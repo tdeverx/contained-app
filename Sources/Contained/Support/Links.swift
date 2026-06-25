@@ -10,11 +10,10 @@ enum Links {
     static var issuesURL: URL { repoURL.appendingPathComponent("issues") }
     static var releasesURL: URL { repoURL.appendingPathComponent("releases") }
 
-    /// A rendered Markdown doc on GitHub (e.g. `docs/Features.md`).
-    static func doc(_ file: String) -> URL {
-        repoURL.appendingPathComponent("blob/main/docs/\(file)")
-    }
+    /// A page in the GitHub wiki, which is where the human docs live (e.g. `Keyboard-Shortcuts`).
+    static var wikiURL: URL { repoURL.appendingPathComponent("wiki") }
+    static func wiki(_ page: String) -> URL { wikiURL.appendingPathComponent(page) }
 
-    static var helpURL: URL { doc("Features.md") }
-    static var shortcutsURL: URL { doc("Keyboard-Shortcuts.md") }
+    static var helpURL: URL { wikiURL }                       // wiki Home
+    static var shortcutsURL: URL { wiki("Keyboard-Shortcuts") }
 }

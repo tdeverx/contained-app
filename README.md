@@ -23,7 +23,11 @@ Download the latest `.dmg` from [Releases](https://github.com/tdeverx/contained-
 - **Beta** — pre-release builds, ahead of stable.
 - **Nightly** — the latest build from every commit (CI), bleeding edge.
 
-Channels are cumulative (Nightly still receives Beta and Stable). See [docs/Release.md](docs/Release.md) for the maintainer release/signing/notarization flow.
+Channels are cumulative (Nightly still receives Beta and Stable). See the [Release runbook](https://github.com/tdeverx/contained-app/wiki/Release) for the maintainer signing/notarization flow.
+
+## Documentation
+
+Full docs live in the **[wiki](https://github.com/tdeverx/contained-app/wiki)** — [Features](https://github.com/tdeverx/contained-app/wiki/Features) · [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts) · [Installation](https://github.com/tdeverx/contained-app/wiki/Installation) · [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting) · [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture) · [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing).
 
 ## Requirements
 
@@ -55,7 +59,7 @@ The package splits into two targets so all logic is testable without a UI:
 - **`ContainedCore`** (library) — models, the `container` CLI wrapper (`--format json`), lenient decoders grounded against captured real CLI output, and command builders. No UI.
 - **`Contained`** (executable) — the SwiftUI app: design system, stores (`@Observable` + `@MainActor`), feature views, and the SwiftData history store.
 
-Integration is by **shelling out** to the `container` CLI and decoding its JSON, rather than linking a private framework — robust across CLI updates and easy to verify. Personalization (tint, icon, nickname, background) is stored **locally** (image-keyed defaults + per-container overrides) and never written back as container labels, keeping the CLI clean. Full design notes in [docs/Architecture.md](docs/Architecture.md).
+Integration is by **shelling out** to the `container` CLI and decoding its JSON, rather than linking a private framework — robust across CLI updates and easy to verify. Personalization (tint, icon, nickname, background) is stored **locally** (image-keyed defaults + per-container overrides) and never written back as container labels, keeping the CLI clean. Full design notes in the [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture) wiki page.
 
 ```
 Sources/
@@ -68,7 +72,7 @@ scripts/
   bundle.sh        Build + assemble Contained.app
   release.sh       Sign + notarize + DMG (maintainers)
   appcast.sh       Generate the Sparkle appcast
-docs/              Architecture, Features, Install-and-Build, Keyboard-Shortcuts, Release, Contributing
+docs/              appcast.xml — Sparkle feed via GitHub Pages (human docs live in the wiki)
 ```
 
 ## 1.0 Polish Checklist
@@ -103,7 +107,7 @@ Every screen gets the same pass before tagging 1.0. Criteria per page: **G** Liq
 
 ## Contributing
 
-Forks, issues, and pull requests are welcome — see [docs/Contributing.md](docs/Contributing.md). The project is built for collaboration; the only thing off the table is commercial use (see License).
+Forks, issues, and pull requests are welcome — see [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing). The project is built for collaboration; the only thing off the table is commercial use (see License).
 
 ## License
 
