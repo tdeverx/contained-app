@@ -65,10 +65,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIconName</key><string>Contained</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
   <key>NSHumanReadableCopyright</key><string>© 2026 Contained. All rights reserved.</string>
-  <!-- Sparkle auto-update: replace with your hosted appcast URL + the EdDSA public key from
-       Sparkle's generate_keys before distributing a signed build. -->
+  <!-- Sparkle auto-update. SUPublicEDKey is the public half of the EdDSA keypair from
+       generate_keys; the private half lives in the keychain (back it up, add as the
+       SPARKLE_ED_PRIVATE_KEY CI secret). The feed is served from GitHub Pages (docs/appcast.xml). -->
   <key>SUFeedURL</key><string>https://tdeverx.github.io/contained-app/appcast.xml</string>
-  <key>SUPublicEDKey</key><string>REPLACE_WITH_YOUR_SPARKLE_PUBLIC_KEY</string>
+  <key>SUPublicEDKey</key><string>M/wt6mIO/OCxhM5wK8Le0jCtaCBIhlRh2aBWv0jkq8o=</string>
   <key>SUEnableInstallerLauncherService</key><true/>
 </dict>
 </plist>
