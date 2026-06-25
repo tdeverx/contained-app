@@ -6,6 +6,11 @@
 
 A native, SwiftUI-first macOS app for Apple's [`container`](https://github.com/apple/container) CLI — a Liquid Glass control surface for running, customizing, and inspecting Linux containers on Apple silicon. It covers the everyday Docker-Desktop workflow plus the broader `container` command surface, without leaving the Mac-native look and feel.
 
+<p align="center">
+  <img src=".github/assets/screenshot.png" width="900" alt="Contained — running containers and the Run a Container sheet">
+  <br><sub><i>Work in progress — the UI and features are still evolving.</i></sub>
+</p>
+
 > **Status:** feature-complete, polishing toward 1.0. Every section below is implemented; see the [1.0 Polish Checklist](#10-polish-checklist) for the per-screen pass that remains before tagging a stable release.
 
 ## Highlights
