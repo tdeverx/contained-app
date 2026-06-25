@@ -1,0 +1,88 @@
+name: Nightly
+
+# Builds the latest green `main` and feeds Sparkle's `nightly` channel.
+#
+# Two guards keep this green on a fresh public repo:
+#   1. Toolchain — Contained targets macOS 26 / Xcode 26. GitHub doesn't offer those runners yet, so
+#      the build is skipped (job still succeeds) until a macOS 26 image exists. Bump `runs-on` then.
+#   2. Secrets — signing/notarizing/publishing is skipped unless the signing secrets are present.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true   # only the newest commit builds
+
+permissions:
+  contents: write            # update the rolling `nightly` release + commit appcast
+
+jobs:
+  nightly:
+    runs-on: macos-15        # TODO: switch to a macOS 26 image when available (Xcode 26 required)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # full history → monotonic build number via `git rev-list --count`
+
+      - id: toolchain
+        name: Check toolchain (needs Xcode 26)
+        run: |
+          MAJOR=$(xcodebuild -version | sed -n 's/Xcode \([0-9]*\).*/\1/p')
+          echo "Xcode major: ${MAJOR:-unknown}"
+          if [ "${MAJOR:-0}" -ge 26 ]; then
+            echo "supported=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "supported=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping build — needs Xcode 26 (runner has ${MAJOR:-?}). Will build once macOS 26 runners ship."
+          fi
+
+      - name: Build & test
+        if: steps.toolchain.outputs.supported == 'true'
+        run: |
+          swift build -c release
+          swift test
+
+      - id: secrets
+        name: Detect signing secrets
+        if: steps.toolchain.outputs.supported == 'true'
+        env:
+          CERT: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+        run: |
+          if [ -n "$CERT" ]; then
+            echo "signing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signing=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No signing secrets set — built + tested only, skipping sign/notarize/publish."
+          fi
+
+      - name: Bundle, sign, notarize, publish nightly
+        if: steps.toolchain.outputs.supported == 'true' && steps.secrets.outputs.signing == 'true'
+        env:
+          DEVELOPER_ID_CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          NOTARYTOOL_API_KEY: ${{ secrets.NOTARYTOOL_API_KEY }}
+          NOTARYTOOL_KEY_ID: ${{ secrets.NOTARYTOOL_KEY_ID }}
+          NOTARYTOOL_ISSUER: ${{ secrets.NOTARYTOOL_ISSUER }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BUILD=$(git rev-list --count HEAD)
+          SHA=$(git rev-parse --short HEAD)
+          export VERSION="1.0.0-nightly.${BUILD}+${SHA}"
+          # See docs/Release.md for the keychain-import + notarytool credential setup these scripts use.
+          ./scripts/release.sh
+          ./scripts/appcast.sh "$(dirname "$(command -v generate_appcast || echo /usr/local/bin/generate_appcast)")" updates
+          # Refresh the rolling nightly pre-release with the new DMG.
+          gh release delete nightly --yes --cleanup-tag || true
+          gh release create nightly updates/*.dmg --prerelease --title "Nightly ($VERSION)" \
+            --notes "Automated nightly build of \`main\` @ ${SHA}."
+          # Publish the regenerated appcast (served by GitHub Pages from /docs).
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/appcast.xml
+          git commit -m "ci: nightly appcast ${VERSION}" || true
+          git push || true

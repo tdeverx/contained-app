@@ -1,0 +1,92 @@
+import SwiftUI
+import SwiftData
+import ContainedCore
+
+/// The "Templates" sidebar section hosts two related tools: the Templates library (saved + built-in
+/// run recipes) and Stacks (compose import). A segmented control switches between them.
+struct TemplatesSectionView: View {
+    enum Tab: String, CaseIterable, Identifiable { case templates = "Templates", stacks = "Stacks"; var id: String { rawValue } }
+    @Environment(UIState.self) private var ui
+    @State private var tab: Tab = .templates
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("View", selection: $tab) {
+                ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 260)
+            .padding(.top, Tokens.Space.s)
+            switch tab {
+            case .templates: TemplatesView()
+            case .stacks: StacksView()
+            }
+        }
+        // File ▸ Import Compose… lands here; switch to the Stacks tab so it can open the picker.
+        .onChange(of: ui.pendingComposeImport) { _, pending in if pending { tab = .stacks } }
+        .onAppear { if ui.pendingComposeImport { tab = .stacks } }
+    }
+}
+
+/// A gallery of run templates: built-in starters plus the user's saved recipes. "Use" prefills the
+/// Create form; saved templates can be deleted.
+struct TemplatesView: View {
+    @Environment(UIState.self) private var ui
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Template.createdAt, order: .reverse) private var saved: [Template]
+
+    private let columns = [GridItem(.adaptive(minimum: 200, maximum: 280), spacing: Tokens.Space.m)]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Tokens.Space.l) {
+                section("Starters") {
+                    ForEach(BuiltinTemplate.all, id: \.name) { item in
+                        card(name: item.name, symbol: item.symbol, subtitle: Format.shortImage(item.spec.image),
+                             onUse: { ui.useTemplate(item.spec) }, onDelete: nil)
+                    }
+                }
+                if !saved.isEmpty {
+                    section("Saved") {
+                        ForEach(saved) { template in
+                            card(name: template.name, symbol: "bookmark.fill",
+                                 subtitle: Format.shortImage(template.spec?.image ?? "—"),
+                                 onUse: { if let spec = template.spec { ui.useTemplate(spec) } },
+                                 onDelete: { modelContext.delete(template); try? modelContext.save() })
+                        }
+                    }
+                }
+            }
+            .padding(Tokens.Space.l)
+        }
+        .scrollEdgeEffectStyle(.soft, for: .all)
+    }
+
+    private func section<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            Text(title).font(.headline)
+            LazyVGrid(columns: columns, spacing: Tokens.Space.m) { content() }
+        }
+    }
+
+    private func card(name: String, symbol: String, subtitle: String,
+                      onUse: @escaping () -> Void, onDelete: (() -> Void)?) -> some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            HStack {
+                Image(systemName: symbol).font(.title2).foregroundStyle(Color.accentColor)
+                Spacer()
+                if let onDelete {
+                    Button(role: .destructive, action: onDelete) { Image(systemName: "trash") }
+                        .buttonStyle(.plain).foregroundStyle(.secondary)
+                }
+            }
+            Text(name).font(.headline)
+            Text(subtitle).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
+            Button("Use") { onUse() }.buttonStyle(.glassProminent).controlSize(.small)
+        }
+        .padding(Tokens.Space.l)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+    }
+}

@@ -1,0 +1,111 @@
+import SwiftUI
+import AppKit
+import ContainedCore
+
+@main
+struct ContainedApp: App {
+    @State private var app = AppModel()
+    @State private var ui = UIState()
+
+    var body: some Scene {
+        WindowGroup {
+            RootView()
+                .environment(app)
+                .environment(ui)
+                .modelContainer(app.historyStore.container)
+                .frame(minWidth: 920, minHeight: 620)
+        }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 1200, height: 800)
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Contained") { showAboutPanel() }
+            }
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { app.updater.checkForUpdates() }
+                    .disabled(!app.updater.canCheckForUpdates)
+            }
+            CommandGroup(after: .newItem) {
+                Button("New Container…") { ui.showRunSheet = true }
+                    .keyboardShortcut("n", modifiers: .command)
+                Button("Run a Container…") { ui.showRunSheet = true }
+                    .keyboardShortcut("r", modifiers: .command)
+                Divider()
+                Button("Pull Image…") { ui.section = .images; ui.requestPull += 1 }
+                Button("Import Compose…") { ui.section = .templates; ui.pendingComposeImport = true }
+            }
+            CommandGroup(after: .textEditing) {
+                Button("Find") { ui.focusSearchTick += 1 }
+                    .keyboardShortcut("f", modifiers: .command)
+            }
+            SidebarCommands()
+            CommandGroup(after: .sidebar) {
+                Divider()
+                Button("Reload") { app.coordinator.wake() }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                Picker("Card Size", selection: cardSizeBinding) {
+                    ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
+                }
+                Toggle("Show Running Only", isOn: runningOnlyBinding)
+            }
+            CommandGroup(after: .toolbar) {
+                Button("Command Palette…") { ui.showPalette = true }
+                    .keyboardShortcut("k", modifiers: .command)
+            }
+            CommandMenu("Go") {
+                ForEach(Array(AppSection.allCases.enumerated()), id: \.element) { index, section in
+                    Button(section.title) { ui.section = section }
+                        .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                }
+            }
+            CommandGroup(replacing: .help) {
+                Button("Contained Help") { NSWorkspace.shared.open(Links.helpURL) }
+                Button("Keyboard Shortcuts") { NSWorkspace.shared.open(Links.shortcutsURL) }
+                Divider()
+                Button("Report an Issue…") { NSWorkspace.shared.open(Links.issuesURL) }
+                Button("View Source on GitHub") { NSWorkspace.shared.open(Links.repoURL) }
+                Divider()
+                Button("Reveal CLI Binary in Finder") { revealCLIBinary() }
+            }
+        }
+
+        Settings {
+            SettingsView()
+                .environment(app)
+        }
+
+        MenuBarExtra(isInserted: menuBarInserted) {
+            MenuBarContent()
+                .environment(app)
+                .environment(ui)
+        } label: {
+            Label("\(app.containers.running.count)", systemImage: "shippingbox.fill")
+        }
+        .menuBarExtraStyle(.menu)
+    }
+
+    /// Binding into the persisted setting so toggling it inserts/removes the menu-bar item live.
+    private var menuBarInserted: Binding<Bool> {
+        Binding(get: { app.settings.keepInMenuBar }, set: { app.settings.keepInMenuBar = $0 })
+    }
+
+    private var cardSizeBinding: Binding<CardDensity> {
+        Binding(get: { app.settings.density }, set: { app.settings.density = $0 })
+    }
+
+    private var runningOnlyBinding: Binding<Bool> {
+        Binding(get: { ui.runningOnly }, set: { ui.runningOnly = $0 })
+    }
+
+    /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).
+    private func revealCLIBinary() {
+        guard let url = CLILocator.locate(override: app.settings.cliPathOverride) else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    /// Show the standard macOS About panel (version pulled from the bundle).
+    private func showAboutPanel() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.orderFrontStandardAboutPanel(options: [:])
+    }
+}
