@@ -80,8 +80,8 @@ Tests/
 scripts/
   bundle.sh        Build + assemble Contained.app
   release.sh       Sign + notarize + DMG (maintainers)
-  appcast.sh       Generate the Sparkle appcast
-docs/              appcast.xml — Sparkle feed via GitHub Pages (human docs live in the wiki)
+  appcast.sh       Generate this branch's Sparkle appcast
+appcast.xml        Per-branch Sparkle feed (nightly/beta/main each own one; human docs live in the wiki)
 ```
 
 ## 1.0 Polish Checklist

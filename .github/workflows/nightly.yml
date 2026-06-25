@@ -1,24 +1,24 @@
 name: Nightly
 
-# Builds the latest green `main`, ad-hoc signs, packages a DMG, EdDSA-signs the Sparkle appcast, and
-# publishes the rolling `nightly` pre-release. No Apple Developer ID / notarization (no paid account
-# needed) — Sparkle's own EdDSA signature is the update-integrity boundary. First launch of an
-# unsigned build needs right-click ▸ Open (Gatekeeper).
+# Builds the latest `nightly` branch, ad-hoc signs, packages a DMG, and refreshes the rolling
+# `nightly-latest` release. The Sparkle feed (appcast.xml at this branch's repo root) is then
+# regenerated for the new DMG and committed back to `nightly` — the app reads it raw per channel,
+# so there's no cross-branch merge.
 #
-# Only secret required for auto-updates: SPARKLE_ED_PRIVATE_KEY (from `generate_keys -x`). Without it
-# the DMG is still published for manual download; the appcast just isn't (re)signed.
+# No Apple Developer ID / notarization (no paid account). First launch of an unsigned build needs
+# right-click ▸ Open. Only secret: SPARKLE_ED_PRIVATE_KEY (DMG still ships without it).
 
 on:
   push:
-    branches: [main]
+    branches: [nightly]
   workflow_dispatch:
 
 concurrency:
   group: nightly
-  cancel-in-progress: true   # only the newest commit builds
+  cancel-in-progress: true
 
 permissions:
-  contents: write            # update the rolling release + commit the appcast
+  contents: write
 
 jobs:
   nightly:
@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7        # Node 24
         with:
-          fetch-depth: 0                 # full history → monotonic build number
+          fetch-depth: 0
 
       - name: Toolchain
         run: swift --version && xcodebuild -version
@@ -51,35 +51,31 @@ jobs:
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
-      - name: Publish rolling nightly release
+      - name: Publish rolling nightly-latest release
         run: |
-          gh release delete nightly --yes --cleanup-tag || true
-          gh release create nightly updates/*.dmg \
+          gh release delete nightly-latest --yes --cleanup-tag || true
+          gh release create nightly-latest updates/*.dmg \
             --prerelease --title "Nightly (${VERSION})" \
-            --notes "Automated build of \`main\` @ ${SHA}.
+            --notes "Automated build of \`nightly\` @ ${SHA}.
 
           ⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
 
-      - name: Sign appcast (Sparkle) + commit
+      - name: Update Sparkle feed (nightly branch appcast.xml)
         if: env.SPARKLE_ED_PRIVATE_KEY != ''
         run: |
-          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle_key"
-          BIN=.build/artifacts/sparkle/Sparkle/bin
+          KEYFILE="$(mktemp)"; printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$KEYFILE"
+          BIN=".build/artifacts/sparkle/Sparkle/bin"
           [ -x "$BIN/generate_appcast" ] || BIN="$(dirname "$(find .build -type f -name generate_appcast | head -1)")"
-          "$BIN/generate_appcast" --ed-key-file "$RUNNER_TEMP/sparkle_key" \
-            --download-url-prefix "https://github.com/tdeverx/contained-app/releases/download/nightly/" \
-            updates
-          rm -f "$RUNNER_TEMP/sparkle_key"
-          # Tag the item for the `nightly` channel so only nightly-channel users are offered it
-          # (the EdDSA signature lives on the enclosure, so editing the item body is safe).
-          python3 -c 'p="updates/appcast.xml"; s=open(p).read(); open(p,"w").write(s if "<sparkle:channel>" in s else s.replace("<item>","<item><sparkle:channel>nightly</sparkle:channel>",1))'
-          mkdir -p docs && cp updates/appcast.xml docs/appcast.xml
+          ED_KEY_FILE="$KEYFILE" \
+            DOWNLOAD_PREFIX="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/" \
+            ./scripts/appcast.sh "$BIN" updates
+          rm -f "$KEYFILE"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/appcast.xml
-          git commit -m "ci: nightly appcast ${VERSION}" || true
-          git push || true
-
-      - name: No Sparkle key — auto-update skipped
-        if: env.SPARKLE_ED_PRIVATE_KEY == ''
-        run: echo "::notice::SPARKLE_ED_PRIVATE_KEY not set — published the DMG, but skipped appcast signing. Set that one secret to enable in-app auto-updates."
+          git add appcast.xml
+          if git diff --cached --quiet; then
+            echo "appcast unchanged — nothing to commit."
+          else
+            git commit -m "ci: nightly appcast (${VERSION})"
+            git push origin HEAD:nightly
+          fi

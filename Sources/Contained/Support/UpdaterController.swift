@@ -2,10 +2,12 @@ import SwiftUI
 import Sparkle
 
 /// Thin wrapper over Sparkle's standard updater. Inert until a signed build sets `SUFeedURL` +
-/// `SUPublicEDKey` in Info.plist and points them at a hosted appcast (see scripts/appcast.sh).
+/// `SUPublicEDKey` in Info.plist and points them at a hosted appcast.
 ///
-/// Channels: a single appcast carries stable (un-tagged), `beta`, and `nightly` items; the
-/// `ChannelDelegate` tells Sparkle which channels the user opted into via `allowedChannels(for:)`.
+/// Channels: each channel (stable/beta/nightly) has its **own** appcast feed at the matching git
+/// branch's repo root (see `UpdateChannel.feedURL`). The `ChannelDelegate` overrides Sparkle's
+/// `SUFeedURL` per the selected channel via `feedURLString(for:)`, so switching channels just points
+/// the updater at a different branch's manifest — no cross-branch merging.
 @MainActor
 @Observable
 final class UpdaterController {
@@ -13,7 +15,7 @@ final class UpdaterController {
     @ObservationIgnored private let channelDelegate = ChannelDelegate()
 
     init(channel: UpdateChannel = .stable) {
-        channelDelegate.allowed = channel.allowedChannels
+        channelDelegate.channel = channel
         // Sparkle requires a code-signed host with a valid feed; starting it in an unsigned/dev
         // build aborts. Only start it in release builds — the dev bundle isn't signed.
         #if !DEBUG
@@ -30,17 +32,20 @@ final class UpdaterController {
         set { controller?.updater.automaticallyChecksForUpdates = newValue }
     }
 
-    /// Switch the opted-in channel set; a background information check picks it up immediately.
+    /// Switch the channel; a background information check re-queries the new feed immediately.
     var channel: UpdateChannel = .stable {
         didSet {
-            channelDelegate.allowed = channel.allowedChannels
+            channelDelegate.channel = channel
             controller?.updater.checkForUpdateInformation()
         }
     }
 
-    /// Sparkle's delegate must be an `NSObject`; it just reports the allowed channel set.
+    /// Sparkle's delegate must be an `NSObject`. It points the updater at the selected channel's feed
+    /// (overriding `SUFeedURL`) and reports the allowed channel set (empty — feed selection *is* the
+    /// channel with per-branch feeds).
     private final class ChannelDelegate: NSObject, SPUUpdaterDelegate {
-        var allowed: Set<String> = []
-        func allowedChannels(for updater: SPUUpdater) -> Set<String> { allowed }
+        var channel: UpdateChannel = .stable
+        func feedURLString(for updater: SPUUpdater) -> String? { channel.feedURL }
+        func allowedChannels(for updater: SPUUpdater) -> Set<String> { channel.allowedChannels }
     }
 }

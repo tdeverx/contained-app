@@ -1,11 +1,11 @@
 name: Release
 
-# Manual stable/beta release: build → ad-hoc sign → DMG → tagged GitHub release.
-# Same no-dev-account approach as nightly (no Developer ID / notarization).
+# Manual stable/beta release: build → ad-hoc sign → DMG → tagged GitHub release → regenerate this
+# branch's appcast.xml. Same no-dev-account approach as nightly (no Developer ID / notarization).
 #
-# NOTE: this publishes a downloadable tagged DMG. Wiring stable/beta items into the single
-# Sparkle appcast (merging with the nightly channel) is future work — until then the nightly
-# workflow owns docs/appcast.xml.
+# Dispatch from the branch you're releasing: run on `main` for a stable release, on `beta` for a
+# beta. The DMG is published under the `v<version>` tag and this branch's appcast.xml (at repo root)
+# is regenerated + committed back, so the matching channel's feed updates.
 
 on:
   workflow_dispatch:
@@ -26,6 +26,7 @@ jobs:
     runs-on: macos-26
     env:
       GH_TOKEN: ${{ github.token }}
+      SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -58,3 +59,25 @@ jobs:
             --notes "Contained ${VERSION}.
 
           ⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
+
+      - name: Update Sparkle feed (this branch's appcast.xml)
+        if: env.SPARKLE_ED_PRIVATE_KEY != ''
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          KEYFILE="$(mktemp)"; printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$KEYFILE"
+          BIN=".build/artifacts/sparkle/Sparkle/bin"
+          [ -x "$BIN/generate_appcast" ] || BIN="$(dirname "$(find .build -type f -name generate_appcast | head -1)")"
+          ED_KEY_FILE="$KEYFILE" \
+            DOWNLOAD_PREFIX="https://github.com/tdeverx/contained-app/releases/download/v${VERSION}/" \
+            ./scripts/appcast.sh "$BIN" updates
+          rm -f "$KEYFILE"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml
+          if git diff --cached --quiet; then
+            echo "appcast unchanged — nothing to commit."
+          else
+            git commit -m "ci: release appcast (v${VERSION})"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

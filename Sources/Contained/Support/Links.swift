@@ -11,9 +11,16 @@ enum Links {
     static var releasesURL: URL { repoURL.appendingPathComponent("releases") }
 
     /// A page in the GitHub wiki, which is where the human docs live (e.g. `Keyboard-Shortcuts`).
+    /// Page names match the wiki page titles exactly so the links resolve.
     static var wikiURL: URL { repoURL.appendingPathComponent("wiki") }
     static func wiki(_ page: String) -> URL { wikiURL.appendingPathComponent(page) }
 
-    static var helpURL: URL { wikiURL }                       // wiki Home
+    static var helpURL: URL { wiki("Home") }                  // wiki Home page
+    static var featuresURL: URL { wiki("Features") }
+    static var installURL: URL { wiki("Installation") }
     static var shortcutsURL: URL { wiki("Keyboard-Shortcuts") }
+    static var troubleshootingURL: URL { wiki("Troubleshooting") }
+    static var architectureURL: URL { wiki("Architecture") }
+    static var contributingURL: URL { wiki("Contributing") }
+    static var releaseDocURL: URL { wiki("Release") }
 }

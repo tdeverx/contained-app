@@ -60,7 +60,14 @@ struct ContainedApp: App {
             }
             CommandGroup(replacing: .help) {
                 Button("Contained Help") { NSWorkspace.shared.open(Links.helpURL) }
+                Button("Features Guide") { NSWorkspace.shared.open(Links.featuresURL) }
+                Button("Installation & Updates") { NSWorkspace.shared.open(Links.installURL) }
                 Button("Keyboard Shortcuts") { NSWorkspace.shared.open(Links.shortcutsURL) }
+                Button("Troubleshooting") { NSWorkspace.shared.open(Links.troubleshootingURL) }
+                Divider()
+                Button("Release Notes") { NSWorkspace.shared.open(Links.releasesURL) }
+                Button("Architecture") { NSWorkspace.shared.open(Links.architectureURL) }
+                Button("Contributing") { NSWorkspace.shared.open(Links.contributingURL) }
                 Divider()
                 Button("Report an Issue…") { NSWorkspace.shared.open(Links.issuesURL) }
                 Button("View Source on GitHub") { NSWorkspace.shared.open(Links.repoURL) }

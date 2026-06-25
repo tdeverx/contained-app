@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
-# Generate / update the Sparkle appcast for built DMG(s) and stage it for GitHub Pages.
+# Generate / update this branch's Sparkle appcast for the built DMG(s).
 #
 # One-time setup (keep the private key safe, never commit it):
 #   generate_keys                       # from Sparkle's bin; prints the public EdDSA key for Info.plist
 #
-# Channels: a single appcast spans stable / beta / nightly. `generate_appcast` reads the channel from
-# each DMG's embedded version metadata; mark pre-release DMGs by placing a channel file next to them
-# (e.g. a `<name>.html` release-notes file is optional). Stable builds carry no channel tag.
+# Per-branch feeds: each git branch (nightly / beta / main) owns an independent appcast.xml at the
+# repo root, served raw from GitHub. The app picks the feed per channel at runtime (UpdaterController),
+# so there's no cross-branch merging — promoting a branch just carries its manifest along. Items carry
+# no channel tag; build numbers are monotonic across branches so the newest build always wins.
 #
 # Usage:
 #   ./scripts/appcast.sh <path-to-sparkle-bin-dir> [updates-dir]
-#
-# The appcast's download URLs point at the GitHub release assets via --download-url-prefix, so the
-# DMGs live as release assets while appcast.xml is served from GitHub Pages (docs/appcast.xml).
+# Env:
+#   DOWNLOAD_PREFIX  GitHub release-asset base the enclosure URLs point at.
+#   ED_KEY_FILE      Path to the EdDSA private key file (CI: written from SPARKLE_ED_PRIVATE_KEY).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -23,12 +24,13 @@ DOWNLOAD_PREFIX="${DOWNLOAD_PREFIX:-https://github.com/tdeverx/contained-app/rel
 
 [ -d "$UPDATES_DIR" ] || { echo "✗ Updates dir '$UPDATES_DIR' not found"; exit 1; }
 
-echo "▸ Generating appcast for $UPDATES_DIR (download prefix: $DOWNLOAD_PREFIX)…"
-"$SPARKLE_BIN/generate_appcast" --download-url-prefix "$DOWNLOAD_PREFIX" "$UPDATES_DIR"
+KEY_ARGS=()
+[ -n "${ED_KEY_FILE:-}" ] && KEY_ARGS=(--ed-key-file "$ED_KEY_FILE")
 
-# Serve from GitHub Pages: docs/ is the Pages source, so the feed resolves at
-# https://<owner>.github.io/contained-app/appcast.xml
-mkdir -p docs
-cp "$UPDATES_DIR/appcast.xml" docs/appcast.xml
-echo "✓ Wrote $UPDATES_DIR/appcast.xml and staged docs/appcast.xml."
-echo "  Commit docs/appcast.xml and upload the DMG(s) as GitHub release assets."
+echo "▸ Generating appcast for $UPDATES_DIR (download prefix: $DOWNLOAD_PREFIX)…"
+"$SPARKLE_BIN/generate_appcast" "${KEY_ARGS[@]}" --download-url-prefix "$DOWNLOAD_PREFIX" "$UPDATES_DIR"
+
+# This branch's feed lives at the repo root; CI commits it back to the same branch.
+cp "$UPDATES_DIR/appcast.xml" appcast.xml
+echo "✓ Wrote appcast.xml at the repo root for this branch."
+echo "  Commit appcast.xml and upload the DMG(s) as GitHub release assets."
