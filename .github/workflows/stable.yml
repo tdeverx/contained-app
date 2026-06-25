@@ -1,69 +1,75 @@
-name: Release
+name: Stable
 
-# Manual stable/beta release: build → ad-hoc sign → DMG → tagged GitHub release → regenerate this
-# branch's appcast.xml. Same no-dev-account approach as nightly (no Developer ID / notarization).
+# Builds on every push to `main`, ad-hoc signs, packages a DMG, publishes a `v<version>` release, and
+# regenerates this branch's appcast.xml (the stable channel's feed).
 #
-# Dispatch from the branch you're releasing: run on `main` for a stable release, on `beta` for a
-# beta. The DMG is published under the `v<version>` tag and this branch's appcast.xml (at repo root)
-# is regenerated + committed back, so the matching channel's feed updates.
+# `main` starts as a basic-files branch with no source — the build steps skip cleanly (green) until
+# code is promoted from `beta`/`nightly`. The stable version is the root VERSION file verbatim.
+#
+# No Apple Developer ID / notarization. Only secret: SPARKLE_ED_PRIVATE_KEY (DMG still ships without it).
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Marketing version, e.g. 1.0.0 or 1.0.0-beta.1"
-        required: true
-      prerelease:
-        description: "Mark as a GitHub pre-release (beta)"
-        type: boolean
-        default: false
+
+concurrency:
+  group: stable
+  cancel-in-progress: true
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  stable:
     runs-on: macos-26
     env:
-      GH_TOKEN: ${{ github.token }}
       SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
+      - name: Guard (skip until source is promoted to this branch)
+        id: guard
+        run: |
+          if [ -f Package.swift ]; then echo "build=true" >> "$GITHUB_OUTPUT"; \
+          else echo "::notice::No source on main yet — skipping build."; echo "build=false" >> "$GITHUB_OUTPUT"; fi
+
       - name: Toolchain
+        if: steps.guard.outputs.build == 'true'
         run: swift --version && xcodebuild -version
 
       - name: Build & test
+        if: steps.guard.outputs.build == 'true'
         run: |
           swift build -c release
           swift test
 
       - name: Bundle (ad-hoc signed) + DMG
-        env:
-          VERSION: ${{ inputs.version }}
+        if: steps.guard.outputs.build == 'true'
         run: |
+          export VERSION=$(cat VERSION 2>/dev/null || echo 1.0.0)
+          SHA=$(git rev-parse --short HEAD)
           ./scripts/bundle.sh release
           mkdir -p updates
           hdiutil create -volname Contained -srcfolder Contained.app -ov -format UDZO \
             "updates/Contained-${VERSION}.dmg"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
       - name: Publish release
-        env:
-          VERSION: ${{ inputs.version }}
+        if: steps.guard.outputs.build == 'true'
         run: |
-          PRE=""; [ "${{ inputs.prerelease }}" = "true" ] && PRE="--prerelease"
-          gh release create "v${VERSION}" updates/*.dmg $PRE \
+          gh release create "v${VERSION}" updates/*.dmg \
             --title "Contained ${VERSION}" \
-            --notes "Contained ${VERSION}.
+            --notes "Contained ${VERSION} @ ${SHA}.
 
           ⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
 
-      - name: Update Sparkle feed (this branch's appcast.xml)
-        if: env.SPARKLE_ED_PRIVATE_KEY != ''
-        env:
-          VERSION: ${{ inputs.version }}
+      - name: Update Sparkle feed (main branch appcast.xml)
+        if: steps.guard.outputs.build == 'true' && env.SPARKLE_ED_PRIVATE_KEY != ''
         run: |
           KEYFILE="$(mktemp)"; printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$KEYFILE"
           BIN=".build/artifacts/sparkle/Sparkle/bin"
@@ -78,6 +84,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "appcast unchanged — nothing to commit."
           else
-            git commit -m "ci: release appcast (v${VERSION})"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
+            git commit -m "ci: stable appcast (v${VERSION})"
+            git push origin HEAD:main
           fi
