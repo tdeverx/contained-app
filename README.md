@@ -1,4 +1,8 @@
-# Contained
+<p align="center">
+  <img src=".github/assets/icon.png" width="128" alt="Contained icon">
+</p>
+
+<h1 align="center">Contained</h1>
 
 A native, SwiftUI-first macOS app for Apple's [`container`](https://github.com/apple/container) CLI — a Liquid Glass control surface for running, customizing, and inspecting Linux containers on Apple silicon. It covers the everyday Docker-Desktop workflow plus the broader `container` command surface, without leaving the Mac-native look and feel.
 
