@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Contained</title>
+        <item>
+            <title>1.0.0-nightly.11+0eb2f73</title>
+            <pubDate>Thu, 25 Jun 2026 23:32:07 +0000</pubDate>
+            <sparkle:version>11</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.11+0eb2f73</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.11+0eb2f73.dmg" length="4493313" type="application/octet-stream"/>
+        </item>
+    </channel>
+</rss>
