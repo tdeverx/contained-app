@@ -1,0 +1,56 @@
+name: Bug report
+description: Something isn't working as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to file a bug! Please fill out the details below so it can be reproduced.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+      placeholder: When I…, I expected…, but instead…
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to…
+        2. Click…
+        3. See…
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: Contained version
+      description: From the menu bar — Contained ▸ About Contained.
+      placeholder: e.g. 1.0.0-beta.1 (build 21)
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: e.g. macOS 26.0
+    validations:
+      required: true
+  - type: input
+    id: cli-version
+    attributes:
+      label: container CLI version
+      description: Output of `container --version`.
+      placeholder: e.g. 1.0.0
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Any relevant log output or screenshots. "Reveal CLI" output is especially helpful.
+    validations:
+      required: false

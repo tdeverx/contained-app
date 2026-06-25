@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation (Wiki)
+    url: https://github.com/tdeverx/contained-app/wiki
+    about: Features, installation, and architecture.
+  - name: 🛠 Troubleshooting
+    url: https://github.com/tdeverx/contained-app/wiki/Troubleshooting
+    about: Common issues and fixes — please check here before filing a bug.
