@@ -1,8 +1,11 @@
 name: Release
 
-# Manual stable/beta release: build → sign → notarize → DMG → GitHub release → appcast.
-# Mirrors the local `scripts/release.sh` path so releases are reproducible in CI.
-# Same two guards as nightly.yml: skips on a pre-Xcode-26 runner, and skips signing without secrets.
+# Manual stable/beta release: build → ad-hoc sign → DMG → tagged GitHub release.
+# Same no-dev-account approach as nightly (no Developer ID / notarization).
+#
+# NOTE: this publishes a downloadable tagged DMG. Wiring stable/beta items into the single
+# Sparkle appcast (merging with the nightly channel) is future work — until then the nightly
+# workflow owns docs/appcast.xml.
 
 on:
   workflow_dispatch:
@@ -11,7 +14,7 @@ on:
         description: "Marketing version, e.g. 1.0.0 or 1.0.0-beta.1"
         required: true
       prerelease:
-        description: "Mark as a GitHub pre-release (beta channel)"
+        description: "Mark as a GitHub pre-release (beta)"
         type: boolean
         default: false
 
@@ -20,57 +23,38 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-15        # TODO: switch to a macOS 26 image when available (Xcode 26 required)
+    runs-on: macos-26
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - id: toolchain
-        name: Check toolchain (needs Xcode 26)
-        run: |
-          MAJOR=$(xcodebuild -version | sed -n 's/Xcode \([0-9]*\).*/\1/p')
-          if [ "${MAJOR:-0}" -ge 26 ]; then
-            echo "supported=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "supported=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping — needs Xcode 26 (runner has ${MAJOR:-?})."
-          fi
+      - name: Toolchain
+        run: swift --version && xcodebuild -version
 
       - name: Build & test
-        if: steps.toolchain.outputs.supported == 'true'
         run: |
           swift build -c release
           swift test
 
-      - id: secrets
-        name: Detect signing secrets
-        if: steps.toolchain.outputs.supported == 'true'
+      - name: Bundle (ad-hoc signed) + DMG
         env:
-          CERT: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
-        run: |
-          if [ -n "$CERT" ]; then echo "signing=true" >> "$GITHUB_OUTPUT";
-          else echo "signing=false" >> "$GITHUB_OUTPUT"; echo "::notice::No signing secrets — skipping sign/notarize/publish."; fi
-
-      - name: Bundle, sign, notarize, publish release
-        if: steps.toolchain.outputs.supported == 'true' && steps.secrets.outputs.signing == 'true'
-        env:
-          DEVELOPER_ID_CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
-          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
-          NOTARYTOOL_API_KEY: ${{ secrets.NOTARYTOOL_API_KEY }}
-          NOTARYTOOL_KEY_ID: ${{ secrets.NOTARYTOOL_KEY_ID }}
-          NOTARYTOOL_ISSUER: ${{ secrets.NOTARYTOOL_ISSUER }}
-          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
-          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
         run: |
-          set -euo pipefail
-          ./scripts/release.sh
-          ./scripts/appcast.sh "$(dirname "$(command -v generate_appcast || echo /usr/local/bin/generate_appcast)")" updates
+          ./scripts/bundle.sh release
+          mkdir -p updates
+          hdiutil create -volname Contained -srcfolder Contained.app -ov -format UDZO \
+            "updates/Contained-${VERSION}.dmg"
+
+      - name: Publish release
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
           PRE=""; [ "${{ inputs.prerelease }}" = "true" ] && PRE="--prerelease"
-          gh release create "v${VERSION}" updates/*.dmg $PRE --title "Contained ${VERSION}" --generate-notes
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/appcast.xml
-          git commit -m "ci: release appcast ${VERSION}" || true
-          git push || true
+          gh release create "v${VERSION}" updates/*.dmg $PRE \
+            --title "Contained ${VERSION}" \
+            --notes "Contained ${VERSION}.
+
+          ⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."

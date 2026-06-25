@@ -1,11 +1,12 @@
 name: Nightly
 
-# Builds the latest green `main` and feeds Sparkle's `nightly` channel.
+# Builds the latest green `main`, ad-hoc signs, packages a DMG, EdDSA-signs the Sparkle appcast, and
+# publishes the rolling `nightly` pre-release. No Apple Developer ID / notarization (no paid account
+# needed) — Sparkle's own EdDSA signature is the update-integrity boundary. First launch of an
+# unsigned build needs right-click ▸ Open (Gatekeeper).
 #
-# Two guards keep this green on a fresh public repo:
-#   1. Toolchain — Contained targets macOS 26 / Xcode 26. GitHub doesn't offer those runners yet, so
-#      the build is skipped (job still succeeds) until a macOS 26 image exists. Bump `runs-on` then.
-#   2. Secrets — signing/notarizing/publishing is skipped unless the signing secrets are present.
+# Only secret required for auto-updates: SPARKLE_ED_PRIVATE_KEY (from `generate_keys -x`). Without it
+# the DMG is still published for manual download; the appcast just isn't (re)signed.
 
 on:
   push:
@@ -17,72 +18,68 @@ concurrency:
   cancel-in-progress: true   # only the newest commit builds
 
 permissions:
-  contents: write            # update the rolling `nightly` release + commit appcast
+  contents: write            # update the rolling release + commit the appcast
 
 jobs:
   nightly:
-    runs-on: macos-15        # TODO: switch to a macOS 26 image when available (Xcode 26 required)
+    runs-on: macos-26        # GA, arm64 (Apple silicon) — ships Xcode 26
+    env:
+      SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7        # Node 24
         with:
-          fetch-depth: 0     # full history → monotonic build number via `git rev-list --count`
+          fetch-depth: 0                 # full history → monotonic build number
 
-      - id: toolchain
-        name: Check toolchain (needs Xcode 26)
-        run: |
-          MAJOR=$(xcodebuild -version | sed -n 's/Xcode \([0-9]*\).*/\1/p')
-          echo "Xcode major: ${MAJOR:-unknown}"
-          if [ "${MAJOR:-0}" -ge 26 ]; then
-            echo "supported=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "supported=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping build — needs Xcode 26 (runner has ${MAJOR:-?}). Will build once macOS 26 runners ship."
-          fi
+      - name: Toolchain
+        run: swift --version && xcodebuild -version
 
       - name: Build & test
-        if: steps.toolchain.outputs.supported == 'true'
         run: |
           swift build -c release
           swift test
 
-      - id: secrets
-        name: Detect signing secrets
-        if: steps.toolchain.outputs.supported == 'true'
-        env:
-          CERT: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+      - name: Bundle (ad-hoc signed) + DMG
         run: |
-          if [ -n "$CERT" ]; then
-            echo "signing=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "signing=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No signing secrets set — built + tested only, skipping sign/notarize/publish."
-          fi
-
-      - name: Bundle, sign, notarize, publish nightly
-        if: steps.toolchain.outputs.supported == 'true' && steps.secrets.outputs.signing == 'true'
-        env:
-          DEVELOPER_ID_CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
-          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
-          NOTARYTOOL_API_KEY: ${{ secrets.NOTARYTOOL_API_KEY }}
-          NOTARYTOOL_KEY_ID: ${{ secrets.NOTARYTOOL_KEY_ID }}
-          NOTARYTOOL_ISSUER: ${{ secrets.NOTARYTOOL_ISSUER }}
-          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
           BUILD=$(git rev-list --count HEAD)
           SHA=$(git rev-parse --short HEAD)
           export VERSION="1.0.0-nightly.${BUILD}+${SHA}"
-          # See docs/Release.md for the keychain-import + notarytool credential setup these scripts use.
-          ./scripts/release.sh
-          ./scripts/appcast.sh "$(dirname "$(command -v generate_appcast || echo /usr/local/bin/generate_appcast)")" updates
-          # Refresh the rolling nightly pre-release with the new DMG.
+          ./scripts/bundle.sh release
+          mkdir -p updates
+          hdiutil create -volname Contained -srcfolder Contained.app -ov -format UDZO \
+            "updates/Contained-${VERSION}.dmg"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "SHA=${SHA}" >> "$GITHUB_ENV"
+
+      - name: Publish rolling nightly release
+        run: |
           gh release delete nightly --yes --cleanup-tag || true
-          gh release create nightly updates/*.dmg --prerelease --title "Nightly ($VERSION)" \
-            --notes "Automated nightly build of \`main\` @ ${SHA}."
-          # Publish the regenerated appcast (served by GitHub Pages from /docs).
+          gh release create nightly updates/*.dmg \
+            --prerelease --title "Nightly (${VERSION})" \
+            --notes "Automated build of \`main\` @ ${SHA}.
+
+          ⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
+
+      - name: Sign appcast (Sparkle) + commit
+        if: env.SPARKLE_ED_PRIVATE_KEY != ''
+        run: |
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle_key"
+          BIN=.build/artifacts/sparkle/Sparkle/bin
+          [ -x "$BIN/generate_appcast" ] || BIN="$(dirname "$(find .build -type f -name generate_appcast | head -1)")"
+          "$BIN/generate_appcast" --ed-key-file "$RUNNER_TEMP/sparkle_key" \
+            --download-url-prefix "https://github.com/tdeverx/contained-app/releases/download/nightly/" \
+            updates
+          rm -f "$RUNNER_TEMP/sparkle_key"
+          # Tag the item for the `nightly` channel so only nightly-channel users are offered it
+          # (the EdDSA signature lives on the enclosure, so editing the item body is safe).
+          python3 -c 'p="updates/appcast.xml"; s=open(p).read(); open(p,"w").write(s if "<sparkle:channel>" in s else s.replace("<item>","<item><sparkle:channel>nightly</sparkle:channel>",1))'
+          mkdir -p docs && cp updates/appcast.xml docs/appcast.xml
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/appcast.xml
           git commit -m "ci: nightly appcast ${VERSION}" || true
           git push || true
+
+      - name: No Sparkle key — auto-update skipped
+        if: env.SPARKLE_ED_PRIVATE_KEY == ''
+        run: echo "::notice::SPARKLE_ED_PRIVATE_KEY not set — published the DMG, but skipped appcast signing. Set that one secret to enable in-app auto-updates."
