@@ -22,7 +22,7 @@ swift build -c "$CONFIG"
 BIN_PATH="$(swift build -c "$CONFIG" --show-bin-path)/Contained"
 [ -x "$BIN_PATH" ] || { echo "✗ Built binary not found at $BIN_PATH"; exit 1; }
 
-echo "▸ Assembling $APP…"
+echo "▸ Assembling ${APP}…"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_PATH" "$APP/Contents/MacOS/Contained"
