@@ -17,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-SPARKLE_BIN="${1:?Pass the path to Sparkle's bin directory (contains generate_appcast)}"
+SPARKLE_BIN="${1:?Pass the path to the Sparkle bin directory containing generate_appcast}"
 UPDATES_DIR="${2:-updates}"
 # GitHub release asset base (the DMGs are uploaded as release assets). Override via env in CI.
 DOWNLOAD_PREFIX="${DOWNLOAD_PREFIX:-https://github.com/tdeverx/contained-app/releases/download/}"
