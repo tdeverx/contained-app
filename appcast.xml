@@ -3,13 +3,13 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.11+0eb2f73</title>
-            <pubDate>Thu, 25 Jun 2026 23:32:07 +0000</pubDate>
-            <sparkle:version>11</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.11+0eb2f73</sparkle:shortVersionString>
+            <title>1.0.0-nightly.12+43af73b</title>
+            <pubDate>Thu, 25 Jun 2026 23:41:37 +0000</pubDate>
+            <sparkle:version>12</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.12+43af73b</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.11+0eb2f73.dmg" length="4493313" type="application/octet-stream"/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.12+43af73b.dmg" length="4496057" type="application/octet-stream" sparkle:edSignature="iDCbAq2lKP8hMl1VwOw6Hb3ngEQy7aO7vYVBTY93B0VaFbqO3YLZA1RH2FnLsLsbJBoGtpoc8WmVOUH/+bNGAg=="/>
         </item>
     </channel>
 </rss>
