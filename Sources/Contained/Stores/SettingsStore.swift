@@ -53,7 +53,9 @@ final class SettingsStore {
         notifyOnCrash = defaults.object(forKey: Keys.notifyOnCrash) as? Bool ?? true
         revealCLI = defaults.object(forKey: Keys.revealCLI) as? Bool ?? true
         historyRetentionDays = defaults.object(forKey: Keys.historyRetention) as? Int ?? 7
-        updateChannel = UpdateChannel(rawValue: defaults.string(forKey: Keys.updateChannel) ?? "") ?? .stable
+        // Default to Nightly while the app is pre-1.0 — that's where the only builds ship, so a fresh
+        // install actually receives updates. Users can switch to Beta/Stable in Settings → Updates.
+        updateChannel = UpdateChannel(rawValue: defaults.string(forKey: Keys.updateChannel) ?? "") ?? .nightly
         lastSection = defaults.string(forKey: Keys.lastSection) ?? ""
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
