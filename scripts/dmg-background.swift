@@ -23,15 +23,19 @@ struct Style {
     let bg, pillBg, pillBorder, pillText, arrow, caption: NSColor
     let captionText: String
 }
+// `bg` is the solid brand color at the BOTTOM of the window; the background fades to transparent
+// toward the top so the window's native (light/dark-adaptive) surface shows through there and blends
+// with the title bar in either appearance. Pills are solid colored badges (readable on both native
+// surfaces); the arrow is a mid-tone that reads on white and dark; captions sit on the solid bottom.
 let styles: [String: Style] = [
-    "stable": Style(bg: hex("#F3F7FD"), pillBg: hex("#E6F1FB"), pillBorder: hex("#B5D4F4"),
-                    pillText: hex("#0C447C"), arrow: hex("#85B7EB"), caption: hex("#5F8FBF"),
+    "stable": Style(bg: hex("#2E86E0"), pillBg: hex("#2E86E0"), pillBorder: hex("#1E6FC0"),
+                    pillText: hex("#FFFFFF"), arrow: hex("#2E86E0"), caption: hex("#FFFFFF"),
                     captionText: "Drag Contained to Applications to install"),
-    "beta": Style(bg: hex("#FBF3E6"), pillBg: hex("#FAEEDA"), pillBorder: hex("#FAC775"),
-                  pillText: hex("#633806"), arrow: hex("#E0B062"), caption: hex("#A8884E"),
+    "beta": Style(bg: hex("#ED9F26"), pillBg: hex("#ED9F26"), pillBorder: hex("#C57E10"),
+                  pillText: hex("#4A2B07"), arrow: hex("#C57E10"), caption: hex("#4A2B07"),
                   captionText: "Prerelease software — may contain bugs"),
-    "nightly": Style(bg: hex("#191630"), pillBg: hex("#2A2550"), pillBorder: hex("#3C3489"),
-                     pillText: hex("#CECBF6"), arrow: hex("#7F77DD"), caption: hex("#8983C4"),
+    "nightly": Style(bg: hex("#4A41A8"), pillBg: hex("#4A41A8"), pillBorder: hex("#6E66C8"),
+                     pillText: hex("#FFFFFF"), arrow: hex("#8B83D9"), caption: hex("#FFFFFF"),
                      captionText: "Bleeding edge — will contain bugs"),
 ]
 let st = styles[channel] ?? styles["stable"]!
@@ -53,9 +57,11 @@ let xf = NSAffineTransform(); xf.scale(by: scale); xf.concat()   // work in poin
 
 func fromTop(_ topY: CGFloat, _ h: CGFloat) -> CGFloat { hpt - topY - h }  // top-origin → AppKit y
 
-// Surface.
-st.bg.setFill()
-NSRect(x: 0, y: 0, width: wpt, height: hpt).fill()
+// Surface: solid brand color at the bottom fading to transparent at the top (alpha gradient), so the
+// title-bar area shows the window's native surface and blends in light *and* dark mode.
+let surface = NSGradient(colors: [st.bg, st.bg, st.bg.withAlphaComponent(0)],
+                         atLocations: [0.0, 0.25, 1.0], colorSpace: .sRGB)!
+surface.draw(in: NSRect(x: 0, y: 0, width: wpt, height: hpt), angle: 90)
 
 // Centered text helper.
 func draw(_ text: String, font: NSFont, color: NSColor, centerX: CGFloat, topY: CGFloat,
