@@ -20,11 +20,9 @@ struct RootView: View {
             content
                 .contentBackground(reduceTransparency: settings.reduceTranslucency,
                                    material: settings.windowMaterial.nsMaterial)
-                .mainToolbar(ui: ui, settings: settings)
+                .toolbar { mainToolbar }
                 .toolbarBackground(.visible, for: .windowToolbar)
                 .navigationTitle(ui.section.title)
-                .searchable(text: $ui.searchText, prompt: "Search \(ui.section.title.lowercased())")
-                .searchFocused($searchFocused)
                 .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil }) {
                     ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
                 }
@@ -57,6 +55,90 @@ struct RootView: View {
             app.coordinator.isActive = (phase == .active)
         }
         .onChange(of: ui.focusSearchTick) { _, _ in searchFocused = true }
+    }
+
+    // MARK: - Unified toolbar (same shape on every page)
+
+    @ToolbarContentBuilder
+    private var mainToolbar: some ToolbarContent {
+        @Bindable var ui = ui
+        @Bindable var settings = app.settings
+
+        // Leading: a single "＋" that adds anything, from any page.
+        ToolbarItem(placement: .navigation) {
+            Menu {
+                Button { ui.dispatch(.runContainer) } label: { Label("New Container…", systemImage: "shippingbox") }
+                Button { ui.dispatch(.pullImage) } label: { Label("Pull Image…", systemImage: "arrow.down.circle") }
+                Divider()
+                Button { ui.dispatch(.createVolume) } label: { Label("New Volume…", systemImage: "externaldrive.badge.plus") }
+                Button { ui.dispatch(.createNetwork) } label: { Label("New Network…", systemImage: "network") }
+                Button { ui.dispatch(.registryLogin) } label: { Label("Registry Login…", systemImage: "person.badge.key") }
+                Divider()
+                Button { ui.section = .templates; ui.pendingComposeImport = true } label: {
+                    Label("Import Compose…", systemImage: "square.on.square")
+                }
+            } label: {
+                Image(systemName: "plus")
+            }
+            .menuIndicator(.hidden)
+            .help("Add…")
+        }
+
+        // Center: search.
+        ToolbarItem(placement: .principal) {
+            searchField(ui: ui)
+        }
+
+        // Trailing: the remaining, page-relevant actions.
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                Button { app.coordinator.wake() } label: { Label("Refresh", systemImage: "arrow.clockwise") }
+                switch ui.section {
+                case .containers:
+                    Divider()
+                    Toggle(isOn: $ui.runningOnly) { Label("Show running only", systemImage: "play.circle") }
+                    Picker(selection: $settings.density) {
+                        ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
+                    } label: { Label("Card size", systemImage: "square.grid.2x2") }
+                case .images:
+                    Divider()
+                    Button { ui.dispatch(.loadImage) } label: { Label("Load Image Tar…", systemImage: "square.and.arrow.down") }
+                    Button { ui.dispatch(.pruneImages) } label: { Label("Prune Images…", systemImage: "trash") }
+                case .system:
+                    Divider()
+                    Button { ui.dispatch(.activityHistory) } label: { Label("Activity History", systemImage: "clock.arrow.circlepath") }
+                    Button { ui.dispatch(.systemLogs) } label: { Label("System Logs", systemImage: "text.alignleft") }
+                default:
+                    EmptyView()
+                }
+                Divider()
+                Button { ui.showPalette = true } label: { Label("Command Palette…", systemImage: "command") }
+            } label: {
+                Image(systemName: "ellipsis")
+            }
+            .menuIndicator(.hidden)
+            .help("More actions")
+        }
+    }
+
+    private func searchField(ui: UIState) -> some View {
+        @Bindable var ui = ui
+        return HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").font(.caption).foregroundStyle(.secondary)
+            TextField("Search \(ui.section.title.lowercased())", text: $ui.searchText)
+                .textFieldStyle(.plain)
+                .focused($searchFocused)
+                .frame(width: 220)
+            if !ui.searchText.isEmpty {
+                Button { ui.searchText = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.plain).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, Tokens.Space.s)
+        .padding(.vertical, 5)
+        .background(.quaternary.opacity(0.5), in: Capsule())
     }
 
     @ViewBuilder
