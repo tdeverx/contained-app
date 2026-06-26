@@ -7,7 +7,7 @@ override those defaults:
 
 | File | Overrides | Falls back to |
 |------|-----------|---------------|
-| `background-<channel>.png` | The window background. 760×1040 (380×560 @2×). | Auto-generated tinted background. |
+| `background-<channel>.png` | The window background. 380×560 px (the window size — Finder paints it 1:1, so match these dimensions exactly). | Auto-generated tinted background. |
 | `volume-<channel>.icns` | The mounted-volume icon. | `Resources/Contained.icns` (the main icon), then the system default. |
 
 `<channel>` is `stable`, `beta`, or `nightly`.

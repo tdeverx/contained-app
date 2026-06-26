@@ -36,8 +36,10 @@ let styles: [String: Style] = [
 ]
 let st = styles[channel] ?? styles["stable"]!
 
-// Window content is 380×560 points; render at 2× for retina.
-let scale: CGFloat = 2
+// Window content is 380×560 points. Render the PNG at exactly that pixel size (1×) so Finder paints
+// it 1:1 onto the window — fills edge-to-edge, no fit/letterbox, content stays centered. (A 2× image
+// gets treated as 1× by create-dmg/Finder and shows only a corner; DPI tags don't fix it.)
+let scale: CGFloat = 1
 let wpt: CGFloat = 380, hpt: CGFloat = 560
 let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(wpt * scale),
                            pixelsHigh: Int(hpt * scale), bitsPerSample: 8, samplesPerPixel: 4,
