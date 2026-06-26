@@ -66,8 +66,8 @@ create-dmg \
   --window-pos 200 120 \
   --window-size 380 560 \
   --icon-size 104 \
-  --icon "$APP" 190 180 \
-  --app-drop-link 190 430 \
+  --icon "$APP" 190 172 \
+  --app-drop-link 190 392 \
   --hide-extension "$APP" \
   --no-internet-enable \
   "$OUT" "$APP"

@@ -57,11 +57,11 @@ let xf = NSAffineTransform(); xf.scale(by: scale); xf.concat()   // work in poin
 
 func fromTop(_ topY: CGFloat, _ h: CGFloat) -> CGFloat { hpt - topY - h }  // top-origin → AppKit y
 
-// Surface: the brand color is a low accent along the bottom edge, fading to fully transparent by the
-// lower third so the whole upper window shows the native (appearance-adaptive) surface and blends
-// with the title bar in light *and* dark mode.
-let surface = NSGradient(colors: [st.bg, st.bg, st.bg.withAlphaComponent(0)],
-                         atLocations: [0.0, 0.10, 0.42], colorSpace: .sRGB)!
+// Surface: the brand color is a soft accent along the bottom, fading smoothly (one continuous ramp,
+// no plateau) to fully transparent by just under halfway up, so the upper window shows the native
+// (appearance-adaptive) surface and blends with the title bar in light *and* dark mode.
+let surface = NSGradient(colors: [st.bg, st.bg.withAlphaComponent(0)],
+                         atLocations: [0.0, 0.46], colorSpace: .sRGB)!
 surface.draw(in: NSRect(x: 0, y: 0, width: wpt, height: hpt), angle: 90)
 
 // Centered text helper.
@@ -80,7 +80,7 @@ func draw(_ text: String, font: NSFont, color: NSColor, centerX: CGFloat, topY: 
 // Version pill (top, centered).
 let pillFont = NSFont.systemFont(ofSize: 13, weight: .medium)
 let pillSize = (pillText as NSString).size(withAttributes: [.font: pillFont])
-let pillW = pillSize.width + 30, pillH: CGFloat = 30, pillTop: CGFloat = 28
+let pillW = pillSize.width + 30, pillH: CGFloat = 30, pillTop: CGFloat = 43
 let pillRect = NSRect(x: wpt / 2 - pillW / 2, y: fromTop(pillTop, pillH), width: pillW, height: pillH)
 let pill = NSBezierPath(roundedRect: pillRect, xRadius: pillH / 2, yRadius: pillH / 2)
 st.pillBg.setFill(); pill.fill()
@@ -96,19 +96,19 @@ curl.lineWidth = 7
 curl.lineCapStyle = .round
 curl.lineJoinStyle = .round
 curl.move(to: NSPoint(x: ax, y: fromTop(250, 0)))
-curl.curve(to: NSPoint(x: ax, y: fromTop(348, 0)),
-           controlPoint1: NSPoint(x: ax - 54, y: fromTop(284, 0)),
-           controlPoint2: NSPoint(x: ax + 54, y: fromTop(316, 0)))
+curl.curve(to: NSPoint(x: ax, y: fromTop(316, 0)),
+           controlPoint1: NSPoint(x: ax - 46, y: fromTop(278, 0)),
+           controlPoint2: NSPoint(x: ax + 46, y: fromTop(300, 0)))
 curl.stroke()
 let head = NSBezierPath()
-head.move(to: NSPoint(x: ax, y: fromTop(374, 0)))          // tip
-head.line(to: NSPoint(x: ax - 16, y: fromTop(346, 0)))
-head.line(to: NSPoint(x: ax + 16, y: fromTop(346, 0)))
+head.move(to: NSPoint(x: ax, y: fromTop(336, 0)))          // tip
+head.line(to: NSPoint(x: ax - 16, y: fromTop(314, 0)))
+head.line(to: NSPoint(x: ax + 16, y: fromTop(314, 0)))
 head.close(); head.fill()
 
 // Caption (bottom, centered).
 _ = draw(st.captionText, font: NSFont.systemFont(ofSize: 12), color: st.caption,
-         centerX: wpt / 2, topY: 512, boxWidth: wpt - 40)
+         centerX: wpt / 2, topY: 500, boxWidth: wpt - 40)
 
 NSGraphicsContext.restoreGraphicsState()
 guard let data = rep.representation(using: .png, properties: [:]) else { exit(1) }
