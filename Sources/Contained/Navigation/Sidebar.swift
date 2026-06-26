@@ -7,18 +7,48 @@ struct Sidebar: View {
     @Binding var selection: AppSection
 
     var body: some View {
-        List(selection: $selection) {
+        // No `selection:` binding: the native sidebar highlight is drawn by AppKit in the *system*
+        // accent and can't be recolored from SwiftUI. We suppress it and render selection ourselves
+        // (a tinted capsule via `.listRowBackground`) so the in-app Accent tint drives it. Keyboard
+        // section-switching stays available via the ⌘1–9 "Go" menu shortcuts.
+        List {
             ForEach(AppSection.Group.allCases) { group in
                 Section(group.rawValue) {
                     ForEach(group.sections) { section in
-                        Label(section.title, systemImage: section.systemImage)
-                            .badge(badge(for: section))
-                            .tag(section)
+                        row(section)
                     }
                 }
             }
         }
         .listStyle(.sidebar)
+    }
+
+    @ViewBuilder
+    private func row(_ section: AppSection) -> some View {
+        let isSelected = selection == section
+        Label(section.title, systemImage: section.systemImage)
+            .badge(badge(for: section))
+            .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .listRowBackground(selectionBackground(isSelected))
+            .onTapGesture { selection = section }
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// The selected row's highlight: a prominent, accent-tinted Liquid Glass capsule, inset from the
+    /// row edges so it floats like a native sidebar selection.
+    @ViewBuilder
+    private func selectionBackground(_ isSelected: Bool) -> some View {
+        if isSelected {
+            let shape = RoundedRectangle(cornerRadius: Tokens.Radius.control, style: .continuous)
+            Color.clear
+                .glassEffect(.regular.tint(app.settings.accentTint.color).interactive(), in: shape)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 1)
+        } else {
+            Color.clear
+        }
     }
 
     /// A count badge, or `nil` to show none (keeps the sidebar clean and consistent).

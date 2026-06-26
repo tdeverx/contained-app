@@ -131,8 +131,22 @@ private struct UpdatesTab: View {
         @Bindable var settings = app.settings
         Form {
             Section {
-                Picker("Update channel", selection: channelBinding) {
-                    ForEach(UpdateChannel.allCases) { Text($0.displayName).tag($0) }
+                LabeledContent("Update channel") {
+                    Menu(app.settings.updateChannel.displayName) {
+                        ForEach(UpdateChannel.allCases) { channel in
+                            Button {
+                                channelBinding.wrappedValue = channel
+                            } label: {
+                                if app.settings.updateChannel == channel {
+                                    Label(channel.displayName, systemImage: "checkmark")
+                                } else {
+                                    Text(channel.displayName)
+                                }
+                            }
+                            .disabled(!app.updater.availableChannels.contains(channel))
+                        }
+                    }
+                    .fixedSize()
                 }
                 Toggle("Automatically check for updates",
                        isOn: Binding(get: { app.updater.automaticallyChecks },
@@ -142,11 +156,12 @@ private struct UpdatesTab: View {
             } header: {
                 Text("Updates")
             } footer: {
-                Text("\(settings.updateChannel.footnote) Channels are cumulative — Nightly still receives Beta and Stable. Delivered via Sparkle once a signed build points at the release feed; inert in development builds.")
+                Text("\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
+        .task { app.updater.refreshChannelAvailability() }
     }
 
     private var channelBinding: Binding<UpdateChannel> {
