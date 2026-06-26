@@ -35,7 +35,7 @@ let styles: [String: Style] = [
                   pillText: hex("#4A2B07"), arrow: hex("#C57E10"), caption: hex("#4A2B07"),
                   captionText: "Prerelease software — may contain bugs"),
     "nightly": Style(bg: hex("#4A41A8"), pillBg: hex("#4A41A8"), pillBorder: hex("#6E66C8"),
-                     pillText: hex("#FFFFFF"), arrow: hex("#8B83D9"), caption: hex("#FFFFFF"),
+                     pillText: hex("#FFFFFF"), arrow: hex("#6E5FD6"), caption: hex("#FFFFFF"),
                      captionText: "Bleeding edge — will contain bugs"),
 ]
 let st = styles[channel] ?? styles["stable"]!
@@ -57,10 +57,11 @@ let xf = NSAffineTransform(); xf.scale(by: scale); xf.concat()   // work in poin
 
 func fromTop(_ topY: CGFloat, _ h: CGFloat) -> CGFloat { hpt - topY - h }  // top-origin → AppKit y
 
-// Surface: solid brand color at the bottom fading to transparent at the top (alpha gradient), so the
-// title-bar area shows the window's native surface and blends in light *and* dark mode.
+// Surface: the brand color is a low accent along the bottom edge, fading to fully transparent by the
+// lower third so the whole upper window shows the native (appearance-adaptive) surface and blends
+// with the title bar in light *and* dark mode.
 let surface = NSGradient(colors: [st.bg, st.bg, st.bg.withAlphaComponent(0)],
-                         atLocations: [0.0, 0.25, 1.0], colorSpace: .sRGB)!
+                         atLocations: [0.0, 0.10, 0.42], colorSpace: .sRGB)!
 surface.draw(in: NSRect(x: 0, y: 0, width: wpt, height: hpt), angle: 90)
 
 // Centered text helper.
@@ -87,17 +88,22 @@ st.pillBorder.setStroke(); pill.lineWidth = 1; pill.stroke()
 _ = draw(pillText, font: pillFont, color: st.pillText, centerX: wpt / 2,
          topY: pillTop + (pillH - pillSize.height) / 2, boxWidth: pillW)
 
-// Down-arrow between the two icon slots (app icon ~180, Applications ~430).
+// Curly, prominent drag-arrow swooping from the app icon down to Applications.
 st.arrow.setStroke(); st.arrow.setFill()
 let ax = wpt / 2
-let shaft = NSBezierPath()
-shaft.move(to: NSPoint(x: ax, y: fromTop(270, 0)))
-shaft.line(to: NSPoint(x: ax, y: fromTop(330, 0)))
-shaft.lineWidth = 3; shaft.lineCapStyle = .round; shaft.stroke()
+let curl = NSBezierPath()
+curl.lineWidth = 7
+curl.lineCapStyle = .round
+curl.lineJoinStyle = .round
+curl.move(to: NSPoint(x: ax, y: fromTop(250, 0)))
+curl.curve(to: NSPoint(x: ax, y: fromTop(348, 0)),
+           controlPoint1: NSPoint(x: ax - 54, y: fromTop(284, 0)),
+           controlPoint2: NSPoint(x: ax + 54, y: fromTop(316, 0)))
+curl.stroke()
 let head = NSBezierPath()
-head.move(to: NSPoint(x: ax, y: fromTop(344, 0)))
-head.line(to: NSPoint(x: ax - 11, y: fromTop(330, 0)))
-head.line(to: NSPoint(x: ax + 11, y: fromTop(330, 0)))
+head.move(to: NSPoint(x: ax, y: fromTop(374, 0)))          // tip
+head.line(to: NSPoint(x: ax - 16, y: fromTop(346, 0)))
+head.line(to: NSPoint(x: ax + 16, y: fromTop(346, 0)))
 head.close(); head.fill()
 
 // Caption (bottom, centered).
