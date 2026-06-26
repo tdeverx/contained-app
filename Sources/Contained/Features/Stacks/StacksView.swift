@@ -75,7 +75,7 @@ struct StacksView: View {
             }
         }
         .padding(Tokens.Space.l)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
         .contextMenu { stackMenu(stack) }
     }
 

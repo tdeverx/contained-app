@@ -188,8 +188,8 @@ final class AppModel {
             imagesError = await captured { self.images = try await client.images() }
         case .volumes:
             if let v = try? await client.volumes() { volumes = v }
-        case .networks:
-            if let n = try? await client.networks() { networks = n }
+        case .containers:
+            await refreshNetworks()   // networks are grouped into the Containers page now
         case .registries:
             if let r = try? await client.registries() { registries = r }
         case .system:
@@ -198,6 +198,13 @@ final class AppModel {
         default:
             break
         }
+    }
+
+    /// Refresh the cached network list. Networks back the collapsible groups on the Containers page
+    /// (there's no standalone Networks section), so this is exposed directly rather than via a key.
+    func refreshNetworks() async {
+        guard let client, bootstrap == .ready else { return }
+        if let n = try? await client.networks() { networks = n }
     }
 
     // MARK: Create (pull-aware)
@@ -223,6 +230,30 @@ final class AppModel {
             healthChecks.setCheck(spec.healthCheck, for: newID)
             historyStore.record(.lifecycle, containerID: newID, message: "Created \(newID)")
         }
+        return newID
+    }
+
+    /// Recreate an existing container from an edited spec. Pulls the replacement image before
+    /// deleting the current container so an unavailable image does not strand the edit flow.
+    @discardableResult
+    func recreateContainer(originalID: String, spec: RunSpec) async -> String? {
+        guard client != nil else { return nil }
+        if !(await imageIsLocal(spec.image)) {
+            guard await pullImage(spec.image) else { return nil }
+        }
+        guard await containers.recreate(originalID: originalID, spec: spec) else { return nil }
+        let newID = spec.name.isEmpty ? originalID : spec.name
+        if newID != originalID {
+            personalization.clearOverride(id: originalID)
+            healthChecks.clear(id: originalID)
+        }
+        if spec.personalization.isDefault {
+            personalization.clearOverride(id: newID)
+        } else {
+            personalization.setOverride(spec.personalization, for: newID)
+        }
+        healthChecks.setCheck(spec.healthCheck, for: newID)
+        historyStore.record(.lifecycle, containerID: newID, message: "Recreated \(newID)")
         return newID
     }
 

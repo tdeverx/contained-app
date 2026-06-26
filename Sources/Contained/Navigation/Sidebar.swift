@@ -1,7 +1,9 @@
 import SwiftUI
 import ContainedCore
 
-/// Native `.sidebar` list grouped Workloads / Infra / System with live count badges.
+/// Native `.sidebar` list grouped Workloads / Infra / System with live count badges. The window has
+/// no toolbar; "add" actions live in the menu bar's File ▸ New group and the page-overflow actions
+/// are reached by right-clicking the content background.
 struct Sidebar: View {
     @Environment(AppModel.self) private var app
     @Binding var selection: AppSection

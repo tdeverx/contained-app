@@ -87,7 +87,7 @@ struct TemplatesView: View {
         }
         .padding(Tokens.Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
         .contextMenu {
             Button { onUse() } label: { Label("Use", systemImage: "plus.circle") }
             if let onDelete {

@@ -11,7 +11,6 @@ struct ImagesListView: View {
     @State private var tagging: ContainedCore.ImageResource?
     @State private var pushing: ContainedCore.ImageResource?
     @State private var deleting: ContainedCore.ImageResource?
-    @State private var customizing: CustomizeSheet.Target?
     @State private var pulling = false
     @State private var pruning = false
 
@@ -44,7 +43,6 @@ struct ImagesListView: View {
         .sheet(item: $historyFor) { ImageHistorySheet(image: $0) }
         .sheet(item: $tagging) { TagImageSheet(source: $0.reference) }
         .sheet(item: $pushing) { PushImageSheet(reference: $0.reference) }
-        .sheet(item: $customizing) { CustomizeSheet(target: $0) }
         .sheet(isPresented: $pulling) { PullImageSheet() }
         .confirmationDialog("Delete \(deleting.map { Format.shortImage($0.reference) } ?? "")?",
                             isPresented: deleteBinding, presenting: deleting) { image in
@@ -67,12 +65,28 @@ struct ImagesListView: View {
         let runnable = image.variants.filter(\.isRunnable)
         let size = runnable.compactMap(\.size).max() ?? image.variants.compactMap(\.size).max()
         let arches = runnable.map(\.platform.architecture).joined(separator: ", ")
-        return ResourceRow(symbol: "square.stack.3d.up", tint: .accentColor,
-                           title: Format.shortImage(image.reference),
-                           subtitle: [size.map { Format.bytes(UInt64($0)) }, arches.isEmpty ? nil : arches]
-                            .compactMap { $0 }.joined(separator: "  ·  ")) {
+        let style = app.personalization.imageDefault(for: image.reference) ?? Personalization()
+        let title = style.displayName(fallback: Format.shortImage(image.reference))
+        let subtitle = [size.map { Format.bytes(UInt64($0)) }, arches.isEmpty ? nil : arches]
+            .compactMap { $0 }.joined(separator: "  ·  ")
+        return HStack(spacing: Tokens.Space.m) {
+            ImageStyleButton(image: image, style: style)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                if !subtitle.isEmpty {
+                    Text(subtitle).font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            Spacer(minLength: Tokens.Space.s)
             GlassRowMenu { menuItems(image) }
         }
+        .padding(Tokens.Space.m)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card,
+                      fill: style.fillBackground ? style.color : nil,
+                      fillOpacity: style.backgroundOpacity,
+                      gradient: style.gradient,
+                      gradientAngle: style.gradientAngle)
         .contextMenu { menuItems(image) }
     }
 
@@ -80,7 +94,6 @@ struct ImagesListView: View {
     @ViewBuilder
     private func menuItems(_ image: ContainedCore.ImageResource) -> some View {
         Button { ui.runImage(image.reference) } label: { Label("Run…", systemImage: "play") }
-        Button { customizing = .image(reference: image.reference) } label: { Label("Customize style…", systemImage: "paintbrush.pointed") }
         Button { tagging = image } label: { Label("Tag…", systemImage: "tag") }
         Button { pushing = image } label: { Label("Push…", systemImage: "arrow.up.circle") }
         Button { copyToPasteboard(image.reference) } label: { Label("Copy reference", systemImage: "doc.on.doc") }

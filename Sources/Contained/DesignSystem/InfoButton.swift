@@ -7,6 +7,7 @@ import SwiftUI
 struct InfoButton: View {
     let text: String
     @Environment(AppModel.self) private var app
+    @Environment(\.modalMaterial) private var modalMaterial
     @State private var showing = false
 
     init(_ text: String) { self.text = text }
@@ -26,6 +27,10 @@ struct InfoButton: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(width: 300)
                     .padding(Tokens.Space.m)
+                    .background {
+                        VisualEffectBackground(material: modalMaterial.nsMaterial, blendingMode: .withinWindow)
+                    }
+                    .presentationBackground(.clear)
             }
         }
     }

@@ -64,7 +64,7 @@ struct ContainerOverviewTab: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Tokens.Space.m)
-        .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: Tokens.Radius.control, style: .continuous))
+        .background(.quaternary.opacity(0.10), in: RoundedRectangle(cornerRadius: Tokens.Radius.control, style: .continuous))
     }
 
     private func row(_ label: String, _ value: String) -> some View {

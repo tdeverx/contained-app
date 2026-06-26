@@ -1,20 +1,80 @@
 import SwiftUI
 import ContainedCore
 
-/// The Containers screen: a responsive grid of personalized glass cards. Filters/density/run live
-/// in the window toolbar; tapping a card opens the detail sheet; the dashed card opens Create/Run.
+/// The Containers screen: a responsive grid of personalized glass cards. Density and the running
+/// filter live in the sidebar header's ⋯ menu; tapping a card grows it in place into a centered
+/// detail panel.
 struct ContainersGridView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
 
     @State private var detail: ContainerSnapshot?
-    @State private var customizing: ContainerSnapshot?
     @State private var editing: ContainerSnapshot?
     @State private var deleting: ContainerSnapshot?
     @State private var selecting = false
     @State private var selection: Set<String> = []
+    /// Drives the in-place grow: false = card sits in its grid slot, true = promoted to the centered
+    /// panel. A single spring on this flag owns the whole motion (no matchedGeometry to fight).
+    @State private var expanded = false
+    /// Live frames of every visible grid card (in the "grid" coordinate space) so the promoted card
+    /// can start from the exact slot it was tapped in.
+    @State private var cardFrames: [String: CGRect] = [:]
+
+    // Network grouping is folded into this page: each network is a collapsible section of the
+    // containers attached to it. These drive the network-level CRUD (no separate Networks page).
+    @State private var collapsedNetworks: Set<String> = []
+    @State private var creatingNetwork = false
+    @State private var inspectingNetwork: NetworkResource?
+    @State private var deletingNetwork: NetworkResource?
+
+    private let detailSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
 
     private var store: ContainersStore { app.containers }
+
+    /// A network and the (filtered) containers attached to it. `resource` is nil for the synthetic
+    /// "default" bucket when the runtime has no builtin network of its own.
+    private struct NetworkGroup: Identifiable {
+        let name: String
+        let resource: NetworkResource?
+        let containers: [ContainerSnapshot]
+        var id: String { name }
+        var isBuiltin: Bool { resource?.isBuiltin ?? true }
+    }
+
+    /// The network names a container is attached to (requested config ∪ runtime status).
+    private func networkNames(_ snapshot: ContainerSnapshot) -> [String] {
+        let names = snapshot.configuration.networks.map(\.network) + snapshot.status.networks.map(\.network)
+        return Array(Set(names)).sorted()
+    }
+
+    /// Containers grouped by network. Every known network gets a section (empty ones included);
+    /// containers on multiple networks appear under each; unattached containers fall to "default".
+    private var groups: [NetworkGroup] {
+        let byNetworkName = Dictionary(app.networks.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
+        let defaultName = app.networks.first { $0.isBuiltin }?.name ?? "default"
+
+        var buckets: [String: [ContainerSnapshot]] = [:]
+        for network in app.networks { buckets[network.name] = [] }
+        buckets[defaultName, default: []] = buckets[defaultName] ?? []
+
+        for snapshot in filtered {
+            let names = networkNames(snapshot)
+            if names.isEmpty {
+                buckets[defaultName, default: []].append(snapshot)
+            } else {
+                for name in names { buckets[name, default: []].append(snapshot) }
+            }
+        }
+
+        return buckets.keys.sorted { lhs, rhs in
+            // The default / builtin network sorts first, then alphabetical.
+            if lhs == defaultName { return true }
+            if rhs == defaultName { return false }
+            return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+        }.map { name in
+            NetworkGroup(name: name, resource: byNetworkName[name], containers: buckets[name] ?? [])
+        }
+    }
 
     private var columns: [GridItem] {
         let density = app.settings.density
@@ -33,60 +93,51 @@ struct ContainersGridView: View {
     }
 
     var body: some View {
-        ScrollView {
-            GlassEffectContainer(spacing: Tokens.Space.m) {
-                LazyVGrid(columns: columns, spacing: Tokens.Space.m) {
-                    ForEach(filtered) { snapshot in
-                        let style = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
-                        ContainerCard(
-                            snapshot: snapshot,
-                            style: style,
-                            density: app.settings.density,
-                            stats: store.statsByID[snapshot.id],
-                            history: store.historyByID[snapshot.id]?[style.graphMetric]?.values ?? [],
-                            isBusy: store.busyIDs.contains(snapshot.id),
-                            onTap: { selecting ? toggle(snapshot.id) : (detail = snapshot) },
-                            onStart: { Task { await store.start(snapshot.id) } },
-                            onStop: { Task { await store.stop(snapshot.id) } },
-                            onRestart: { Task { await store.restart(snapshot.id) } },
-                            onCustomize: { customizing = snapshot },
-                            onEdit: { editing = snapshot },
-                            onDelete: { deleting = snapshot },
-                            revealCLI: app.settings.revealCLI,
-                            health: app.health.status(for: snapshot.id),
-                            selecting: selecting,
-                            isSelected: selection.contains(snapshot.id)
-                        )
+        @Bindable var ui = ui
+        return GeometryReader { viewport in
+            ZStack {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
+                        ForEach(groups) { group in
+                            networkSection(group)
+                        }
                     }
-                    if !selecting {
-                        NewContainerCard(density: app.settings.density) { ui.showRunSheet = true }
-                    }
+                    .padding(Tokens.Space.l)
+                }
+                .scrollEdgeEffectStyle(.soft, for: .all)
+                .disabled(detail != nil)
+                .blur(radius: expanded ? 8 : 0)
+
+                if detail != nil {
+                    Rectangle()
+                        .fill(.black.opacity(expanded ? 0.28 : 0))
+                        .ignoresSafeArea()
+                        .contentShape(Rectangle())
+                        .onTapGesture { closeDetail() }
+                        .zIndex(5)
+                }
+
+                if let detail {
+                    let target = panelRect(in: viewport.size)
+                    let rect = expanded ? target : (cardFrames[detail.id] ?? target)
+                    expandedCard(detail)
+                        .frame(width: rect.width, height: rect.height)
+                        .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
+                        // Constant elevation — softer, lighter, larger. Not gated by `expanded`, so it
+                        // doesn't pop out and back in during the close.
+                        .shadow(color: .black.opacity(0.16), radius: 60, y: 26)
+                        .position(x: rect.midX, y: rect.midY)
+                        .zIndex(10)
                 }
             }
-            .padding(Tokens.Space.l)
-        }
-        .scrollEdgeEffectStyle(.soft, for: .top)
-        .overlay(alignment: .topTrailing) {
-            if !filtered.isEmpty {
-                Button(selecting ? "Done" : "Select") {
-                    selecting.toggle()
-                    if !selecting { selection.removeAll() }
-                }
-                .buttonStyle(.glass)
-                .padding(Tokens.Space.m)
-            }
+            .coordinateSpace(.named("grid"))
+            .onPreferenceChange(CardFrameKey.self) { cardFrames = $0 }
         }
         .overlay(alignment: .bottom) {
             if selecting && !selection.isEmpty { batchBar } else if let message = store.errorMessage { ErrorToast(message: message) }
         }
         .overlay {
-            if filtered.isEmpty { emptyState }
-        }
-        .sheet(item: $detail) { snapshot in
-            ContainerDetailView(snapshot: snapshot, onClose: { detail = nil })
-        }
-        .sheet(item: $customizing) { snapshot in
-            CustomizeSheet(snapshot: snapshot)
+            if store.snapshots.isEmpty && app.networks.isEmpty { emptyState }
         }
         .sheet(item: $editing) { snapshot in
             ContainerEditSheet(mode: .edit(snapshot, onComplete: { editing = nil }))
@@ -103,7 +154,202 @@ struct ContainersGridView: View {
         } message: {
             Text("This removes the container. This can't be undone.")
         }
+        // Network-level actions (formerly the Networks page).
+        .task { await app.refreshNetworks() }
+        .onAppear { if ui.pendingAction == .createNetwork { ui.pendingAction = nil; creatingNetwork = true } }
+        .onChange(of: ui.pendingAction) { _, _ in if ui.pendingAction == .createNetwork { ui.pendingAction = nil; creatingNetwork = true } }
+        .sheet(isPresented: $creatingNetwork) {
+            CreateNetworkSheet { name, subnet, internalOnly in
+                await createNetwork(name: name, subnet: subnet, internalOnly: internalOnly)
+            }
+        }
+        .sheet(item: $inspectingNetwork) { JSONInspectorSheet(title: $0.name, value: $0) }
+        .confirmationDialog("Delete network \(deletingNetwork?.name ?? "")?",
+                            isPresented: deleteNetworkBinding, presenting: deletingNetwork) { network in
+            Button("Delete", role: .destructive) { Task { await deleteNetwork(network) } }
+        } message: { _ in Text("This removes the network. Containers must be detached first.") }
         .refreshable { await store.refresh() }
+    }
+
+    // MARK: - Network sections
+
+    @ViewBuilder
+    private func networkSection(_ group: NetworkGroup) -> some View {
+        let collapsed = collapsedNetworks.contains(group.name)
+        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            sectionHeader(group, collapsed: collapsed)
+            if !collapsed {
+                if group.containers.isEmpty {
+                    Text("No containers on this network.")
+                        .font(.callout)
+                        .foregroundStyle(.tertiary)
+                        .padding(.vertical, Tokens.Space.s)
+                        .padding(.leading, Tokens.Space.xs)
+                } else {
+                    LazyVGrid(columns: columns, spacing: Tokens.Space.m) {
+                        ForEach(group.containers) { snapshot in
+                            gridCard(snapshot)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func sectionHeader(_ group: NetworkGroup, collapsed: Bool) -> some View {
+        HStack(spacing: Tokens.Space.s) {
+            Button {
+                toggleCollapsed(group.name)
+            } label: {
+                HStack(spacing: Tokens.Space.s) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(collapsed ? 0 : 90))
+                    Image(systemName: "network").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(group.name).font(.headline)
+                    Text("\(group.containers.count)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(.quaternary, in: Capsule())
+                    if group.isBuiltin {
+                        Text("builtin").font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 7).padding(.vertical, 2)
+                            .background(.quaternary, in: Capsule())
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Spacer(minLength: 0)
+            if let resource = group.resource {
+                GlassRowMenu { networkMenu(resource) }
+            }
+        }
+        .padding(.horizontal, Tokens.Space.xs)
+        .padding(.vertical, Tokens.Space.xs)
+        .contextMenu { if let resource = group.resource { networkMenu(resource) } }
+    }
+
+    @ViewBuilder
+    private func networkMenu(_ resource: NetworkResource) -> some View {
+        Button { inspectingNetwork = resource } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
+        Button { copyToPasteboard(resource.name) } label: { Label("Copy Name", systemImage: "doc.on.doc") }
+        if !resource.isBuiltin {
+            Divider()
+            Button(role: .destructive) { deletingNetwork = resource } label: { Label("Delete Network", systemImage: "trash") }
+        }
+    }
+
+    private func toggleCollapsed(_ name: String) {
+        if collapsedNetworks.contains(name) { collapsedNetworks.remove(name) } else { collapsedNetworks.insert(name) }
+    }
+
+    private var deleteNetworkBinding: Binding<Bool> {
+        Binding(get: { deletingNetwork != nil }, set: { if !$0 { deletingNetwork = nil } })
+    }
+
+    private func createNetwork(name: String, subnet: String?, internalOnly: Bool) async {
+        guard let client = app.client else { return }
+        do {
+            _ = try await client.createNetwork(name: name, subnet: subnet, internalOnly: internalOnly)
+            await app.refreshNetworks()
+        } catch let error as CommandError { app.flash(error.userMessage) }
+        catch { app.flash(error.localizedDescription) }
+    }
+
+    private func deleteNetwork(_ network: NetworkResource) async {
+        guard let client = app.client else { return }
+        do { _ = try await client.deleteNetworks([network.name]); await app.refreshNetworks() }
+        catch let error as CommandError { app.flash(error.userMessage) }
+        catch { app.flash(error.localizedDescription) }
+    }
+
+    @ViewBuilder
+    private func gridCard(_ snapshot: ContainerSnapshot) -> some View {
+        let selected = detail?.id == snapshot.id
+        compactCard(snapshot)
+            // Stays laid out (so the slot is reserved and its frame keeps publishing) but invisible
+            // while the promoted overlay grows out of it — no second card to see double.
+            .opacity(selected ? 0 : 1)
+            .allowsHitTesting(detail == nil)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: CardFrameKey.self,
+                        value: [snapshot.id: proxy.frame(in: .named("grid"))]
+                    )
+                }
+            )
+    }
+
+    private func compactCard(_ snapshot: ContainerSnapshot) -> some View {
+        containerCard(snapshot, isExpanded: false) {
+            selecting ? toggle(snapshot.id) : openDetail(snapshot)
+        }
+    }
+
+    private func expandedCard(_ snapshot: ContainerSnapshot) -> some View {
+        containerCard(snapshot, isExpanded: true) {}
+    }
+
+    private func containerCard(_ snapshot: ContainerSnapshot, isExpanded: Bool, onTap: @escaping () -> Void) -> some View {
+        let style = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+        return ContainerCard(
+            snapshot: snapshot,
+            style: style,
+            density: app.settings.density,
+            stats: store.statsByID[snapshot.id],
+            history: store.historyByID[snapshot.id]?[style.graphMetric]?.values ?? [],
+            isBusy: store.busyIDs.contains(snapshot.id),
+            isExpanded: isExpanded,
+            onTap: onTap,
+            onStart: { Task { await store.start(snapshot.id) } },
+            onStop: { Task { await store.stop(snapshot.id) } },
+            onRestart: { Task { await store.restart(snapshot.id) } },
+            onEdit: { editing = snapshot },
+            onDelete: { deleting = snapshot },
+            onClose: closeDetail,
+            onSelectMultiple: { beginSelecting(snapshot.id) },
+            onToggleSelected: { toggle(snapshot.id) },
+            onEndSelecting: { endSelecting() },
+            revealCLI: app.settings.revealCLI,
+            health: app.health.status(for: snapshot.id),
+            selecting: selecting,
+            isSelected: selection.contains(snapshot.id)
+        )
+    }
+
+    private func panelSize(in viewport: CGSize) -> CGSize {
+        let width = min(max(viewport.width * 0.62, 680), max(680, viewport.width - Tokens.Space.xxl * 2))
+        let height = min(620, max(520, viewport.height - Tokens.Space.xxl * 2))
+        return CGSize(width: width, height: height)
+    }
+
+    /// The centered final frame the promoted card grows into.
+    private func panelRect(in viewport: CGSize) -> CGRect {
+        let size = panelSize(in: viewport)
+        return CGRect(x: (viewport.width - size.width) / 2,
+                      y: (viewport.height - size.height) / 2,
+                      width: size.width, height: size.height)
+    }
+
+    private func openDetail(_ snapshot: ContainerSnapshot) {
+        // Render the card at its slot first (expanded == false), then spring it open on the next
+        // runloop so the grow has a real starting frame to animate from.
+        detail = snapshot
+        expanded = false
+        DispatchQueue.main.async {
+            withAnimation(detailSpring) { expanded = true }
+        }
+    }
+
+    private func closeDetail() {
+        withAnimation(detailSpring) { expanded = false } completion: {
+            detail = nil
+        }
     }
 
     private var batchBar: some View {
@@ -127,13 +373,22 @@ struct ContainersGridView: View {
         if selection.contains(id) { selection.remove(id) } else { selection.insert(id) }
     }
 
+    private func beginSelecting(_ id: String) {
+        selecting = true
+        selection = [id]
+    }
+
+    private func endSelecting() {
+        selection.removeAll()
+        selecting = false
+    }
+
     /// Run an action over every selected container, then exit selection mode.
     private func batch(_ action: @escaping (String) async -> Void) {
         let ids = selection
         Task {
             for id in ids { await action(id) }
-            selection.removeAll()
-            selecting = false
+            endSelecting()
         }
     }
 
@@ -155,27 +410,12 @@ struct ContainersGridView: View {
     }
 }
 
-/// The trailing dashed "+ new" card that starts a Create/Run flow.
-struct NewContainerCard: View {
-    var density: CardDensity
-    var action: () -> Void
-    private var height: CGFloat { density == .compact ? 118 : 154 }
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: Tokens.Space.s) {
-                Image(systemName: "plus").font(.system(size: 20, weight: .medium))
-                Text("Run a container").font(.callout)
-            }
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, minHeight: height, maxHeight: height)
-            .background {
-                RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1.2, dash: [6, 4]))
-                    .foregroundStyle(.secondary.opacity(0.4))
-            }
-        }
-        .buttonStyle(.plain)
+/// Collects each grid card's frame (in the "grid" coordinate space) so a tapped card can grow from
+/// the exact slot it lives in.
+private struct CardFrameKey: PreferenceKey {
+    static let defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }
 

@@ -1,8 +1,8 @@
 import SwiftUI
 import ContainedCore
 
-/// A ⌘K quick-action palette: fuzzy-search across navigation, global actions, and per-container
-/// lifecycle. Type to filter, ↑/↓ to move, ↵ to run, esc to dismiss.
+/// A global quick-action palette: search navigation, creation actions, page actions, and
+/// per-container lifecycle without replacing the native sidebar or toolbar.
 struct CommandPalette: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -10,13 +10,17 @@ struct CommandPalette: View {
     @FocusState private var fieldFocused: Bool
 
     @State private var query = ""
-    @State private var index = 0
+
+    private var items: [PaletteItem] {
+        PaletteItem.filtered(query, app: app, ui: ui)
+    }
 
     var body: some View {
+        @Bindable var ui = ui
         VStack(spacing: 0) {
             HStack(spacing: Tokens.Space.s) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Run a command…", text: $query)
+                TextField("Search or run a command...", text: $query)
                     .textFieldStyle(.plain)
                     .font(.title3)
                     .focused($fieldFocused)
@@ -24,63 +28,132 @@ struct CommandPalette: View {
                     .onKeyPress(.downArrow) { move(1); return .handled }
                     .onKeyPress(.upArrow) { move(-1); return .handled }
                     .onKeyPress(.escape) { dismiss(); return .handled }
+                if !query.isEmpty {
+                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .help("Clear search")
+                        .accessibilityLabel("Clear search")
+                }
             }
             .padding(Tokens.Space.l)
             Divider()
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 2) {
-                        ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
-                            row(item, selected: i == index).id(i)
+                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                            row(item, selected: index == ui.paletteIndex)
+                                .id(index)
+                                .contentShape(Rectangle())
                                 .onTapGesture { run(item) }
                         }
                     }
                     .padding(Tokens.Space.s)
                 }
-                .onChange(of: index) { _, new in proxy.scrollTo(new, anchor: .center) }
+                .frame(height: 360)
+                .onChange(of: ui.paletteIndex) { _, new in proxy.scrollTo(new, anchor: .center) }
             }
-            .frame(height: 360)
         }
         .frame(width: 560)
         .sheetMaterial()
-        .onAppear { fieldFocused = true }
-        .onChange(of: query) { _, _ in index = 0 }
+        .onAppear { fieldFocused = true; ui.paletteIndex = 0 }
+        .onChange(of: query) { _, _ in ui.paletteIndex = 0 }
+        .accessibilityElement(children: .contain)
     }
 
     private func row(_ item: PaletteItem, selected: Bool) -> some View {
         HStack(spacing: Tokens.Space.m) {
-            Image(systemName: item.icon).foregroundStyle(item.tint).frame(width: 22)
-            VStack(alignment: .leading, spacing: 0) {
+            Image(systemName: item.icon)
+                .foregroundStyle(item.tint)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 1) {
                 Text(item.title)
                 if let subtitle = item.subtitle {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary)
                 }
             }
             Spacer()
+            if selected {
+                Image(systemName: "return")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
-        .padding(.horizontal, Tokens.Space.m).padding(.vertical, Tokens.Space.s)
+        .padding(.horizontal, Tokens.Space.m)
+        .padding(.vertical, Tokens.Space.s)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(selected ? AnyShapeStyle(.tint.opacity(0.18)) : AnyShapeStyle(.clear),
                     in: RoundedRectangle(cornerRadius: Tokens.Radius.control))
-        .contentShape(Rectangle())
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    // MARK: Items
+    private func move(_ delta: Int) {
+        guard !items.isEmpty else { return }
+        ui.paletteIndex = min(max(0, ui.paletteIndex + delta), items.count - 1)
+    }
 
-    private var allItems: [PaletteItem] {
+    private func runSelected() {
+        guard items.indices.contains(ui.paletteIndex) else { return }
+        run(items[ui.paletteIndex])
+    }
+
+    private func run(_ item: PaletteItem) {
+        dismiss()
+        item.action()
+    }
+}
+
+/// One command-palette entry: a titled, icon'd action.
+struct PaletteItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String?
+    let icon: String
+    let tint: Color
+    let action: () -> Void
+
+    /// Every available command: navigation, add actions, page/global actions, and per-container
+    /// lifecycle. This is the app's single command surface now that the sidebar and toolbar are gone.
+    @MainActor
+    static func all(app: AppModel, ui: UIState) -> [PaletteItem] {
         var items: [PaletteItem] = []
-        // Navigation
         for section in AppSection.allCases {
-            items.append(PaletteItem(title: "Go to \(section.title)", subtitle: nil,
+            items.append(PaletteItem(title: "Go to \(section.title)", subtitle: "navigate",
                                      icon: section.systemImage, tint: .secondary) {
                 ui.section = section
             })
         }
-        // Global actions
-        items.append(PaletteItem(title: "Run a container", subtitle: nil, icon: "plus", tint: .accentColor) {
-            ui.showRunSheet = true
+        // Add anything, from anywhere.
+        let adds: [(String, String, PendingAction)] = [
+            ("Run a container", "shippingbox", .runContainer),
+            ("Pull an image", "arrow.down.circle", .pullImage),
+            ("New volume", "externaldrive.badge.plus", .createVolume),
+            ("New network", "network", .createNetwork),
+            ("Registry login", "person.badge.key", .registryLogin),
+        ]
+        for (title, icon, action) in adds {
+            items.append(PaletteItem(title: title, subtitle: "create", icon: icon, tint: .accentColor) {
+                ui.dispatch(action)
+            })
+        }
+        items.append(PaletteItem(title: "Import compose…", subtitle: "create", icon: "square.on.square", tint: .accentColor) {
+            ui.section = .templates; ui.pendingComposeImport = true
         })
-        // Per-container lifecycle
+        // Page / global actions.
+        items.append(PaletteItem(title: "Refresh", subtitle: "action", icon: "arrow.clockwise", tint: .secondary) {
+            app.coordinator.wake()
+        })
+        let pageActions: [(String, String, PendingAction)] = [
+            ("Load image tar…", "square.and.arrow.down", .loadImage),
+            ("Prune images…", "trash", .pruneImages),
+            ("Activity history", "clock.arrow.circlepath", .activityHistory),
+            ("System logs", "text.alignleft", .systemLogs),
+        ]
+        for (title, icon, action) in pageActions {
+            items.append(PaletteItem(title: title, subtitle: "action", icon: icon, tint: .secondary) {
+                ui.dispatch(action)
+            })
+        }
         for snapshot in app.containers.snapshots {
             let name = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
                 .displayName(fallback: snapshot.id)
@@ -100,37 +173,15 @@ struct CommandPalette: View {
         return items
     }
 
-    private var items: [PaletteItem] {
+    /// Filter `all(...)` by a query — substring or per-word prefix (predictable for a small set).
+    @MainActor
+    static func filtered(_ query: String, app: AppModel, ui: UIState) -> [PaletteItem] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return allItems }
-        // Substring or per-word prefix — predictable for a small curated command set.
-        return allItems.filter { item in
+        let items = all(app: app, ui: ui)
+        guard !q.isEmpty else { return items }
+        return items.filter { item in
             let t = item.title.lowercased()
             return t.contains(q) || t.split(separator: " ").contains { $0.hasPrefix(q) }
         }
     }
-
-    private func move(_ delta: Int) {
-        guard !items.isEmpty else { return }
-        index = min(max(0, index + delta), items.count - 1)
-    }
-
-    private func runSelected() {
-        guard items.indices.contains(index) else { return }
-        run(items[index])
-    }
-
-    private func run(_ item: PaletteItem) {
-        dismiss()
-        item.action()
-    }
-}
-
-struct PaletteItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let subtitle: String?
-    let icon: String
-    let tint: Color
-    let action: () -> Void
 }

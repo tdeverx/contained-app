@@ -104,7 +104,7 @@ struct SystemView: View {
             }
             .padding(Tokens.Space.l)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
         }
     }
 
@@ -203,7 +203,7 @@ struct SystemView: View {
             }
             .padding(Tokens.Space.l)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
         }
     }
 
@@ -254,7 +254,7 @@ struct SystemView: View {
         }
         .padding(Tokens.Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
     }
 
     private func diskSection(_ usage: DiskUsage) -> some View {

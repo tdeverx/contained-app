@@ -5,6 +5,11 @@ import ContainedCore
 /// styles a single container (with a scope picker for per-container vs image-wide) or an image's
 /// default directly (from the Images list).
 struct CustomizeSheet: View {
+    enum Presentation {
+        case sheet
+        case popover
+    }
+
     /// What's being styled. Identifiable so it can drive `.sheet(item:)`.
     enum Target: Identifiable, Hashable {
         case container(ContainerSnapshot)
@@ -36,35 +41,56 @@ struct CustomizeSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     let target: Target
+    let presentation: Presentation
 
     /// Convenience initializer for the container case (keeps existing call sites working).
-    init(snapshot: ContainerSnapshot) { self.target = .container(snapshot) }
-    init(target: Target) { self.target = target }
+    init(snapshot: ContainerSnapshot, presentation: Presentation = .popover) {
+        self.target = .container(snapshot)
+        self.presentation = presentation
+    }
+
+    init(target: Target, presentation: Presentation = .sheet) {
+        self.target = target
+        self.presentation = presentation
+    }
 
     @State private var style = Personalization()
-    @State private var applyToAllImages = false
+    @State private var overrideContainerStyle = true
     @State private var loaded = false
+
+    private var isPopoverPresentation: Bool { presentation == .popover }
+    private var previewWidth: CGFloat { isPopoverPresentation ? 372 : 320 }
+    private var previewDensity: CardDensity { isPopoverPresentation ? .compact : .large }
+    private var previewHeight: CGFloat { isPopoverPresentation ? 136 : 176 }
+    private var panelSize: CGSize {
+        isPopoverPresentation ? CGSize(width: 430, height: 520) : CGSize(width: 480, height: 600)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             SheetHeader(title: target.isImage ? "Customize image style" : "Customize card",
                         subtitle: target.isImage ? "Default for every container from \(Format.shortImage(target.image))" : nil,
                         onCancel: { dismiss() }) {
-                GlassCircleButton(systemName: "arrow.counterclockwise", role: .destructive, help: "Reset to default") {
-                    reset()
-                }
                 GlassCircleButton(systemName: "checkmark", prominent: true, help: "Save") { save() }
             }
 
             preview
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, Tokens.Space.l)
-                .padding(.bottom, Tokens.Space.m)
+                .padding(.top, Tokens.Space.xs)
+                .padding(.bottom, Tokens.Space.s)
 
             Form {
-                Section("Style") {
-                    if !target.isImage {
-                        TextField("Nickname", text: $style.nickname, prompt: Text(target.previewSnapshot.id))
+                if !target.isImage {
+                    Section("Inheritance") {
+                        Toggle("Override image style", isOn: overrideBinding)
+                            .fieldInfo("Turn this on to customize only this container. Leave it off to inherit the image style from the Images page.")
                     }
+                }
+                Section("Style") {
+                    TextField(target.isImage ? "Display name" : "Nickname",
+                              text: $style.nickname,
+                              prompt: Text(target.isImage ? Format.shortImage(target.image) : target.previewSnapshot.id))
                     TextField("Icon", text: $style.icon, prompt: Text("SF Symbol, e.g. globe, bolt"))
                     LabeledContent("Color") { TintSelector(selection: $style.tint) }
                         .fieldInfo("“App Accent” (the linked swatch) follows the app accent from Settings, so the card tracks your theme. Pick any other color to pin this card.")
@@ -72,15 +98,9 @@ struct CustomizeSheet: View {
                         ForEach(GraphMetric.allCases) { Label($0.displayName, systemImage: $0.systemImage).tag($0) }
                     }
                 }
-                if !target.isImage {
-                    Section("Scope") {
-                        Picker("Apply to", selection: $applyToAllImages) {
-                            Text("This container").tag(false)
-                            Text("All \(Format.shortImage(target.image))").tag(true)
-                        }
-                        .fieldInfo("“This container” saves a per-container override. “All …” sets the default for every container from this image (overrides still win).")
-                    }
-                }
+                .disabled(settingsDisabled)
+                .opacity(settingsDisabled ? 0.48 : 1)
+
                 Section("Background") {
                     Toggle("Color the card background", isOn: $style.fillBackground)
                     if style.fillBackground {
@@ -92,24 +112,65 @@ struct CustomizeSheet: View {
                         if style.gradient { GradientAngleControl(angle: $style.gradientAngle) }
                     }
                 }
+                .disabled(settingsDisabled)
+                .opacity(settingsDisabled ? 0.48 : 1)
+
+                Section {
+                    Button(role: .destructive) { reset() } label: {
+                        Label(target.isImage ? "Reset image style" : "Reset", systemImage: "arrow.counterclockwise")
+                    }
+                    .disabled(!canReset)
+                    if !target.isImage {
+                        Button { applyToImage() } label: {
+                            Label("Apply to image", systemImage: "square.stack.3d.up")
+                        }
+                        .disabled(settingsDisabled)
+                    }
+                }
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
             .scrollEdgeEffectStyle(.soft, for: .all)
         }
-        .frame(width: 480, height: 600)
-        .sheetMaterial()
-        .onAppear {
+        .frame(width: panelSize.width, height: panelSize.height)
+        .sheetMaterial(!isPopoverPresentation)
+        .task {
             guard !loaded else { return }
             switch target {
             case .container(let snapshot):
                 style = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
-                applyToAllImages = !app.personalization.hasOverride(id: snapshot.id)
-                    && app.personalization.imageDefault(for: snapshot.image) != nil
+                overrideContainerStyle = app.personalization.hasOverride(id: snapshot.id)
             case .image(let reference):
                 style = app.personalization.imageDefault(for: reference) ?? Personalization()
+                overrideContainerStyle = true
             }
             loaded = true
+        }
+    }
+
+    private var settingsDisabled: Bool {
+        !target.isImage && !overrideContainerStyle
+    }
+
+    /// Whether there is a saved style to reset — a per-container override, or an image default.
+    /// When false the Reset button is disabled (greyed, not active) rather than a no-op.
+    private var canReset: Bool {
+        switch target {
+        case .image(let reference):    return app.personalization.imageDefault(for: reference) != nil
+        case .container(let snapshot): return app.personalization.hasOverride(id: snapshot.id)
+        }
+    }
+
+    private var overrideBinding: Binding<Bool> {
+        Binding {
+            overrideContainerStyle
+        } set: { newValue in
+            overrideContainerStyle = newValue
+            if case .container(let snapshot) = target {
+                style = newValue
+                    ? app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+                    : inheritedStyle(for: snapshot)
+            }
         }
     }
 
@@ -118,11 +179,10 @@ struct CustomizeSheet: View {
         case .image(let reference):
             app.personalization.setImageDefault(style, for: reference)
         case .container(let snapshot):
-            if applyToAllImages {
-                app.personalization.setImageDefault(style, for: snapshot.image)
-                app.personalization.clearOverride(id: snapshot.id)   // let the image default take effect
-            } else {
+            if overrideContainerStyle {
                 app.personalization.setOverride(style, for: snapshot.id)
+            } else {
+                app.personalization.clearOverride(id: snapshot.id)
             }
         }
         dismiss()
@@ -136,22 +196,34 @@ struct CustomizeSheet: View {
         dismiss()
     }
 
+    private func applyToImage() {
+        guard case .container(let snapshot) = target else { return }
+        app.personalization.setImageDefault(style, for: snapshot.image)
+        app.personalization.clearOverride(id: snapshot.id)
+        overrideContainerStyle = false
+        dismiss()
+    }
+
+    private func inheritedStyle(for snapshot: ContainerSnapshot) -> Personalization {
+        app.personalization.imageDefault(for: snapshot.image) ?? Personalization()
+    }
+
     /// A live preview using the real card view with fake "running" data, so users see how it looks
     /// in use while customizing. No section background — it floats on the sheet material.
     private var preview: some View {
         ContainerCard(
             snapshot: target.previewSnapshot,
             style: style,
-            density: .large,
+            density: previewDensity,
             stats: .sample(),
             history: StatsDelta.sampleHistory,
             isBusy: false,
-            onTap: {}, onStart: {}, onStop: {}, onRestart: {}, onCustomize: {}, onDelete: {},
+            onTap: {}, onStart: {}, onStop: {}, onRestart: {}, onDelete: {},
             previewPresentation: .running
         )
-        .frame(width: 320)
+        .frame(width: previewWidth)
+        .frame(height: previewHeight)
         .allowsHitTesting(false)
-        .animation(.smooth(duration: 0.2), value: style)
     }
 }
 

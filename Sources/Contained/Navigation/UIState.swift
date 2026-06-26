@@ -1,13 +1,18 @@
 import SwiftUI
 
-/// Cross-cutting UI state shared between the toolbar (owned by RootView) and the content views.
+/// Cross-cutting UI state shared between the sidebar header menus, the menu-bar commands, and the
+/// content views.
 @MainActor
 @Observable
 final class UIState {
+    /// Filter text applied by the section list views. The in-window search affordance is being
+    /// reworked; until it returns this stays empty (so every filter is a no-op pass-through).
     var searchText = ""
     var runningOnly = false
     var showRunSheet = false
     var showPalette = false
+    /// Highlighted row in the global command palette.
+    var paletteIndex = 0
     /// The selected sidebar section (here, not RootView, so the command palette can navigate).
     var section: AppSection = .containers
     /// A spec to prefill the next Create/Run sheet — from "Run" on an image or "Use" on a template.
@@ -15,12 +20,10 @@ final class UIState {
 
     // Menu-driven action tickets. Bumping a counter (rather than a Bool) lets a view re-trigger the
     // same action and avoids sticky-flag races; views watch the counter via `.onChange`.
-    /// Bumped by Edit ▸ Find — consumed by `RootView` to focus the search field.
-    var focusSearchTick = 0
     /// Set by File ▸ Import Compose… — consumed by the Templates/Stacks views to open the picker.
     var pendingComposeImport = false
 
-    /// A one-shot action requested from the unified toolbar or a menu, addressed to a specific
+    /// A one-shot action requested from the sidebar header or a menu, addressed to a specific
     /// section's view. The view consumes it (clearing it) on appear *and* on change, which is
     /// race-free across the section switch that mounts the view.
     var pendingAction: PendingAction?
@@ -48,7 +51,7 @@ final class UIState {
     }
 }
 
-/// A one-shot, section-targeted action requested from the unified toolbar (or a menu). Each knows
+/// A one-shot, section-targeted action requested from the sidebar header (or a menu). Each knows
 /// which sidebar section owns it, so `UIState.dispatch` can navigate there first.
 enum PendingAction: Equatable {
     case runContainer
@@ -64,7 +67,7 @@ enum PendingAction: Equatable {
         case .runContainer:                       return .containers
         case .pullImage, .loadImage, .pruneImages: return .images
         case .createVolume:                       return .volumes
-        case .createNetwork:                      return .networks
+        case .createNetwork:                      return .containers   // networks fold into Containers
         case .registryLogin:                      return .registries
         case .build:                              return .build
         case .activityHistory, .systemLogs:       return .system
