@@ -53,7 +53,9 @@ jobs:
           export VERSION=$(cat VERSION 2>/dev/null || echo 1.0.0)
           SHA=$(git rev-parse --short HEAD)
           ./scripts/bundle.sh release
-          ./scripts/make-dmg.sh stable "${VERSION}" "${VERSION}"
+          mkdir -p updates
+          hdiutil create -volname Contained -srcfolder Contained.app -ov -format UDZO \
+            "updates/Contained-${VERSION}.dmg"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 

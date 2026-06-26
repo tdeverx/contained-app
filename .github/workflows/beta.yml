@@ -55,7 +55,9 @@ jobs:
           SHA=$(git rev-parse --short HEAD)
           export VERSION="${BASE}-beta.${BUILD}+${SHA}"
           ./scripts/bundle.sh release
-          ./scripts/make-dmg.sh beta "${VERSION}" "beta ${BASE} · ${BUILD}"
+          mkdir -p updates
+          hdiutil create -volname Contained -srcfolder Contained.app -ov -format UDZO \
+            "updates/Contained-${VERSION}.dmg"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
