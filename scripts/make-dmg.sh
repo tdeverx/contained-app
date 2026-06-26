@@ -31,12 +31,19 @@ mkdir -p updates
 OUT="updates/Contained-${VERSION}.dmg"
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
-# Background: committed override, else auto-generated (760×1120 = 380×560 window @2× for retina).
-BG="Resources/dmg/background-${CHANNEL}.png"
-if [ ! -f "$BG" ]; then
-  BG="$WORK/background.png"
-  echo "▸ Rendering DMG background ($CHANNEL)…"
-  swift scripts/dmg-background.swift "$BG" "$CHANNEL" "$PILL"
+# Background: committed override (.tiff preferred for retina, else .png), else auto-generated as a
+# HiDPI TIFF (1× + 2× folded together) so it's crisp on Retina yet positioned by its 380×560 logical
+# size.
+BG=""
+for cand in "Resources/dmg/background-${CHANNEL}.tiff" "Resources/dmg/background-${CHANNEL}.png"; do
+  [ -f "$cand" ] && { BG="$cand"; break; }
+done
+if [ -z "$BG" ]; then
+  echo "▸ Rendering DMG background ($CHANNEL, 1× + 2× → HiDPI)…"
+  swift scripts/dmg-background.swift "$WORK/bg.png"    "$CHANNEL" "$PILL" 1
+  swift scripts/dmg-background.swift "$WORK/bg@2x.png" "$CHANNEL" "$PILL" 2
+  BG="$WORK/background.tiff"
+  tiffutil -cathidpicheck "$WORK/bg.png" "$WORK/bg@2x.png" -out "$BG" >/dev/null
 fi
 
 # Volume icon: channel override → main app icon → none.

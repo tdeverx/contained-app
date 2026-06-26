@@ -7,7 +7,7 @@ override those defaults:
 
 | File | Overrides | Falls back to |
 |------|-----------|---------------|
-| `background-<channel>.png` | The window background. 380×560 px (the window size — Finder paints it 1:1, so match these dimensions exactly). | Auto-generated tinted background. |
+| `background-<channel>.tiff` or `.png` | The window background. For Retina, supply a HiDPI `.tiff` (1× + 2× via `tiffutil -cathidpicheck bg.png bg@2x.png -out bg.tiff`); a plain `.png` must be 380×560 (the window size, painted 1:1). `.tiff` wins if both exist. | Auto-generated HiDPI background. |
 | `volume-<channel>.icns` | The mounted-volume icon. | `Resources/Contained.icns` (the main icon), then the system default. |
 
 `<channel>` is `stable`, `beta`, or `nightly`.

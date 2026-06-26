@@ -36,10 +36,12 @@ let styles: [String: Style] = [
 ]
 let st = styles[channel] ?? styles["stable"]!
 
-// Window content is 380×560 points. Render the PNG at exactly that pixel size (1×) so Finder paints
-// it 1:1 onto the window — fills edge-to-edge, no fit/letterbox, content stays centered. (A 2× image
-// gets treated as 1× by create-dmg/Finder and shows only a corner; DPI tags don't fix it.)
-let scale: CGFloat = 1
+// Window content is 380×560 points. `scale` is the pixel density: 1 → 380×560 px, 2 → 760×1120 px.
+// make-dmg.sh renders both and folds them into one HiDPI TIFF (tiffutil -cathidpicheck) so Finder
+// paints the 2× rep crisply on Retina while keeping the 380×560 logical size — fills edge-to-edge,
+// content stays centered. (A lone 2× PNG is treated as 1× by create-dmg/Finder and only a corner
+// shows; the TIFF's encoded logical size is what fixes that.)
+let scale: CGFloat = args.count > 4 ? CGFloat(Double(args[4]) ?? 1) : 1
 let wpt: CGFloat = 380, hpt: CGFloat = 560
 let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(wpt * scale),
                            pixelsHigh: Int(hpt * scale), bitsPerSample: 8, samplesPerPixel: 4,
