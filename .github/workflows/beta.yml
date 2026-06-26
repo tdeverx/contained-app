@@ -11,6 +11,14 @@ name: Beta
 on:
   push:
     branches: [beta]
+    # Docs/meta-only changes don't need a build. For anything else (e.g. a
+    # cleanup under a build path), put [skip ci] in the commit message.
+    paths-ignore:
+      - '**/*.md'
+      - '.github/assets/**'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
   workflow_dispatch:
 
 concurrency:
