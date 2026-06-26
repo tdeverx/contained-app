@@ -9,6 +9,9 @@ cd "$(dirname "$0")/.."
 
 CONFIG="${1:-release}"
 APP="Contained.app"
+# Update channel — selects the per-channel app icon (Resources/<channel>.icon). Defaults to
+# nightly (the default channel); CI overrides via env per branch.
+CHANNEL="${CHANNEL:-nightly}"
 # Marketing version (CFBundleShortVersionString): semver, with a pre-release suffix for non-stable
 # channels (e.g. 1.0.0, 1.0.0-beta.1, 1.0.0-nightly.137+abc1234). Override via env in CI.
 VERSION="${VERSION:-1.0.0-beta.1}"
@@ -27,9 +30,23 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_PATH" "$APP/Contents/MacOS/Contained"
 
-# App icon (generate with scripts/make-icon.sh if missing).
-if [ -f "Resources/Contained.icns" ]; then
-  cp "Resources/Contained.icns" "$APP/Contents/Resources/Contained.icns"
+# App icon: compile the per-channel Icon Composer source (Resources/<channel>.icon) with actool
+# into Assets.car + Contained.icns. Renamed to Contained.icon first so the compiled icon name is
+# uniform across channels (Info.plist's CFBundleIconName/File stay "Contained").
+ICON_SRC="Resources/${CHANNEL}.icon"
+if [ -d "$ICON_SRC" ]; then
+  echo "▸ Compiling icon ($CHANNEL)…"
+  TMPICON="$(mktemp -d)"
+  cp -R "$ICON_SRC" "$TMPICON/Contained.icon"
+  xcrun actool "$TMPICON/Contained.icon" \
+    --compile "$APP/Contents/Resources" \
+    --app-icon Contained \
+    --output-partial-info-plist "$TMPICON/icon.plist" \
+    --platform macosx --minimum-deployment-target 26 \
+    --errors --warnings >/dev/null
+  rm -rf "$TMPICON"
+else
+  echo "⚠ No icon source at $ICON_SRC — bundling without an app icon."
 fi
 
 # Embed Sparkle.framework (auto-update) and make the binary find it relocatably.

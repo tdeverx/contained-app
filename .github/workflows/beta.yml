@@ -54,10 +54,10 @@ jobs:
           BUILD=$(git rev-list --count HEAD)
           SHA=$(git rev-parse --short HEAD)
           export VERSION="${BASE}-beta.${BUILD}+${SHA}"
-          ./scripts/bundle.sh release
+          CHANNEL=beta ./scripts/bundle.sh release
           mkdir -p updates
-          hdiutil create -volname Contained -srcfolder Contained.app -ov -format UDZO \
-            "updates/Contained-${VERSION}.dmg"
+          brew install create-dmg
+          ./scripts/make-dmg.sh beta Contained.app "updates/Contained-${VERSION}.dmg"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 

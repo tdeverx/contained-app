@@ -1,8 +1,0 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <!-- CHANNEL RIBBON — Nightly. Toggle this layer ON only for the nightly icon. Sits near the
-       bottom; Icon Composer's mask trims the ends to the squircle. Outline the text to paths before
-       export if Icon Composer substitutes the font. -->
-  <rect x="0" y="820" width="1024" height="150" fill="#1E1A3C" fill-opacity="0.94"/>
-  <text x="512" y="920" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif"
-        font-size="82" font-weight="700" letter-spacing="8" fill="#D5D1F6">NIGHTLY</text>
-</svg>

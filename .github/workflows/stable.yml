@@ -52,10 +52,10 @@ jobs:
         run: |
           export VERSION=$(cat VERSION 2>/dev/null || echo 1.0.0)
           SHA=$(git rev-parse --short HEAD)
-          ./scripts/bundle.sh release
+          CHANNEL=stable ./scripts/bundle.sh release
           mkdir -p updates
-          hdiutil create -volname Contained -srcfolder Contained.app -ov -format UDZO \
-            "updates/Contained-${VERSION}.dmg"
+          brew install create-dmg
+          ./scripts/make-dmg.sh stable Contained.app "updates/Contained-${VERSION}.dmg"
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
