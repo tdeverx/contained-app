@@ -10,6 +10,12 @@ final class SettingsStore {
     var appearance: AppearanceMode { didSet { defaults.set(appearance.rawValue, forKey: Keys.appearance) } }
     var density: CardDensity { didSet { defaults.set(density.rawValue, forKey: Keys.density) } }
     var backdrop: BackdropStyle { didSet { defaults.set(backdrop.rawValue, forKey: Keys.backdrop) } }
+    /// Behind-window vibrancy material for the main content area.
+    var windowMaterial: WindowMaterial { didSet { defaults.set(windowMaterial.rawValue, forKey: Keys.windowMaterial) } }
+    /// Material behind modal sheets.
+    var modalMaterial: ModalMaterial { didSet { defaults.set(modalMaterial.rawValue, forKey: Keys.modalMaterial) } }
+    /// Show the info.circle help popovers throughout the app.
+    var showInfoTips: Bool { didSet { defaults.set(showInfoTips, forKey: Keys.showInfoTips) } }
     var reduceTranslucency: Bool { didSet { defaults.set(reduceTranslucency, forKey: Keys.reduceTranslucency) } }
     var keepInMenuBar: Bool { didSet { defaults.set(keepInMenuBar, forKey: Keys.keepInMenuBar) } }
     var cliPathOverride: String { didSet { defaults.set(cliPathOverride, forKey: Keys.cliPath) } }
@@ -46,6 +52,9 @@ final class SettingsStore {
         appearance = AppearanceMode(rawValue: defaults.string(forKey: Keys.appearance) ?? "") ?? .system
         density = CardDensity(rawValue: defaults.string(forKey: Keys.density) ?? "") ?? .compact
         backdrop = BackdropStyle(rawValue: defaults.string(forKey: Keys.backdrop) ?? "") ?? .mesh
+        windowMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.windowMaterial) ?? "") ?? .fullScreenUI
+        modalMaterial = ModalMaterial(rawValue: defaults.string(forKey: Keys.modalMaterial) ?? "") ?? .regular
+        showInfoTips = defaults.object(forKey: Keys.showInfoTips) as? Bool ?? true
         reduceTranslucency = defaults.bool(forKey: Keys.reduceTranslucency)
         keepInMenuBar = defaults.object(forKey: Keys.keepInMenuBar) as? Bool ?? true
         cliPathOverride = defaults.string(forKey: Keys.cliPath) ?? ""
@@ -65,6 +74,9 @@ final class SettingsStore {
         static let appearance = "appearance"
         static let density = "density"
         static let backdrop = "backdrop"
+        static let windowMaterial = "windowMaterial"
+        static let modalMaterial = "modalMaterial"
+        static let showInfoTips = "showInfoTips"
         static let reduceTranslucency = "reduceTranslucency"
         static let keepInMenuBar = "keepInMenuBar"
         static let cliPath = "cliPathOverride"

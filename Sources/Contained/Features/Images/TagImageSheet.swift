@@ -23,7 +23,7 @@ struct TagImageSheet: View {
             .scrollContentBackground(.hidden)
         }
         .frame(Tokens.SheetSize.small)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 
     private func submit() {

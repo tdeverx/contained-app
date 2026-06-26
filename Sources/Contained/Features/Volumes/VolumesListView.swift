@@ -21,12 +21,9 @@ struct VolumesListView: View {
                          emptyMessage: "Create a volume to share persistent storage with containers.") {
             ForEach(volumes) { volume in row(volume) }
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { creating = true } label: { Image(systemName: "plus") }.help("Create a volume")
-            }
-        }
         .task { await app.refreshResource(.volumes) }
+        .onAppear { if ui.pendingAction == .createVolume { ui.pendingAction = nil; creating = true } }
+        .onChange(of: ui.pendingAction) { _, _ in if ui.pendingAction == .createVolume { ui.pendingAction = nil; creating = true } }
         .sheet(item: $inspecting) { JSONInspectorSheet(title: $0.name, value: $0) }
         .sheet(isPresented: $creating) {
             CreateVolumeSheet { name, size in await create(name: name, size: size) }
@@ -41,13 +38,17 @@ struct VolumesListView: View {
         let parts = [config.sizeInBytes.map { Format.bytes($0) }, config.format, config.source].compactMap { $0 }
         return ResourceRow(symbol: "externaldrive", tint: .accentColor, title: volume.name,
                            subtitle: parts.joined(separator: "  ·  ")) {
-            GlassRowMenu {
-                Button { inspecting = volume } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
-                Button { copyToPasteboard(volume.name) } label: { Label("Copy name", systemImage: "doc.on.doc") }
-                Divider()
-                Button(role: .destructive) { deleting = volume } label: { Label("Delete", systemImage: "trash") }
-            }
+            GlassRowMenu { menuItems(volume) }
         }
+        .contextMenu { menuItems(volume) }
+    }
+
+    @ViewBuilder
+    private func menuItems(_ volume: VolumeResource) -> some View {
+        Button { inspecting = volume } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
+        Button { copyToPasteboard(volume.name) } label: { Label("Copy name", systemImage: "doc.on.doc") }
+        Divider()
+        Button(role: .destructive) { deleting = volume } label: { Label("Delete", systemImage: "trash") }
     }
 
     private var deleteBinding: Binding<Bool> {
@@ -91,7 +92,7 @@ struct CreateVolumeSheet: View {
             .scrollContentBackground(.hidden)
         }
         .frame(Tokens.SheetSize.small)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 
     private func submit() {

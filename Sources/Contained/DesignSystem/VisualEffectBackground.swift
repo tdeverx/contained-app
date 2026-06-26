@@ -25,11 +25,12 @@ extension View {
     /// layer here would double-frost and wash the cards out. Under Reduce Transparency we use a
     /// solid backing instead (and the window is made opaque).
     @ViewBuilder
-    func contentBackground(reduceTransparency: Bool) -> some View {
+    func contentBackground(reduceTransparency: Bool,
+                           material: NSVisualEffectView.Material = .fullScreenUI) -> some View {
         if reduceTransparency {
             self.background(Color(nsColor: .windowBackgroundColor))
         } else {
-            self.background(VisualEffectBackground().ignoresSafeArea())
+            self.background(VisualEffectBackground(material: material).ignoresSafeArea())
         }
     }
 }

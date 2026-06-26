@@ -11,6 +11,7 @@ struct ImagesListView: View {
     @State private var tagging: ContainedCore.ImageResource?
     @State private var pushing: ContainedCore.ImageResource?
     @State private var deleting: ContainedCore.ImageResource?
+    @State private var customizing: CustomizeSheet.Target?
     @State private var pulling = false
     @State private var pruning = false
 
@@ -36,23 +37,14 @@ struct ImagesListView: View {
                 }
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { pulling = true } label: { Image(systemName: "arrow.down.circle") }.help("Pull an image")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button { load() } label: { Image(systemName: "square.and.arrow.down") }.help("Load images from a tar archive")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button { pruning = true } label: { Image(systemName: "trash") }.help("Prune unused images")
-            }
-        }
         .task { await app.refreshResource(.images) }
-        .onChange(of: ui.requestPull) { _, _ in pulling = true }
+        .onAppear { consumePending() }
+        .onChange(of: ui.pendingAction) { _, _ in consumePending() }
         .sheet(item: $inspecting) { JSONInspectorSheet(title: $0.reference, value: $0) }
         .sheet(item: $historyFor) { ImageHistorySheet(image: $0) }
         .sheet(item: $tagging) { TagImageSheet(source: $0.reference) }
         .sheet(item: $pushing) { PushImageSheet(reference: $0.reference) }
+        .sheet(item: $customizing) { CustomizeSheet(target: $0) }
         .sheet(isPresented: $pulling) { PullImageSheet() }
         .confirmationDialog("Delete \(deleting.map { Format.shortImage($0.reference) } ?? "")?",
                             isPresented: deleteBinding, presenting: deleting) { image in
@@ -79,17 +71,33 @@ struct ImagesListView: View {
                            title: Format.shortImage(image.reference),
                            subtitle: [size.map { Format.bytes(UInt64($0)) }, arches.isEmpty ? nil : arches]
                             .compactMap { $0 }.joined(separator: "  ·  ")) {
-            GlassRowMenu {
-                Button { ui.runImage(image.reference) } label: { Label("Run…", systemImage: "play") }
-                Button { tagging = image } label: { Label("Tag…", systemImage: "tag") }
-                Button { pushing = image } label: { Label("Push…", systemImage: "arrow.up.circle") }
-                Button { copyToPasteboard(image.reference) } label: { Label("Copy reference", systemImage: "doc.on.doc") }
-                Button { inspecting = image } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
-                Button { historyFor = image } label: { Label("History", systemImage: "clock.arrow.circlepath") }
-                Button { save(image) } label: { Label("Save to tar…", systemImage: "arrow.up.doc") }
-                Divider()
-                Button(role: .destructive) { deleting = image } label: { Label("Delete", systemImage: "trash") }
-            }
+            GlassRowMenu { menuItems(image) }
+        }
+        .contextMenu { menuItems(image) }
+    }
+
+    /// The row's actions — shared by the ⋯ button and the right-click context menu.
+    @ViewBuilder
+    private func menuItems(_ image: ContainedCore.ImageResource) -> some View {
+        Button { ui.runImage(image.reference) } label: { Label("Run…", systemImage: "play") }
+        Button { customizing = .image(reference: image.reference) } label: { Label("Customize style…", systemImage: "paintbrush.pointed") }
+        Button { tagging = image } label: { Label("Tag…", systemImage: "tag") }
+        Button { pushing = image } label: { Label("Push…", systemImage: "arrow.up.circle") }
+        Button { copyToPasteboard(image.reference) } label: { Label("Copy reference", systemImage: "doc.on.doc") }
+        Button { inspecting = image } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
+        Button { historyFor = image } label: { Label("History", systemImage: "clock.arrow.circlepath") }
+        Button { save(image) } label: { Label("Save to tar…", systemImage: "arrow.up.doc") }
+        Divider()
+        Button(role: .destructive) { deleting = image } label: { Label("Delete", systemImage: "trash") }
+    }
+
+    /// Pick up a toolbar/menu action addressed to this page (race-free across the section switch).
+    private func consumePending() {
+        switch ui.pendingAction {
+        case .pullImage:   ui.pendingAction = nil; pulling = true
+        case .loadImage:   ui.pendingAction = nil; load()
+        case .pruneImages: ui.pendingAction = nil; pruning = true
+        default: break
         }
     }
 

@@ -44,7 +44,7 @@ struct ContainerDetailView: View {
             content
         }
         .frame(minWidth: 640, minHeight: 520)
-        .background(.regularMaterial)
+        .sheetMaterial()
         .confirmationDialog("Delete \(style.displayName(fallback: snapshot.id))?", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) {
                 Task { await app.containers.remove(snapshot.id, force: true); onClose() }

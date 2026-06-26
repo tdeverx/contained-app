@@ -18,8 +18,9 @@ struct RootView: View {
                 .navigationSplitViewColumnWidth(min: 210, ideal: 224, max: 264)
         } detail: {
             content
-                .contentBackground(reduceTransparency: settings.reduceTranslucency)
-                .toolbar { toolbarContent }
+                .contentBackground(reduceTransparency: settings.reduceTranslucency,
+                                   material: settings.windowMaterial.nsMaterial)
+                .mainToolbar(ui: ui, settings: settings)
                 .toolbarBackground(.visible, for: .windowToolbar)
                 .navigationTitle(ui.section.title)
                 .searchable(text: $ui.searchText, prompt: "Search \(ui.section.title.lowercased())")
@@ -28,10 +29,18 @@ struct RootView: View {
                     ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
                 }
                 .sheet(isPresented: $ui.showPalette) { CommandPalette() }
-                .overlay(alignment: .bottom) { bannerView }
+                .overlay(alignment: .bottom) {
+                    VStack(spacing: Tokens.Space.s) {
+                        activityBar
+                        bannerView
+                    }
+                    .padding(.bottom, Tokens.Space.l)
+                }
                 .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: app.banner)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: app.activity)
         }
         .tint(settings.accentTint.color)
+        .environment(\.modalMaterial, settings.modalMaterial)
         .preferredColorScheme(settings.appearance.colorScheme)
         .task {
             if let restored = AppSection(rawValue: settings.lastSection) { ui.section = restored }
@@ -58,8 +67,38 @@ struct RootView: View {
                 .padding(.horizontal, Tokens.Space.l)
                 .padding(.vertical, Tokens.Space.s)
                 .glassEffect(.regular, in: Capsule())
-                .padding(.bottom, Tokens.Space.l)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
+    /// Floating progress bar for a long operation (e.g. pulling an image before a run).
+    @ViewBuilder
+    private var activityBar: some View {
+        if let activity = app.activity {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: Tokens.Space.s) {
+                    ProgressView().controlSize(.small)
+                    Text(activity.title).font(.callout.weight(.medium))
+                    Spacer(minLength: 0)
+                }
+                if let fraction = activity.fraction {
+                    ProgressView(value: fraction).progressViewStyle(.linear)
+                } else {
+                    ProgressView().progressViewStyle(.linear)
+                }
+                if !activity.detail.isEmpty {
+                    Text(activity.detail)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            .padding(.horizontal, Tokens.Space.l)
+            .padding(.vertical, Tokens.Space.m)
+            .frame(maxWidth: 460)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
@@ -85,34 +124,4 @@ struct RootView: View {
         }
     }
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        @Bindable var settings = app.settings
-        @Bindable var ui = ui
-
-        if ui.section == .containers, app.bootstrap == .ready {
-            ToolbarItem(placement: .primaryAction) {
-                Picker("Show", selection: $ui.runningOnly) {
-                    Text("Running").tag(true)
-                    Text("All").tag(false)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Picker("Card size", selection: $settings.density) {
-                    Image(systemName: "rectangle.grid.1x2").tag(CardDensity.large)
-                    Image(systemName: "square.grid.3x3").tag(CardDensity.compact)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .help("Card size")
-            }
-            ToolbarSpacer(.flexible, placement: .primaryAction)
-            ToolbarItem(placement: .primaryAction) {
-                Button { ui.showRunSheet = true } label: { Image(systemName: "plus") }
-                    .help("Run a new container")
-            }
-        }
-    }
 }

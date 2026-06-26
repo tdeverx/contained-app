@@ -42,7 +42,7 @@ struct CommandPalette: View {
             .frame(height: 360)
         }
         .frame(width: 560)
-        .background(.regularMaterial)
+        .sheetMaterial()
         .onAppear { fieldFocused = true }
         .onChange(of: query) { _, _ in index = 0 }
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Design tokens — the single source of truth for spacing, radii, and type used across the app.
 enum Tokens {
@@ -46,14 +47,19 @@ extension View {
     }
 }
 
-/// A curated color. Used as the app accent and as per-card personalization (icon + optional
-/// background wash). `.multicolor` follows the system accent.
+/// A curated color, used identically for the app accent (Settings) and per-card personalization
+/// (icon + optional background wash) so the palette is consistent everywhere. `.multicolor` is the
+/// "follow the app accent" option: it resolves to `Color.accentColor`, which the root sets to the
+/// chosen accent tint — so a container left on `.multicolor` tracks whatever the app accent is.
 enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
     case multicolor, graphite, azure, teal, coral, indigo, green, amber, pink
 
     var id: String { rawValue }
 
-    var displayName: String { self == .multicolor ? "Multicolor" : rawValue.capitalized }
+    var displayName: String { self == .multicolor ? "App Accent" : rawValue.capitalized }
+
+    /// True for the "follow the app accent" option (rendered with a marker in the swatch row).
+    var followsAppAccent: Bool { self == .multicolor }
 
     var color: Color {
         switch self {
@@ -99,4 +105,87 @@ enum BackdropStyle: String, CaseIterable, Identifiable, Codable, Sendable {
     case mesh, solid
     var id: String { rawValue }
     var displayName: String { rawValue.capitalized }
+}
+
+/// The behind-window vibrancy material used for the main content area. A curated, ordered subset of
+/// `NSVisualEffectView.Material` (lightest → most opaque) so the picker reads sensibly.
+enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
+    case fullScreenUI, hudWindow, underWindowBackground, popover, sidebar,
+         headerView, menu, contentBackground, windowBackground, underPageBackground
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .fullScreenUI:        return "Full-screen UI (default)"
+        case .hudWindow:           return "HUD"
+        case .underWindowBackground: return "Under Window"
+        case .popover:             return "Popover"
+        case .sidebar:             return "Sidebar"
+        case .headerView:          return "Header"
+        case .menu:                return "Menu"
+        case .contentBackground:   return "Content"
+        case .windowBackground:    return "Window"
+        case .underPageBackground: return "Under Page"
+        }
+    }
+
+    var nsMaterial: NSVisualEffectView.Material {
+        switch self {
+        case .fullScreenUI:          return .fullScreenUI
+        case .hudWindow:             return .hudWindow
+        case .underWindowBackground: return .underWindowBackground
+        case .popover:               return .popover
+        case .sidebar:               return .sidebar
+        case .headerView:            return .headerView
+        case .menu:                  return .menu
+        case .contentBackground:     return .contentBackground
+        case .windowBackground:      return .windowBackground
+        case .underPageBackground:   return .underPageBackground
+        }
+    }
+}
+
+/// The material painted behind modal sheets. Maps onto SwiftUI's `Material` so sheets stay
+/// consistent with the platform's blur stops.
+enum ModalMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
+    case ultraThin, thin, regular, thick, ultraThick
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .ultraThin:  return "Ultra Thin"
+        case .thin:       return "Thin"
+        case .regular:    return "Regular (default)"
+        case .thick:      return "Thick"
+        case .ultraThick: return "Ultra Thick"
+        }
+    }
+
+    var material: Material {
+        switch self {
+        case .ultraThin:  return .ultraThin
+        case .thin:       return .thin
+        case .regular:    return .regular
+        case .thick:      return .thick
+        case .ultraThick: return .ultraThick
+        }
+    }
+}
+
+extension EnvironmentValues {
+    /// The user-chosen modal material, seeded at the app root and inherited by presented sheets.
+    @Entry var modalMaterial: ModalMaterial = .regular
+}
+
+private struct SheetMaterial: ViewModifier {
+    @Environment(\.modalMaterial) private var material
+    func body(content: Content) -> some View { content.background(material.material) }
+}
+
+extension View {
+    /// Standard sheet background — the user-chosen modal material (read from the environment).
+    /// Replaces ad-hoc `.background(.regularMaterial)` so every sheet honors the setting.
+    func sheetMaterial() -> some View { modifier(SheetMaterial()) }
 }

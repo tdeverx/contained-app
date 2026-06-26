@@ -5,6 +5,16 @@ import Testing
 @Suite("Decoding real CLI fixtures")
 struct DecodingTests {
 
+    @Test func placeholderSnapshotDecodes() {
+        // `ContainerSnapshot.placeholder` force-decodes a JSON template — guard that it never traps.
+        let s = ContainerSnapshot.placeholder(id: "nginx", image: "nginx:latest")
+        #expect(s.id == "nginx")
+        #expect(s.image == "nginx:latest")
+        #expect(s.state == .running)
+        let stopped = ContainerSnapshot.placeholder(id: "x", image: "redis:7", state: .stopped)
+        #expect(stopped.state == .stopped)
+    }
+
     @Test func decodesContainerList() throws {
         let snapshots = try ContainerJSON.decode([ContainerSnapshot].self, from: try Fixture.data("list"))
         try #require(snapshots.count == 1)

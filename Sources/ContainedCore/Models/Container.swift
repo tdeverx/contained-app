@@ -21,6 +21,18 @@ public struct ContainerSnapshot: Codable, Sendable, Identifiable, Hashable {
 
     /// Name shown in the UI: nickname label if present, otherwise the container id.
     public var displayName: String { nicknameLabel ?? id }
+
+    /// A synthetic snapshot for previews and image-level customization (styling an image's default
+    /// before any container from it exists). Decodes from a minimal JSON template — the fields a card
+    /// reads are set; everything else falls back to its decode default.
+    public static func placeholder(id: String, image: String,
+                                   state: RuntimeStatus = .running) -> ContainerSnapshot {
+        let json = """
+        {"id":"\(id)","status":{"state":"\(state.rawValue)"},\
+        "configuration":{"id":"\(id)","image":{"reference":"\(image)"},"initProcess":{}}}
+        """
+        return try! JSONDecoder().decode(ContainerSnapshot.self, from: Data(json.utf8))
+    }
 }
 
 /// The `status` object inside a snapshot.

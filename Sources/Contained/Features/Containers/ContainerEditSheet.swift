@@ -66,7 +66,7 @@ struct ContainerEditSheet: View {
             }
         }
         .frame(Tokens.SheetSize.form)
-        .background(.regularMaterial)
+        .sheetMaterial()
         .onAppear(perform: load)
         .confirmationDialog("Save changes to \(spec.name.isEmpty ? editID : spec.name)?",
                             isPresented: $confirming) {
@@ -111,18 +111,11 @@ struct ContainerEditSheet: View {
     }
 
     private func create() {
-        Task {
-            working = true
-            let newID = await app.containers.run(spec)
-            if let newID {
-                if !spec.personalization.isDefault {
-                    app.personalization.setOverride(spec.personalization, for: newID)
-                }
-                app.healthChecks.setCheck(spec.healthCheck, for: newID)
-            }
-            working = false
-            if newID != nil { dismiss() }
-        }
+        // Dismiss right away and let AppModel run the (possibly image-pulling) create in the
+        // background, surfacing progress in the floating bar. This fixes the old flow where a
+        // not-yet-pulled image made "Create" appear to do nothing until the image arrived.
+        app.beginCreate(spec)
+        dismiss()
     }
 
     private func save() {

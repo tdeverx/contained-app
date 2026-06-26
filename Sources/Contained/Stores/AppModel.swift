@@ -42,6 +42,16 @@ final class AppModel {
     private(set) var imagesError: String?
     /// Transient watchdog/crash banner text (auto-cleared).
     var banner: String?
+    /// A long-running operation surfaced as a floating progress bar (e.g. pulling an image before a
+    /// run). `nil` when idle.
+    var activity: ActivityState?
+
+    /// One in-flight operation shown in the bottom progress bar.
+    struct ActivityState: Equatable {
+        var title: String
+        var detail: String = ""
+        var fraction: Double? = nil   // nil → indeterminate
+    }
 
     init(settings: SettingsStore = SettingsStore()) {
         self.settings = settings
@@ -188,6 +198,68 @@ final class AppModel {
         default:
             break
         }
+    }
+
+    // MARK: Create (pull-aware)
+
+    /// Kick off a container create without blocking the caller (the Create sheet dismisses
+    /// immediately and progress shows in the floating bar).
+    func beginCreate(_ spec: RunSpec) {
+        Task { await createContainer(spec) }
+    }
+
+    /// Create a container from the form. If its image isn't present locally, pull it first with a
+    /// visible progress bar — so a fresh template or image "just works" instead of appearing to do
+    /// nothing while the image silently downloads. Attaches local style + healthcheck on success.
+    @discardableResult
+    func createContainer(_ spec: RunSpec) async -> String? {
+        guard client != nil else { return nil }
+        if !(await imageIsLocal(spec.image)) {
+            guard await pullImage(spec.image) else { return nil }   // pull failed; error surfaced
+        }
+        let newID = await containers.run(spec)
+        if let newID {
+            if !spec.personalization.isDefault { personalization.setOverride(spec.personalization, for: newID) }
+            healthChecks.setCheck(spec.healthCheck, for: newID)
+            historyStore.record(.lifecycle, containerID: newID, message: "Created \(newID)")
+        }
+        return newID
+    }
+
+    /// Pull an image, streaming `--progress` lines into the floating activity bar. Returns true on
+    /// success. Used both by the create flow and as a standalone progress surface.
+    @discardableResult
+    func pullImage(_ reference: String) async -> Bool {
+        guard let client else { return false }
+        activity = ActivityState(title: "Pulling \(Format.shortImage(reference))…")
+        defer { activity = nil }
+        do {
+            for try await line in client.streamPull(reference, platform: nil) {
+                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty { activity?.detail = trimmed }
+            }
+            await refreshResource(.images)
+            return true
+        } catch let error as CommandError { flash(error.userMessage); return false }
+        catch { flash(error.localizedDescription); return false }
+    }
+
+    /// Whether an image reference is already in the local store (tag-normalized compare so
+    /// `nginx` matches `nginx:latest` and `docker.io/library/nginx:latest`).
+    private func imageIsLocal(_ reference: String) async -> Bool {
+        guard let client else { return false }
+        let target = normalizedRef(reference)
+        let list = (try? await client.images()) ?? images
+        return list.contains { normalizedRef($0.reference) == target }
+    }
+
+    /// Strip the docker.io prefix and append `:latest` when no tag/digest is present.
+    private func normalizedRef(_ reference: String) -> String {
+        let short = Format.shortImage(reference)
+        let nameStart = short.lastIndex(of: "/").map { short.index(after: $0) } ?? short.startIndex
+        let namePart = short[nameStart...]
+        if namePart.contains(":") || namePart.contains("@") { return short }
+        return short + ":latest"
     }
 
     private var bannerClear: Task<Void, Never>?

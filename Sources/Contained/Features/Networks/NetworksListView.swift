@@ -21,12 +21,9 @@ struct NetworksListView: View {
                          emptyMessage: "Create a network to connect containers.") {
             ForEach(networks) { network in row(network) }
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { creating = true } label: { Image(systemName: "plus") }.help("Create a network")
-            }
-        }
         .task { await app.refreshResource(.networks) }
+        .onAppear { if ui.pendingAction == .createNetwork { ui.pendingAction = nil; creating = true } }
+        .onChange(of: ui.pendingAction) { _, _ in if ui.pendingAction == .createNetwork { ui.pendingAction = nil; creating = true } }
         .sheet(item: $inspecting) { JSONInspectorSheet(title: $0.name, value: $0) }
         .sheet(isPresented: $creating) {
             CreateNetworkSheet { name, subnet, internalOnly in
@@ -50,15 +47,19 @@ struct NetworksListView: View {
                         .padding(.horizontal, 7).padding(.vertical, 2)
                         .background(.quaternary, in: Capsule())
                 }
-                GlassRowMenu {
-                    Button { inspecting = network } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
-                    Button { copyToPasteboard(network.name) } label: { Label("Copy name", systemImage: "doc.on.doc") }
-                    if !network.isBuiltin {
-                        Divider()
-                        Button(role: .destructive) { deleting = network } label: { Label("Delete", systemImage: "trash") }
-                    }
-                }
+                GlassRowMenu { menuItems(network) }
             }
+        }
+        .contextMenu { menuItems(network) }
+    }
+
+    @ViewBuilder
+    private func menuItems(_ network: NetworkResource) -> some View {
+        Button { inspecting = network } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
+        Button { copyToPasteboard(network.name) } label: { Label("Copy name", systemImage: "doc.on.doc") }
+        if !network.isBuiltin {
+            Divider()
+            Button(role: .destructive) { deleting = network } label: { Label("Delete", systemImage: "trash") }
         }
     }
 
@@ -107,7 +108,7 @@ struct CreateNetworkSheet: View {
             .scrollContentBackground(.hidden)
         }
         .frame(Tokens.SheetSize.small)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 
     private func submit() {

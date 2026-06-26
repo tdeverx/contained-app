@@ -26,7 +26,7 @@ struct JSONInspectorSheet<Value: Encodable>: View {
             .scrollEdgeEffectStyle(.soft, for: .all)
         }
         .frame(Tokens.SheetSize.inspector)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 
     private var json: String {

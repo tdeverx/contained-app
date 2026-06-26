@@ -31,7 +31,7 @@ struct ContainedApp: App {
                 Button("Run a Container…") { ui.showRunSheet = true }
                     .keyboardShortcut("r", modifiers: .command)
                 Divider()
-                Button("Pull Image…") { ui.section = .images; ui.requestPull += 1 }
+                Button("Pull Image…") { ui.dispatch(.pullImage) }
                 Button("Import Compose…") { ui.section = .templates; ui.pendingComposeImport = true }
             }
             CommandGroup(after: .textEditing) {

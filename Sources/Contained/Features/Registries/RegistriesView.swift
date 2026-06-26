@@ -5,6 +5,7 @@ import ContainedCore
 /// CLI via `--password-stdin`, so the password never lands in argv or the process list.
 struct RegistriesView: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
     @State private var loggingIn = false
     @State private var loggingOut: RegistryLogin?
 
@@ -14,12 +15,9 @@ struct RegistriesView: View {
                          emptyMessage: "Log in to a registry to pull private images and push your builds.") {
             ForEach(app.registries) { login in row(login) }
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { loggingIn = true } label: { Image(systemName: "person.badge.key") }.help("Log in to a registry")
-            }
-        }
         .task { await app.refreshResource(.registries) }
+        .onAppear { if ui.pendingAction == .registryLogin { ui.pendingAction = nil; loggingIn = true } }
+        .onChange(of: ui.pendingAction) { _, _ in if ui.pendingAction == .registryLogin { ui.pendingAction = nil; loggingIn = true } }
         .sheet(isPresented: $loggingIn) { RegistryLoginSheet() }
         .confirmationDialog("Log out of \(loggingOut?.host ?? "")?",
                             isPresented: logoutBinding, presenting: loggingOut) { login in
@@ -30,10 +28,16 @@ struct RegistriesView: View {
     private func row(_ login: RegistryLogin) -> some View {
         ResourceRow(symbol: "key.fill", tint: .accentColor, title: login.host,
                     subtitle: login.username.map { "as \($0)" } ?? "") {
-            GlassRowMenu {
-                Button(role: .destructive) { loggingOut = login } label: { Label("Log out", systemImage: "rectangle.portrait.and.arrow.right") }
-            }
+            GlassRowMenu { menuItems(login) }
         }
+        .contextMenu { menuItems(login) }
+    }
+
+    @ViewBuilder
+    private func menuItems(_ login: RegistryLogin) -> some View {
+        Button { copyToPasteboard(login.host) } label: { Label("Copy host", systemImage: "doc.on.doc") }
+        Divider()
+        Button(role: .destructive) { loggingOut = login } label: { Label("Log out", systemImage: "rectangle.portrait.and.arrow.right") }
     }
 
     private var logoutBinding: Binding<Bool> {
@@ -84,7 +88,7 @@ struct RegistryLoginSheet: View {
             .scrollContentBackground(.hidden)
         }
         .frame(Tokens.SheetSize.small)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 
     private func submit() {

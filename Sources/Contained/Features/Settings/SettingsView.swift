@@ -49,11 +49,18 @@ private struct AppearanceTab: View {
                 Picker("Window backdrop", selection: $settings.backdrop) {
                     ForEach(BackdropStyle.allCases) { Text($0.displayName).tag($0) }
                 }
+                Picker("Window material", selection: $settings.windowMaterial) {
+                    ForEach(WindowMaterial.allCases) { Text($0.displayName).tag($0) }
+                }
+                Picker("Sheet material", selection: $settings.modalMaterial) {
+                    ForEach(ModalMaterial.allCases) { Text($0.displayName).tag($0) }
+                }
                 Toggle("Reduce translucency", isOn: $settings.reduceTranslucency)
+                Toggle("Show info tips", isOn: $settings.showInfoTips)
             } header: {
                 Text("Layout & glass")
             } footer: {
-                Text("Reduce translucency falls back to solid surfaces — useful on slower displays or for legibility. Per-container colors are set from each container's Customize sheet.")
+                Text("Window and sheet materials set the behind-window vibrancy used across every screen. Reduce translucency overrides both with solid surfaces — useful on slower displays or for legibility. Per-container colors are set from each container's Customize sheet.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

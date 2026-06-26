@@ -68,6 +68,7 @@ struct ContainerCard: View {
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+        .contextMenu { menuItems }
         .onHover { hovering = $0 }
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: hovering)
         .accessibilityElement(children: .combine)
@@ -111,23 +112,7 @@ struct ContainerCard: View {
 
     private var menu: some View {
         Menu {
-            if isRunning {
-                Button { onStop() } label: { Label("Stop", systemImage: "stop.fill") }
-                Button { onRestart() } label: { Label("Restart", systemImage: "arrow.clockwise") }
-            } else {
-                Button { onStart() } label: { Label("Start", systemImage: "play.fill") }
-            }
-            Divider()
-            Button { onCustomize() } label: { Label("Customize…", systemImage: "paintbrush.pointed") }
-            Button { onEdit() } label: { Label("Edit…", systemImage: "slider.horizontal.3") }
-            Button { copyToPasteboard(snapshot.id) } label: { Label("Copy ID", systemImage: "doc.on.doc") }
-            if revealCLI {
-                Button { copyToPasteboard("container inspect \(snapshot.id)") } label: {
-                    Label("Copy as CLI", systemImage: "terminal")
-                }
-            }
-            Divider()
-            Button(role: .destructive) { onDelete() } label: { Label("Delete", systemImage: "trash") }
+            menuItems
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 13))
@@ -139,6 +124,29 @@ struct ContainerCard: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
+    }
+
+    /// The container's actions — shared by the ⋯ menu and the right-click context menu.
+    @ViewBuilder
+    private var menuItems: some View {
+        if isRunning {
+            Button { onStop() } label: { Label("Stop", systemImage: "stop.fill") }
+            Button { onRestart() } label: { Label("Restart", systemImage: "arrow.clockwise") }
+        } else {
+            Button { onStart() } label: { Label("Start", systemImage: "play.fill") }
+        }
+        Divider()
+        Button { onTap() } label: { Label("Open details", systemImage: "rectangle.expand.vertical") }
+        Button { onCustomize() } label: { Label("Customize…", systemImage: "paintbrush.pointed") }
+        Button { onEdit() } label: { Label("Edit…", systemImage: "slider.horizontal.3") }
+        Button { copyToPasteboard(snapshot.id) } label: { Label("Copy ID", systemImage: "doc.on.doc") }
+        if revealCLI {
+            Button { copyToPasteboard("container inspect \(snapshot.id)") } label: {
+                Label("Copy as CLI", systemImage: "terminal")
+            }
+        }
+        Divider()
+        Button(role: .destructive) { onDelete() } label: { Label("Delete", systemImage: "trash") }
     }
 
     private var portsRow: some View {
