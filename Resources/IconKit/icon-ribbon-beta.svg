@@ -1,0 +1,8 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- CHANNEL RIBBON — Beta. Toggle this layer ON only for the beta icon. Sits near the bottom;
+       Icon Composer's mask trims the ends to the squircle. Outline the text to paths before export
+       if Icon Composer substitutes the font (Type > Convert to Outlines, or do it in your editor). -->
+  <rect x="0" y="820" width="1024" height="150" fill="#6F3F07" fill-opacity="0.92"/>
+  <text x="512" y="922" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif"
+        font-size="104" font-weight="700" letter-spacing="10" fill="#FBEFD9">BETA</text>
+</svg>

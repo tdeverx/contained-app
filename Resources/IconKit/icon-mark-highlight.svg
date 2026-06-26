@@ -1,0 +1,6 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- SPECULAR LAYER — a faint light-catch over the top face. Place ABOVE the cube layer in Icon
+       Composer and let its glass amplify it. Subtle on purpose; the system adds the real gloss. -->
+  <polygon points="512,222 763,367 512,512 261,367" fill="#FFFFFF" fill-opacity="0.16"/>
+  <polygon points="512,222 700,330 512,438 324,330" fill="#FFFFFF" fill-opacity="0.20"/>
+</svg>
