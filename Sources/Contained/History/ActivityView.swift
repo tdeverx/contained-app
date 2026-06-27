@@ -27,9 +27,6 @@ struct ActivityContent: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: Tokens.Space.s) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .foregroundStyle(Color.accentColor)
-                    .frame(width: Tokens.IconSize.control, height: Tokens.IconSize.control)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Activity").font(.headline)
                     Text("\(filtered.count) events").font(.caption).foregroundStyle(.secondary)

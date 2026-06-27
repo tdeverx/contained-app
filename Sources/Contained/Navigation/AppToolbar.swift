@@ -1,10 +1,11 @@
 import SwiftUI
 import SwiftData
+import AppKit
 import ContainedCore
 
 /// The app-wide, custom (non-native) toolbar that lives in the title-bar band of the hidden-title-bar
 /// window. Three compact glass groups — add menu (leading), search + command palette (center),
-/// updates + activity (trailing) — stay **constant across pages** (high-level, not per-section).
+/// images + activity (trailing) — stay **constant across pages** (high-level, not per-section).
 ///
 /// Mounted as a top overlay over the **detail column** in `RootView` (never over the sidebar): the
 /// band sits in the title-bar region, the rest of the area is hit-transparent until a control opens.
@@ -18,6 +19,11 @@ struct AppToolbar: View {
 
     @State private var slots: [UIState.ToolbarMorph: CGRect] = [:]
     @State private var addSoftDismiss: (() -> Void)?
+    @State private var toolbarImageDetail: LocalImageTagGroup?
+    @State private var toolbarImageSourceFrame: CGRect?
+    @State private var toolbarImageExpanded = false
+
+    private let toolbarImageSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
 
     static let space = "appToolbar"
     /// Title-bar band height. The toolbar lives in the detail column (no traffic lights there), so the
@@ -44,6 +50,8 @@ struct AppToolbar: View {
                 .zIndex(ui.activeMorph == .updates ? 30 : 0)
             activityMorphLayer
                 .zIndex(ui.activeMorph == .activity ? 30 : 0)
+            toolbarImageDetailLayer
+                .zIndex(toolbarImageDetail == nil ? 0 : 50)
         }
         .coordinateSpace(.named(Self.space))
         .onPreferenceChange(ToolbarSlotKey.self) { slots = $0 }
@@ -61,12 +69,11 @@ struct AppToolbar: View {
         .frame(maxWidth: .infinity)
     }
 
-    // The add control is a standalone circle (single action); the trailing updates/activity buttons are a
+    // The add control is a standalone circle (single action); the trailing images/activity buttons are a
     // grouped capsule.
     private var leadingZone: some View {
         ToolbarIconButton(systemName: "plus", help: "Add") { ui.toggleMorph(.add) }
             .frame(width: Tokens.Toolbar.controlHeight, height: Tokens.Toolbar.controlHeight)
-            .glassEffect(.regular.interactive(), in: Circle())
             .opacity(ui.activeMorph == .add ? 0 : 1)
             .background(
                 GeometryReader { proxy in
@@ -78,7 +85,7 @@ struct AppToolbar: View {
 
     private var trailingZone: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
-            ToolbarIconButton(systemName: "arrow.down.circle", help: "Updates") { ui.toggleMorph(.updates) }
+            ToolbarIconButton(systemName: "shippingbox.fill", help: "Images") { ui.toggleMorph(.updates) }
                 .opacity(ui.activeMorph == .updates ? 0 : 1)
                 .background(slotReader(.updates))
             ToolbarIconButton(systemName: "clock.arrow.circlepath", help: "Activity") { ui.toggleMorph(.activity) }
@@ -122,9 +129,36 @@ struct AppToolbar: View {
                              originFrame: slots[.updates] ?? .zero,
                              panelSize: CGSize(width: 440, height: 300),
                              placement: .anchored,
-                             targetInsets: morphTargetInsets) {
-                ToolbarUpdatesPanel {
+                             targetInsets: morphTargetInsets,
+                             showsPanelShadow: false) {
+                ToolbarUpdatesPanel(onOpenImage: openToolbarImageDetail) {
                     ui.activeMorph = nil
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var toolbarImageDetailLayer: some View {
+        if let detail = toolbarImageDetail {
+            GeometryReader { proxy in
+                let bounds = safeBounds(in: proxy.size)
+                let current = currentToolbarImageGroup(detail)
+                let target = toolbarImageTargetRect(in: bounds)
+                let source = usableToolbarImageSource ?? target
+                let rect = toolbarImageExpanded ? target : source
+                ZStack {
+                    Color.clear
+                        .globalBackdrop(style: .dim, progress: toolbarImageExpanded ? 1 : 0)
+                        .contentShape(Rectangle())
+                        .onTapGesture { closeToolbarImageDetail() }
+
+                    ToolbarImageGroupCard(group: current,
+                                          isExpanded: true,
+                                          onTap: {},
+                                          onClose: closeToolbarImageDetail)
+                        .frame(width: rect.width, height: rect.height, alignment: .top)
+                        .position(x: rect.midX, y: rect.midY)
                 }
             }
         }
@@ -169,87 +203,119 @@ struct AppToolbar: View {
     }
 
     private var rowTopInset: CGFloat { Tokens.Toolbar.topPadding }
+
+    private var usableToolbarImageSource: CGRect? {
+        guard let frame = toolbarImageSourceFrame,
+              frame.width.isFinite, frame.height.isFinite,
+              frame.minX.isFinite, frame.minY.isFinite,
+              frame.width > 1, frame.height > 1
+        else { return nil }
+        return frame
+    }
+
+    private func safeBounds(in size: CGSize) -> CGRect {
+        let insets = morphTargetInsets
+        return CGRect(x: insets.leading,
+                      y: insets.top,
+                      width: max(1, size.width - insets.leading - insets.trailing),
+                      height: max(1, size.height - insets.top - insets.bottom))
+    }
+
+    private func toolbarImageTargetRect(in bounds: CGRect) -> CGRect {
+        let proposed = CGSize(width: min(max(bounds.width * 0.72, 560), 760),
+                              height: min(max(bounds.height * 0.68, 440), 620))
+        return MorphGeometry.targetRect(origin: .zero,
+                                        proposedSize: proposed,
+                                        bounds: bounds,
+                                        placement: .centered,
+                                        margin: Tokens.Space.xxl)
+    }
+
+    private func currentToolbarImageGroup(_ group: LocalImageTagGroup) -> LocalImageTagGroup {
+        LocalImageTagGroup.groups(for: app.images).first { $0.id == group.id } ?? group
+    }
+
+    private func openToolbarImageDetail(_ group: LocalImageTagGroup, sourceFrame: CGRect) {
+        toolbarImageDetail = group
+        toolbarImageSourceFrame = sourceFrame
+        toolbarImageExpanded = false
+        DispatchQueue.main.async {
+            withAnimation(toolbarImageSpring) { toolbarImageExpanded = true }
+        }
+    }
+
+    private func closeToolbarImageDetail() {
+        withAnimation(toolbarImageSpring) { toolbarImageExpanded = false } completion: {
+            toolbarImageDetail = nil
+            toolbarImageSourceFrame = nil
+        }
+    }
 }
 
 private struct ToolbarUpdatesPanel: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
+    var onOpenImage: (LocalImageTagGroup, CGRect) -> Void
     var onClose: () -> Void
 
-    private var updateGroups: [LocalImageTagGroup] {
-        LocalImageTagGroup.groups(for: app.images).filter {
-            app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable
+    private var imageGroups: [LocalImageTagGroup] {
+        LocalImageTagGroup.groups(for: app.images).sorted { lhs, rhs in
+            let lhsRank = imageRank(lhs)
+            let rhsRank = imageRank(rhs)
+            if lhsRank != rhsRank { return lhsRank < rhsRank }
+            return lhs.primaryReference.localizedCaseInsensitiveCompare(rhs.primaryReference) == .orderedAscending
         }
     }
 
-    private var alertGroups: [LocalImageTagGroup] {
-        LocalImageTagGroup.groups(for: app.images).filter {
-            app.imageUpdateStatus(for: $0.primaryReference).state == .error
-        }
+    private var updateCount: Int {
+        imageGroups.filter { app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable }.count
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
-            VStack(alignment: .leading, spacing: Tokens.Space.m) {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    countdownCard(context.date)
-                }
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
-                        if updateGroups.isEmpty && alertGroups.isEmpty {
-                            emptyCard
-                        } else {
-                            ForEach(updateGroups) { group in
-                                updateCard(group)
-                            }
-                            ForEach(alertGroups) { group in
-                                alertCard(group)
-                            }
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
+                    if imageGroups.isEmpty {
+                        emptyCard
+                    } else {
+                        ForEach(imageGroups) { group in
+                            imageRow(group)
                         }
                     }
-                    .padding(.vertical, 1)
                 }
-                .frame(maxHeight: 300)
-                HStack {
-                    Button {
-                        Task { await app.runImageUpdateSweepNow() }
-                    } label: {
-                        Label("Run Now", systemImage: "play.fill")
-                    }
-                    .buttonStyle(.glassProminent)
-                    Button {
-                        ui.section = .images
-                        onClose()
-                    } label: {
-                        Label("Open Images", systemImage: "square.stack.3d.up")
-                    }
-                    .buttonStyle(.glass)
-                    Spacer(minLength: 0)
-                }
+                .padding(Tokens.Space.m)
             }
-            .padding(Tokens.Space.l)
+            .scrollEdgeEffectStyle(.soft, for: .all)
         }
-        .morphPanelSize(CGSize(width: 520, height: 540))
+        .morphPanelSize(CGSize(width: 520, height: 520))
         .morphPanelPlacement(.anchored)
     }
 
     private var header: some View {
         HStack(spacing: Tokens.Space.s) {
-            Image(systemName: "arrow.down.circle")
-                .foregroundStyle(Color.accentColor)
-                .frame(width: Tokens.IconSize.control, height: Tokens.IconSize.control)
             VStack(alignment: .leading, spacing: 1) {
-                Text("Updates").font(.headline)
-                Text("\(updateGroups.count) available · \(app.imageUpdateIntervalDescription)")
+                Text("Images").font(.headline)
+                Text("\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            GlassCircleButton(systemName: "square.and.arrow.down", help: "Load Image Tar") {
+                ui.dispatch(.loadImage)
+                onClose()
+            }
+            GlassCircleButton(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
+                Task { await app.runImageUpdateSweepNow() }
+            }
+            GlassCircleButton(systemName: "trash", help: "Prune Images") {
+                ui.dispatch(.pruneImages)
+                onClose()
+            }
             GlassCircleButton(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
         }
-        .padding(Tokens.Space.l)
+        .padding(Tokens.Space.m)
     }
 
     private var emptyCard: some View {
@@ -260,82 +326,246 @@ private struct ToolbarUpdatesPanel: View {
                     .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
                     .background(.green.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("No image updates").font(.callout.weight(.medium))
-                    Text("Everything checked is current").font(.caption).foregroundStyle(.secondary)
+                    Text("No images").font(.callout.weight(.medium))
+                    Text("Pull or build an image to see it here").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
             }
         }
     }
 
-    private func updateCard(_ group: LocalImageTagGroup) -> some View {
+    private func imageRow(_ group: LocalImageTagGroup) -> some View {
+        GeometryReader { proxy in
+            ToolbarImageGroupCard(group: group,
+                                  isExpanded: false,
+                                  onTap: {
+                                      onOpenImage(group, proxy.frame(in: .named(AppToolbar.space)))
+                                  },
+                                  onClose: {})
+        }
+        .frame(height: ResourceCardSize.medium.height)
+    }
+
+    private func imageRank(_ group: LocalImageTagGroup) -> Int {
+        switch app.imageUpdateStatus(for: group.primaryReference).state {
+        case .updateAvailable: return 0
+        case .error: return 1
+        case .checking: return 2
+        case .unknown: return 3
+        case .current: return 4
+        }
+    }
+
+}
+
+private struct ToolbarImageGroupCard: View {
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
+    let group: LocalImageTagGroup
+    let isExpanded: Bool
+    var onTap: () -> Void
+    var onClose: () -> Void
+
+    @State private var inspecting: ContainedCore.ImageResource?
+    @State private var historyFor: ContainedCore.ImageResource?
+    @State private var tagging: ContainedCore.ImageResource?
+    @State private var pushing: ContainedCore.ImageResource?
+    @State private var deletingReference: String?
+    @State private var pruning = false
+
+    var body: some View {
+        let image = primaryImage(group)
         let status = app.imageUpdateStatus(for: group.primaryReference)
-        let style = imageStyle(for: group)
-        return ResourceGlassCard(size: .small) {
-            HStack(spacing: Tokens.Space.s) {
+        let resolved = app.imageGroupStyle(for: group)
+        ResourceGlassCard(size: .medium,
+                          isExpanded: isExpanded,
+                          fill: resolved.fillBackground ? resolved.color : nil,
+                          fillOpacity: resolved.backgroundOpacity,
+                          gradient: resolved.gradient,
+                          gradientAngle: resolved.gradientAngle,
+                          onTap: onTap) {
+            cardHeader(group, image: image, style: resolved)
+        } bodyContent: {
+            tagList(group)
+        } footerLeading: {
+            imageFooterInfo(status)
+        } footerActions: {
+            imageFooterActions(group)
+        }
+        .contextMenu { cardMenu(group) }
+        .sheet(item: $inspecting) { JSONInspectorSheet(title: $0.reference, value: $0) }
+        .sheet(item: $historyFor) { ImageHistorySheet(image: $0) }
+        .sheet(item: $tagging) { TagImageSheet(source: $0.reference) }
+        .sheet(item: $pushing) { PushImageSheet(reference: $0.reference) }
+        .confirmationDialog("Delete \(Format.shortImage(deletingReference ?? ""))?",
+                            isPresented: deletingBinding,
+                            presenting: deletingReference) { reference in
+            Button("Delete", role: .destructive) { Task { await delete(reference) } }
+        } message: { _ in Text("This removes the selected local image reference.") }
+        .confirmationDialog("Prune images?", isPresented: $pruning) {
+            Button("Remove unused", role: .destructive) { Task { await prune(all: false) } }
+            Button("Remove all unreferenced", role: .destructive) { Task { await prune(all: true) } }
+        } message: {
+            Text("Unused images aren't referenced by any container. “All” also removes dangling layers.")
+        }
+    }
+
+    private func cardHeader(_ group: LocalImageTagGroup, image: ContainedCore.ImageResource?,
+                            style: Personalization) -> some View {
+        HStack(spacing: Tokens.Space.s) {
+            if let image {
+                ImageStyleButton(reference: image.reference,
+                                 style: style,
+                                 target: .imageGroup(id: group.id, reference: group.primaryReference))
+            } else {
                 imageChip(style)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(repositoryName(group.primaryReference))
-                        .font(.callout.weight(.medium))
-                        .lineLimit(1)
-                    Text(updateSubtitle(group, status: status))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                GlassCircleButton(systemName: "arrow.down", help: "Pull Update") {
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(repositoryName(group.primaryReference))
+                    .font(.system(size: 14, weight: .medium))
+                    .lineLimit(1)
+                Text("\(group.references.count) tag\(group.references.count == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            if isExpanded {
+                GlassCircleButton(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+            }
+        }
+    }
+
+    private func imageFooterInfo(_ status: ImageUpdateStatus) -> some View {
+        HStack(spacing: Tokens.Space.s) {
+            Image(systemName: updateSymbol(status.state))
+                .font(.caption)
+                .foregroundStyle(updateTint(status.state))
+            Text(updateFooterText(status))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+    }
+
+    private func imageFooterActions(_ group: LocalImageTagGroup) -> some View {
+        HStack(spacing: Tokens.Space.m) {
+            footerAction("play", help: "Run") {
+                ui.runImage(group.primaryReference)
+                if isExpanded { onClose() }
+            }
+            footerAction("arrow.triangle.2.circlepath", help: "Check for Updates") {
+                Task { await app.checkImageUpdate(group.primaryReference) }
+            }
+            if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
+                footerAction("arrow.down.circle", help: "Pull Update", tint: .orange) {
                     Task { await app.pullImageUpdate(group.primaryReference) }
                 }
             }
+            if let image = primaryImage(group) {
+                footerAction("tag", help: "Add Tag") { tagging = image }
+                footerAction("arrow.up.circle", help: "Push") { pushing = image }
+                footerAction("arrow.up.doc", help: "Save") { save(image) }
+            }
+            footerAction("trash", help: "Prune", tint: .red) { pruning = true }
         }
     }
 
-    private func alertCard(_ group: LocalImageTagGroup) -> some View {
-        let status = app.imageUpdateStatus(for: group.primaryReference)
-        let style = imageStyle(for: group)
-        return ResourceGlassCard(size: .small) {
+    private func tagList(_ group: LocalImageTagGroup) -> some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.m) {
+            Text("Tags").font(.headline)
+            ScrollView(.vertical) {
+                LazyVStack(spacing: Tokens.Space.s) {
+                    ForEach(group.references, id: \.self) { reference in
+                        tagRow(reference, in: group)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(Tokens.Space.s)
+            }
+            .frame(height: tagListHeight(for: group))
+            .scrollEdgeEffectStyle(.soft, for: .all)
+        }
+    }
+
+    private func tagListHeight(for group: LocalImageTagGroup) -> CGFloat {
+        let rows = CGFloat(max(group.references.count, 1))
+        let content = rows * ResourceCardSize.medium.height + max(0, rows - 1) * Tokens.Space.s
+        return min(content + Tokens.Space.s * 2, 360)
+    }
+
+    private func tagRow(_ reference: String, in group: LocalImageTagGroup) -> some View {
+        let style = app.imageStyle(for: reference)
+        return ResourceGlassCard(size: .medium,
+                                 fill: style.fillBackground ? style.color : nil,
+                                 fillOpacity: style.backgroundOpacity,
+                                 gradient: style.gradient,
+                                 gradientAngle: style.gradientAngle) {
             HStack(spacing: Tokens.Space.s) {
-                imageChip(style)
+                ImageStyleButton(reference: reference,
+                                 style: style,
+                                 target: .imageTag(reference: reference, groupID: group.id))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(repositoryName(group.primaryReference))
-                        .font(.callout.weight(.medium))
+                    Text(Format.shortImage(reference))
+                        .font(.system(.callout, design: .monospaced).weight(.medium))
                         .lineLimit(1)
-                    Text(status.message ?? "Update check failed")
+                    Text(repositoryName(reference))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
-        }
-    }
-
-    private func countdownCard(_ now: Date) -> some View {
-        ResourceGlassCard(size: .small) {
-            HStack(spacing: Tokens.Space.s) {
-                Image(systemName: "timer")
-                    .foregroundStyle(.secondary)
-                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-                    .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Next check").font(.callout.weight(.medium))
-                    Text(app.imageUpdateIntervalDescription)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        } footerLeading: {
+            Text("Local tag")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } footerActions: {
+            HStack(spacing: Tokens.Space.m) {
+                footerAction("play", help: "Run") {
+                    ui.runImage(reference)
+                    if isExpanded { onClose() }
                 }
-                Spacer(minLength: 0)
-                Text(countdown(to: app.imageUpdateNextRunDate, now: now))
-                    .font(.system(.callout, design: .monospaced).weight(.semibold))
+                footerAction("doc.on.doc", help: "Copy reference") { copyToPasteboard(reference) }
+                footerAction("doc.text.magnifyingglass", help: "Inspect") { inspect(reference, in: group) }
+                footerAction("trash", help: "Delete tag", tint: .red) { deletingReference = reference }
             }
         }
     }
 
-    private func imageStyle(for group: LocalImageTagGroup) -> Personalization {
-        guard let image = (group.images.first { $0.reference == group.primaryReference } ?? group.images.first) else {
-            return Personalization()
+    private func footerAction(_ systemName: String, help: String, tint: Color? = nil,
+                              action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName).font(.system(size: 13))
         }
-        return app.personalization.imageDefault(for: image.reference) ?? Personalization()
+        .buttonStyle(.plain)
+        .foregroundStyle(tint ?? .secondary)
+        .help(help)
+        .accessibilityLabel(help)
+    }
+
+    @ViewBuilder
+    private func cardMenu(_ group: LocalImageTagGroup) -> some View {
+        Button { ui.runImage(group.primaryReference) } label: { Label("Run…", systemImage: "play") }
+        if let image = primaryImage(group) {
+            Button { tagging = image } label: { Label("Add Tag…", systemImage: "tag") }
+            Button { pushing = image } label: { Label("Push…", systemImage: "arrow.up.circle") }
+            Button { inspecting = image } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
+            Button { historyFor = image } label: { Label("History", systemImage: "clock.arrow.circlepath") }
+            Button { save(image) } label: { Label("Save to tar…", systemImage: "arrow.up.doc") }
+        }
+        Divider()
+        Button { Task { await app.checkImageUpdate(group.primaryReference) } } label: {
+            Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
+        }
+        if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
+            Button { Task { await app.pullImageUpdate(group.primaryReference) } } label: {
+                Label("Pull Update", systemImage: "arrow.down.circle")
+            }
+        }
+        Divider()
+        Button(role: .destructive) { deletingReference = group.primaryReference } label: {
+            Label("Delete Primary Tag", systemImage: "trash")
+        }
     }
 
     private func imageChip(_ style: Personalization) -> some View {
@@ -346,6 +576,25 @@ private struct ToolbarUpdatesPanel: View {
             .background(style.color.opacity(0.16), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 
+    private func updateSymbol(_ state: ImageUpdateState) -> String {
+        switch state {
+        case .unknown: return "questionmark.circle"
+        case .checking: return "arrow.triangle.2.circlepath"
+        case .current: return "checkmark.circle.fill"
+        case .updateAvailable: return "arrow.down.circle.fill"
+        case .error: return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func updateTint(_ state: ImageUpdateState) -> Color {
+        switch state {
+        case .current: return .green
+        case .updateAvailable, .error: return .orange
+        case .checking: return .blue
+        case .unknown: return .secondary
+        }
+    }
+
     private func repositoryName(_ reference: String) -> String {
         let parsed = RegistryImageReference.parse(reference)
         if parsed.registry == "registry-1.docker.io", parsed.repository.hasPrefix("library/") {
@@ -354,22 +603,62 @@ private struct ToolbarUpdatesPanel: View {
         return parsed.repository
     }
 
-    private func updateSubtitle(_ group: LocalImageTagGroup, status: ImageUpdateStatus) -> String {
-        let tags = "\(group.references.count) tag\(group.references.count == 1 ? "" : "s")"
-        guard let checkedAt = status.checkedAt else { return tags }
-        return "\(tags) · Checked \(checkedAt.formatted(date: .omitted, time: .shortened))"
+    private func updateFooterText(_ status: ImageUpdateStatus) -> String {
+        switch status.state {
+        case .unknown: return "Not checked"
+        case .checking: return "Checking"
+        case .current: return "Up to date"
+        case .updateAvailable: return "Update available"
+        case .error: return "Check failed"
+        }
     }
 
-    private func countdown(to date: Date, now: Date) -> String {
-        let seconds = max(0, Int(date.timeIntervalSince(now)))
-        if seconds == 0 { return "due now" }
-        let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
-        let secs = seconds % 60
-        if hours > 0 { return String(format: "%dh %02dm", hours, minutes) }
-        if minutes > 0 { return String(format: "%dm %02ds", minutes, secs) }
-        return "\(secs)s"
+    private func primaryImage(_ group: LocalImageTagGroup) -> ContainedCore.ImageResource? {
+        group.images.first { $0.reference == group.primaryReference } ?? group.images.first
     }
+
+    private var deletingBinding: Binding<Bool> {
+        Binding(get: { deletingReference != nil }, set: { if !$0 { deletingReference = nil } })
+    }
+
+    private func inspect(_ reference: String, in group: LocalImageTagGroup) {
+        inspecting = group.images.first { $0.reference == reference }
+    }
+
+    private func delete(_ reference: String) async {
+        guard let client = app.client else { return }
+        do {
+            _ = try await client.deleteImages([reference])
+            await app.refreshResource(.images)
+            app.flash("Deleted \(Format.shortImage(reference))")
+            deletingReference = nil
+        } catch let error as CommandError { app.flash(error.userMessage) }
+        catch { app.flash(error.localizedDescription) }
+    }
+
+    private func prune(all: Bool) async {
+        guard let client = app.client else { return }
+        do { _ = try await client.pruneImages(all: all); await app.refreshResource(.images) }
+        catch let error as CommandError { app.flash(error.userMessage) }
+        catch { app.flash(error.localizedDescription) }
+    }
+
+    private func save(_ image: ContainedCore.ImageResource) {
+        guard let client = app.client else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.init(filenameExtension: "tar") ?? .data]
+        panel.nameFieldStringValue = Format.shortImage(image.reference).replacingOccurrences(of: ":", with: "_") + ".tar"
+        panel.message = "Save \(Format.shortImage(image.reference)) to a tar archive"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        Task {
+            if let error = await app.captured({ _ = try await client.saveImages([image.reference], to: url.path) }) {
+                app.flash(error)
+            } else {
+                app.flash("Saved \(url.lastPathComponent)")
+            }
+        }
+    }
+
 }
 
 private struct ToolbarActivityPanel: View {
@@ -449,8 +738,8 @@ private struct ToolbarCommandPalette: View {
                alignment: .top)
         // Same surface as the add-button morph (floatingPanelMaterial: shadow .24/24/12, border .18) so
         // both toolbar morphs read as the one gesture.
-        .background { Color.clear.glassEffect(.regular.interactive(), in: shape) }
         .clipShape(shape)
+        .background { Color.clear.glassEffect(.regular.interactive(), in: shape) }
         .overlay { if expanded { shape.strokeBorder(.white.opacity(0.18), lineWidth: 1) } }
         .shadow(color: .black.opacity(expanded ? 0.24 : 0), radius: expanded ? 24 : 0, y: expanded ? 12 : 0)
         .padding(.top, topInset)

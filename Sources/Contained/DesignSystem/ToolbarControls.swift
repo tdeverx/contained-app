@@ -16,11 +16,15 @@ struct ToolbarIconButton: View {
                 .font(.headline)             // 13pt semibold (weight) → Dynamic-Type scalable
                 .imageScale(.large)          // bumps the glyph up to toolbar size (headline == body size)
                 .padding(Tokens.Toolbar.iconInnerPadding)
-                .frame(height: Tokens.Toolbar.controlHeight)
+                .frame(width: Tokens.Toolbar.controlHeight, height: Tokens.Toolbar.controlHeight)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .buttonBorderShape(.circle)
+        .background {
+            Circle().fill(.clear).glassEffect(.regular.interactive(), in: Circle())
+        }
+        .clipShape(Circle())
         .help(help)
         .accessibilityLabel(help)
     }
@@ -31,6 +35,6 @@ extension View {
     /// interactive `.regular` glass in a concentric capsule, padded so grouped buttons sit on one
     /// baseline. Matches the interactive glass used by `GlassOptionTile`.
     func toolbarControlGlass() -> some View {
-        glassEffect(.regular.interactive(), in: Capsule())
+        clipShape(Capsule())
     }
 }

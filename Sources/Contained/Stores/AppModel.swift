@@ -58,14 +58,34 @@ final class AppModel {
     private var lastImageUpdateSweep: Date? {
         didSet { Self.saveLastImageUpdateSweep(lastImageUpdateSweep) }
     }
-    private static let imageUpdateInterval: TimeInterval = 6 * 60 * 60
     private static let imageUpdatesKey = "imageUpdateStatuses"
     private static let imageUpdateLastSweepKey = "imageUpdateLastSweep"
+    private var imageUpdateInterval: TimeInterval { TimeInterval(settings.imageUpdateIntervalHours) * 60 * 60 }
     var imageUpdateLastRunDate: Date? { lastImageUpdateSweep }
     var imageUpdateNextRunDate: Date {
-        lastImageUpdateSweep?.addingTimeInterval(Self.imageUpdateInterval) ?? Date()
+        lastImageUpdateSweep?.addingTimeInterval(imageUpdateInterval) ?? Date()
     }
-    var imageUpdateIntervalDescription: String { "Every 6 hours" }
+    var imageUpdateIntervalDescription: String {
+        "Every \(settings.imageUpdateIntervalHours) hour\(settings.imageUpdateIntervalHours == 1 ? "" : "s")"
+    }
+
+    func imageStyle(for reference: String) -> Personalization {
+        let groupID = LocalImageTagGroup.groups(for: images).first { group in
+            group.references.contains(reference)
+        }?.id
+        return personalization.imageDefault(for: reference, groupID: groupID) ?? Personalization()
+    }
+
+    func imageGroupStyle(for group: LocalImageTagGroup) -> Personalization {
+        personalization.imageGroupDefault(for: group.id) ?? Personalization()
+    }
+
+    func containerStyle(for snapshot: ContainerSnapshot) -> Personalization {
+        let groupID = LocalImageTagGroup.groups(for: images).first { group in
+            group.references.contains(snapshot.image)
+        }?.id
+        return personalization.resolved(id: snapshot.id, image: snapshot.image, groupID: groupID)
+    }
 
     /// One in-flight operation shown in the bottom progress bar.
     struct ActivityState: Equatable {
@@ -85,7 +105,7 @@ final class AppModel {
         }
         watchdog.onRestart = { [weak self] snapshot, attempt in
             guard let self else { return }
-            let name = self.personalization.resolved(id: snapshot.id, image: snapshot.image)
+            let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             self.flash("Restarted \(name) (attempt \(attempt))")
             self.historyStore.record(.watchdog, containerID: snapshot.id, message: "Restarted \(name) (attempt \(attempt))")
@@ -93,14 +113,14 @@ final class AppModel {
         }
         watchdog.onUnexpectedExit = { [weak self] snapshot in
             guard let self else { return }
-            let name = self.personalization.resolved(id: snapshot.id, image: snapshot.image)
+            let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             self.historyStore.record(.watchdog, containerID: snapshot.id, message: "\(name) exited unexpectedly")
             self.notifier.containerExited(name: name, enabled: settings.notifyOnCrash)
         }
         health.onUnhealthy = { [weak self] snapshot in
             guard let self else { return }
-            let name = self.personalization.resolved(id: snapshot.id, image: snapshot.image)
+            let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             self.flash("\(name) is unhealthy")
             self.historyStore.record(.healthcheck, containerID: snapshot.id, message: "\(name) failed its healthcheck")
@@ -430,7 +450,7 @@ final class AppModel {
     }
 
     private func checkImageUpdatesIfNeeded(now: Date = Date()) async {
-        if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < Self.imageUpdateInterval { return }
+        if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < imageUpdateInterval { return }
         if images.isEmpty, let client {
             do {
                 images = try await client.images()

@@ -12,7 +12,7 @@ struct StatsTab: View {
     private var delta: StatsDelta? { app.containers.statsByID[snapshot.id] }
     private var history: [GraphMetric: SampleBuffer] { app.containers.historyByID[snapshot.id] ?? [:] }
     private var tint: Color {
-        app.personalization.resolved(id: snapshot.id, image: snapshot.image).color
+        app.containerStyle(for: snapshot).color
     }
 
     private let columns = [GridItem(.adaptive(minimum: 200), spacing: Tokens.Space.m)]

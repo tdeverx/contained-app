@@ -20,9 +20,14 @@ struct ImagesListView: View {
     @State private var pruning = false
 
     private let detailSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
+    private var columns: [GridItem] {
+        [GridItem(.adaptive(minimum: Tokens.CardSize.largeMin,
+                            maximum: Tokens.CardSize.largeMax),
+                  spacing: Tokens.Space.m)]
+    }
 
     private var groups: [LocalImageTagGroup] {
-        let all = LocalImageTagGroup.groups(for: app.images)
+        let all = sortedGroups(LocalImageTagGroup.groups(for: app.images))
         let q = ui.searchText.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return all }
         return all.filter { group in
@@ -35,12 +40,10 @@ struct ImagesListView: View {
             ZStack {
                 content(viewport: viewport)
                     .disabled(detail != nil)
-                    .blur(radius: expanded ? 8 : 0)
 
                 if detail != nil {
-                    Rectangle()
-                        .fill(.black.opacity(expanded ? 0.28 : 0))
-                        .ignoresSafeArea()
+                    Color.clear
+                        .globalBackdrop(style: .dim, progress: expanded ? 1 : 0)
                         .contentShape(Rectangle())
                         .onTapGesture { closeDetail() }
                         .zIndex(5)
@@ -51,15 +54,10 @@ struct ImagesListView: View {
                     let target = panelRect(in: viewport.size)
                     let source = cardFrames[current.id].flatMap { $0.isUsableForImageMorph ? $0 : nil } ?? target
                     let rect = expanded ? target : source
-                    ZStack {
-                        ExteriorShadow(cornerRadius: Tokens.Radius.card,
-                                       color: .black.opacity(0.16), radius: 60, y: 26)
-                        imageCard(current, isExpanded: true)
-                            .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
-                    }
-                    .frame(width: rect.width, height: rect.height)
-                    .position(x: rect.midX, y: rect.midY)
-                    .zIndex(10)
+                    imageCard(current, isExpanded: true)
+                        .frame(width: rect.width, height: rect.height, alignment: .top)
+                        .position(x: rect.midX, y: rect.midY)
+                        .zIndex(10)
                 }
             }
             .coordinateSpace(.named("image-grid"))
@@ -115,13 +113,12 @@ struct ImagesListView: View {
                         .frame(maxWidth: .infinity, minHeight: viewport.size.height)
                         .contentShape(Rectangle())
                         .onTapGesture(count: 2) { zoomFrontWindow() }
-                    LazyVStack(spacing: Tokens.Space.m) {
+                    LazyVGrid(columns: columns, spacing: Tokens.Space.m) {
                         ForEach(groups) { group in
                             let selected = detail?.id == group.id
                             imageCard(group, isExpanded: false)
                                 .opacity(selected ? 0 : 1)
                                 .allowsHitTesting(detail == nil)
-                                .frame(maxWidth: .infinity)
                                 .background(
                                     GeometryReader { proxy in
                                         Color.clear.preference(
@@ -154,8 +151,7 @@ struct ImagesListView: View {
 
     private func imageCard(_ group: LocalImageTagGroup, isExpanded: Bool) -> some View {
         let image = primaryImage(group)
-        let style = image.map { app.personalization.imageDefault(for: $0.reference) } ?? nil
-        let resolved = style ?? Personalization()
+        let resolved = app.imageGroupStyle(for: group)
         let status = app.imageUpdateStatus(for: group.primaryReference)
         return ResourceGlassCard(size: .medium,
                                  isExpanded: isExpanded,
@@ -166,13 +162,11 @@ struct ImagesListView: View {
                                  onTap: { openDetail(group) }) {
             cardHeader(group, image: image, style: resolved, isExpanded: isExpanded)
         } bodyContent: {
-            imageDetailBody(group, image: image, status: status)
+            imageDetailBody(group)
         } footerLeading: {
             imageFooterInfo(status)
         } footerActions: {
             imageFooterActions(group)
-        } widget: {
-            updatePanel(status)
         }
         .contextMenu { cardMenu(group) }
     }
@@ -181,7 +175,9 @@ struct ImagesListView: View {
                             style: Personalization, isExpanded: Bool) -> some View {
         HStack(spacing: Tokens.Space.s) {
             if let image {
-                ImageStyleButton(image: image, style: style)
+                ImageStyleButton(reference: image.reference,
+                                 style: style,
+                                 target: .imageGroup(id: group.id, reference: group.primaryReference))
             } else {
                 Image(systemName: style.symbol)
                     .foregroundStyle(style.color)
@@ -215,83 +211,31 @@ struct ImagesListView: View {
         }
     }
 
-    private func imageDetailBody(_ group: LocalImageTagGroup, image: ContainedCore.ImageResource?,
-                                 status: ImageUpdateStatus) -> some View {
-        HStack(alignment: .top, spacing: Tokens.Space.m) {
-            VStack(alignment: .leading, spacing: Tokens.Space.m) {
-                if let image {
-                    detailInfoCard(title: "Image", value: imageSubtitle(image), symbol: "info.circle")
-                }
-                detailInfoCard(title: "References",
-                               value: "\(group.references.count) local tag\(group.references.count == 1 ? "" : "s")",
-                               symbol: "tag")
-                tagList(group)
-            }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            detailUpdateCard(group, status: status)
-                .frame(width: 260)
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-    }
-
-    private func detailInfoCard(title: String, value: String, symbol: String) -> some View {
-        ResourceGlassCard(size: .small) {
-            HStack(spacing: Tokens.Space.s) {
-                Image(systemName: symbol)
-                    .foregroundStyle(Color.accentColor)
-                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-                    .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(value)
-                        .font(.callout.weight(.medium))
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }
-        }
-    }
-
-    private func detailUpdateCard(_ group: LocalImageTagGroup, status: ImageUpdateStatus) -> some View {
-        ResourceGlassCard(size: .small) {
-            HStack(spacing: Tokens.Space.s) {
-                Image(systemName: updateSymbol(status.state))
-                    .foregroundStyle(updateTint(status.state))
-                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-                    .background(updateTint(status.state).opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(updateTitle(status))
-                        .font(.callout.weight(.medium))
-                        .lineLimit(1)
-                    Text(updateDetail(status))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                if status.state == .updateAvailable {
-                    GlassCircleButton(systemName: "arrow.down", help: "Pull Update") {
-                        Task { await app.pullImageUpdate(group.primaryReference) }
-                    }
-                }
-            }
-        }
+    private func imageDetailBody(_ group: LocalImageTagGroup) -> some View {
+        tagList(group)
     }
 
     private func tagList(_ group: LocalImageTagGroup) -> some View {
         VStack(alignment: .leading, spacing: Tokens.Space.m) {
             Text("Tags").font(.headline)
-            ScrollView {
+            ScrollView(.vertical) {
                 LazyVStack(spacing: Tokens.Space.s) {
                     ForEach(group.references, id: \.self) { reference in
                         tagRow(reference, in: group)
+                            .frame(maxWidth: .infinity)
                     }
                 }
+                .padding(Tokens.Space.s)
             }
+            .frame(height: tagListHeight(for: group))
+            .scrollEdgeEffectStyle(.soft, for: .all)
         }
-        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private func tagListHeight(for group: LocalImageTagGroup) -> CGFloat {
+        let rows = CGFloat(max(group.references.count, 1))
+        let content = rows * ResourceCardSize.medium.height + max(0, rows - 1) * Tokens.Space.s
+        return min(content + Tokens.Space.s * 2, 360)
     }
 
     private func imageFooterActions(_ group: LocalImageTagGroup) -> some View {
@@ -325,45 +269,40 @@ struct ImagesListView: View {
         .accessibilityLabel(help)
     }
 
-    private func updatePanel(_ status: ImageUpdateStatus) -> some View {
-        ResourceGlassCard(size: .small) {
+    private func tagRow(_ reference: String, in group: LocalImageTagGroup) -> some View {
+        let style = app.imageStyle(for: reference)
+        return ResourceGlassCard(size: .medium,
+                                 fill: style.fillBackground ? style.color : nil,
+                                 fillOpacity: style.backgroundOpacity,
+                                 gradient: style.gradient,
+                                 gradientAngle: style.gradientAngle) {
             HStack(spacing: Tokens.Space.s) {
-                Image(systemName: updateSymbol(status.state))
-                    .font(.system(size: 14))
-                    .foregroundStyle(updateTint(status.state))
-                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-                    .background(updateTint(status.state).opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                ImageStyleButton(reference: reference,
+                                 style: style,
+                                 target: .imageTag(reference: reference, groupID: group.id))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(updateTitle(status)).font(.callout.weight(.medium)).lineLimit(1)
-                    Text(updateDetail(status))
+                    Text(Format.shortImage(reference))
+                        .font(.system(.callout, design: .monospaced).weight(.medium))
+                        .lineLimit(1)
+                    Text(repositoryName(reference))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
+        } footerLeading: {
+            Text("Local tag")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } footerActions: {
+            HStack(spacing: Tokens.Space.m) {
+                footerAction("play", help: "Run") { ui.runImage(reference); closeDetail() }
+                footerAction("doc.on.doc", help: "Copy reference") { copyToPasteboard(reference) }
+                footerAction("doc.text.magnifyingglass", help: "Inspect") { inspect(reference, in: group) }
+                footerAction("trash", help: "Delete tag", tint: .red) { deletingReference = reference }
+            }
         }
-    }
-
-    private func tagRow(_ reference: String, in group: LocalImageTagGroup) -> some View {
-        HStack(spacing: Tokens.Space.s) {
-            Image(systemName: "tag.fill").foregroundStyle(Color.accentColor).frame(width: 18)
-            Text(Format.shortImage(reference))
-                .font(.system(.callout, design: .monospaced))
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            Button { ui.runImage(reference); closeDetail() } label: { Image(systemName: "play") }
-                .help("Run")
-            Button { copyToPasteboard(reference) } label: { Image(systemName: "doc.on.doc") }
-                .help("Copy reference")
-            Button { inspect(reference, in: group) } label: { Image(systemName: "doc.text.magnifyingglass") }
-                .help("Inspect")
-            Button(role: .destructive) { deletingReference = reference } label: { Image(systemName: "trash") }
-                .help("Delete tag")
-        }
-        .buttonStyle(.glass)
-        .padding(Tokens.Space.s)
-        .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: Tokens.Radius.control))
     }
 
     @ViewBuilder
@@ -442,6 +381,25 @@ struct ImagesListView: View {
         groups.first { $0.id == group.id } ?? group
     }
 
+    private func sortedGroups(_ groups: [LocalImageTagGroup]) -> [LocalImageTagGroup] {
+        groups.sorted { lhs, rhs in
+            let lhsRank = imageRank(lhs)
+            let rhsRank = imageRank(rhs)
+            if lhsRank != rhsRank { return lhsRank < rhsRank }
+            return lhs.primaryReference.localizedCaseInsensitiveCompare(rhs.primaryReference) == .orderedAscending
+        }
+    }
+
+    private func imageRank(_ group: LocalImageTagGroup) -> Int {
+        switch app.imageUpdateStatus(for: group.primaryReference).state {
+        case .updateAvailable: return 0
+        case .error: return 1
+        case .checking: return 2
+        case .unknown: return 3
+        case .current: return 4
+        }
+    }
+
     private func primaryImage(_ group: LocalImageTagGroup) -> ContainedCore.ImageResource? {
         group.images.first { $0.reference == group.primaryReference } ?? group.images.first
     }
@@ -452,14 +410,6 @@ struct ImagesListView: View {
             return String(parsed.repository.dropFirst("library/".count))
         }
         return parsed.repository
-    }
-
-    private func imageSubtitle(_ image: ContainedCore.ImageResource) -> String {
-        let runnable = image.variants.filter(\.isRunnable)
-        let size = runnable.compactMap(\.size).max() ?? image.variants.compactMap(\.size).max()
-        let arches = runnable.map(\.platform.architecture).joined(separator: ", ")
-        return [size.map { Format.bytes(UInt64($0)) }, arches.isEmpty ? nil : arches]
-            .compactMap { $0 }.joined(separator: "  ·  ")
     }
 
     private func openDetail(_ group: LocalImageTagGroup) {

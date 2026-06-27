@@ -23,7 +23,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var systemImage: String {
         switch self {
         case .containers: return "shippingbox"
-        case .images: return "square.stack.3d.up"
+        case .images: return "shippingbox.fill"
         case .build: return "hammer"
         case .volumes: return "externaldrive"
         case .registries: return "key"

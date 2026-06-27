@@ -113,12 +113,10 @@ struct ContainersGridView: View {
                 }
                 .scrollEdgeEffectStyle(.soft, for: .all)
                 .disabled(detail != nil)
-                .blur(radius: expanded ? 8 : 0)
 
                 if detail != nil {
-                    Rectangle()
-                        .fill(.black.opacity(expanded ? 0.28 : 0))
-                        .ignoresSafeArea()
+                    Color.clear
+                        .globalBackdrop(style: .blur, progress: expanded ? 1 : 0)
                         .contentShape(Rectangle())
                         .onTapGesture { closeDetail() }
                         .zIndex(5)
@@ -128,17 +126,8 @@ struct ContainersGridView: View {
                     let target = panelRect(in: viewport.size)
                     let source = cardFrames[detail.id].flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
                     let rect = expanded ? target : source
-                    ZStack {
-                        // Constant elevation — softer, lighter, larger. Not gated by `expanded`,
-                        // and not part of the blurred grid/content layer.
-                        ExteriorShadow(cornerRadius: Tokens.Radius.card,
-                                       color: .black.opacity(0.16),
-                                       radius: 60,
-                                       y: 26)
-                        expandedCard(detail)
-                            .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
-                    }
-                    .frame(width: rect.width, height: rect.height)
+                    expandedCard(detail)
+                        .frame(width: rect.width, height: rect.height, alignment: .top)
                         .position(x: rect.midX, y: rect.midY)
                         .zIndex(10)
                 }
@@ -336,7 +325,7 @@ struct ContainersGridView: View {
 
     private func containerCard(_ snapshot: ContainerSnapshot, isExpanded: Bool,
                                controlsVisible: Bool = true, onTap: @escaping () -> Void) -> some View {
-        let style = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+        let style = app.containerStyle(for: snapshot)
         return ContainerCard(
             snapshot: snapshot,
             style: style,
@@ -452,7 +441,7 @@ struct ContainersGridView: View {
 
     private func customizeName(_ snapshot: ContainerSnapshot?) -> String {
         guard let snapshot else { return "" }
-        return app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+        return app.containerStyle(for: snapshot)
             .displayName(fallback: snapshot.id)
     }
 

@@ -227,15 +227,18 @@ extension View {
 
 private struct FloatingPanelMaterial: ViewModifier {
     @Environment(\.modalMaterial) private var material
+    var showsShadow = true
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: Tokens.Radius.sheet, style: .continuous)
         content
             .background {
-                ExteriorShadow(cornerRadius: Tokens.Radius.sheet,
-                               color: .black.opacity(0.24),
-                               radius: 24,
-                               y: 12)
+                if showsShadow {
+                    ExteriorShadow(cornerRadius: Tokens.Radius.sheet,
+                                   color: .black.opacity(0.24),
+                                   radius: 24,
+                                   y: 12)
+                }
             }
             .background {
                 VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
@@ -251,5 +254,7 @@ private struct FloatingPanelMaterial: ViewModifier {
 extension View {
     /// In-window floating panel material. Unlike `.sheet`, this samples the live app content instead
     /// of the dimmed system-modal backdrop, so thin materials actually read thin.
-    func floatingPanelMaterial() -> some View { modifier(FloatingPanelMaterial()) }
+    func floatingPanelMaterial(showsShadow: Bool = true) -> some View {
+        modifier(FloatingPanelMaterial(showsShadow: showsShadow))
+    }
 }

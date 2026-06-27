@@ -5,6 +5,14 @@ enum MorphPanelPlacement: Equatable {
     case centered
 }
 
+struct GlobalBackdropStyle: OptionSet {
+    let rawValue: Int
+
+    static let dim = GlobalBackdropStyle(rawValue: 1 << 0)
+    static let blur = GlobalBackdropStyle(rawValue: 1 << 1)
+    static let blurAndDim: GlobalBackdropStyle = [.blur, .dim]
+}
+
 enum MorphGeometry {
     static let defaultMargin: CGFloat = Tokens.Space.l
     static let centeredTopMargin: CGFloat = Tokens.Space.xxl * 2
@@ -39,8 +47,7 @@ enum MorphGeometry {
         switch placement {
         case .centered:
             let x = bounds.minX + (bounds.width - size.width) / 2
-            let y = max(bounds.minY + (bounds.height - size.height) / 2,
-                        bounds.minY + min(centeredTopMargin, max(0, bounds.height - size.height)))
+            let y = bounds.minY + (bounds.height - size.height) / 2
             return clamped(CGRect(origin: CGPoint(x: x, y: y), size: size),
                            in: bounds, margin: margin)
         case .anchored:
@@ -91,6 +98,8 @@ struct MorphingExpander<Content: View>: View {
     var panelSize: CGSize = CGSize(width: 460, height: 440)
     var placement: MorphPanelPlacement = .centered
     var targetInsets: EdgeInsets = EdgeInsets()
+    var backdropStyle: GlobalBackdropStyle = .dim
+    var showsPanelShadow = true
     var onBackdropTap: (() -> Void)?
     @ViewBuilder var content: () -> Content
 
@@ -109,10 +118,10 @@ struct MorphingExpander<Content: View>: View {
             let target = targetRect(in: geo.size)
             let rect = expanded ? target : originFrame
             ZStack {
-                // Dim + blur the whole window behind the panel (tap to dismiss).
-                Rectangle()
-                    .fill(.black.opacity(expanded ? 0.28 : 0))
-                    .ignoresSafeArea()
+                Color.clear
+                    .globalBackdrop(style: backdropStyle,
+                                    progress: expanded ? 1 : 0,
+                                    dimOpacity: 0.28)
                     .contentShape(Rectangle())
                     .onTapGesture { onBackdropTap?() ?? close() }
 
@@ -122,7 +131,7 @@ struct MorphingExpander<Content: View>: View {
                     .opacity(0)
                     .accessibilityHidden(true)
 
-                MorphPanelShell()
+                MorphPanelShell(showsShadow: showsPanelShadow)
                     .matchedGeometryEffect(id: "morph-panel-shell",
                                            in: shellNamespace,
                                            properties: .frame)
@@ -177,10 +186,35 @@ struct MorphingExpander<Content: View>: View {
     }
 }
 
+extension View {
+    func globalBackdrop(style: GlobalBackdropStyle,
+                        progress: Double,
+                        dimOpacity: Double = 0.28) -> some View {
+        self
+            .overlay {
+                if style.contains(.blur) {
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(progress)
+                        .ignoresSafeArea()
+                }
+            }
+            .overlay {
+                if style.contains(.dim) {
+                    Rectangle()
+                        .fill(.black.opacity(dimOpacity * progress))
+                        .ignoresSafeArea()
+                }
+            }
+    }
+}
+
 private struct MorphPanelShell: View {
+    var showsShadow = true
+
     var body: some View {
         Color.clear
-            .floatingPanelMaterial()
+            .floatingPanelMaterial(showsShadow: showsShadow)
     }
 }
 

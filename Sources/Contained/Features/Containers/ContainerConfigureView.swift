@@ -175,7 +175,7 @@ struct ContainerConfigureView: View {
             break   // spec was prefilled at init
         case .edit(let snapshot, _):
             // Pull the current style + healthcheck from the local stores so edits start from what's set.
-            spec.personalization = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+            spec.personalization = app.containerStyle(for: snapshot)
             spec.healthCheck = app.healthChecks.check(for: snapshot.id) ?? HealthCheck()
         }
     }

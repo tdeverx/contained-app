@@ -4,8 +4,9 @@ import ContainedCore
 /// Image row identity chip. If the image has a saved default style, this displays it and opens the
 /// same compact customization popover used by container cards.
 struct ImageStyleButton: View {
-    let image: ContainedCore.ImageResource
+    let reference: String
     let style: Personalization
+    let target: CustomizeSheet.Target
 
     @State private var hovering = false
     @State private var showingCustomize = false
@@ -21,9 +22,9 @@ struct ImageStyleButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help("Customize image style")
-        .accessibilityLabel("Customize \(Format.shortImage(image.reference)) image style")
+        .accessibilityLabel("Customize \(Format.shortImage(reference)) image style")
         .popover(isPresented: $showingCustomize, arrowEdge: .trailing) {
-            CustomizeSheet(target: .image(reference: image.reference), presentation: .popover)
+            CustomizeSheet(target: target, presentation: .popover)
         }
     }
 }

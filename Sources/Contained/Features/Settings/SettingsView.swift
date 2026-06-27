@@ -232,6 +232,21 @@ private struct UpdatesTab: View {
                 Text("\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+
+            Section {
+                Picker("Check images", selection: $settings.imageUpdateIntervalHours) {
+                    Text("Every hour").tag(1)
+                    Text("Every 3 hours").tag(3)
+                    Text("Every 6 hours").tag(6)
+                    Text("Every 12 hours").tag(12)
+                    Text("Every day").tag(24)
+                }
+            } header: {
+                Text("Image updates")
+            } footer: {
+                Text("Controls the background registry digest check cadence. Manual checks are always available from Images, System, and the toolbar.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .task { app.updater.refreshChannelAvailability() }

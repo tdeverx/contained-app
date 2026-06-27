@@ -53,7 +53,7 @@ struct PaletteItem: Identifiable {
             })
         }
         for snapshot in app.containers.snapshots {
-            let name = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+            let name = app.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             if snapshot.state == .running {
                 items.append(PaletteItem(title: "Stop \(name)", subtitle: "container", icon: "stop.fill", tint: .orange) {

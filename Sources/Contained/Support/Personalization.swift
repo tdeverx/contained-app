@@ -113,8 +113,8 @@ final class PersonalizationStore {
     }
 
     /// Resolve a container's effective style: per-container override → image default → built-in.
-    func resolved(id: String, image: String) -> Personalization {
-        overrides[id] ?? imageDefaults[image] ?? Personalization()
+    func resolved(id: String, image: String, groupID: String? = nil) -> Personalization {
+        overrides[id] ?? imageDefault(for: image, groupID: groupID) ?? Personalization()
     }
 
     // MARK: Per-container overrides
@@ -135,14 +135,36 @@ final class PersonalizationStore {
 
     func imageDefault(for image: String) -> Personalization? { imageDefaults[image] }
 
+    func imageDefault(for image: String, groupID: String?) -> Personalization? {
+        imageDefaults[image] ?? groupID.flatMap { imageDefaults[Self.imageGroupKey($0)] }
+    }
+
+    func imageGroupDefault(for groupID: String) -> Personalization? {
+        imageDefaults[Self.imageGroupKey(groupID)]
+    }
+
     func setImageDefault(_ personalization: Personalization, for image: String) {
         imageDefaults[image] = personalization
+        persist(Keys.imageDefaults, imageDefaults)
+    }
+
+    func setImageGroupDefault(_ personalization: Personalization, for groupID: String) {
+        imageDefaults[Self.imageGroupKey(groupID)] = personalization
         persist(Keys.imageDefaults, imageDefaults)
     }
 
     func clearImageDefault(for image: String) {
         imageDefaults[image] = nil
         persist(Keys.imageDefaults, imageDefaults)
+    }
+
+    func clearImageGroupDefault(for groupID: String) {
+        imageDefaults[Self.imageGroupKey(groupID)] = nil
+        persist(Keys.imageDefaults, imageDefaults)
+    }
+
+    static func imageGroupKey(_ groupID: String) -> String {
+        "image-group:\(groupID)"
     }
 
     // MARK: One-time migration

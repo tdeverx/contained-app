@@ -22,6 +22,7 @@ struct GlassSurface: ViewModifier {
         // NOTE: no `.compositingGroup()` here — it rasterizes the glass and makes it render opaque,
         // breaking the live translucency. `.glassEffect` provides its own elevation.
         return content
+            .clipShape(shape)
             .background {
                 ExteriorShadow(cornerRadius: cornerRadius,
                                color: shadowColor,

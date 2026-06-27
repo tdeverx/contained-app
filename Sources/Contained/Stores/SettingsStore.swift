@@ -19,6 +19,7 @@ final class SettingsStore {
     var keepInMenuBar: Bool { didSet { defaults.set(keepInMenuBar, forKey: Keys.keepInMenuBar) } }
     var cliPathOverride: String { didSet { defaults.set(cliPathOverride, forKey: Keys.cliPath) } }
     var refreshInterval: Double { didSet { defaults.set(refreshInterval, forKey: Keys.refresh) } }
+    var imageUpdateIntervalHours: Int { didSet { defaults.set(imageUpdateIntervalHours, forKey: Keys.imageUpdateIntervalHours) } }
     var notifyOnCrash: Bool { didSet { defaults.set(notifyOnCrash, forKey: Keys.notifyOnCrash) } }
     /// Show "Reveal CLI" affordances on destructive/privileged actions (global gate).
     var revealCLI: Bool { didSet { defaults.set(revealCLI, forKey: Keys.revealCLI) } }
@@ -57,6 +58,7 @@ final class SettingsStore {
         keepInMenuBar = defaults.object(forKey: Keys.keepInMenuBar) as? Bool ?? true
         cliPathOverride = defaults.string(forKey: Keys.cliPath) ?? ""
         refreshInterval = defaults.object(forKey: Keys.refresh) as? Double ?? 2.0
+        imageUpdateIntervalHours = defaults.object(forKey: Keys.imageUpdateIntervalHours) as? Int ?? 6
         notifyOnCrash = defaults.object(forKey: Keys.notifyOnCrash) as? Bool ?? true
         revealCLI = defaults.object(forKey: Keys.revealCLI) as? Bool ?? true
         historyRetentionDays = defaults.object(forKey: Keys.historyRetention) as? Int ?? 7
@@ -114,6 +116,7 @@ final class SettingsStore {
         static let keepInMenuBar = "keepInMenuBar"
         static let cliPath = "cliPathOverride"
         static let refresh = "refreshInterval"
+        static let imageUpdateIntervalHours = "imageUpdateIntervalHours"
         static let notifyOnCrash = "notifyOnCrash"
         static let revealCLI = "revealCLI"
         static let historyRetention = "historyRetentionDays"

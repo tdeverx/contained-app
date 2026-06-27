@@ -27,7 +27,7 @@ struct MenuBarContent: View {
             Text("No running containers")
         } else {
             ForEach(store.running) { snapshot in
-                let name = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+                let name = app.containerStyle(for: snapshot)
                     .displayName(fallback: snapshot.id)
                 Button("Stop \(name)") { Task { await store.stop(snapshot.id) } }
             }
@@ -38,7 +38,7 @@ struct MenuBarContent: View {
             Divider()
             Menu("Start…") {
                 ForEach(stopped) { snapshot in
-                    let name = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+                    let name = app.containerStyle(for: snapshot)
                         .displayName(fallback: snapshot.id)
                     Button(name) { Task { await store.start(snapshot.id) } }
                 }

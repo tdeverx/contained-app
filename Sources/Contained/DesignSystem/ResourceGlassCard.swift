@@ -15,6 +15,10 @@ enum ResourceCardSize {
     var showsWidget: Bool { self == .large }
 }
 
+enum ResourceCardExpandedMetrics {
+    static let maxWidth: CGFloat = 760
+}
+
 struct CardSizePicker: View {
     @Binding var selection: CardDensity
 
@@ -86,55 +90,63 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     }
 
     private var surface: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
-            header()
-            if isExpanded {
-                GeometryReader { proxy in
-                    expandedBody()
-                        .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
-                        .opacity(clamp((proxy.size.height - 40) / 160))
+        let shape = RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+        return cardContent
+            .padding(Tokens.Space.m)
+            .frame(maxWidth: isExpanded ? ResourceCardExpandedMetrics.maxWidth : .infinity,
+                   minHeight: isExpanded ? 0 : size.height,
+                   maxHeight: isExpanded ? nil : size.height,
+                   alignment: .topLeading)
+            .clipShape(shape)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card,
+                          fill: fill,
+                          fillOpacity: fillOpacity,
+                          gradient: gradient,
+                          gradientAngle: gradientAngle)
+            .overlay {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: Tokens.Radius.card)
+                        .strokeBorder(Color.accentColor, lineWidth: 2.5)
+                        .padding(1)
                 }
+            }
+    }
+
+    @ViewBuilder
+    private var cardContent: some View {
+        if isExpanded {
+            VStack(alignment: .leading, spacing: 0) {
+                header()
+                expandedBody()
                 if size != .small {
                     footer(showWidget: size.showsWidget, showActions: controlsVisible)
                 }
-            } else {
-                switch size {
-                case .small:
-                    EmptyView()
-                case .medium:
+            }
+        } else {
+            switch size {
+            case .small:
+                header()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            case .medium:
+                VStack(alignment: .leading, spacing: 0) {
+                    header()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     footer(showWidget: false, showActions: hovering)
-                case .large:
+                }
+            case .large:
+                VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                    header()
                     Spacer(minLength: 0)
                     footer(showWidget: true, showActions: hovering)
                 }
             }
         }
-        .padding(Tokens.Space.m)
-        .frame(maxWidth: .infinity,
-               minHeight: isExpanded ? 0 : size.height,
-               maxHeight: isExpanded ? .infinity : size.height,
-               alignment: isExpanded ? .bottomLeading : .topLeading)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card,
-                      fill: fill,
-                      fillOpacity: fillOpacity,
-                      gradient: gradient,
-                      gradientAngle: gradientAngle)
-        .overlay {
-            if isSelected {
-                RoundedRectangle(cornerRadius: Tokens.Radius.card)
-                    .strokeBorder(Color.accentColor, lineWidth: 2.5)
-                    .padding(1)
-            }
-        }
     }
 
     private func expandedBody() -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
-            if size != .large {
-                widget()
-            }
+        VStack(alignment: .leading, spacing: 0) {
             bodyContent()
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             if size == .small {
                 footer(showWidget: false, showActions: controlsVisible)
             }
@@ -157,10 +169,6 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
         }
         .padding(.top, showWidget ? Tokens.Space.s : 0)
     }
-
-    private func clamp(_ value: CGFloat) -> Double {
-        Double(max(0, min(1, value)))
-    }
 }
 
 extension ResourceGlassCard where BodyContent == EmptyView, FooterLeading == EmptyView,
@@ -182,6 +190,67 @@ extension ResourceGlassCard where BodyContent == EmptyView, FooterLeading == Emp
                   bodyContent: { EmptyView() },
                   footerLeading: { EmptyView() },
                   footerActions: { EmptyView() },
+                  widget: { EmptyView() })
+    }
+}
+
+extension ResourceGlassCard where BodyContent == EmptyView, Widget == EmptyView {
+    init(size: ResourceCardSize,
+         isExpanded: Bool = false,
+         controlsVisible: Bool = true,
+         isSelected: Bool = false,
+         fill: Color? = nil,
+         fillOpacity: Double = 0.18,
+         gradient: Bool = false,
+         gradientAngle: Double = 135,
+         onTap: @escaping () -> Void = {},
+         @ViewBuilder header: @escaping () -> Header,
+         @ViewBuilder footerLeading: @escaping () -> FooterLeading,
+         @ViewBuilder footerActions: @escaping () -> FooterActions) {
+        self.init(size: size,
+                  isExpanded: isExpanded,
+                  controlsVisible: controlsVisible,
+                  isSelected: isSelected,
+                  fill: fill,
+                  fillOpacity: fillOpacity,
+                  gradient: gradient,
+                  gradientAngle: gradientAngle,
+                  onTap: onTap,
+                  header: header,
+                  bodyContent: { EmptyView() },
+                  footerLeading: footerLeading,
+                  footerActions: footerActions,
+                  widget: { EmptyView() })
+    }
+}
+
+extension ResourceGlassCard where Widget == EmptyView {
+    init(size: ResourceCardSize,
+         isExpanded: Bool = false,
+         controlsVisible: Bool = true,
+         isSelected: Bool = false,
+         fill: Color? = nil,
+         fillOpacity: Double = 0.18,
+         gradient: Bool = false,
+         gradientAngle: Double = 135,
+         onTap: @escaping () -> Void = {},
+         @ViewBuilder header: @escaping () -> Header,
+         @ViewBuilder bodyContent: @escaping () -> BodyContent,
+         @ViewBuilder footerLeading: @escaping () -> FooterLeading,
+         @ViewBuilder footerActions: @escaping () -> FooterActions) {
+        self.init(size: size,
+                  isExpanded: isExpanded,
+                  controlsVisible: controlsVisible,
+                  isSelected: isSelected,
+                  fill: fill,
+                  fillOpacity: fillOpacity,
+                  gradient: gradient,
+                  gradientAngle: gradientAngle,
+                  onTap: onTap,
+                  header: header,
+                  bodyContent: bodyContent,
+                  footerLeading: footerLeading,
+                  footerActions: footerActions,
                   widget: { EmptyView() })
     }
 }

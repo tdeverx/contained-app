@@ -202,7 +202,7 @@ struct SystemView: View {
                         Button {
                             Task { await app.runImageUpdateSweepNow() }
                         } label: {
-                            Label("Run Now", systemImage: "play.fill")
+                            Label("Run Now", systemImage: "arrow.triangle.2.circlepath")
                         }
                         .buttonStyle(.glassProminent)
                     }

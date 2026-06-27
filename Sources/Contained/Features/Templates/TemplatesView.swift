@@ -64,14 +64,10 @@ struct TemplatesView: View {
                         .buttonStyle(.plain).foregroundStyle(.secondary)
                 }
             }
-        } bodyContent: {
-            EmptyView()
         } footerLeading: {
             Text("Saved run configuration").font(.caption).foregroundStyle(.secondary)
         } footerActions: {
             Button("Use") { onUse() }.buttonStyle(.glassProminent).controlSize(.small)
-        } widget: {
-            EmptyView()
         }
         .contextMenu {
             Button { onUse() } label: { Label("Use", systemImage: "plus.circle") }
