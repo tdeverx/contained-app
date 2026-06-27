@@ -58,9 +58,9 @@ struct ContainedApp: App {
                 Button("Search This Page") { ui.focusSearch() }
                     .keyboardShortcut("s", modifiers: .command)
                 Divider()
-                Button("Updates") { app.flash("Updates — coming soon") }
+                Button("Run Image Update Check") { Task { await app.runImageUpdateSweepNow() } }
                     .keyboardShortcut("u", modifiers: .command)
-                Button("Notifications") { app.flash("Notifications — coming soon") }
+                Button("Activity") { ui.dispatch(.activityHistory) }
                     .keyboardShortcut("i", modifiers: .command)
             }
             CommandMenu("Go") {

@@ -126,9 +126,24 @@ enum AppearanceMode: String, CaseIterable, Identifiable, Codable, Sendable {
 }
 
 enum CardDensity: String, CaseIterable, Identifiable, Codable, Sendable {
-    case compact, large
+    case small, medium, large
     var id: String { rawValue }
     var displayName: String { rawValue.capitalized }
+    var resourceSize: ResourceCardSize {
+        switch self {
+        case .small: return .small
+        case .medium: return .medium
+        case .large: return .large
+        }
+    }
+
+    init(stored raw: String?) {
+        if raw == "compact" {
+            self = .medium
+        } else {
+            self = CardDensity(rawValue: raw ?? "") ?? .medium
+        }
+    }
 }
 
 /// The behind-window vibrancy material used for the main content area. A curated, ordered subset of

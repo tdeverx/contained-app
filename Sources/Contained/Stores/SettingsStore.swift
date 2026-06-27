@@ -49,7 +49,7 @@ final class SettingsStore {
         self.defaults = defaults
         accentTint = AppTint(rawValue: defaults.string(forKey: Keys.tint) ?? "") ?? .multicolor
         appearance = AppearanceMode(rawValue: defaults.string(forKey: Keys.appearance) ?? "") ?? .system
-        density = CardDensity(rawValue: defaults.string(forKey: Keys.density) ?? "") ?? .compact
+        density = CardDensity(stored: defaults.string(forKey: Keys.density))
         windowMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.windowMaterial) ?? "") ?? .fullScreenUI
         modalMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.modalMaterial) ?? "") ?? .sheet
         showInfoTips = defaults.object(forKey: Keys.showInfoTips) as? Bool ?? true

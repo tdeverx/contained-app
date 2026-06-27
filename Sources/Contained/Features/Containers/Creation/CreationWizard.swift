@@ -7,13 +7,15 @@ import SwiftUI
 struct CreationWizard: View {
     @Environment(\.dismiss) private var dismiss
     let entry: UIState.CreationEntry
+    let prefill: RunSpec?
 
-    init(entry: UIState.CreationEntry = .chooser) {
+    init(entry: UIState.CreationEntry = .chooser, prefill: RunSpec? = nil) {
         self.entry = entry
+        self.prefill = prefill
     }
 
     var body: some View {
-        CreationFlow(start: CreationFlow.Start(entry), onClose: { dismiss() })
+        CreationFlow(start: CreationFlow.Start(entry), onClose: { dismiss() }, prefill: prefill)
             .frame(Tokens.SheetSize.form)
             .sheetMaterial()
     }

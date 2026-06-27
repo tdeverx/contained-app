@@ -21,7 +21,9 @@ struct RootView: View {
             detailShell(settings: settings)
         }
         .navigationTitle(ui.section.title)
-        .sheet(isPresented: $ui.showCreateWizard) { CreationWizard(entry: ui.creationEntry) }
+        .sheet(isPresented: $ui.showCreateWizard, onDismiss: { ui.creationPrefillSpec = nil }) {
+            CreationWizard(entry: ui.creationEntry, prefill: ui.creationPrefillSpec)
+        }
         .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil; ui.advancePrefillQueue() }) {
             ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
         }
@@ -127,6 +129,9 @@ struct RootView: View {
             } label: { Label("Card Size", systemImage: "square.grid.2x2") }
         case .images:
             Divider()
+            Picker(selection: $settings.density) {
+                ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
+            } label: { Label("Card Size", systemImage: "square.grid.2x2") }
             Button { ui.dispatch(.loadImage) } label: { Label("Load Image Tar…", systemImage: "square.and.arrow.down") }
             Button { ui.dispatch(.pruneImages) } label: { Label("Prune Images…", systemImage: "trash") }
         case .system:

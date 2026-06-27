@@ -47,22 +47,32 @@ struct TemplatesView: View {
 
     private func card(name: String, symbol: String, subtitle: String,
                       onUse: @escaping () -> Void, onDelete: (() -> Void)?) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
-            HStack {
-                Image(systemName: symbol).font(.title2).foregroundStyle(Color.accentColor)
+        ResourceGlassCard(size: .medium, onTap: onUse) {
+            HStack(spacing: Tokens.Space.m) {
+                Image(systemName: symbol)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
+                    .background(Color.accentColor.opacity(0.16), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(name).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                    Text(subtitle).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
+                }
                 Spacer()
                 if let onDelete {
                     Button(role: .destructive, action: onDelete) { Image(systemName: "trash") }
                         .buttonStyle(.plain).foregroundStyle(.secondary)
                 }
             }
-            Text(name).font(.headline)
-            Text(subtitle).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary).lineLimit(1)
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            Text("Saved run configuration").font(.caption).foregroundStyle(.secondary)
+        } footerActions: {
             Button("Use") { onUse() }.buttonStyle(.glassProminent).controlSize(.small)
+        } widget: {
+            EmptyView()
         }
-        .padding(Tokens.Space.l)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
         .contextMenu {
             Button { onUse() } label: { Label("Use", systemImage: "plus.circle") }
             if let onDelete {

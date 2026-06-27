@@ -77,9 +77,7 @@ struct ContainersGridView: View {
     }
 
     private var columns: [GridItem] {
-        // Both densities share the same width band — only the card height differs (compact drops the
-        // graph), so the grid columns line up regardless of density.
-        [GridItem(.adaptive(minimum: Tokens.CardSize.largeMin, maximum: Tokens.CardSize.largeMax),
+        return [GridItem(.adaptive(minimum: Tokens.CardSize.largeMin, maximum: Tokens.CardSize.largeMax),
                   spacing: Tokens.Space.m)]
     }
 
@@ -150,6 +148,14 @@ struct ContainersGridView: View {
         }
         .overlay(alignment: .bottom) {
             if selecting && !selection.isEmpty { batchBar } else if let message = store.errorMessage { ErrorToast(message: message) }
+        }
+        .safeAreaInset(edge: .bottom) {
+            HStack {
+                Spacer()
+                CardSizePicker(selection: densityBinding)
+            }
+            .padding(.horizontal, Tokens.Space.l)
+            .padding(.bottom, Tokens.Space.l)
         }
         .overlay {
             if store.snapshots.isEmpty && app.networks.isEmpty { emptyState }
@@ -287,6 +293,10 @@ struct ContainersGridView: View {
         Binding(get: { deletingNetwork != nil }, set: { if !$0 { deletingNetwork = nil } })
     }
 
+    private var densityBinding: Binding<CardDensity> {
+        Binding(get: { app.settings.density }, set: { app.settings.density = $0 })
+    }
+
     private func deleteNetwork(_ network: NetworkResource) async {
         guard let client = app.client else { return }
         do { _ = try await client.deleteNetworks([network.name]); await app.refreshNetworks() }
@@ -335,6 +345,7 @@ struct ContainersGridView: View {
             history: store.historyByID[snapshot.id]?[style.graphMetric]?.values ?? [],
             histories: (store.historyByID[snapshot.id] ?? [:]).mapValues(\.values),
             isBusy: store.busyIDs.contains(snapshot.id),
+            hasImageUpdate: app.imageUpdateStatus(for: snapshot.image).state == .updateAvailable,
             isExpanded: isExpanded,
             controlsVisible: controlsVisible,
             onTap: onTap,
@@ -342,6 +353,7 @@ struct ContainersGridView: View {
             onStop: { Task { await store.stop(snapshot.id) } },
             onRestart: { Task { await store.restart(snapshot.id) } },
             onEdit: { editing = snapshot },
+            onUpdate: { updateContainer(snapshot) },
             onDelete: { deleting = snapshot },
             onClose: closeDetail,
             onSelectMultiple: { beginSelecting(snapshot.id) },
@@ -427,6 +439,14 @@ struct ContainersGridView: View {
         Task {
             for id in ids { await action(id) }
             endSelecting()
+        }
+    }
+
+    private func updateContainer(_ snapshot: ContainerSnapshot) {
+        Task {
+            if await app.pullImageUpdate(snapshot.image) {
+                editing = snapshot
+            }
         }
     }
 

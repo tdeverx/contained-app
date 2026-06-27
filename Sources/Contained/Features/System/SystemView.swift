@@ -35,6 +35,7 @@ struct SystemView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Tokens.Space.l) {
                 serviceCard
+                backgroundTasksSection
                 if let usage = app.diskUsage { diskSection(usage) }
                 pruneSection
                 kernelDNSSection
@@ -171,6 +172,72 @@ struct SystemView: View {
                 pruneButton("Unused networks", "network", .networks, nil)
             }
         }
+    }
+
+    private var backgroundTasksSection: some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.m) {
+            Text("Background tasks").font(.headline)
+            VStack(alignment: .leading, spacing: Tokens.Space.m) {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    HStack(spacing: Tokens.Space.m) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Color.accentColor)
+                            .frame(width: Tokens.IconSize.headerChip, height: Tokens.IconSize.headerChip)
+                            .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Image update check").font(.callout.weight(.medium))
+                            Text(backgroundTaskDetail(now: context.date))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(countdown(to: app.imageUpdateNextRunDate, now: context.date))
+                                .font(.system(.callout, design: .monospaced).weight(.semibold))
+                            Text(app.imageUpdateIntervalDescription)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Button {
+                            Task { await app.runImageUpdateSweepNow() }
+                        } label: {
+                            Label("Run Now", systemImage: "play.fill")
+                        }
+                        .buttonStyle(.glassProminent)
+                    }
+                }
+                Divider()
+                HStack {
+                    Label("Refresh loop", systemImage: "dot.radiowaves.left.and.right")
+                    Spacer()
+                    Text(app.coordinator.isActive ? "Active" : "Paused")
+                        .font(.callout)
+                        .foregroundStyle(app.coordinator.isActive ? .green : .secondary)
+                }
+            }
+            .padding(Tokens.Space.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
+        }
+    }
+
+    private func backgroundTaskDetail(now: Date) -> String {
+        if let last = app.imageUpdateLastRunDate {
+            return "Last ran \(last.formatted(date: .omitted, time: .shortened))"
+        }
+        return app.imageUpdateNextRunDate <= now ? "Ready to run" : "Not run yet"
+    }
+
+    private func countdown(to date: Date, now: Date) -> String {
+        let seconds = max(0, Int(date.timeIntervalSince(now)))
+        if seconds == 0 { return "due now" }
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        let secs = seconds % 60
+        if hours > 0 { return String(format: "%dh %02dm", hours, minutes) }
+        if minutes > 0 { return String(format: "%dm %02ds", minutes, secs) }
+        return "\(secs)s"
     }
 
     private func pruneButton(_ title: String, _ symbol: String, _ target: PruneTarget, _ reclaimable: UInt64?) -> some View {

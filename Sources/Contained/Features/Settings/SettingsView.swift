@@ -81,8 +81,8 @@ private struct GeneralTab: View {
                 Toggle("Keep running in the menu bar", isOn: $settings.keepInMenuBar)
             }
 
-            Section("Notifications & actions") {
-                Toggle("Notify on container crash / restart", isOn: $settings.notifyOnCrash)
+            Section("Activity & alerts") {
+                Toggle("System alert on container crash / restart", isOn: $settings.notifyOnCrash)
                 Toggle("Show “Reveal CLI” on actions", isOn: $settings.revealCLI)
                     .fieldInfo("Adds a copyable command and a “Copy as CLI” menu item to destructive or privileged actions, so you can see exactly what runs.")
             }

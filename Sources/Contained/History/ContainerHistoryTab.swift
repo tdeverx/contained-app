@@ -115,13 +115,22 @@ struct ContainerHistoryTab: View {
 struct EventRow: View {
     let event: EventRecord
     var body: some View {
-        HStack(spacing: Tokens.Space.s) {
-            Image(systemName: event.kind.symbol).foregroundStyle(.secondary).frame(width: 20)
-            Text(event.message).font(.callout).lineLimit(1)
-            Spacer()
-            Text(event.timestamp.formatted(date: .abbreviated, time: .shortened))
-                .font(.caption).foregroundStyle(.secondary)
+        ResourceGlassCard(size: .small) {
+            HStack(spacing: Tokens.Space.s) {
+                Image(systemName: event.kind.symbol)
+                    .foregroundStyle(.secondary)
+                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
+                    .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(event.message)
+                        .font(.callout.weight(.medium))
+                        .lineLimit(1)
+                    Text(event.timestamp.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
         }
-        .padding(.vertical, 2)
     }
 }

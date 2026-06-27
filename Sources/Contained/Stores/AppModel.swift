@@ -26,6 +26,7 @@ final class AppModel {
     let historyStore = HistoryStore()
     let updater = UpdaterController()
     let migrator = StateMigrator()
+    private let manifestClient = RegistryManifestClient()
 
     private(set) var bootstrap: Bootstrap = .checking
     private(set) var client: ContainerClient?
@@ -42,6 +43,9 @@ final class AppModel {
     private(set) var registries: [RegistryLogin] = []
     private(set) var properties: SystemProperties?
     private(set) var imagesError: String?
+    private(set) var imageUpdates: [String: ImageUpdateStatus] = [:] {
+        didSet { Self.saveImageUpdates(imageUpdates) }
+    }
     /// Transient watchdog/crash banner text (auto-cleared).
     var banner: String?
     /// A long-running operation surfaced as a floating progress bar (e.g. pulling an image before a
@@ -51,6 +55,17 @@ final class AppModel {
     /// The most recent create/pull failure, surfaced inline by the create form so the user can fix the
     /// problem without losing their spec. Cleared at the start of each attempt.
     var createError: String?
+    private var lastImageUpdateSweep: Date? {
+        didSet { Self.saveLastImageUpdateSweep(lastImageUpdateSweep) }
+    }
+    private static let imageUpdateInterval: TimeInterval = 6 * 60 * 60
+    private static let imageUpdatesKey = "imageUpdateStatuses"
+    private static let imageUpdateLastSweepKey = "imageUpdateLastSweep"
+    var imageUpdateLastRunDate: Date? { lastImageUpdateSweep }
+    var imageUpdateNextRunDate: Date {
+        lastImageUpdateSweep?.addingTimeInterval(Self.imageUpdateInterval) ?? Date()
+    }
+    var imageUpdateIntervalDescription: String { "Every 6 hours" }
 
     /// One in-flight operation shown in the bottom progress bar.
     struct ActivityState: Equatable {
@@ -61,6 +76,8 @@ final class AppModel {
 
     init(settings: SettingsStore = SettingsStore()) {
         self.settings = settings
+        imageUpdates = Self.loadImageUpdates()
+        lastImageUpdateSweep = Self.loadLastImageUpdateSweep()
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
         if case .newerOnDisk(let version) = migrator.reconcile() {
@@ -187,6 +204,7 @@ final class AppModel {
         await health.evaluate(snapshots: containers.snapshots, store: healthChecks, client: client)
         historyStore.recordMetrics(containers.statsByID)
         await refreshResource(section)
+        await checkImageUpdatesIfNeeded()
     }
 
     /// Refresh the cached list backing a resource page. Failures keep the last good data.
@@ -238,6 +256,7 @@ final class AppModel {
             if !spec.personalization.isDefault { personalization.setOverride(spec.personalization, for: newID) }
             healthChecks.setCheck(spec.healthCheck, for: newID)
             historyStore.record(.lifecycle, containerID: newID, message: "Created \(newID)")
+            flash("Created \(newID)")
         }
         return newID
     }
@@ -332,9 +351,141 @@ final class AppModel {
                 if !trimmed.isEmpty { activity?.detail = trimmed }
             }
             await refreshResource(.images)
+            historyStore.record(.pull, message: "Pulled \(Format.shortImage(reference))")
             return true
         } catch let error as CommandError { flash(error.userMessage); return false }
         catch { flash(error.localizedDescription); return false }
+    }
+
+    // MARK: Image updates
+
+    func imageUpdateStatus(for reference: String) -> ImageUpdateStatus {
+        imageUpdates[imageUpdateKey(reference)] ?? ImageUpdateStatus()
+    }
+
+    func imageUpdateKey(_ reference: String) -> String {
+        RegistryImageReference.normalizedKey(reference)
+    }
+
+    func checkAllImageUpdates(manual: Bool = false) async {
+        let unique = uniqueImageReferences()
+        guard !unique.isEmpty else {
+            if manual { flash("No local images to check") }
+            return
+        }
+        for reference in unique {
+            await checkImageUpdate(reference, notify: false)
+        }
+        lastImageUpdateSweep = Date()
+        if manual {
+            let available = unique.filter { imageUpdateStatus(for: $0).state == .updateAvailable }.count
+            flash(available == 0 ? "Images are up to date" : "\(available) image update\(available == 1 ? "" : "s") available")
+        }
+    }
+
+    func runImageUpdateSweepNow() async {
+        await checkAllImageUpdates(manual: true)
+    }
+
+    func checkImageUpdate(_ reference: String, notify: Bool = true) async {
+        let key = imageUpdateKey(reference)
+        let localDigest = localDigest(for: key)
+        imageUpdates[key] = .checking(localDigest: localDigest)
+        do {
+            let remoteDigest = try await manifestClient.remoteDigest(for: reference)
+            guard let localDigest, !localDigest.isEmpty else {
+                imageUpdates[key] = .failed(localDigest: nil, message: "Local digest unavailable")
+                if notify { flash("Couldn't compare \(Format.shortImage(reference)): local digest unavailable") }
+                return
+            }
+            let status = ImageUpdateStatus.resolved(localDigest: localDigest, remoteDigest: remoteDigest)
+            imageUpdates[key] = status
+            if notify {
+                switch status.state {
+                case .updateAvailable:
+                    flash("Update available for \(Format.shortImage(reference))")
+                    historyStore.record(.alert, message: "Update available for \(Format.shortImage(reference))")
+                case .current:
+                    flash("\(Format.shortImage(reference)) is up to date")
+                default:
+                    break
+                }
+            }
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            imageUpdates[key] = .failed(localDigest: localDigest, message: message)
+            if notify { flash(message) }
+        }
+    }
+
+    @discardableResult
+    func pullImageUpdate(_ reference: String) async -> Bool {
+        let ok = await pullImage(reference)
+        if ok {
+            await checkImageUpdate(reference, notify: false)
+            flash("Updated \(Format.shortImage(reference))")
+            historyStore.record(.pull, message: "Updated \(Format.shortImage(reference))")
+        }
+        return ok
+    }
+
+    private func checkImageUpdatesIfNeeded(now: Date = Date()) async {
+        if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < Self.imageUpdateInterval { return }
+        if images.isEmpty, let client {
+            do {
+                images = try await client.images()
+                imagesError = nil
+            } catch let error as CommandError {
+                imagesError = error.userMessage
+                return
+            } catch {
+                imagesError = error.localizedDescription
+                return
+            }
+        }
+        guard !images.isEmpty else { return }
+        await checkAllImageUpdates(manual: false)
+    }
+
+    private func uniqueImageReferences() -> [String] {
+        Array(Set(images.map(\.reference))).sorted {
+            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+        }
+    }
+
+    private func localDigest(for key: String) -> String? {
+        images.first { imageUpdateKey($0.reference) == key }?.digest
+    }
+
+    private static func loadImageUpdates(defaults: UserDefaults = .standard) -> [String: ImageUpdateStatus] {
+        guard let data = defaults.data(forKey: imageUpdatesKey),
+              let decoded = try? JSONDecoder().decode([String: ImageUpdateStatus].self, from: data) else {
+            return [:]
+        }
+        return decoded.mapValues { status in
+            status.state == .checking ? ImageUpdateStatus() : status
+        }
+    }
+
+    private static func saveImageUpdates(_ updates: [String: ImageUpdateStatus], defaults: UserDefaults = .standard) {
+        let stable = updates.mapValues { status in
+            status.state == .checking ? ImageUpdateStatus() : status
+        }
+        if let data = try? JSONEncoder().encode(stable) {
+            defaults.set(data, forKey: imageUpdatesKey)
+        }
+    }
+
+    private static func loadLastImageUpdateSweep(defaults: UserDefaults = .standard) -> Date? {
+        defaults.object(forKey: imageUpdateLastSweepKey) as? Date
+    }
+
+    private static func saveLastImageUpdateSweep(_ date: Date?, defaults: UserDefaults = .standard) {
+        if let date {
+            defaults.set(date, forKey: imageUpdateLastSweepKey)
+        } else {
+            defaults.removeObject(forKey: imageUpdateLastSweepKey)
+        }
     }
 
     /// Whether an image reference is already in the local store (tag-normalized compare so

@@ -15,11 +15,13 @@ import ContainedCore
 struct CreationFlow: View {
     /// Where the flow starts: the toolbar `+` begins at `menu`; other entry points begin at `chooser`.
     enum Start {
-        case menu, chooser, network, volume
+        case menu, chooser, search, configure, network, volume
 
         init(_ entry: UIState.CreationEntry) {
             switch entry {
             case .chooser: self = .chooser
+            case .search: self = .search
+            case .configure: self = .configure
             case .network: self = .network
             case .volume: self = .volume
             }
@@ -56,13 +58,19 @@ struct CreationFlow: View {
     private var twoRowOptionPageHeight: CGFloat { optionPageHeight + GlassOptionTile.defaultHeight + Tokens.Space.s }
 
     init(start: Start, onClose: @escaping () -> Void,
+         prefill: RunSpec? = nil,
          onSoftDismissChange: (((() -> Void)?) -> Void)? = nil) {
         self.start = start
         self.onClose = onClose
         self.onSoftDismissChange = onSoftDismissChange
+        if let prefill {
+            _spec = State(initialValue: prefill)
+        }
         switch start {
         case .menu:    _page = State(initialValue: .menu)
         case .chooser: _page = State(initialValue: .chooser)
+        case .search:  _page = State(initialValue: .search)
+        case .configure: _page = State(initialValue: .configure)
         case .network: _page = State(initialValue: .network)
         case .volume:  _page = State(initialValue: .volume)
         }
@@ -462,7 +470,7 @@ struct CreationFlow: View {
         case .chooser, .network, .volume:
             switch start {
             case .menu: go(.menu)
-            case .chooser, .network, .volume: onClose()
+            case .chooser, .search, .configure, .network, .volume: onClose()
             }
         case .compose:
             go(.chooser)

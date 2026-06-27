@@ -15,6 +15,7 @@ struct RegistryImageSearch: View {
     @State private var query = ""
     @State private var results: [HubSearchResult] = []
     @State private var searching = false
+    @State private var errorMessage: String?
     @State private var searchTask: Task<Void, Never>?
 
     private var trimmedQuery: String { query.trimmingCharacters(in: .whitespaces) }
@@ -114,6 +115,12 @@ struct RegistryImageSearch: View {
                 if searching {
                     ProgressView()
                     Text("Searching Docker Hub…").font(.callout).foregroundStyle(.secondary)
+                } else if let errorMessage {
+                    Image(systemName: "wifi.exclamationmark").font(.title2).foregroundStyle(.orange)
+                    Text("Couldn't search Docker Hub").font(.callout.weight(.medium))
+                    Text(errorMessage).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    Button { runSearch() } label: { Label("Retry", systemImage: "arrow.clockwise") }
+                        .buttonStyle(.glass)
                 } else {
                     Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.tertiary)
                     Text("No images found for “\(trimmedQuery)”").font(.callout).foregroundStyle(.secondary)
@@ -164,6 +171,7 @@ struct RegistryImageSearch: View {
     /// Debounce typing, then search.
     private func scheduleSearch() {
         searchTask?.cancel()
+        errorMessage = nil
         let current = query
         searchTask = Task {
             try? await Task.sleep(for: .milliseconds(350))
@@ -173,16 +181,28 @@ struct RegistryImageSearch: View {
     }
 
     private func runSearch() {
-        guard let url = HubSearch.url(query: query) else { results = []; searching = false; return }
+        guard let url = HubSearch.url(query: query) else {
+            results = []
+            searching = false
+            errorMessage = nil
+            return
+        }
         searching = true
+        errorMessage = nil
         Task {
             defer { searching = false }
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
+                let (data, response) = try await URLSession.shared.data(from: url)
+                if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                    throw URLError(.badServerResponse)
+                }
                 let decoded = try JSONDecoder().decode(HubSearchResponse.self, from: data)
                 if !Task.isCancelled { results = decoded.results }
             } catch {
-                if !Task.isCancelled { results = [] }
+                if !Task.isCancelled {
+                    results = []
+                    errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                }
             }
         }
     }

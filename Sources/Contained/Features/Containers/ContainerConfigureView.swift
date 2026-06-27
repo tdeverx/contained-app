@@ -15,6 +15,7 @@ struct ContainerConfigureView: View {
     }
 
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
     @Environment(\.modelContext) private var modelContext
 
     let mode: ContainerEditSheet.Mode
@@ -188,7 +189,10 @@ struct ContainerConfigureView: View {
         Task {
             let newID = await app.createContainer(spec)
             working = false
-            if newID != nil { onFinished() }
+            if newID != nil {
+                ui.section = .containers
+                onFinished()
+            }
             // else: stay open — `app.createError` drives the inline error.
         }
     }

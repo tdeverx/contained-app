@@ -13,6 +13,7 @@ struct ContainerCard: View {
     /// without waiting for the parent to recompute. The compact card just uses `history`.
     var histories: [GraphMetric: [Double]] = [:]
     var isBusy: Bool
+    var hasImageUpdate: Bool = false
     var isExpanded: Bool = false
     /// Whether the expanded card's controls (footer buttons + close) are shown. The grid drops this
     /// the instant a close begins so the glass buttons fade out *before* the shrink finishes.
@@ -22,6 +23,7 @@ struct ContainerCard: View {
     var onStop: () -> Void
     var onRestart: () -> Void
     var onEdit: () -> Void = {}
+    var onUpdate: () -> Void = {}
     var onDelete: () -> Void
     var onClose: () -> Void = {}
     var onSelectMultiple: () -> Void = {}
@@ -35,7 +37,6 @@ struct ContainerCard: View {
     var selecting: Bool = false
     var isSelected: Bool = false
 
-    @State private var hovering = false
     @State private var tab: Tab = .overview
     @State private var confirmingDelete = false
     /// Customize popover, anchored to the whole card so the live card is the preview.
@@ -75,9 +76,7 @@ struct ContainerCard: View {
     private var metric: GraphMetric { localMetric ?? style.graphMetric }
     /// The recent history for the currently-plotted metric (live switch in the expanded footer).
     private var plotted: [Double] { histories[metric] ?? history }
-    // Compact drops the ~66pt graph block (58pt sparkline + Space.s), so it's that much shorter than
-    // large; both share the same width band.
-    private var cardHeight: CGFloat { density == .compact ? 110 : 176 }
+    private var cardSize: ResourceCardSize { density.resourceSize }
     /// The metrics offered as selectable footer chips (the runtime exposes no GPU stat).
     private let footerMetrics: [GraphMetric] = [.cpu, .memory, .netRx, .netTx]
 
@@ -87,10 +86,7 @@ struct ContainerCard: View {
                 cardSurface
             } else {
                 cardSurface
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: onTap)
                     .contextMenu { menuItems }
-                    .onHover { hovering = $0 }
             }
         }
         .accessibilityElement(children: .combine)
@@ -111,64 +107,28 @@ struct ContainerCard: View {
     }
 
     private var cardSurface: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
-            if isExpanded {
-                expandedBody
-            } else {
-                collapsedBody
-            }
-        }
-        .padding(Tokens.Space.m)
-        // Expanded: fill the actual (animating) frame so header/footer stay pinned to the real top
-        // and bottom edges — NOT a fixed min height, which would push the footer past the bottom
-        // and clip it during the grow. Collapsed: keep the fixed card height.
-        .frame(maxWidth: .infinity,
-               minHeight: isExpanded ? 0 : cardHeight,
-               maxHeight: isExpanded ? .infinity : nil,
-               // Expanded anchors to the bottom: the footer is the fixed bottom bookend, so if the
-               // card ever shrinks below header+footer (the compact slot on close) the overflow
-               // clips at the top instead of pushing the footer past the bottom and snapping.
-               alignment: isExpanded ? .bottomLeading : .topLeading)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card,
-                      fill: style.fillBackground ? style.color : nil,
-                      fillOpacity: style.backgroundOpacity,
-                      gradient: style.gradient,
-                      gradientAngle: style.gradientAngle)
-        .overlay(alignment: .topTrailing) { if isBusy { ProgressView().controlSize(.small).padding(8) } }
-        .overlay {
-            if isSelected {
-                RoundedRectangle(cornerRadius: Tokens.Radius.card)
-                    .strokeBorder(Color.accentColor, lineWidth: 2.5)
-                    .padding(1)
-            }
-        }
-    }
-
-    /// The collapsed card is just the two bookends — header on top, the shared footer pinned to the
-    /// bottom. Large shows the graph; compact hides it (graph only on expand). Buttons stay hidden
-    /// until hover. No body.
-    @ViewBuilder
-    private var collapsedBody: some View {
-        headerRow()
-        Spacer(minLength: 0)
-        cardFooter(showGraph: density == .large, showButtons: hovering)
-    }
-
-    /// The expanded interior. Header and footer are DIRECT children of the card's VStack, so the real
-    /// stack layout pins them to the top/bottom edges every frame (no lag). Only the middle tab area
-    /// is a GeometryReader, which reveals the body inline with its height.
-    @ViewBuilder
-    private var expandedBody: some View {
-        headerRow(controlsReveal: controlsVisible ? 1 : 0)
-        GeometryReader { proxy in
+        ResourceGlassCard(size: cardSize,
+                          isExpanded: isExpanded,
+                          controlsVisible: controlsVisible,
+                          isSelected: isSelected,
+                          fill: style.fillBackground ? style.color : nil,
+                          fillOpacity: style.backgroundOpacity,
+                          gradient: style.gradient,
+                          gradientAngle: style.gradientAngle,
+                          onTap: onTap) {
+            headerRow(controlsReveal: controlsVisible ? 1 : 0)
+        } bodyContent: {
             detailTabs
-                .frame(width: proxy.size.width, height: proxy.size.height)
-                .opacity(clamp((proxy.size.height - 40) / 160))
+        } footerLeading: {
+            ForEach(footerMetrics) { metricChip($0) }
+        } footerActions: {
+            footerActions
+        } widget: {
+            LiveSparkline(samples: plotted, color: tint)
+                .frame(height: 58)
         }
-        cardFooter(showGraph: true, showButtons: controlsVisible)
+        .overlay(alignment: .topTrailing) { if isBusy { ProgressView().controlSize(.small).padding(8) } }
     }
-
-    private func clamp(_ value: CGFloat) -> Double { Double(max(0, min(1, value))) }
 
     private func headerRow(controlsReveal: Double = 1) -> some View {
         HStack(spacing: Tokens.Space.s) {
@@ -225,6 +185,9 @@ struct ContainerCard: View {
             Button { onSelectMultiple() } label: { Label("Select Multiple", systemImage: "checklist") }
         }
         Button { onEdit() } label: { Label("Edit…", systemImage: "slider.horizontal.3") }
+        if hasImageUpdate {
+            Button { onUpdate() } label: { Label("Update Container…", systemImage: "arrow.down.circle") }
+        }
         Button { copyToPasteboard(snapshot.id) } label: { Label("Copy ID", systemImage: "doc.on.doc") }
         if revealCLI {
             Button { copyToPasteboard("container inspect \(snapshot.id)") } label: {
@@ -266,32 +229,6 @@ struct ContainerCard: View {
         .tabViewStyle(.automatic)
         .tint(tint)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    /// The shared bottom bookend — identical on the compact and expanded cards. The expanded card
-    /// shows the live graph above the metrics row; the compact card hides the graph but keeps the
-    /// selectable percentages. It never resizes, so the open/close animation has nothing to reflow.
-    private func cardFooter(showGraph: Bool, showButtons: Bool) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
-            if showGraph {
-                LiveSparkline(samples: plotted, color: tint)
-                    .frame(height: 58)
-            }
-            HStack(spacing: Tokens.Space.m) {
-                ForEach(footerMetrics) { metricChip($0) }
-                Spacer(minLength: 0)
-                // Always laid out (even when hidden) so the action glyphs — taller than the metric
-                // chips — set a constant row height. Hiding via opacity keeps the footer from
-                // jumping when the buttons fade in on hover. Identical metrics row in all 3 states.
-                footerActions
-                    .opacity(showButtons ? 1 : 0)
-                    .allowsHitTesting(showButtons)
-                    // Quick, self-contained fade — independent of the slower grow/shrink spring — so
-                    // on close the buttons are gone well before the card finishes shrinking.
-                    .animation(.easeOut(duration: 0.18), value: showButtons)
-            }
-        }
-        .padding(.top, showGraph ? Tokens.Space.s : 0)
     }
 
     /// A selectable CPU·Memory·Net readout. Tapping flips the graph for this session only (not

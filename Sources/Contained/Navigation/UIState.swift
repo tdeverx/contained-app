@@ -10,8 +10,9 @@ final class UIState {
     var searchText = ""
     var runningOnly = false
     var showRunSheet = false
-    enum CreationEntry: Hashable { case chooser, network, volume }
+    enum CreationEntry: Hashable { case chooser, search, configure, network, volume }
     var creationEntry: CreationEntry = .chooser
+    var creationPrefillSpec: RunSpec?
     /// The unified creation wizard (the front door for "new container"). Distinct from `showRunSheet`,
     /// which presents the configure form directly — that's the wizard's handoff target as well as the
     /// direct-prefill paths (Run-image, Use-template, compose queue).
@@ -19,7 +20,7 @@ final class UIState {
 
     /// Which toolbar button is currently morphed open into a centered panel (nil = none). The toolbar
     /// reads this to grow the matching panel from that button's slot.
-    enum ToolbarMorph: Hashable { case add, palette }
+    enum ToolbarMorph: Hashable { case add, palette, updates, activity }
     var activeMorph: ToolbarMorph?
 
     /// Toggle a toolbar morph panel (open it, or close it if already open).
@@ -53,6 +54,9 @@ final class UIState {
         case .runContainer:
             creationEntry = .chooser
             showCreateWizard = true   // front door is the wizard, not the bare form
+        case .pullImage:
+            creationEntry = .search
+            showCreateWizard = true
         case .createVolume:
             creationEntry = .volume
             showCreateWizard = true
@@ -68,6 +72,13 @@ final class UIState {
     /// hands off to compose/tar imports internally, so there's no post-dismiss outcome to resolve.
     func openCreateWizard() {
         creationEntry = .chooser
+        creationPrefillSpec = nil
+        showCreateWizard = true
+    }
+
+    func openCreateWizard(prefill spec: RunSpec) {
+        creationEntry = .configure
+        creationPrefillSpec = spec
         showCreateWizard = true
     }
 
@@ -82,12 +93,12 @@ final class UIState {
         var spec = RunSpec()
         spec.image = reference
         prefillQueue = []
-        presentCreate(spec)
+        openCreateWizard(prefill: spec)
     }
 
     func useTemplate(_ spec: RunSpec) {
         prefillQueue = []
-        presentCreate(spec)
+        openCreateWizard(prefill: spec)
     }
 
     /// Open the New-Container window prefilled with `spec`.
