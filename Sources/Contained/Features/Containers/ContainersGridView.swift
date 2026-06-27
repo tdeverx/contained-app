@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import ContainedCore
 
 /// The Containers screen: a responsive grid of personalized glass cards. Density and the running
@@ -77,10 +78,10 @@ struct ContainersGridView: View {
     }
 
     private var columns: [GridItem] {
-        let density = app.settings.density
-        let minWidth = density == .compact ? Tokens.CardSize.compactMin : Tokens.CardSize.largeMin
-        let maxWidth = density == .compact ? Tokens.CardSize.compactMax : Tokens.CardSize.largeMax
-        return [GridItem(.adaptive(minimum: minWidth, maximum: maxWidth), spacing: Tokens.Space.m)]
+        // Both densities share the same width band — only the card height differs (compact drops the
+        // graph), so the grid columns line up regardless of density.
+        [GridItem(.adaptive(minimum: Tokens.CardSize.largeMin, maximum: Tokens.CardSize.largeMax),
+                  spacing: Tokens.Space.m)]
     }
 
     private var filtered: [ContainerSnapshot] {
@@ -97,12 +98,21 @@ struct ContainersGridView: View {
         return GeometryReader { viewport in
             ZStack {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
-                        ForEach(groups) { group in
-                            networkSection(group)
+                    ZStack(alignment: .top) {
+                        // Background sibling (behind the cards): double-click empty space to zoom the
+                        // window. As a sibling — not an ancestor — of the cards, it never delays or
+                        // intercepts their taps; only clicks that fall through the gaps reach it.
+                        Color.clear
+                            .frame(maxWidth: .infinity, minHeight: viewport.size.height)
+                            .contentShape(Rectangle())
+                            .onTapGesture(count: 2) { zoomFrontWindow() }
+                        LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
+                            ForEach(groups) { group in
+                                networkSection(group)
+                            }
                         }
+                        .padding(Tokens.Space.l)
                     }
-                    .padding(Tokens.Space.l)
                 }
                 .scrollEdgeEffectStyle(.soft, for: .all)
                 .disabled(detail != nil)
@@ -225,12 +235,32 @@ struct ContainersGridView: View {
             .buttonStyle(.plain)
             Spacer(minLength: 0)
             if let resource = group.resource {
-                GlassRowMenu { networkMenu(resource) }
+                networkOptionsMenu(resource)
             }
         }
         .padding(.horizontal, Tokens.Space.xs)
         .padding(.vertical, Tokens.Space.xs)
         .contextMenu { if let resource = group.resource { networkMenu(resource) } }
+    }
+
+    /// The header's ⋯ menu, styled to match the cards' non-prominent round glass buttons (a neutral
+    /// glass circle — not the accent-tinted resource-row menu).
+    private func networkOptionsMenu(_ resource: NetworkResource) -> some View {
+        Menu {
+            networkMenu(resource)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: Tokens.IconSize.rowMenu, height: Tokens.IconSize.rowMenu)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .tint(.secondary)
+        .help("Network options")
+        .accessibilityLabel("Network options")
     }
 
     @ViewBuilder
@@ -245,6 +275,11 @@ struct ContainersGridView: View {
 
     private func toggleCollapsed(_ name: String) {
         if collapsedNetworks.contains(name) { collapsedNetworks.remove(name) } else { collapsedNetworks.insert(name) }
+    }
+
+    /// Zoom (fill/restore) the window — the title-bar gesture, relocated to the empty background.
+    private func zoomFrontWindow() {
+        (NSApp.keyWindow ?? NSApp.mainWindow)?.zoom(nil)
     }
 
     private var deleteNetworkBinding: Binding<Bool> {
@@ -292,10 +327,13 @@ struct ContainersGridView: View {
     }
 
     private func expandedCard(_ snapshot: ContainerSnapshot) -> some View {
-        containerCard(snapshot, isExpanded: true) {}
+        // `controlsVisible: expanded` so the footer buttons + close fade out as soon as a close
+        // starts (expanded → false), finishing before the shrink animation does.
+        containerCard(snapshot, isExpanded: true, controlsVisible: expanded) {}
     }
 
-    private func containerCard(_ snapshot: ContainerSnapshot, isExpanded: Bool, onTap: @escaping () -> Void) -> some View {
+    private func containerCard(_ snapshot: ContainerSnapshot, isExpanded: Bool,
+                               controlsVisible: Bool = true, onTap: @escaping () -> Void) -> some View {
         let style = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
         return ContainerCard(
             snapshot: snapshot,
@@ -303,8 +341,11 @@ struct ContainersGridView: View {
             density: app.settings.density,
             stats: store.statsByID[snapshot.id],
             history: store.historyByID[snapshot.id]?[style.graphMetric]?.values ?? [],
+            histories: (store.historyByID[snapshot.id] ?? [:]).mapValues(\.values),
+            onSelectMetric: { metric in selectMetric(metric, for: snapshot, current: style) },
             isBusy: store.busyIDs.contains(snapshot.id),
             isExpanded: isExpanded,
+            controlsVisible: controlsVisible,
             onTap: onTap,
             onStart: { Task { await store.start(snapshot.id) } },
             onStop: { Task { await store.stop(snapshot.id) } },
@@ -320,6 +361,15 @@ struct ContainersGridView: View {
             selecting: selecting,
             isSelected: selection.contains(snapshot.id)
         )
+    }
+
+    /// Persist the metric picked from a card's footer chips as a per-container override, so the
+    /// choice sticks (and the compact card matches) after the detail closes.
+    private func selectMetric(_ metric: GraphMetric, for snapshot: ContainerSnapshot, current: Personalization) {
+        guard metric != current.graphMetric else { return }
+        var updated = current
+        updated.graphMetric = metric
+        app.personalization.setOverride(updated, for: snapshot.id)
     }
 
     private func panelSize(in viewport: CGSize) -> CGSize {

@@ -67,7 +67,9 @@ struct RootView: View {
         // context menus, which take precedence). Double-click it to zoom the window — the gesture the
         // title bar used to provide, now that the toolbar is gone.
         .contextMenu { backgroundMenu() }
-        .onTapGesture(count: 2) { zoomFrontWindow() }
+        // NOTE: double-click-to-zoom is NOT here — on the shell it would sit above the cards, delay
+        // their taps, and fire when double-clicking a card. Pages attach it to a background layer
+        // behind their content via `.zoomWindowOnBackgroundDoubleClick()` instead.
     }
 
     /// The page-overflow menu (formerly the toolbar's ⋯), shown by right-clicking the background.

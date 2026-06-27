@@ -9,8 +9,16 @@ struct ContainerCard: View {
     var density: CardDensity
     var stats: StatsDelta?
     var history: [Double]
+    /// Every metric's recent history, so the expanded footer's chips can flip the graph instantly
+    /// without waiting for the parent to recompute. The compact card just uses `history`.
+    var histories: [GraphMetric: [Double]] = [:]
+    /// Persist the metric the user picks from the expanded footer (so the compact card matches too).
+    var onSelectMetric: (GraphMetric) -> Void = { _ in }
     var isBusy: Bool
     var isExpanded: Bool = false
+    /// Whether the expanded card's controls (footer buttons + close) are shown. The grid drops this
+    /// the instant a close begins so the glass buttons fade out *before* the shrink finishes.
+    var controlsVisible: Bool = true
     var onTap: () -> Void
     var onStart: () -> Void
     var onStop: () -> Void
@@ -34,6 +42,9 @@ struct ContainerCard: View {
     @State private var hovering = false
     @State private var tab: Tab = .overview
     @State private var confirmingDelete = false
+    /// Footer-chip override for the plotted metric — instant local response; also persisted via
+    /// `onSelectMetric`. Nil falls back to the resolved style.
+    @State private var localMetric: GraphMetric? = nil
 
     enum Tab: String, CaseIterable, Identifiable {
         case overview = "Overview"
@@ -63,8 +74,14 @@ struct ContainerCard: View {
     private var tint: Color { style.color }
     private var name: String { style.displayName(fallback: snapshot.id) }
     private var isRunning: Bool { presentation == .running }
-    private var metric: GraphMetric { style.graphMetric }
-    private var cardHeight: CGFloat { density == .compact ? 136 : 176 }
+    private var metric: GraphMetric { localMetric ?? style.graphMetric }
+    /// The recent history for the currently-plotted metric (live switch in the expanded footer).
+    private var plotted: [Double] { histories[metric] ?? history }
+    // Compact drops the ~66pt graph block (58pt sparkline + Space.s), so it's that much shorter than
+    // large; both share the same width band.
+    private var cardHeight: CGFloat { density == .compact ? 110 : 176 }
+    /// The metrics offered as selectable footer chips (the runtime exposes no GPU stat).
+    private let footerMetrics: [GraphMetric] = [.cpu, .memory, .netRx, .netTx]
 
     var body: some View {
         Group {
@@ -98,16 +115,17 @@ struct ContainerCard: View {
                 collapsedBody
             }
         }
-        // Roomier sheet-like padding when expanded (matches the Customize/Settings panels); compact
-        // padding for grid cards.
-        .padding(isExpanded ? Tokens.Space.l : Tokens.Space.m)
+        .padding(Tokens.Space.m)
         // Expanded: fill the actual (animating) frame so header/footer stay pinned to the real top
         // and bottom edges — NOT a fixed min height, which would push the footer past the bottom
         // and clip it during the grow. Collapsed: keep the fixed card height.
         .frame(maxWidth: .infinity,
                minHeight: isExpanded ? 0 : cardHeight,
                maxHeight: isExpanded ? .infinity : nil,
-               alignment: .topLeading)
+               // Expanded anchors to the bottom: the footer is the fixed bottom bookend, so if the
+               // card ever shrinks below header+footer (the compact slot on close) the overflow
+               // clips at the top instead of pushing the footer past the bottom and snapping.
+               alignment: isExpanded ? .bottomLeading : .topLeading)
         .glassSurface(.regular, cornerRadius: Tokens.Radius.card,
                       fill: style.fillBackground ? style.color : nil,
                       fillOpacity: style.backgroundOpacity,
@@ -123,51 +141,28 @@ struct ContainerCard: View {
         }
     }
 
+    /// The collapsed card is just the two bookends — header on top, the shared footer pinned to the
+    /// bottom. Large shows the graph; compact hides it (graph only on expand). Buttons stay hidden
+    /// until hover. No body.
     @ViewBuilder
     private var collapsedBody: some View {
         headerRow()
-        portsRow                       // both densities now (renders only when ports are published)
-        if density == .large { statsStrip }
-        sparkRow                        // flexible — fills the remaining height, no dead band
-        collapsedFooter
+        Spacer(minLength: 0)
+        cardFooter(showGraph: density == .large, showButtons: hovering)
     }
 
-    /// A compact CPU · Memory readout for the large card, shown when live stats are available.
+    /// The expanded interior. Header and footer are DIRECT children of the card's VStack, so the real
+    /// stack layout pins them to the top/bottom edges every frame (no lag). Only the middle tab area
+    /// is a GeometryReader, which reveals the body inline with its height.
     @ViewBuilder
-    private var statsStrip: some View {
-        if let stats {
-            HStack(spacing: Tokens.Space.m) {
-                statChip("cpu", GraphMetric.cpu.caption(from: stats))
-                statChip("memorychip", GraphMetric.memory.caption(from: stats))
-                Spacer(minLength: 0)
-            }
-        }
-    }
-
-    private func statChip(_ icon: String, _ value: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 10))
-            Text(value).font(.system(size: 11, weight: .medium)).monospacedDigit()
-        }
-        .foregroundStyle(.secondary)
-    }
-
-    /// The expanded interior, laid out against its live height so everything tracks the grow/shrink:
-    /// header and footer/graph are sticky bookends; the tab body reveals with the opening gap; and
-    /// the glass control buttons (close + lifecycle/edit/delete) fade out earlier than the body so
-    /// they're gone well before the card finishes collapsing.
     private var expandedBody: some View {
+        headerRow(controlsReveal: controlsVisible ? 1 : 0)
         GeometryReader { proxy in
-            let h = proxy.size.height
-            let bodyReveal = clamp((h - 180) / 200)
-            let controlsReveal = clamp((h - 300) / 130)
-            VStack(alignment: .leading, spacing: Tokens.Space.m) {
-                headerRow(controlsReveal: controlsReveal)
-                detailTabs.opacity(bodyReveal)
-                expandedFooter(controlsReveal: controlsReveal)
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            detailTabs
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .opacity(clamp((proxy.size.height - 40) / 160))
         }
+        cardFooter(showGraph: true, showButtons: controlsVisible)
     }
 
     private func clamp(_ value: CGFloat) -> Double { Double(max(0, min(1, value))) }
@@ -175,10 +170,10 @@ struct ContainerCard: View {
     private func headerRow(controlsReveal: Double = 1) -> some View {
         HStack(spacing: Tokens.Space.s) {
             iconChip
-            VStack(alignment: .leading, spacing: isExpanded ? 2 : 1) {
+            VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(name)
-                        .font(isExpanded ? .system(size: 16, weight: .semibold) : .system(size: 14, weight: .medium))
+                        .font(.system(size: 14, weight: .medium))
                         .lineLimit(1)
                     StatusOrb(presentation: presentation, size: 7)
                     if health == .unhealthy {
@@ -190,12 +185,16 @@ struct ContainerCard: View {
                     }
                 }
                 Text(Format.shortImage(snapshot.image))
-                    .font(.system(size: isExpanded ? 12 : 11, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
-            if isExpanded { closeAction.opacity(controlsReveal) }
+            if isExpanded {
+                closeAction
+                    .opacity(controlsReveal)
+                    .animation(.easeOut(duration: 0.18), value: controlsReveal)
+            }
         }
     }
 
@@ -233,45 +232,6 @@ struct ContainerCard: View {
         Button(role: .destructive) { onDelete() } label: { Label("Delete", systemImage: "trash") }
     }
 
-    private var portsRow: some View {
-        let ports = snapshot.configuration.publishedPorts
-        return Group {
-            if !ports.isEmpty {
-                Text(ports.map(\.display).joined(separator: ", "))
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-        }
-    }
-
-    private var sparkRow: some View {
-        LiveSparkline(samples: history, color: tint)
-            .frame(minHeight: density == .large ? 26 : 16, maxHeight: .infinity)
-    }
-
-    private var collapsedFooter: some View {
-        HStack(spacing: Tokens.Space.s) {
-            Label(metric.displayName, systemImage: metric.systemImage)
-                .labelStyle(.iconOnly)
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
-            Text(isRunning ? "↑ \(Format.uptime(since: snapshot.startedDate))" : presentation.label)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            if let stats { Text(metric.caption(from: stats)).font(.system(size: 12, weight: .medium)).foregroundStyle(tint) }
-            if hovering {
-                Button(action: isRunning ? onStop : onStart) {
-                    Image(systemName: isRunning ? "stop.fill" : "play.fill").font(.system(size: 12))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-            }
-        }
-    }
-
     private var closeAction: some View {
         GlassCircleButton(systemName: "xmark", tint: tint, help: "Close", isCancel: true) { onClose() }
     }
@@ -305,52 +265,75 @@ struct ContainerCard: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func expandedFooter(controlsReveal: Double) -> some View {
+    /// The shared bottom bookend — identical on the compact and expanded cards. The expanded card
+    /// shows the live graph above the metrics row; the compact card hides the graph but keeps the
+    /// selectable percentages. It never resizes, so the open/close animation has nothing to reflow.
+    private func cardFooter(showGraph: Bool, showButtons: Bool) -> some View {
         VStack(alignment: .leading, spacing: Tokens.Space.s) {
-            // The graph is a persistent bookend: always visible, stretching to full width with the
-            // card. It is never gated by the reveal — only the tab body in the gap is.
-            LiveSparkline(samples: history, color: tint)
-                .frame(height: 58)
-            HStack(spacing: Tokens.Space.s) {
-                Label(metric.displayName, systemImage: metric.systemImage)
-                    .labelStyle(.iconOnly)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                Text(isRunning ? "↑ \(Format.uptime(since: snapshot.startedDate))" : presentation.label)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+            if showGraph {
+                LiveSparkline(samples: plotted, color: tint)
+                    .frame(height: 58)
+            }
+            HStack(spacing: Tokens.Space.m) {
+                ForEach(footerMetrics) { metricChip($0) }
                 Spacer(minLength: 0)
-                if let stats {
-                    Text(metric.caption(from: stats))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(tint)
-                }
-                // The glass control buttons fade out early on close so they're gone before the card
-                // finishes collapsing — the metric/uptime text stays as part of the footer bookend.
-                footerActions.opacity(controlsReveal)
-                lifecycleActions.opacity(controlsReveal)
+                // Always laid out (even when hidden) so the action glyphs — taller than the metric
+                // chips — set a constant row height. Hiding via opacity keeps the footer from
+                // jumping when the buttons fade in on hover. Identical metrics row in all 3 states.
+                footerActions
+                    .opacity(showButtons ? 1 : 0)
+                    .allowsHitTesting(showButtons)
+                    // Quick, self-contained fade — independent of the slower grow/shrink spring — so
+                    // on close the buttons are gone well before the card finishes shrinking.
+                    .animation(.easeOut(duration: 0.18), value: showButtons)
             }
         }
+        .padding(.top, showGraph ? Tokens.Space.s : 0)
     }
 
-    private var lifecycleActions: some View {
-        HStack(spacing: Tokens.Space.s) {
-            if isRunning {
-                GlassCircleButton(systemName: "stop.fill", prominent: true, role: .destructive, help: "Stop") { onStop() }
-                GlassCircleButton(systemName: "arrow.clockwise", prominent: true, tint: tint, help: "Restart") { onRestart() }
-            } else {
-                GlassCircleButton(systemName: "play.fill", prominent: true, tint: tint, help: "Start") { onStart() }
+    /// A selectable CPU·Memory·Net readout. Tapping flips the graph (instantly + persisted); the
+    /// metric currently driving the graph is tinted, the rest are muted.
+    private func metricChip(_ chip: GraphMetric) -> some View {
+        let active = chip == metric
+        return Button {
+            localMetric = chip
+            onSelectMetric(chip)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: chip.systemImage).font(.system(size: 10))
+                Text(stats.map(chip.chipCaption(from:)) ?? "—")
+                    .font(.system(size: 11, weight: .medium))
+                    .monospacedDigit()
             }
+            .foregroundStyle(active ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
         }
+        .buttonStyle(.plain)
+        .help(chip.displayName)
     }
 
+    /// Lifecycle + edit/delete, styled to match the compact card's small plain play/stop glyph
+    /// rather than the heavier prominent glass circles (per the simplified footer).
     private var footerActions: some View {
-        HStack(spacing: Tokens.Space.s) {
-            GlassCircleButton(systemName: "slider.horizontal.3", prominent: true, tint: tint, help: "Edit") { onEdit() }
-            GlassCircleButton(systemName: "trash", prominent: true, role: .destructive, help: "Delete") {
-                confirmingDelete = true
+        HStack(spacing: Tokens.Space.m) {
+            if isRunning {
+                footerAction("stop.fill", help: "Stop", action: onStop)
+                footerAction("arrow.clockwise", help: "Restart", action: onRestart)
+            } else {
+                footerAction("play.fill", help: "Start", tint: tint, action: onStart)
             }
+            footerAction("slider.horizontal.3", help: "Edit", action: onEdit)
+            footerAction("trash", help: "Delete", tint: .red) { confirmingDelete = true }
         }
+    }
+
+    private func footerAction(_ systemName: String, help: String, tint: Color? = nil,
+                              action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName).font(.system(size: 13))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(tint ?? .secondary)
+        .help(help)
+        .accessibilityLabel(help)
     }
 }
