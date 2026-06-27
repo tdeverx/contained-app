@@ -4,7 +4,7 @@
 # One-time setup (keep the private key safe, never commit it):
 #   generate_keys                       # from Sparkle's bin; prints the public EdDSA key for Info.plist
 #
-# Per-branch feeds: each git branch (nightly / beta / main) owns an independent appcast.xml at the
+# Per-branch feeds: each git branch (nightly / beta / stable) owns an independent appcast.xml at the
 # repo root, served raw from GitHub. The app picks the feed per channel at runtime (UpdaterController),
 # so there's no cross-branch merging — promoting a branch just carries its manifest along. Items carry
 # no channel tag; build numbers are monotonic across branches so the newest build always wins.

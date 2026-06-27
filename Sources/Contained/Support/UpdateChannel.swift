@@ -17,7 +17,7 @@ enum UpdateChannel: String, CaseIterable, Identifiable, Codable, Sendable {
     /// The git branch whose `appcast.xml` (at repo root) backs this channel.
     var branch: String {
         switch self {
-        case .stable:  return "main"
+        case .stable:  return "stable"
         case .beta:    return "beta"
         case .nightly: return "nightly"
         }
