@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The circular glass ellipsis menu used as the trailing accessory on every resource row
-/// (Images/Volumes/Networks/Registries/Stacks) and the detail header. Centralizes the styling
+/// (Images/Volumes/Networks/Registries/Templates) and the detail header. Centralizes the styling
 /// chain and the VoiceOver label so icon-only menus are consistently accessible.
 struct GlassRowMenu<Content: View>: View {
     var systemImage: String = "ellipsis"

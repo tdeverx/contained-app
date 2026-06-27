@@ -1,7 +1,7 @@
 import Foundation
 import Yams
 
-/// A parsed `compose.yaml`, reduced to the subset Contained can launch as a Stack. Anything not
+/// A parsed `compose.yaml`, reduced to the subset Contained can prefill into Run specs. Anything not
 /// translated is recorded in `warnings` so the user knows exactly what to wire up by hand.
 public struct ComposeProject: Sendable, Hashable, Identifiable {
     public let name: String
@@ -16,22 +16,54 @@ public struct ComposeService: Sendable, Hashable, Identifiable {
     public let key: String
     public let name: String
     public let image: String?
+    public let platform: String?
     public let command: String?
+    public let entrypoint: String?
+    public let workingDir: String?
+    public let user: String?
+    public let cpus: String?
+    public let memory: String?
     public let ports: [String]        // "host:container[/proto]"
     public let volumes: [String]      // "source:target[:ro]"
     public let environment: [String]  // "KEY=value"
+    public let envFiles: [String]
+    public let labels: [String]       // "KEY=value"
     public let restart: String?
+    public let network: String?
+    public let readOnly: Bool
+    public let initProcess: Bool
+    public let interactive: Bool
+    public let tty: Bool
+    public let capAdd: [String]
+    public let capDrop: [String]
+    public let dns: [String]
+    public let dnsSearch: [String]
+    public let dnsOptions: [String]
+    public let tmpfs: [String]
+    public let ulimits: [String]
     public let dependsOn: [ComposeDependency]
     public let healthcheck: ComposeHealthcheck?
 
     public var id: String { key }
 
-    public init(key: String, name: String, image: String?, command: String?, ports: [String],
-                volumes: [String], environment: [String], restart: String?,
+    public init(key: String, name: String, image: String?, platform: String?, command: String?,
+                entrypoint: String? = nil, workingDir: String? = nil, user: String? = nil,
+                cpus: String? = nil, memory: String? = nil, ports: [String], volumes: [String],
+                environment: [String], envFiles: [String] = [], labels: [String] = [], restart: String?,
+                network: String? = nil, readOnly: Bool = false, initProcess: Bool = false,
+                interactive: Bool = false, tty: Bool = false, capAdd: [String] = [],
+                capDrop: [String] = [], dns: [String] = [], dnsSearch: [String] = [],
+                dnsOptions: [String] = [], tmpfs: [String] = [], ulimits: [String] = [],
                 dependsOn: [ComposeDependency], healthcheck: ComposeHealthcheck?) {
-        self.key = key; self.name = name; self.image = image; self.command = command
-        self.ports = ports; self.volumes = volumes; self.environment = environment
-        self.restart = restart; self.dependsOn = dependsOn; self.healthcheck = healthcheck
+        self.key = key; self.name = name; self.image = image; self.platform = platform; self.command = command
+        self.entrypoint = entrypoint; self.workingDir = workingDir; self.user = user; self.cpus = cpus
+        self.memory = memory; self.ports = ports; self.volumes = volumes; self.environment = environment
+        self.envFiles = envFiles
+        self.labels = labels; self.restart = restart; self.network = network; self.readOnly = readOnly
+        self.initProcess = initProcess; self.interactive = interactive; self.tty = tty
+        self.capAdd = capAdd; self.capDrop = capDrop; self.dns = dns; self.dnsSearch = dnsSearch
+        self.dnsOptions = dnsOptions; self.tmpfs = tmpfs; self.ulimits = ulimits
+        self.dependsOn = dependsOn; self.healthcheck = healthcheck
     }
 }
 
@@ -120,7 +152,10 @@ public enum ComposeParser {
 
     private static let supportedKeys: Set<String> =
         ["image", "command", "ports", "volumes", "environment", "restart", "container_name",
-         "depends_on", "healthcheck"]
+         "depends_on", "healthcheck", "platform", "entrypoint", "working_dir", "user", "cpus",
+         "mem_limit", "env_file", "labels", "read_only", "init", "stdin_open",
+         "tty", "cap_add", "cap_drop", "dns", "dns_search", "dns_opt", "tmpfs", "ulimits",
+         "network_mode", "networks"]
 
     private static func service(name: String, body: [String: Any], warnings: inout [String]) -> ComposeService {
         for key in body.keys where !supportedKeys.contains(key) {
@@ -134,11 +169,31 @@ public enum ComposeParser {
             key: name,
             name: (body["container_name"] as? String) ?? name,
             image: image,
+            platform: body["platform"] as? String,
             command: scalarOrJoined(body["command"]),
-            ports: stringList(body["ports"], service: name, key: "ports", warnings: &warnings),
-            volumes: stringList(body["volumes"], service: name, key: "volumes", warnings: &warnings),
+            entrypoint: scalarOrJoined(body["entrypoint"]),
+            workingDir: body["working_dir"] as? String,
+            user: stringValue(body["user"]),
+            cpus: stringValue(body["cpus"]),
+            memory: stringValue(body["mem_limit"]),
+            ports: ports(body["ports"], service: name, warnings: &warnings),
+            volumes: volumes(body["volumes"], service: name, warnings: &warnings),
             environment: environment(body["environment"]),
-            restart: body["restart"] as? String,
+            envFiles: stringList(body["env_file"], service: name, key: "env_file", warnings: &warnings),
+            labels: keyValues(body["labels"]),
+            restart: restart(body["restart"]),
+            network: network(mode: body["network_mode"], networks: body["networks"]),
+            readOnly: body["read_only"] as? Bool ?? false,
+            initProcess: body["init"] as? Bool ?? false,
+            interactive: body["stdin_open"] as? Bool ?? false,
+            tty: body["tty"] as? Bool ?? false,
+            capAdd: stringList(body["cap_add"], service: name, key: "cap_add", warnings: &warnings),
+            capDrop: stringList(body["cap_drop"], service: name, key: "cap_drop", warnings: &warnings),
+            dns: stringList(body["dns"], service: name, key: "dns", warnings: &warnings),
+            dnsSearch: stringList(body["dns_search"], service: name, key: "dns_search", warnings: &warnings),
+            dnsOptions: stringList(body["dns_opt"], service: name, key: "dns_opt", warnings: &warnings),
+            tmpfs: stringList(body["tmpfs"], service: name, key: "tmpfs", warnings: &warnings),
+            ulimits: ulimits(body["ulimits"], service: name, warnings: &warnings),
             dependsOn: dependencies(body["depends_on"]),
             healthcheck: healthcheck(body["healthcheck"])
         )
@@ -200,19 +255,31 @@ public enum ComposeParser {
     /// A scalar string, or a list joined with spaces (compose `command` accepts both).
     private static func scalarOrJoined(_ value: Any?) -> String? {
         if let s = value as? String { return s }
-        if let list = value as? [Any] { return list.compactMap { $0 as? String }.joined(separator: " ") }
+        if let list = value as? [Any] { return list.compactMap(stringValue).joined(separator: " ") }
         return nil
+    }
+
+    /// A scalar string/number/bool rendered as text.
+    private static func stringValue(_ value: Any?) -> String? {
+        switch value {
+        case let s as String: return s
+        case let i as Int: return String(i)
+        case let d as Double: return String(d)
+        case let b as Bool: return b ? "true" : "false"
+        default: return nil
+        }
     }
 
     /// A list of short-form strings; long-form (mapping) entries are reported, not translated.
     private static func stringList(_ value: Any?, service: String, key: String, warnings: inout [String]) -> [String] {
+        if let scalar = stringValue(value) { return [scalar] }
         guard let list = value as? [Any] else {
             if value != nil { warnings.append("`\(service).\(key)` uses an unsupported shape.") }
             return []
         }
         var out: [String] = []
         for entry in list {
-            if let s = entry as? String { out.append(s) }
+            if let s = stringValue(entry) { out.append(s) }
             else { warnings.append("`\(service).\(key)` long syntax isn't translated.") }
         }
         return out
@@ -220,11 +287,112 @@ public enum ComposeParser {
 
     /// Environment as a list ("KEY=val") or a mapping ({KEY: val}) → normalized "KEY=value".
     private static func environment(_ value: Any?) -> [String] {
-        if let list = value as? [Any] { return list.compactMap { $0 as? String } }
+        if let list = value as? [Any] { return list.compactMap(stringValue) }
+        return keyValues(value)
+    }
+
+    /// Labels as a list ("KEY=val") or a mapping ({KEY: val}) → normalized "KEY=value".
+    private static func keyValues(_ value: Any?) -> [String] {
+        if let list = value as? [Any] { return list.compactMap(stringValue) }
         if let map = value as? [String: Any] {
             return map.keys.sorted().map { "\($0)=\(stringify(map[$0]))" }
         }
         return []
+    }
+
+    /// Parse ports in short syntax or Compose long syntax into `container run --publish` specs.
+    private static func ports(_ value: Any?, service: String, warnings: inout [String]) -> [String] {
+        guard let list = value as? [Any] else {
+            if value != nil { warnings.append("`\(service).ports` uses an unsupported shape.") }
+            return []
+        }
+        var out: [String] = []
+        for entry in list {
+            if let s = stringValue(entry) {
+                if s.contains(":") {
+                    out.append(s)
+                } else {
+                    warnings.append("`\(service).ports` entry `\(s)` has no host port to publish.")
+                }
+            } else if let map = entry as? [String: Any] {
+                guard let target = stringValue(map["target"]) else {
+                    warnings.append("`\(service).ports` long syntax is missing `target`.")
+                    continue
+                }
+                guard let published = stringValue(map["published"]) else {
+                    warnings.append("`\(service).ports` entry for target `\(target)` has no published host port.")
+                    continue
+                }
+                let hostIP = stringValue(map["host_ip"])
+                let protocolName = (stringValue(map["protocol"]) ?? "tcp").lowercased()
+                var spec = [hostIP, published, target].compactMap { value in
+                    let trimmed = value?.trimmingCharacters(in: .whitespaces)
+                    return trimmed?.isEmpty == false ? trimmed : nil
+                }.joined(separator: ":")
+                if protocolName != "tcp" { spec += "/\(protocolName)" }
+                out.append(spec)
+            } else {
+                warnings.append("`\(service).ports` entry isn't translated.")
+            }
+        }
+        return out
+    }
+
+    /// Parse bind/volume mounts in short syntax or Compose long syntax into `--volume` specs.
+    private static func volumes(_ value: Any?, service: String, warnings: inout [String]) -> [String] {
+        guard let list = value as? [Any] else {
+            if value != nil { warnings.append("`\(service).volumes` uses an unsupported shape.") }
+            return []
+        }
+        var out: [String] = []
+        for entry in list {
+            if let s = stringValue(entry) {
+                out.append(s)
+            } else if let map = entry as? [String: Any],
+                      let source = stringValue(map["source"]),
+                      let target = stringValue(map["target"]) {
+                var spec = "\(source):\(target)"
+                if (map["read_only"] as? Bool) == true { spec += ":ro" }
+                out.append(spec)
+            } else {
+                warnings.append("`\(service).volumes` entry isn't translated.")
+            }
+        }
+        return out
+    }
+
+    /// Parse Compose ulimits into `type=soft[:hard]` entries.
+    private static func ulimits(_ value: Any?, service: String, warnings: inout [String]) -> [String] {
+        if let list = value as? [Any] { return list.compactMap(stringValue) }
+        guard let map = value as? [String: Any] else {
+            if value != nil { warnings.append("`\(service).ulimits` uses an unsupported shape.") }
+            return []
+        }
+        return map.keys.sorted().compactMap { key in
+            if let scalar = stringValue(map[key]) { return "\(key)=\(scalar)" }
+            if let limits = map[key] as? [String: Any],
+               let soft = stringValue(limits["soft"]) {
+                let hard = stringValue(limits["hard"])
+                return hard == nil ? "\(key)=\(soft)" : "\(key)=\(soft):\(hard!)"
+            }
+            warnings.append("`\(service).ulimits.\(key)` isn't translated.")
+            return nil
+        }
+    }
+
+    /// Compose `unless-stopped` matches the app's existing `always` policy because user-initiated
+    /// stops are already suppressed by the watchdog.
+    private static func restart(_ value: Any?) -> String? {
+        let raw = stringValue(value)
+        return raw == "unless-stopped" ? "always" : raw
+    }
+
+    /// Prefer explicit `network_mode`; otherwise use the first named service network.
+    private static func network(mode: Any?, networks: Any?) -> String? {
+        if let mode = stringValue(mode) { return mode }
+        if let list = networks as? [Any] { return list.compactMap(stringValue).first }
+        if let map = networks as? [String: Any] { return map.keys.sorted().first }
+        return nil
     }
 
     private static func stringify(_ value: Any?) -> String {

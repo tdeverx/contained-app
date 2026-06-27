@@ -2,33 +2,6 @@ import SwiftUI
 import SwiftData
 import ContainedCore
 
-/// The "Templates" sidebar section hosts two related tools: the Templates library (saved + built-in
-/// run recipes) and Stacks (compose import). A segmented control switches between them.
-struct TemplatesSectionView: View {
-    enum Tab: String, CaseIterable, Identifiable { case templates = "Templates", stacks = "Stacks"; var id: String { rawValue } }
-    @Environment(UIState.self) private var ui
-    @State private var tab: Tab = .templates
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Picker("View", selection: $tab) {
-                ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(maxWidth: 260)
-            .padding(.top, Tokens.Space.s)
-            switch tab {
-            case .templates: TemplatesView()
-            case .stacks: StacksView()
-            }
-        }
-        // File ▸ Import Compose… lands here; switch to the Stacks tab so it can open the picker.
-        .onChange(of: ui.pendingComposeImport) { _, pending in if pending { tab = .stacks } }
-        .onAppear { if ui.pendingComposeImport { tab = .stacks } }
-    }
-}
-
 /// A gallery of run templates: built-in starters plus the user's saved recipes. "Use" prefills the
 /// Create form; saved templates can be deleted.
 struct TemplatesView: View {

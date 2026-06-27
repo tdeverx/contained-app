@@ -342,7 +342,6 @@ struct ContainersGridView: View {
             stats: store.statsByID[snapshot.id],
             history: store.historyByID[snapshot.id]?[style.graphMetric]?.values ?? [],
             histories: (store.historyByID[snapshot.id] ?? [:]).mapValues(\.values),
-            onSelectMetric: { metric in selectMetric(metric, for: snapshot, current: style) },
             isBusy: store.busyIDs.contains(snapshot.id),
             isExpanded: isExpanded,
             controlsVisible: controlsVisible,
@@ -361,15 +360,6 @@ struct ContainersGridView: View {
             selecting: selecting,
             isSelected: selection.contains(snapshot.id)
         )
-    }
-
-    /// Persist the metric picked from a card's footer chips as a per-container override, so the
-    /// choice sticks (and the compact card matches) after the detail closes.
-    private func selectMetric(_ metric: GraphMetric, for snapshot: ContainerSnapshot, current: Personalization) {
-        guard metric != current.graphMetric else { return }
-        var updated = current
-        updated.graphMetric = metric
-        app.personalization.setOverride(updated, for: snapshot.id)
     }
 
     private func panelSize(in viewport: CGSize) -> CGSize {

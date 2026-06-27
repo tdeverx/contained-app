@@ -137,7 +137,7 @@ struct PaletteItem: Identifiable {
             })
         }
         items.append(PaletteItem(title: "Import compose…", subtitle: "create", icon: "square.on.square", tint: .accentColor) {
-            ui.section = .templates; ui.pendingComposeImport = true
+            ComposeImport.pickAndImport(app: app, ui: ui)
         })
         // Page / global actions.
         items.append(PaletteItem(title: "Refresh", subtitle: "action", icon: "arrow.clockwise", tint: .secondary) {

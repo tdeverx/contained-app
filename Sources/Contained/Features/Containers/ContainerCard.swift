@@ -12,8 +12,6 @@ struct ContainerCard: View {
     /// Every metric's recent history, so the expanded footer's chips can flip the graph instantly
     /// without waiting for the parent to recompute. The compact card just uses `history`.
     var histories: [GraphMetric: [Double]] = [:]
-    /// Persist the metric the user picks from the expanded footer (so the compact card matches too).
-    var onSelectMetric: (GraphMetric) -> Void = { _ in }
     var isBusy: Bool
     var isExpanded: Bool = false
     /// Whether the expanded card's controls (footer buttons + close) are shown. The grid drops this
@@ -36,6 +34,8 @@ struct ContainerCard: View {
     /// Multi-select mode: tapping toggles selection instead of opening the detail.
     var selecting: Bool = false
     var isSelected: Bool = false
+    /// Hover-revealed footer buttons (start/stop/edit/delete). Off for non-interactive previews.
+    var showsHoverControls: Bool = true
     /// Force a status (used by the customizer preview to show a "running" look).
     var previewPresentation: StatusPresentation? = nil
 
@@ -148,7 +148,7 @@ struct ContainerCard: View {
     private var collapsedBody: some View {
         headerRow()
         Spacer(minLength: 0)
-        cardFooter(showGraph: density == .large, showButtons: hovering)
+        cardFooter(showGraph: density == .large, showButtons: showsHoverControls && hovering)
     }
 
     /// The expanded interior. Header and footer are DIRECT children of the card's VStack, so the real
@@ -296,8 +296,9 @@ struct ContainerCard: View {
     private func metricChip(_ chip: GraphMetric) -> some View {
         let active = chip == metric
         return Button {
+            // Temporary, session-only graph switch — deliberately NOT persisted, so flipping the
+            // graph never creates a per-container override or changes the saved default.
             localMetric = chip
-            onSelectMetric(chip)
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: chip.systemImage).font(.system(size: 10))

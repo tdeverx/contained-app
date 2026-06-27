@@ -225,6 +225,7 @@ final class AppModel {
             guard await pullImage(spec.image) else { return nil }   // pull failed; error surfaced
         }
         let newID = await containers.run(spec)
+        if newID == nil, let error = containers.errorMessage { flash(error) }
         if let newID {
             if !spec.personalization.isDefault { personalization.setOverride(spec.personalization, for: newID) }
             healthChecks.setCheck(spec.healthCheck, for: newID)
@@ -255,6 +256,15 @@ final class AppModel {
         healthChecks.setCheck(spec.healthCheck, for: newID)
         historyStore.record(.lifecycle, containerID: newID, message: "Recreated \(newID)")
         return newID
+    }
+
+    /// Ensure an image is present locally, pulling it (with the progress bar) only if missing.
+    /// Returns true when the image is available. Used by compose import before prefilling a form.
+    @discardableResult
+    func ensureImage(_ reference: String) async -> Bool {
+        guard client != nil else { return false }
+        if await imageIsLocal(reference) { return true }
+        return await pullImage(reference)
     }
 
     /// Pull an image, streaming `--progress` lines into the floating activity bar. Returns true on

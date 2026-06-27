@@ -27,9 +27,7 @@ struct ContainedApp: App {
             }
             CommandGroup(after: .newItem) {
                 // The former toolbar "＋" add-menu now lives here under File ▸ New.
-                Button("New Container…") { ui.showRunSheet = true }
-                    .keyboardShortcut("n", modifiers: .command)
-                Button("Run a Container…") { ui.showRunSheet = true }
+                Button("Run Container…") { ui.showRunSheet = true }
                     .keyboardShortcut("r", modifiers: .command)
                 Divider()
                 Button("Pull Image…") { ui.dispatch(.pullImage) }
@@ -38,7 +36,7 @@ struct ContainedApp: App {
                 Button("New Volume…") { ui.dispatch(.createVolume) }
                 Button("New Network…") { ui.dispatch(.createNetwork) }
                 Divider()
-                Button("Import Compose…") { ui.section = .templates; ui.pendingComposeImport = true }
+                Button("Import Compose…") { ComposeImport.pickAndImport(app: app, ui: ui) }
             }
             // (Find / ⌘F intentionally omitted — in-window search is being reworked and will return
             // with the new search affordance.)

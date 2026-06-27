@@ -72,10 +72,10 @@ struct CommandTests {
     }
 
     @Test func composeCycleFallsBack() {
-        let a = ComposeService(key: "a", name: "a", image: "x", command: nil, ports: [], volumes: [],
+        let a = ComposeService(key: "a", name: "a", image: "x", platform: nil, command: nil, ports: [], volumes: [],
                                environment: [], restart: nil,
                                dependsOn: [ComposeDependency(service: "b", condition: .started)], healthcheck: nil)
-        let b = ComposeService(key: "b", name: "b", image: "x", command: nil, ports: [], volumes: [],
+        let b = ComposeService(key: "b", name: "b", image: "x", platform: nil, command: nil, ports: [], volumes: [],
                                environment: [], restart: nil,
                                dependsOn: [ComposeDependency(service: "a", condition: .started)], healthcheck: nil)
         let (order, cycle) = ComposeOrder.sorted([a, b])

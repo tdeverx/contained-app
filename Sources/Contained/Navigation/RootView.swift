@@ -21,7 +21,7 @@ struct RootView: View {
             detailShell(settings: settings)
         }
         .navigationTitle(ui.section.title)
-        .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil }) {
+        .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil; ui.advancePrefillQueue() }) {
             ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
         }
         .sheet(isPresented: $ui.showPalette) { CommandPalette() }
@@ -166,7 +166,7 @@ struct RootView: View {
         case .volumes: VolumesListView()
         case .registries: RegistriesView()
         case .system: SystemView()
-        case .templates: TemplatesSectionView()
+        case .templates: TemplatesView()
         }
     }
 

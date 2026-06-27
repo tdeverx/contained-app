@@ -17,11 +17,9 @@ final class UIState {
     var section: AppSection = .containers
     /// A spec to prefill the next Create/Run sheet — from "Run" on an image or "Use" on a template.
     var prefillSpec: RunSpec?
-
-    // Menu-driven action tickets. Bumping a counter (rather than a Bool) lets a view re-trigger the
-    // same action and avoids sticky-flag races; views watch the counter via `.onChange`.
-    /// Set by File ▸ Import Compose… — consumed by the Templates/Stacks views to open the picker.
-    var pendingComposeImport = false
+    /// Remaining specs to step through as prefilled New-Container windows. Compose import enqueues one
+    /// per service; each opens after the previous window closes (Create or Cancel both advance).
+    var prefillQueue: [RunSpec] = []
 
     /// A one-shot action requested from the sidebar header or a menu, addressed to a specific
     /// section's view. The view consumes it (clearing it) on appear *and* on change, which is
@@ -41,13 +39,38 @@ final class UIState {
     func runImage(_ reference: String) {
         var spec = RunSpec()
         spec.image = reference
+        prefillQueue = []
+        presentCreate(spec)
+    }
+
+    func useTemplate(_ spec: RunSpec) {
+        prefillQueue = []
+        presentCreate(spec)
+    }
+
+    /// Open the New-Container window prefilled with `spec`.
+    func presentCreate(_ spec: RunSpec) {
         prefillSpec = spec
         showRunSheet = true
     }
 
-    func useTemplate(_ spec: RunSpec) {
-        prefillSpec = spec
-        showRunSheet = true
+    /// Open the New-Container window for each queued spec in turn (compose import). Pulls each image
+    /// first (with progress), then presents the first window; the rest follow as windows close.
+    func beginPrefillQueue(_ specs: [RunSpec], using app: AppModel) {
+        guard let first = specs.first else { return }
+        prefillQueue = Array(specs.dropFirst())
+        Task {
+            for spec in specs { _ = await app.ensureImage(spec.image) }
+            presentCreate(first)
+        }
+    }
+
+    /// Advance to the next queued prefill when a New-Container window closes. No-op when drained.
+    func advancePrefillQueue() {
+        guard !prefillQueue.isEmpty else { return }
+        let next = prefillQueue.removeFirst()
+        // Re-present on the next runloop so the previous sheet finishes dismissing first.
+        DispatchQueue.main.async { self.presentCreate(next) }
     }
 }
 

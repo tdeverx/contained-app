@@ -67,6 +67,7 @@ struct Phase4Tests {
         services:
           web:
             image: nginx:latest
+            platform: linux/arm64
             ports:
               - "8080:80"
             environment:
@@ -85,6 +86,7 @@ struct Phase4Tests {
         #expect(project.services.count == 2)
         let web = project.services.first { $0.name == "web" }
         #expect(web?.image == "nginx:latest")
+        #expect(web?.platform == "linux/arm64")
         #expect(web?.ports == ["8080:80"])
         #expect(web?.environment == ["FOO=bar"])
         #expect(web?.restart == "always")
@@ -119,6 +121,7 @@ struct Phase4Tests {
         #expect(RestartPolicy(label: "always") == .always)
         #expect(RestartPolicy(label: "on-failure") == .onFailure)
         #expect(RestartPolicy(label: nil) == .no)
+        #expect(RestartPolicy(label: "unless-stopped") == .no)
         #expect(RestartPolicy(label: "garbage") == .no)
     }
 

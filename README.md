@@ -18,7 +18,7 @@ A native, SwiftUI-first macOS app for Apple's [`container`](https://github.com/a
 - **Grid of glass cards** — each container is a clear Liquid Glass card with a customizable tint, gradient, icon, nickname, an app-managed health badge, and a selectable live sparkline (CPU / memory / network / disk).
 - **Full lifecycle + 7 detail tabs** — start/stop/restart, plus Overview, Logs, Terminal (SwiftTerm), Stats, History, Files, and Inspect for each container.
 - **Images, Build, Volumes, Networks, Registries, System** — pull (with Docker Hub search), build (streamed BuildKit log), tag/push/save/load, filesystem export, volume/network CRUD, registry login, service control, `df`, a Prune Center, and guarded kernel/DNS management.
-- **Templates & Stacks** — a library of saved run recipes plus built-in starters, and `compose.yaml` import with app-managed start-order and health-gated launch.
+- **Templates & Compose import** — a library of saved run recipes plus built-in starters, and `compose.yaml` import that opens editable, prefilled Run forms for each service.
 - **One Edit form** — progressive-disclosure mapping of the `container run` flags with host-bounded CPU/RAM controls and a live "reveal the CLI" preview.
 - **Persistent history** — SwiftData-backed events and metrics power a per-container History tab and a system-wide Activity view (Swift Charts), with configurable retention.
 - **App-managed restart & healthchecks** — `container` has no native `--restart` or healthcheck, so Contained runs both itself.
@@ -36,7 +36,7 @@ Channels are cumulative (Nightly still receives Beta and Stable). See the [Relea
 
 ## Documentation
 
-Full docs live in the **[wiki](https://github.com/tdeverx/contained-app/wiki)** — [Features](https://github.com/tdeverx/contained-app/wiki/Features) · [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts) · [Installation](https://github.com/tdeverx/contained-app/wiki/Installation) · [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting) · [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture) · [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing).
+Full docs live in the **[wiki](https://github.com/tdeverx/contained-app/wiki)** — [Features](https://github.com/tdeverx/contained-app/wiki/Features) · [Run / Edit Form](https://github.com/tdeverx/contained-app/wiki/Run-Edit-Form) · [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts) · [Installation](https://github.com/tdeverx/contained-app/wiki/Installation) · [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting) · [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture) · [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing).
 
 ## Requirements
 
@@ -106,7 +106,7 @@ Every screen gets the same pass before tagging 1.0. Criteria per page: **G** Liq
 | System | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | System · Activity | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | Templates | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| Stacks | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| Compose import | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | Edit / Run form | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | Customize sheet | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | Settings | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |

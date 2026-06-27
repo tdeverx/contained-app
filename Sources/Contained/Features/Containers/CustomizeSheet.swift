@@ -60,10 +60,11 @@ struct CustomizeSheet: View {
 
     private var isPopoverPresentation: Bool { presentation == .popover }
     private var previewWidth: CGFloat { isPopoverPresentation ? 372 : 320 }
-    private var previewDensity: CardDensity { isPopoverPresentation ? .compact : .large }
-    private var previewHeight: CGFloat { isPopoverPresentation ? 136 : 176 }
+    /// Always preview the large card (graph + footer) so the style reads at its richest.
+    private var previewDensity: CardDensity { .large }
+    private var previewHeight: CGFloat { 176 }
     private var panelSize: CGSize {
-        isPopoverPresentation ? CGSize(width: 430, height: 520) : CGSize(width: 480, height: 600)
+        isPopoverPresentation ? CGSize(width: 430, height: 560) : CGSize(width: 480, height: 600)
     }
 
     var body: some View {
@@ -219,11 +220,26 @@ struct CustomizeSheet: View {
             history: StatsDelta.sampleHistory,
             isBusy: false,
             onTap: {}, onStart: {}, onStop: {}, onRestart: {}, onDelete: {},
+            showsHoverControls: false,
             previewPresentation: .running
         )
         .frame(width: previewWidth)
         .frame(height: previewHeight)
+        .background(previewBackdrop)
         .allowsHitTesting(false)
+    }
+
+    /// The grid renders its cards over the window's behind-window vibrancy (the window itself is
+    /// clear), which is what gives the card glass something to refract. A sheet/popover has no such
+    /// backdrop, so the card glass renders flat. Recreate the same vibrancy directly behind the
+    /// preview so it reads identically to the main page.
+    @ViewBuilder
+    private var previewBackdrop: some View {
+        if !app.settings.reduceTranslucency {
+            VisualEffectBackground(material: app.settings.windowMaterial.nsMaterial,
+                                   blendingMode: .behindWindow)
+                .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
+        }
     }
 }
 

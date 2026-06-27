@@ -6,34 +6,67 @@ import ContainedCore
 /// through tappable `info.circle` popovers (`fieldInfo`), not hover tooltips.
 struct RunSpecForm: View {
     @Binding var spec: RunSpec
+    @State private var advancedExpanded: Bool
+
+    init(spec: Binding<RunSpec>) {
+        self._spec = spec
+        let initial = spec.wrappedValue
+        self._advancedExpanded = State(initialValue: initial.hasAdvancedOptions)
+    }
 
     var body: some View {
         Form {
-            generalSection
-            resourcesSection
-            portsSection
-            volumesSection
-            environmentSection
-            healthSection
-            personalizationSection
-            advancedSection
-            runtimeSection
+            Section("Essentials") {
+                generalSection
+            }
+            Section("Resources") {
+                resourcesSection
+            }
+            Section("Networking") {
+                portsSection
+                networkSection
+                socketsSection
+            }
+            Section("Storage") {
+                volumesSection
+            }
+            Section("Environment") {
+                environmentSection
+            }
+            Section("App Managed") {
+                restartSection
+                healthSection
+            }
+            Section("Appearance") {
+                personalizationSection
+            }
+            advancedOptionsSection
         }
         .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
         .scrollEdgeEffectStyle(.soft, for: .all)
+        .onChange(of: spec.hasAdvancedOptions) { _, hasValues in if hasValues { advancedExpanded = true } }
     }
 
     private var generalSection: some View {
-        Section("General") {
+        Group {
             TextField("Image", text: $spec.image, prompt: Text("e.g. nginx:latest"))
                 .fieldInfo("The image to run, repo:tag. Pulled automatically if not present locally.")
+            Picker("Platform", selection: platformPresetBinding) {
+                Text("Default").tag("")
+                Text("Linux arm64").tag("linux/arm64")
+                Text("Linux amd64").tag("linux/amd64")
+                Text("Linux amd64/v2").tag("linux/amd64/v2")
+                Text("Custom").tag("custom")
+            }
+                .fieldInfo("Select an image platform when the image is multi-platform (--platform).")
+            if platformPresetBinding.wrappedValue == "custom" {
+                TextField("Custom platform", text: $spec.platform, prompt: Text("os/arch[/variant]"))
+                    .fieldInfo("Custom platform string passed to --platform.")
+            }
             TextField("Name", text: $spec.name, prompt: Text("optional"))
                 .fieldInfo("A stable name for the container. Leave blank for a generated one.")
             TextField("Command", text: $spec.command, prompt: Text("override the default command (optional)"))
                 .fieldInfo("Arguments passed to the image, replacing its default command.")
-            TextField("Entrypoint", text: $spec.entrypoint, prompt: Text("optional"))
-                .fieldInfo("Override the image's entrypoint program.")
             Toggle("Run in the background", isOn: $spec.detach)
                 .fieldInfo("Detached (-d): runs without attaching to its output.")
             Toggle("Remove when stopped", isOn: $spec.removeOnExit)
@@ -42,7 +75,7 @@ struct RunSpecForm: View {
     }
 
     private var resourcesSection: some View {
-        Section("Resources") {
+        Group {
             Picker("CPUs", selection: cpuBinding) {
                 Text("Default").tag(0)
                 ForEach(1...max(1, hostCPUs), id: \.self) { Text("\($0)").tag($0) }
@@ -80,9 +113,18 @@ struct RunSpecForm: View {
         Binding(get: { Self.parseMemoryGB(spec.memory) ?? 2 }, set: { spec.memory = Self.memorySpec(gb: $0) })
     }
     private var memoryReadout: String {
-        let gb = Self.parseMemoryGB(spec.memory) ?? 2
+        memoryReadout(spec.memory, fallbackGB: 2)
+    }
+    private func memoryReadout(_ spec: String, fallbackGB: Double) -> String {
+        let gb = Self.parseMemoryGB(spec) ?? fallbackGB
         if gb < 1 { return "\(Int(gb * 1024)) MB" }
         return gb.rounded() == gb ? "\(Int(gb)) GB" : String(format: "%.1f GB", gb)
+    }
+
+    private var platformPresetBinding: Binding<String> {
+        let presets = Set(["", "linux/arm64", "linux/amd64", "linux/amd64/v2"])
+        return Binding(get: { presets.contains(spec.platform) ? spec.platform : "custom" },
+                       set: { if $0 != "custom" { spec.platform = $0 } })
     }
 
     /// Parse a `--memory` spec ("512M", "1G", "2g", bare bytes) into gigabytes.
@@ -107,7 +149,7 @@ struct RunSpecForm: View {
     }
 
     private var portsSection: some View {
-        Section("Ports") {
+        Group {
             ForEach($spec.ports) { $port in
                 HStack {
                     TextField("Host", text: $port.hostPort).frame(width: 70)
@@ -124,7 +166,7 @@ struct RunSpecForm: View {
     }
 
     private var volumesSection: some View {
-        Section("Volumes & mounts") {
+        Group {
             ForEach($spec.volumes) { $vol in
                 VStack {
                     HStack {
@@ -142,7 +184,7 @@ struct RunSpecForm: View {
     }
 
     private var environmentSection: some View {
-        Section("Environment") {
+        Group {
             ForEach($spec.env) { $variable in
                 HStack {
                     TextField("KEY", text: $variable.key)
@@ -152,11 +194,42 @@ struct RunSpecForm: View {
                 }
             }
             addButton("Add variable") { spec.env.append(KeyValue()) }
+            stringList("Add env file", $spec.envFiles, prompt: "/path/to/.env",
+                       info: "Read environment variables from a file (--env-file).")
+        }
+    }
+
+    private var socketsSection: some View {
+        Group {
+            ForEach($spec.sockets) { $socket in
+                VStack {
+                    HStack {
+                        TextField("Host socket path", text: $socket.hostPath)
+                        removeButton { spec.sockets.removeAll { $0.id == socket.id } }
+                    }
+                    TextField("Container socket path", text: $socket.containerPath)
+                }
+            }
+            addButton("Add socket") { spec.sockets.append(SocketMap()) }
+        }
+    }
+
+    private var labelsSection: some View {
+        Group {
+            ForEach($spec.labels) { $label in
+                HStack {
+                    TextField("KEY", text: $label.key)
+                    Text("=").foregroundStyle(.secondary)
+                    TextField("value", text: $label.value)
+                    removeButton { spec.labels.removeAll { $0.id == label.id } }
+                }
+            }
+            addButton("Add label") { spec.labels.append(KeyValue()) }
         }
     }
 
     private var personalizationSection: some View {
-        Section("Personalization") {
+        Group {
             TextField("Nickname", text: $spec.personalization.nickname, prompt: Text("display name (optional)"))
                 .fieldInfo("A friendly display name shown on the card. Stored locally, not on the container.")
             TextField("Icon", text: $spec.personalization.icon, prompt: Text("SF Symbol, e.g. globe, bolt"))
@@ -181,27 +254,17 @@ struct RunSpecForm: View {
         }
     }
 
-    private var advancedSection: some View {
-        Section("Security & advanced") {
+    private var restartSection: some View {
+        Group {
             Picker("Restart policy", selection: $spec.restart) {
                 ForEach(RestartPolicy.allCases) { Text($0.displayName).tag($0) }
             }
             .fieldInfo("Contained restarts the container automatically based on this setting.")
-            Toggle("Read-only filesystem", isOn: $spec.readOnly)
-                .fieldInfo("Mounts the container's root filesystem as read-only.")
-            Toggle("Use an init process", isOn: $spec.useInit)
-                .fieldInfo("Runs a tiny init that forwards signals and cleans up zombie processes.")
-            Toggle("Rosetta (x86 apps)", isOn: $spec.rosetta)
-                .fieldInfo("Lets the container run x86-64 binaries via Rosetta.")
-            Toggle("Forward SSH agent", isOn: $spec.ssh)
-                .fieldInfo("Forwards your host SSH agent into the container.")
-            Toggle("Expose virtualization", isOn: $spec.virtualization)
-                .fieldInfo("Exposes nested virtualization (needs host + guest support).")
         }
     }
 
     private var healthSection: some View {
-        Section("Health check") {
+        Group {
             Toggle("Enable healthcheck", isOn: $spec.healthCheck.enabled)
                 .fieldInfo("Contained probes the container on an interval (app-managed; the runtime has no native healthcheck).")
             if spec.healthCheck.enabled {
@@ -230,7 +293,13 @@ struct RunSpecForm: View {
 
     @ViewBuilder
     private var runtimeSection: some View {
-        Section("Advanced") {
+        Group {
+            TextField("Entrypoint", text: $spec.entrypoint, prompt: Text("optional"))
+                .fieldInfo("Override the image's entrypoint program.")
+            Toggle("Keep stdin open", isOn: $spec.interactive)
+                .fieldInfo("Keep standard input open even when detached (--interactive).")
+            Toggle("Allocate TTY", isOn: $spec.tty)
+                .fieldInfo("Allocate a terminal for the process (--tty).")
             TextField("Working directory", text: $spec.workingDir, prompt: Text("optional, e.g. /app"))
                 .fieldInfo("Initial working directory inside the container (-w).")
             TextField("User", text: $spec.user, prompt: Text("name | uid[:gid]"))
@@ -241,29 +310,139 @@ struct RunSpecForm: View {
                 Spacer()
             }
             .fieldInfo("Numeric user / group IDs (--uid / --gid).")
-            TextField("Shared memory size", text: $spec.shmSize, prompt: Text("optional, e.g. 64M, 1G"))
+            Toggle("Set shared memory size", isOn: shmLimitBinding)
                 .fieldInfo("Size of /dev/shm (--shm-size).")
+            if !spec.shmSize.isEmpty {
+                LabeledContent("Shared memory") {
+                    Slider(value: shmGBBinding, in: 0.0625...max(0.0625, maxMemoryGB), step: 0.0625)
+                    Text(memoryReadout(spec.shmSize, fallbackGB: 0.0625)).monospacedDigit().frame(width: 64)
+                }
+            }
 
             stringList("Add capability", $spec.capAdd, prompt: "CAP_NET_RAW or ALL",
                        info: "Add a Linux capability (--cap-add).")
             stringList("Drop capability", $spec.capDrop, prompt: "CAP_NET_RAW or ALL",
                        info: "Drop a Linux capability (--cap-drop).")
+            TextField("Container ID file", text: $spec.cidFile, prompt: Text("optional path"))
+                .fieldInfo("Write the new container ID to a file (--cidfile).")
             stringList("Add tmpfs mount", $spec.tmpfs, prompt: "/path",
                        info: "Mount a tmpfs at this path (--tmpfs).")
             stringList("Add ulimit", $spec.ulimits, prompt: "nofile=1024:2048",
                        info: "Resource limit, type=soft[:hard] (--ulimit).")
         }
+    }
 
-        Section("DNS") {
-            stringList("Add nameserver", $spec.dns, prompt: "1.1.1.1",
-                       info: "DNS nameserver IP (--dns).")
-            TextField("Search domain default", text: $spec.dnsDomain, prompt: Text("optional"))
-                .fieldInfo("Default DNS domain (--dns-domain).")
-            stringList("Add search domain", $spec.dnsSearch, prompt: "example.com",
-                       info: "DNS search domain (--dns-search).")
-            stringList("Add DNS option", $spec.dnsOption, prompt: "ndots:2",
-                       info: "DNS resolver option (--dns-option).")
+    @ViewBuilder
+    private var securitySection: some View {
+        Group {
+            Toggle("Read-only filesystem", isOn: $spec.readOnly)
+                .fieldInfo("Mounts the container's root filesystem as read-only.")
+            Toggle("Use an init process", isOn: $spec.useInit)
+                .fieldInfo("Runs a tiny init that forwards signals and cleans up zombie processes.")
+            Toggle("Rosetta (x86 apps)", isOn: $spec.rosetta)
+                .fieldInfo("Lets the container run x86-64 binaries via Rosetta.")
+            Toggle("Forward SSH agent", isOn: $spec.ssh)
+                .fieldInfo("Forwards your host SSH agent into the container.")
+            Toggle("Expose virtualization", isOn: $spec.virtualization)
+                .fieldInfo("Exposes nested virtualization (needs host + guest support).")
         }
+    }
+
+    @ViewBuilder
+    private var networkSection: some View {
+        Group {
+            TextField("Network", text: $spec.network, prompt: Text("optional, e.g. default"))
+                .fieldInfo("Attach the container to a network (--network).")
+        }
+    }
+
+    @ViewBuilder
+    private var fetchSection: some View {
+        Group {
+            TextField("Runtime", text: $spec.runtime, prompt: Text("optional"))
+                .fieldInfo("Runtime handler (--runtime).")
+            TextField("Init image", text: $spec.initImage, prompt: Text("optional image"))
+                .fieldInfo("Use a custom init image (--init-image).")
+            TextField("Kernel", text: $spec.kernel, prompt: Text("optional path"))
+                .fieldInfo("Use a custom kernel path (--kernel).")
+            Picker("Registry scheme", selection: $spec.scheme) {
+                Text("Default").tag("")
+                Text("Auto").tag("auto")
+                Text("HTTPS").tag("https")
+                Text("HTTP").tag("http")
+            }
+                .fieldInfo("Registry connection scheme for image fetches (--scheme).")
+            Picker("Progress", selection: $spec.progress) {
+                Text("Default").tag("")
+                Text("Auto").tag("auto")
+                Text("None").tag("none")
+                Text("ANSI").tag("ansi")
+                Text("Plain").tag("plain")
+                Text("Color").tag("color")
+            }
+                .fieldInfo("Progress display mode for image fetches (--progress).")
+            Toggle("Limit parallel downloads", isOn: maxDownloadsBinding)
+                .fieldInfo("Maximum concurrent image downloads (--max-concurrent-downloads).")
+            if !spec.maxConcurrentDownloads.isEmpty {
+                Stepper("Max downloads: \(maxConcurrentDownloadsBinding.wrappedValue)",
+                        value: maxConcurrentDownloadsBinding, in: 1...16)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var dnsSection: some View {
+        Group {
+            Toggle("Disable DNS", isOn: $spec.noDNS)
+                .fieldInfo("Do not configure DNS inside the container (--no-dns).")
+            if !spec.noDNS {
+                stringList("Add nameserver", $spec.dns, prompt: "1.1.1.1",
+                           info: "DNS nameserver IP (--dns).")
+                TextField("Search domain default", text: $spec.dnsDomain, prompt: Text("optional"))
+                    .fieldInfo("Default DNS domain (--dns-domain).")
+                stringList("Add search domain", $spec.dnsSearch, prompt: "example.com",
+                           info: "DNS search domain (--dns-search).")
+                stringList("Add DNS option", $spec.dnsOption, prompt: "ndots:2",
+                           info: "DNS resolver option (--dns-option).")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var advancedOptionsSection: some View {
+        Section("Advanced Options") {
+            Toggle("Show advanced options", isOn: $advancedExpanded)
+                .fieldInfo("Shows less-common run settings. Compose import and Edit open this automatically when advanced values are present.")
+            if advancedExpanded {
+                runtimeSection
+                securitySection
+                fetchSection
+                dnsSection
+                stringList("Add mount", $spec.mounts, prompt: "type=bind,source=/host,target=/container",
+                           info: "Raw mount spec for advanced mount types (--mount).")
+                labelsSection
+            }
+        }
+    }
+
+    private var shmLimitBinding: Binding<Bool> {
+        Binding(get: { !spec.shmSize.isEmpty },
+                set: { spec.shmSize = $0 ? "64M" : "" })
+    }
+
+    private var shmGBBinding: Binding<Double> {
+        Binding(get: { Self.parseMemoryGB(spec.shmSize) ?? 0.0625 },
+                set: { spec.shmSize = Self.memorySpec(gb: $0) })
+    }
+
+    private var maxDownloadsBinding: Binding<Bool> {
+        Binding(get: { !spec.maxConcurrentDownloads.isEmpty },
+                set: { spec.maxConcurrentDownloads = $0 ? "3" : "" })
+    }
+
+    private var maxConcurrentDownloadsBinding: Binding<Int> {
+        Binding(get: { max(1, Int(spec.maxConcurrentDownloads) ?? 3) },
+                set: { spec.maxConcurrentDownloads = String($0) })
     }
 
     /// A repeatable single-string list editor (capabilities, DNS servers, tmpfs, ulimits…).
@@ -290,5 +469,60 @@ struct RunSpecForm: View {
         Button(action: action) { Image(systemName: "minus.circle.fill") }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
+    }
+}
+
+private extension RunSpec {
+    var hasResourceOptions: Bool {
+        !cpus.isEmpty || !memory.isEmpty
+    }
+
+    var hasNetworkingOptions: Bool {
+        !ports.isEmpty || !network.isEmpty || !sockets.isEmpty
+    }
+
+    var hasStorageOptions: Bool {
+        !volumes.isEmpty || !mounts.isEmpty
+    }
+
+    var hasEnvironmentOptions: Bool {
+        !env.isEmpty || !envFiles.isEmpty
+    }
+
+    var hasPersonalizationOptions: Bool {
+        !personalization.isDefault
+    }
+
+    var hasAdvancedOptions: Bool {
+        interactive || tty ||
+        !entrypoint.isEmpty ||
+        !workingDir.isEmpty ||
+        !user.isEmpty ||
+        !uid.isEmpty ||
+        !gid.isEmpty ||
+        !shmSize.isEmpty ||
+        !capAdd.isEmpty ||
+        !capDrop.isEmpty ||
+        !cidFile.isEmpty ||
+        !initImage.isEmpty ||
+        !kernel.isEmpty ||
+        noDNS ||
+        !dns.isEmpty ||
+        !dnsDomain.isEmpty ||
+        !dnsSearch.isEmpty ||
+        !dnsOption.isEmpty ||
+        !tmpfs.isEmpty ||
+        !ulimits.isEmpty ||
+        !runtime.isEmpty ||
+        !scheme.isEmpty ||
+        !progress.isEmpty ||
+        !maxConcurrentDownloads.isEmpty ||
+        !mounts.isEmpty ||
+        !labels.isEmpty ||
+        readOnly ||
+        useInit ||
+        rosetta ||
+        ssh ||
+        virtualization
     }
 }
