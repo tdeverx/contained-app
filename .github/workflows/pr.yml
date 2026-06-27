@@ -1,0 +1,33 @@
+name: PR
+
+# Builds on every PR — builds, tests, and validates without any versioning or release.
+
+on:
+  pull_request:
+    branches: [main, nightly, beta, stable]
+    paths-ignore:
+      - '**/*.md'
+      - '.github/assets/**'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Toolchain
+        run: swift --version && xcodebuild -version
+
+      - name: Build & test
+        run: |
+          swift build -c release
+          swift test
