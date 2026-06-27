@@ -1,16 +1,18 @@
 import SwiftUI
 import ContainedCore
 
-/// Container identity chip that turns into the customization affordance on hover.
+/// Container identity chip that turns into the customization affordance on hover. The customize
+/// popover is owned by `ContainerCard` and anchored to the whole card (not this chip), so the live
+/// card itself serves as the preview — this button just triggers it.
 struct ContainerCustomizeButton: View {
     let snapshot: ContainerSnapshot
     let style: Personalization
+    var onTap: () -> Void
 
     @State private var hovering = false
-    @State private var showingCustomize = false
 
     var body: some View {
-        Button { showingCustomize = true } label: {
+        Button(action: onTap) {
             Image(systemName: hovering ? "paintbrush.pointed.fill" : style.symbol)
                 .font(.system(size: 15))
                 .foregroundStyle(style.color)
@@ -21,8 +23,5 @@ struct ContainerCustomizeButton: View {
         .onHover { hovering = $0 }
         .help("Customize card")
         .accessibilityLabel("Customize \(style.displayName(fallback: snapshot.id))")
-        .popover(isPresented: $showingCustomize, arrowEdge: .trailing) {
-            CustomizeSheet(snapshot: snapshot)
-        }
     }
 }

@@ -135,6 +135,8 @@ struct ContainersGridView: View {
                         .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
                         // Constant elevation — softer, lighter, larger. Not gated by `expanded`, so it
                         // doesn't pop out and back in during the close.
+                        // KNOWN ISSUE: a small shadow pop remains as the card reaches the closed slot
+                        // (the overlay is swapped for the real grid card). Tracked separately.
                         .shadow(color: .black.opacity(0.16), radius: 60, y: 26)
                         .position(x: rect.midX, y: rect.midY)
                         .zIndex(10)

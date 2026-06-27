@@ -34,16 +34,14 @@ struct ContainerCard: View {
     /// Multi-select mode: tapping toggles selection instead of opening the detail.
     var selecting: Bool = false
     var isSelected: Bool = false
-    /// Hover-revealed footer buttons (start/stop/edit/delete). Off for non-interactive previews.
-    var showsHoverControls: Bool = true
-    /// Force a status (used by the customizer preview to show a "running" look).
-    var previewPresentation: StatusPresentation? = nil
 
     @State private var hovering = false
     @State private var tab: Tab = .overview
     @State private var confirmingDelete = false
-    /// Footer-chip override for the plotted metric — instant local response; also persisted via
-    /// `onSelectMetric`. Nil falls back to the resolved style.
+    /// Customize popover, anchored to the whole card so the live card is the preview.
+    @State private var showingCustomize = false
+    /// Footer-chip override for the plotted metric — session-only (never persisted). Nil falls back
+    /// to the resolved style's metric.
     @State private var localMetric: GraphMetric? = nil
 
     enum Tab: String, CaseIterable, Identifiable {
@@ -70,7 +68,7 @@ struct ContainerCard: View {
         }
     }
 
-    private var presentation: StatusPresentation { previewPresentation ?? StatusPresentation(snapshot.state) }
+    private var presentation: StatusPresentation { StatusPresentation(snapshot.state) }
     private var tint: Color { style.color }
     private var name: String { style.displayName(fallback: snapshot.id) }
     private var isRunning: Bool { presentation == .running }
@@ -97,6 +95,11 @@ struct ContainerCard: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(name), \(presentation.label)")
+        // Anchored to the whole card (via the surrounding Group), so the popover floats beside the
+        // real, live card — which is itself the preview. The customizer carries only the form.
+        .popover(isPresented: $showingCustomize, arrowEdge: .trailing) {
+            CustomizeSheet(snapshot: snapshot, presentation: .popover)
+        }
         .confirmationDialog("Delete \(name)?", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) {
                 onDelete()
@@ -148,7 +151,7 @@ struct ContainerCard: View {
     private var collapsedBody: some View {
         headerRow()
         Spacer(minLength: 0)
-        cardFooter(showGraph: density == .large, showButtons: showsHoverControls && hovering)
+        cardFooter(showGraph: density == .large, showButtons: hovering)
     }
 
     /// The expanded interior. Header and footer are DIRECT children of the card's VStack, so the real
@@ -199,7 +202,7 @@ struct ContainerCard: View {
     }
 
     private var iconChip: some View {
-        ContainerCustomizeButton(snapshot: snapshot, style: style)
+        ContainerCustomizeButton(snapshot: snapshot, style: style) { showingCustomize = true }
     }
 
     /// The container's actions for the right-click context menu.
@@ -291,8 +294,8 @@ struct ContainerCard: View {
         .padding(.top, showGraph ? Tokens.Space.s : 0)
     }
 
-    /// A selectable CPU·Memory·Net readout. Tapping flips the graph (instantly + persisted); the
-    /// metric currently driving the graph is tinted, the rest are muted.
+    /// A selectable CPU·Memory·Net readout. Tapping flips the graph for this session only (not
+    /// persisted); the metric currently driving the graph is tinted, the rest are muted.
     private func metricChip(_ chip: GraphMetric) -> some View {
         let active = chip == metric
         return Button {
