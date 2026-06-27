@@ -27,7 +27,7 @@ struct ContainedApp: App {
             }
             CommandGroup(after: .newItem) {
                 // The former toolbar "＋" add-menu now lives here under File ▸ New.
-                Button("Run Container…") { ui.showRunSheet = true }
+                Button("Run Container…") { ui.openCreateWizard() }
                     .keyboardShortcut("r", modifiers: .command)
                 Divider()
                 Button("Pull Image…") { ui.dispatch(.pullImage) }
@@ -51,7 +51,7 @@ struct ContainedApp: App {
                 Toggle("Show Running Only", isOn: runningOnlyBinding)
             }
             CommandGroup(after: .toolbar) {
-                Button("Command Palette…") { ui.showPalette = true }
+                Button("Command Palette…") { ui.toggleMorph(.palette) }
                     .keyboardShortcut("k", modifiers: .command)
             }
             CommandMenu("Go") {

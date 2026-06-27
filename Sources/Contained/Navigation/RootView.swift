@@ -21,10 +21,10 @@ struct RootView: View {
             detailShell(settings: settings)
         }
         .navigationTitle(ui.section.title)
+        .sheet(isPresented: $ui.showCreateWizard) { CreationWizard(entry: ui.creationEntry) }
         .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil; ui.advancePrefillQueue() }) {
             ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
         }
-        .sheet(isPresented: $ui.showPalette) { CommandPalette() }
         .sheet(isPresented: downgradeBinding) {
             DowngradeDecisionView(schemaVersion: app.downgradeSchemaVersion ?? StateMigrator.currentSchemaVersion,
                                   onExportAndReset: { app.exportForDowngradeAndReset() },
@@ -35,6 +35,18 @@ struct RootView: View {
             ReleaseNotesView(title: "What’s New",
                              html: app.updater.currentReleaseNotesHTML,
                              onClose: { app.updater.markWhatsNewSeen() })
+        }
+        // App-wide drop: a compose file opens the creation flow prefilled; an image .tar loads into the
+        // store. The Images page keeps its own .tar drop target, which takes precedence there.
+        .dropDestination(for: URL.self) { urls, _ in
+            for url in urls {
+                switch url.pathExtension.lowercased() {
+                case "yaml", "yml": ComposeImport.importFile(at: url, app: app, ui: ui); return true
+                case "tar":         app.loadImageTar(at: url); return true
+                default:            continue
+                }
+            }
+            return false
         }
         .overlay(alignment: .bottom) {
             VStack(spacing: Tokens.Space.s) {
@@ -55,6 +67,7 @@ struct RootView: View {
         }
         .onChange(of: ui.section) { _, new in
             ui.searchText = ""
+            ui.pageResultCount = nil
             settings.lastSection = new.rawValue
             app.coordinator.activeSection = new
             app.coordinator.wake()
@@ -65,18 +78,24 @@ struct RootView: View {
     }
 
     private func detailShell(settings: SettingsStore) -> some View {
-        ZStack {
-            ContentBackgroundLayer(reduceTransparency: settings.reduceTranslucency,
-                                   material: settings.windowMaterial.nsMaterial)
-            content
+        GeometryReader { proxy in
+            ZStack {
+                ContentBackgroundLayer(reduceTransparency: settings.reduceTranslucency,
+                                       material: settings.windowMaterial.nsMaterial)
+                // Pages respect the top safe area again now that the toolbar occupies that band — so their
+                // content starts below the toolbar rather than under it. (The background layer self-ignores
+                // the safe area, so the vibrancy still fills behind the toolbar.)
+                content
+            }
+            .environment(\.appSafeAreas, AppSafeAreaManager(system: proxy.safeAreaInsets,
+                                                            toolbarHeight: AppToolbar.bandHeight))
+            // The app-wide toolbar lives in the detail column only (never over the sidebar) and draws up
+            // into the title-bar band; its morph panels center within the content area.
+            .overlay { AppToolbar().ignoresSafeArea(.container, edges: .top) }
         }
-        // Reclaim the dead band the (now-hidden) title bar still reserves as a top safe-area inset on
-        // the detail column — pages own their own top padding. The sidebar keeps its inset so the
-        // traffic lights stay clear.
-        .ignoresSafeArea(.container, edges: .top)
         // Right-click the empty background for the page's overflow actions (cards/rows keep their own
         // context menus, which take precedence). Double-click it to zoom the window — the gesture the
-        // title bar used to provide, now that the toolbar is gone.
+        // title bar used to provide.
         .contextMenu { backgroundMenu() }
         // NOTE: double-click-to-zoom is NOT here — on the shell it would sit above the cards, delay
         // their taps, and fire when double-clicking a card. Pages attach it to a background layer
@@ -118,7 +137,7 @@ struct RootView: View {
             EmptyView()
         }
         Divider()
-        Button { ui.showPalette = true } label: { Label("Command Palette…", systemImage: "command") }
+        Button { ui.toggleMorph(.palette) } label: { Label("Command Palette…", systemImage: "command") }
     }
 
     /// Toggle the front window between its zoomed (filled) and restored size — emulates the

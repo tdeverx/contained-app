@@ -22,13 +22,18 @@ struct GlassSurface: ViewModifier {
         // NOTE: no `.compositingGroup()` here — it rasterizes the glass and makes it render opaque,
         // breaking the live translucency. `.glassEffect` provides its own elevation.
         return content
+            .background {
+                ExteriorShadow(cornerRadius: cornerRadius,
+                               color: shadowColor,
+                               radius: shadowRadius,
+                               y: shadowY)
+            }
             .glassEffect(glass, in: shape)
             .background {
                 if let fill {
                     shape.fill(fillStyle(fill))
                 }
             }
-            .shadow(color: shadowColor, radius: shadowRadius, x: 0, y: shadowY)
     }
 
     private func fillStyle(_ color: Color) -> AnyShapeStyle {

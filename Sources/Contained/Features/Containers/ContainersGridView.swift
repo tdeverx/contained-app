@@ -24,7 +24,6 @@ struct ContainersGridView: View {
     // Network grouping is folded into this page: each network is a collapsible section of the
     // containers attached to it. These drive the network-level CRUD (no separate Networks page).
     @State private var collapsedNetworks: Set<String> = []
-    @State private var creatingNetwork = false
     @State private var inspectingNetwork: NetworkResource?
     @State private var deletingNetwork: NetworkResource?
 
@@ -129,15 +128,19 @@ struct ContainersGridView: View {
 
                 if let detail {
                     let target = panelRect(in: viewport.size)
-                    let rect = expanded ? target : (cardFrames[detail.id] ?? target)
-                    expandedCard(detail)
-                        .frame(width: rect.width, height: rect.height)
-                        .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
-                        // Constant elevation — softer, lighter, larger. Not gated by `expanded`, so it
-                        // doesn't pop out and back in during the close.
-                        // KNOWN ISSUE: a small shadow pop remains as the card reaches the closed slot
-                        // (the overlay is swapped for the real grid card). Tracked separately.
-                        .shadow(color: .black.opacity(0.16), radius: 60, y: 26)
+                    let source = cardFrames[detail.id].flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
+                    let rect = expanded ? target : source
+                    ZStack {
+                        // Constant elevation — softer, lighter, larger. Not gated by `expanded`,
+                        // and not part of the blurred grid/content layer.
+                        ExteriorShadow(cornerRadius: Tokens.Radius.card,
+                                       color: .black.opacity(0.16),
+                                       radius: 60,
+                                       y: 26)
+                        expandedCard(detail)
+                            .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
+                    }
+                    .frame(width: rect.width, height: rect.height)
                         .position(x: rect.midX, y: rect.midY)
                         .zIndex(10)
                 }
@@ -168,19 +171,15 @@ struct ContainersGridView: View {
         }
         // Network-level actions (formerly the Networks page).
         .task { await app.refreshNetworks() }
-        .onAppear { if ui.pendingAction == .createNetwork { ui.pendingAction = nil; creatingNetwork = true } }
-        .onChange(of: ui.pendingAction) { _, _ in if ui.pendingAction == .createNetwork { ui.pendingAction = nil; creatingNetwork = true } }
-        .sheet(isPresented: $creatingNetwork) {
-            CreateNetworkSheet { name, subnet, internalOnly in
-                await createNetwork(name: name, subnet: subnet, internalOnly: internalOnly)
-            }
-        }
         .sheet(item: $inspectingNetwork) { JSONInspectorSheet(title: $0.name, value: $0) }
         .confirmationDialog("Delete network \(deletingNetwork?.name ?? "")?",
                             isPresented: deleteNetworkBinding, presenting: deletingNetwork) { network in
             Button("Delete", role: .destructive) { Task { await deleteNetwork(network) } }
         } message: { _ in Text("This removes the network. Containers must be detached first.") }
         .refreshable { await store.refresh() }
+        // Report the in-page search count so the toolbar can escalate an empty search into the palette.
+        .onAppear { ui.pageResultCount = filtered.count }
+        .onChange(of: filtered.count) { _, count in ui.pageResultCount = count }
     }
 
     // MARK: - Network sections
@@ -288,15 +287,6 @@ struct ContainersGridView: View {
         Binding(get: { deletingNetwork != nil }, set: { if !$0 { deletingNetwork = nil } })
     }
 
-    private func createNetwork(name: String, subnet: String?, internalOnly: Bool) async {
-        guard let client = app.client else { return }
-        do {
-            _ = try await client.createNetwork(name: name, subnet: subnet, internalOnly: internalOnly)
-            await app.refreshNetworks()
-        } catch let error as CommandError { app.flash(error.userMessage) }
-        catch { app.flash(error.localizedDescription) }
-    }
-
     private func deleteNetwork(_ network: NetworkResource) async {
         guard let client = app.client else { return }
         do { _ = try await client.deleteNetworks([network.name]); await app.refreshNetworks() }
@@ -365,17 +355,23 @@ struct ContainersGridView: View {
     }
 
     private func panelSize(in viewport: CGSize) -> CGSize {
-        let width = min(max(viewport.width * 0.62, 680), max(680, viewport.width - Tokens.Space.xxl * 2))
-        let height = min(620, max(520, viewport.height - Tokens.Space.xxl * 2))
+        let fitted = MorphGeometry.fittedSize(
+            CGSize(width: max(viewport.width * 0.62, 680), height: 620),
+            in: viewport,
+            margin: Tokens.Space.xxl
+        )
+        let width = max(min(fitted.width, viewport.width - Tokens.Space.xxl * 2), min(360, fitted.width))
+        let height = max(min(fitted.height, viewport.height - Tokens.Space.xxl * 2), min(420, fitted.height))
         return CGSize(width: width, height: height)
     }
 
     /// The centered final frame the promoted card grows into.
     private func panelRect(in viewport: CGSize) -> CGRect {
-        let size = panelSize(in: viewport)
-        return CGRect(x: (viewport.width - size.width) / 2,
-                      y: (viewport.height - size.height) / 2,
-                      width: size.width, height: size.height)
+        MorphGeometry.targetRect(origin: .zero,
+                                 proposedSize: panelSize(in: viewport),
+                                 container: viewport,
+                                 placement: .centered,
+                                 margin: Tokens.Space.xxl)
     }
 
     private func openDetail(_ snapshot: ContainerSnapshot) {
@@ -447,7 +443,7 @@ struct ContainersGridView: View {
         } description: {
             Text(ui.runningOnly ? "No running containers." : "Run a container to see it here.")
         } actions: {
-            Button("Run a container") { ui.showRunSheet = true }
+            Button("Run a container") { ui.openCreateWizard() }
         }
     }
 }
@@ -473,5 +469,11 @@ struct ErrorToast: View {
         .glassSurface(.regular, cornerRadius: Tokens.Radius.control)
         .padding(Tokens.Space.l)
         .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+}
+
+private extension CGRect {
+    var isUsableForMorph: Bool {
+        width.isFinite && height.isFinite && minX.isFinite && minY.isFinite && width > 1 && height > 1
     }
 }

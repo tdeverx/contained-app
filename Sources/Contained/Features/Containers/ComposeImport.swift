@@ -22,12 +22,26 @@ enum ComposeImport {
         do {
             let text = try String(contentsOf: url, encoding: .utf8)
             let projectName = url.deletingLastPathComponent().lastPathComponent
-            let parsed = try ComposeParser.parse(text, projectName: projectName.isEmpty ? "stack" : projectName)
-            let baseDirectory = url.deletingLastPathComponent()
+            importText(text, projectName: projectName.isEmpty ? "stack" : projectName,
+                       baseDirectory: url.deletingLastPathComponent(), app: app, ui: ui)
+        } catch let error as ComposeError {
+            app.flash({ if case .invalid(let message) = error { return message }; return "Invalid compose file." }())
+        } catch {
+            app.flash(error.localizedDescription)
+        }
+    }
+
+    /// Parse pasted compose text and feed its services into the prefill queue.
+    static func importText(_ text: String, projectName: String = "pasted",
+                           baseDirectory: URL? = nil, app: AppModel, ui: UIState) {
+        do {
+            let parsed = try ComposeParser.parse(text, projectName: projectName)
             var specs: [RunSpec] = []
             for service in parsed.services where service.image != nil {
                 var spec = RunSpec(service: service, projectName: parsed.name)
-                spec.volumes = spec.volumes.map { resolveRelativeVolume($0, baseDirectory: baseDirectory) }
+                if let baseDirectory {
+                    spec.volumes = spec.volumes.map { resolveRelativeVolume($0, baseDirectory: baseDirectory) }
+                }
                 specs.append(spec)
             }
             guard !specs.isEmpty else {

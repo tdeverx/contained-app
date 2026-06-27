@@ -10,7 +10,27 @@ final class UIState {
     var searchText = ""
     var runningOnly = false
     var showRunSheet = false
-    var showPalette = false
+    enum CreationEntry: Hashable { case chooser, network, volume }
+    var creationEntry: CreationEntry = .chooser
+    /// The unified creation wizard (the front door for "new container"). Distinct from `showRunSheet`,
+    /// which presents the configure form directly — that's the wizard's handoff target as well as the
+    /// direct-prefill paths (Run-image, Use-template, compose queue).
+    var showCreateWizard = false
+
+    /// Which toolbar button is currently morphed open into a centered panel (nil = none). The toolbar
+    /// reads this to grow the matching panel from that button's slot.
+    enum ToolbarMorph: Hashable { case add, palette }
+    var activeMorph: ToolbarMorph?
+
+    /// Toggle a toolbar morph panel (open it, or close it if already open).
+    func toggleMorph(_ morph: ToolbarMorph) {
+        activeMorph = (activeMorph == morph) ? nil : morph
+    }
+
+    /// The number of results the current page is showing for `searchText` (nil = page doesn't report
+    /// a count, so no auto-escalation). The toolbar uses this to morph the page search into the full
+    /// command palette when an in-page search comes up empty.
+    var pageResultCount: Int?
     /// Highlighted row in the global command palette.
     var paletteIndex = 0
     /// The selected sidebar section (here, not RootView, so the command palette can navigate).
@@ -30,10 +50,25 @@ final class UIState {
     func dispatch(_ action: PendingAction) {
         section = action.section
         switch action {
-        case .runContainer: showRunSheet = true       // RootView is always mounted — no handoff needed
+        case .runContainer:
+            creationEntry = .chooser
+            showCreateWizard = true   // front door is the wizard, not the bare form
+        case .createVolume:
+            creationEntry = .volume
+            showCreateWizard = true
+        case .createNetwork:
+            creationEntry = .network
+            showCreateWizard = true
         case .build: break                            // navigate only; Build has its own UI
         default: pendingAction = action
         }
+    }
+
+    /// Open the creation wizard from scratch (the paged chooser). The flow handles its own steps and
+    /// hands off to compose/tar imports internally, so there's no post-dismiss outcome to resolve.
+    func openCreateWizard() {
+        creationEntry = .chooser
+        showCreateWizard = true
     }
 
     func runImage(_ reference: String) {

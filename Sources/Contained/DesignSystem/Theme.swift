@@ -189,6 +189,12 @@ private struct FloatingPanelMaterial: ViewModifier {
         let shape = RoundedRectangle(cornerRadius: Tokens.Radius.sheet, style: .continuous)
         content
             .background {
+                ExteriorShadow(cornerRadius: Tokens.Radius.sheet,
+                               color: .black.opacity(0.24),
+                               radius: 24,
+                               y: 12)
+            }
+            .background {
                 VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
                     .clipShape(shape)
             }
@@ -196,7 +202,6 @@ private struct FloatingPanelMaterial: ViewModifier {
             .overlay {
                 shape.strokeBorder(.white.opacity(0.18), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(0.24), radius: 24, y: 12)
     }
 }
 

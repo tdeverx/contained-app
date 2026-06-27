@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 import ContainedCore
 
-/// A gallery of run templates: built-in starters plus the user's saved recipes. "Use" prefills the
-/// Create form; saved templates can be deleted.
+/// A gallery of the user's saved run templates. "Use" prefills the Create form; saved templates can
+/// be deleted. (Built-in starters now live on the creation flow's search page, not here.)
 struct TemplatesView: View {
     @Environment(UIState.self) private var ui
     @Environment(\.modelContext) private var modelContext
@@ -12,28 +12,30 @@ struct TemplatesView: View {
     private let columns = [GridItem(.adaptive(minimum: 200, maximum: 280), spacing: Tokens.Space.m)]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Tokens.Space.l) {
-                section("Starters") {
-                    ForEach(BuiltinTemplate.all, id: \.name) { item in
-                        card(name: item.name, symbol: item.symbol, subtitle: Format.shortImage(item.spec.image),
-                             onUse: { ui.useTemplate(item.spec) }, onDelete: nil)
-                    }
+        Group {
+            if saved.isEmpty {
+                ContentUnavailableView {
+                    Label("No saved templates", systemImage: "bookmark")
+                } description: {
+                    Text("Save a container's settings as a template from the create form to reuse them here.")
                 }
-                if !saved.isEmpty {
-                    section("Saved") {
-                        ForEach(saved) { template in
-                            card(name: template.name, symbol: "bookmark.fill",
-                                 subtitle: Format.shortImage(template.spec?.image ?? "—"),
-                                 onUse: { if let spec = template.spec { ui.useTemplate(spec) } },
-                                 onDelete: { modelContext.delete(template); try? modelContext.save() })
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Tokens.Space.l) {
+                        section("Saved") {
+                            ForEach(saved) { template in
+                                card(name: template.name, symbol: "bookmark.fill",
+                                     subtitle: Format.shortImage(template.spec?.image ?? "—"),
+                                     onUse: { if let spec = template.spec { ui.useTemplate(spec) } },
+                                     onDelete: { modelContext.delete(template); try? modelContext.save() })
+                            }
                         }
                     }
+                    .padding(Tokens.Space.l)
                 }
+                .scrollEdgeEffectStyle(.soft, for: .all)
             }
-            .padding(Tokens.Space.l)
         }
-        .scrollEdgeEffectStyle(.soft, for: .all)
     }
 
     private func section<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {

@@ -47,7 +47,7 @@ struct MenuBarContent: View {
 
         Divider()
 
-        Button("Run a Container…") { activate(); ui.showRunSheet = true }
+        Button("Run a Container…") { activate(); ui.openCreateWizard() }
         Button("Open Contained") { activate() }
         Divider()
         Button("Quit Contained") { NSApplication.shared.terminate(nil) }

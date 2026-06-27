@@ -1,161 +1,22 @@
 import SwiftUI
-import SwiftData
 import ContainedCore
 
-/// The single container Create/Edit form: the shared `RunSpecForm` plus a live "Reveal CLI" preview.
-/// Mode `.new` creates a container ("Create"); mode `.edit` prefills from an existing one and, on
-/// "Save", tears it down and re-runs the edited spec in its place (container config is immutable, so
-/// editing means delete + re-run). Replaces the old separate Create and Recreate sheets.
+/// The container Create/Edit form presented as a modal sheet. The form body lives in the shared
+/// `ContainerConfigureView` (also used by the paged `CreationFlow` in the toolbar); this wrapper just
+/// supplies the sheet chrome and a cancel control. Mode `.new` creates; mode `.edit` prefills from an
+/// existing container and, on Save, tears it down and re-runs the edited spec in its place.
 struct ContainerEditSheet: View {
     enum Mode {
         case new(prefill: RunSpec?)
         case edit(ContainerSnapshot, onComplete: () -> Void)
     }
 
-    @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
     let mode: Mode
 
-    @State private var spec: RunSpec
-    @State private var working = false
-    @State private var confirming = false
-    @State private var loaded = false
-    @State private var savingTemplate = false
-    @State private var templateName = ""
-
-    init(mode: Mode) {
-        self.mode = mode
-        switch mode {
-        case .new(let prefill):
-            _spec = State(initialValue: prefill ?? RunSpec())
-        case .edit(let snapshot, _):
-            _spec = State(initialValue: RunSpec(from: snapshot.configuration))
-        }
-    }
-
-    private var isEdit: Bool { if case .edit = mode { return true }; return false }
-
     var body: some View {
-        VStack(spacing: 0) {
-            SheetHeader(title: isEdit ? "Edit container" : "Run a container",
-                        subtitle: isEdit ? "Replaces the existing container with your edits" : nil,
-                        onCancel: { dismiss() }) {
-                if working {
-                    ProgressView().controlSize(.small)
-                        .frame(width: Tokens.IconSize.control, height: Tokens.IconSize.control)
-                } else {
-                    GlassCircleButton(systemName: "bookmark", help: "Save as template") {
-                        templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
-                        savingTemplate = true
-                    }
-                    .disabled(!spec.isRunnable)
-                    GlassCircleButton(systemName: isEdit ? "checkmark" : "play.fill",
-                                      prominent: true, help: isEdit ? "Save" : "Create") {
-                        if isEdit { confirming = true } else { create() }
-                    }
-                    .disabled(!spec.isRunnable)
-                }
-            }
-
-            validationSummary
-
-            RunSpecForm(spec: $spec)
-
-            if app.settings.revealCLI {
-                CommandPreviewBar(command: spec.arguments())
-                    .padding(Tokens.Space.l)
-            }
-        }
-        .frame(Tokens.SheetSize.form)
-        .sheetMaterial()
-        .onAppear(perform: load)
-        .confirmationDialog("Replace \(spec.name.isEmpty ? editID : spec.name)?",
-                            isPresented: $confirming) {
-            Button("Delete current container and run replacement", role: .destructive) { save() }
-        } message: {
-            Text("Contained will stop and delete the current container, then run a replacement from the command preview. Local style and health settings are reapplied. Data not stored in volumes is lost.")
-        }
-        .alert("Save as template", isPresented: $savingTemplate) {
-            TextField("Template name", text: $templateName)
-            Button("Cancel", role: .cancel) {}
-            Button("Save") { saveTemplate() }
-        } message: {
-            Text("Save these settings as a reusable template.")
-        }
-    }
-
-    @ViewBuilder
-    private var validationSummary: some View {
-        let messages = spec.validationMessages
-        if !messages.isEmpty {
-            VStack(alignment: .leading, spacing: Tokens.Space.xs) {
-                ForEach(messages, id: \.self) { message in
-                    Label(message, systemImage: "exclamationmark.circle")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Tokens.Space.l)
-            .padding(.bottom, Tokens.Space.s)
-        } else if let error = app.containers.errorMessage, isEdit {
-            Label(error, systemImage: "exclamationmark.triangle")
-                .font(.caption)
-                .foregroundStyle(.red)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Tokens.Space.l)
-                .padding(.bottom, Tokens.Space.s)
-        }
-    }
-
-    private func saveTemplate() {
-        let name = templateName.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty else { return }
-        modelContext.insert(Template(name: name, spec: spec))
-        try? modelContext.save()
-        app.flash("Saved template “\(name)”")
-    }
-
-    /// The id of the container being edited (empty in `.new` mode).
-    private var editID: String {
-        if case .edit(let snapshot, _) = mode { return snapshot.id }
-        return ""
-    }
-
-    private func load() {
-        guard !loaded else { return }
-        loaded = true
-        switch mode {
-        case .new:
-            break   // spec was prefilled at init
-        case .edit(let snapshot, _):
-            // Pull the current style + healthcheck from the local stores so edits start from what's set.
-            spec.personalization = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
-            spec.healthCheck = app.healthChecks.check(for: snapshot.id) ?? HealthCheck()
-        }
-    }
-
-    private func create() {
-        // Dismiss right away and let AppModel run the (possibly image-pulling) create in the
-        // background, surfacing progress in the floating bar. This fixes the old flow where a
-        // not-yet-pulled image made "Create" appear to do nothing until the image arrived.
-        app.beginCreate(spec)
-        dismiss()
-    }
-
-    private func save() {
-        guard case .edit(let snapshot, let onComplete) = mode else { return }
-        working = true
-        Task {
-            let newID = await app.recreateContainer(originalID: snapshot.id, spec: spec)
-            if newID != nil {
-                working = false
-                onComplete()
-                dismiss()
-            } else {
-                working = false
-            }
-        }
+        ContainerConfigureView(mode: mode, leading: .cancel { dismiss() }, onFinished: { dismiss() })
+            .frame(Tokens.SheetSize.form)
+            .sheetMaterial()
     }
 }

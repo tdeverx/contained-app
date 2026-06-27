@@ -3,16 +3,18 @@ import ContainedCore
 
 /// A global quick-action palette: search navigation, creation actions, page actions, and
 /// per-container lifecycle without replacing the native sidebar or toolbar.
+/// The command-palette content, embeddable in the toolbar's morph panel (it no longer carries its own
+/// sheet chrome — `MorphingExpander` provides the glass panel). It shares `ui.searchText` with the
+/// toolbar field, so ⌘K and page-search escalation use one query state.
 struct CommandPalette: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @Environment(\.dismiss) private var dismiss
     @FocusState private var fieldFocused: Bool
 
-    @State private var query = ""
+    var onClose: () -> Void = {}
 
     private var items: [PaletteItem] {
-        PaletteItem.filtered(query, app: app, ui: ui)
+        PaletteItem.filtered(ui.searchText, app: app, ui: ui)
     }
 
     var body: some View {
@@ -20,16 +22,16 @@ struct CommandPalette: View {
         VStack(spacing: 0) {
             HStack(spacing: Tokens.Space.s) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search or run a command...", text: $query)
+                TextField("Search or run a command...", text: $ui.searchText)
                     .textFieldStyle(.plain)
                     .font(.title3)
                     .focused($fieldFocused)
                     .onSubmit { runSelected() }
                     .onKeyPress(.downArrow) { move(1); return .handled }
                     .onKeyPress(.upArrow) { move(-1); return .handled }
-                    .onKeyPress(.escape) { dismiss(); return .handled }
-                if !query.isEmpty {
-                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .onKeyPress(.escape) { onClose(); return .handled }
+                if !ui.searchText.isEmpty {
+                    Button { ui.searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
                         .help("Clear search")
@@ -50,14 +52,12 @@ struct CommandPalette: View {
                     }
                     .padding(Tokens.Space.s)
                 }
-                .frame(height: 360)
                 .onChange(of: ui.paletteIndex) { _, new in proxy.scrollTo(new, anchor: .center) }
             }
         }
-        .frame(width: 560)
-        .sheetMaterial()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { fieldFocused = true; ui.paletteIndex = 0 }
-        .onChange(of: query) { _, _ in ui.paletteIndex = 0 }
+        .onChange(of: ui.searchText) { _, _ in ui.paletteIndex = 0 }
         .accessibilityElement(children: .contain)
     }
 
@@ -98,7 +98,7 @@ struct CommandPalette: View {
     }
 
     private func run(_ item: PaletteItem) {
-        dismiss()
+        onClose()
         item.action()
     }
 }

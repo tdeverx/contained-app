@@ -48,6 +48,9 @@ final class AppModel {
     /// run). `nil` when idle.
     var activity: ActivityState?
     var downgradeSchemaVersion: Int?
+    /// The most recent create/pull failure, surfaced inline by the create form so the user can fix the
+    /// problem without losing their spec. Cleared at the start of each attempt.
+    var createError: String?
 
     /// One in-flight operation shown in the bottom progress bar.
     struct ActivityState: Equatable {
@@ -215,23 +218,22 @@ final class AppModel {
 
     // MARK: Create (pull-aware)
 
-    /// Kick off a container create without blocking the caller (the Create sheet dismisses
-    /// immediately and progress shows in the floating bar).
-    func beginCreate(_ spec: RunSpec) {
-        Task { await createContainer(spec) }
-    }
-
     /// Create a container from the form. If its image isn't present locally, pull it first with a
     /// visible progress bar — so a fresh template or image "just works" instead of appearing to do
     /// nothing while the image silently downloads. Attaches local style + healthcheck on success.
     @discardableResult
     func createContainer(_ spec: RunSpec) async -> String? {
         guard client != nil else { return nil }
+        createError = nil
         if !(await imageIsLocal(spec.image)) {
-            guard await pullImage(spec.image) else { return nil }   // pull failed; error surfaced
+            guard await pullImage(spec.image) else {
+                // pullImage already flashed; mirror it inline so the form can show it without dismissing.
+                createError = banner ?? "Couldn't pull \(Format.shortImage(spec.image))."
+                return nil
+            }
         }
         let newID = await containers.run(spec)
-        if newID == nil, let error = containers.errorMessage { flash(error) }
+        if newID == nil { createError = containers.errorMessage ?? "Couldn't create the container." }
         if let newID {
             if !spec.personalization.isDefault { personalization.setOverride(spec.personalization, for: newID) }
             healthChecks.setCheck(spec.healthCheck, for: newID)
@@ -262,6 +264,50 @@ final class AppModel {
         healthChecks.setCheck(spec.healthCheck, for: newID)
         historyStore.record(.lifecycle, containerID: newID, message: "Recreated \(newID)")
         return newID
+    }
+
+    /// Load images from an OCI `.tar` archive into the local store. Shared by the Images page drop
+    /// target, the menu loader, and the creation wizard's "Select a file" path.
+    func loadImageTar(at url: URL) {
+        guard let client else { return }
+        Task {
+            if let error = await captured({ _ = try await client.loadImages(from: url.path) }) {
+                flash(error)
+            } else {
+                await refreshResource(.images)
+                flash("Loaded \(url.lastPathComponent)")
+            }
+        }
+    }
+
+    @discardableResult
+    func createVolume(name: String, size: String?) async -> Bool {
+        guard let client else { return false }
+        let error = await captured {
+            _ = try await client.createVolume(name: name, size: size)
+            await refreshResource(.volumes)
+        }
+        if let error {
+            flash(error)
+            return false
+        }
+        flash("Created volume \(name)")
+        return true
+    }
+
+    @discardableResult
+    func createNetwork(name: String, subnet: String?, internalOnly: Bool) async -> Bool {
+        guard let client else { return false }
+        let error = await captured {
+            _ = try await client.createNetwork(name: name, subnet: subnet, internalOnly: internalOnly)
+            await refreshNetworks()
+        }
+        if let error {
+            flash(error)
+            return false
+        }
+        flash("Created network \(name)")
+        return true
     }
 
     /// Ensure an image is present locally, pulling it (with the progress bar) only if missing.

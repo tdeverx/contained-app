@@ -7,7 +7,6 @@ struct VolumesListView: View {
     @Environment(UIState.self) private var ui
     @State private var inspecting: VolumeResource?
     @State private var deleting: VolumeResource?
-    @State private var creating = false
 
     private var volumes: [VolumeResource] {
         let all = app.volumes.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -22,12 +21,7 @@ struct VolumesListView: View {
             ForEach(volumes) { volume in row(volume) }
         }
         .task { await app.refreshResource(.volumes) }
-        .onAppear { if ui.pendingAction == .createVolume { ui.pendingAction = nil; creating = true } }
-        .onChange(of: ui.pendingAction) { _, _ in if ui.pendingAction == .createVolume { ui.pendingAction = nil; creating = true } }
         .sheet(item: $inspecting) { JSONInspectorSheet(title: $0.name, value: $0) }
-        .sheet(isPresented: $creating) {
-            CreateVolumeSheet { name, size in await create(name: name, size: size) }
-        }
         .confirmationDialog("Delete volume \(deleting?.name ?? "")?", isPresented: deleteBinding, presenting: deleting) { volume in
             Button("Delete", role: .destructive) { Task { await delete(volume) } }
         } message: { _ in Text("This permanently removes the volume and its data.") }
@@ -55,52 +49,10 @@ struct VolumesListView: View {
         Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })
     }
 
-    private func create(name: String, size: String?) async {
-        guard let client = app.client else { return }
-        do { _ = try await client.createVolume(name: name, size: size); await app.refreshResource(.volumes) }
-        catch let error as CommandError { app.flash(error.userMessage) }
-        catch { app.flash(error.localizedDescription) }
-    }
-
     private func delete(_ volume: VolumeResource) async {
         guard let client = app.client else { return }
         do { _ = try await client.deleteVolumes([volume.name]); await app.refreshResource(.volumes) }
         catch let error as CommandError { app.flash(error.userMessage) }
         catch { app.flash(error.localizedDescription) }
-    }
-}
-
-/// Minimal create-volume sheet: name + optional size.
-struct CreateVolumeSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    let onCreate: (String, String?) async -> Void
-    @State private var name = ""
-    @State private var size = ""
-    @State private var busy = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            SheetHeader(title: "New volume", onCancel: { dismiss() }) {
-                GlassCircleButton(systemName: "checkmark", prominent: true, help: "Create") { submit() }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || busy)
-            }
-            Form {
-                TextField("Name", text: $name, prompt: Text("my-volume"))
-                TextField("Size", text: $size, prompt: Text("optional, e.g. 10G"))
-            }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-        }
-        .frame(Tokens.SheetSize.small)
-        .sheetMaterial()
-    }
-
-    private func submit() {
-        busy = true
-        Task {
-            await onCreate(name.trimmingCharacters(in: .whitespaces),
-                           size.trimmingCharacters(in: .whitespaces).isEmpty ? nil : size)
-            dismiss()
-        }
     }
 }

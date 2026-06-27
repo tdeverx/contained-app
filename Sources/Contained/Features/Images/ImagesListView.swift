@@ -59,6 +59,9 @@ struct ImagesListView: View {
             loadTar(at: url)
             return true
         }
+        // Report the in-page search count so the toolbar can escalate an empty search into the palette.
+        .onAppear { ui.pageResultCount = images.count }
+        .onChange(of: images.count) { _, count in ui.pageResultCount = count }
     }
 
     private func row(_ image: ContainedCore.ImageResource) -> some View {
@@ -161,15 +164,5 @@ struct ImagesListView: View {
     }
 
     /// Load images from a tar at `url` (shared by the picker and drag-and-drop).
-    private func loadTar(at url: URL) {
-        guard let client = app.client else { return }
-        Task {
-            if let error = await app.captured({ _ = try await client.loadImages(from: url.path) }) {
-                app.flash(error)
-            } else {
-                await app.refreshResource(.images)
-                app.flash("Loaded \(url.lastPathComponent)")
-            }
-        }
-    }
+    private func loadTar(at url: URL) { app.loadImageTar(at: url) }
 }
