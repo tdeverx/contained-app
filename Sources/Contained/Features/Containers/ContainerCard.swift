@@ -296,12 +296,8 @@ struct ContainerCard: View {
     private func metricChip(_ chip: GraphMetric) -> some View {
         let active = chip == metric
         return Button {
-            // Update local state for instant UI feedback
             localMetric = chip
-            // Only persist if this is a real change from the current style metric
-            if chip != style.graphMetric {
-                onSelectMetric(chip)
-            }
+            onSelectMetric(chip)
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: chip.systemImage).font(.system(size: 10))
