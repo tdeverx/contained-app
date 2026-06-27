@@ -3,13 +3,13 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.46+408b6e8</title>
-            <pubDate>Sat, 27 Jun 2026 05:04:50 +0000</pubDate>
-            <sparkle:version>46</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.46+408b6e8</sparkle:shortVersionString>
+            <title>1.0.0-nightly.49+2872340</title>
+            <pubDate>Sat, 27 Jun 2026 07:27:47 +0000</pubDate>
+            <sparkle:version>49</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.49+2872340</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.46+408b6e8.dmg" length="6533882" type="application/octet-stream" sparkle:edSignature="ZHVzp3mez/FaTRKNTrCM7VX47W0IL2kkfhhEZqn3V5Es3H9uM7LOXICpN1Ra15qW5c2aNU0wFuA5hfN2m6xfDg=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.49+2872340.dmg" length="6513008" type="application/octet-stream" sparkle:edSignature="kbwkcd7RZlcBf9tVUS9LYMxx9tmyi8fVjK22KGC2g8tMwugM6GxM26XFz/Bu9/QOE8N8bi0CXQg749P8dvh4Cw=="/>
         </item>
     </channel>
 </rss>
