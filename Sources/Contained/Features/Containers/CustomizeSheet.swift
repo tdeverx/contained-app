@@ -60,8 +60,8 @@ struct CustomizeSheet: View {
 
     private var isPopoverPresentation: Bool { presentation == .popover }
     private var previewWidth: CGFloat { isPopoverPresentation ? 372 : 320 }
-    private var previewDensity: CardDensity { isPopoverPresentation ? .compact : .large }
-    private var previewHeight: CGFloat { isPopoverPresentation ? 136 : 176 }
+    private var previewDensity: CardDensity { .large }
+    private var previewHeight: CGFloat { isPopoverPresentation ? 176 : 176 }
     private var panelSize: CGSize {
         isPopoverPresentation ? CGSize(width: 430, height: 520) : CGSize(width: 480, height: 600)
     }
@@ -93,7 +93,7 @@ struct CustomizeSheet: View {
                               prompt: Text(target.isImage ? Format.shortImage(target.image) : target.previewSnapshot.id))
                     TextField("Icon", text: $style.icon, prompt: Text("SF Symbol, e.g. globe, bolt"))
                     LabeledContent("Color") { TintSelector(selection: $style.tint) }
-                        .fieldInfo("“App Accent” (the linked swatch) follows the app accent from Settings, so the card tracks your theme. Pick any other color to pin this card.")
+                        .fieldInfo("\"App Accent\" (the linked swatch) follows the app accent from Settings, so the card tracks your theme. Pick any other color to pin this card.")
                     Picker("Graph", selection: $style.graphMetric) {
                         ForEach(GraphMetric.allCases) { Label($0.displayName, systemImage: $0.systemImage).tag($0) }
                     }
@@ -210,6 +210,8 @@ struct CustomizeSheet: View {
 
     /// A live preview using the real card view with fake "running" data, so users see how it looks
     /// in use while customizing. No section background — it floats on the sheet material.
+    /// Uses the large card variant to match actual card display, with buttons disabled on hover
+    /// and proper glass surface styling applied.
     private var preview: some View {
         ContainerCard(
             snapshot: target.previewSnapshot,
