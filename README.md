@@ -22,7 +22,7 @@ A native, SwiftUI-first macOS app for Apple's [`container`](https://github.com/a
 - **One Edit form** — progressive-disclosure mapping of the `container run` flags with host-bounded CPU/RAM controls and a live "reveal the CLI" preview.
 - **Persistent history** — SwiftData-backed events and metrics power a per-container History tab and a system-wide Activity view (Swift Charts), with configurable retention.
 - **App-managed restart & healthchecks** — `container` has no native `--restart` or healthcheck, so Contained runs both itself.
-- **Mac-native throughout** — `NavigationSplitView`, the system search field, a section-aware Liquid Glass toolbar, a command palette (⌘K), a menu-bar extra, full keyboard shortcuts, and accessibility (Reduce Transparency / Reduce Motion / VoiceOver). AppKit bridges are used only where SwiftUI has no equivalent, and are flagged in the source.
+- **Mac-native throughout** — `NavigationSplitView`, an app-wide custom Liquid Glass toolbar (add menu, page search, command palette, updates/notifications) whose buttons morph open into resizing panels, a command palette (⌘K), a menu-bar extra, full keyboard shortcuts, and accessibility (Reduce Transparency / Reduce Motion / VoiceOver). AppKit bridges are used only where SwiftUI has no equivalent, and are flagged in the source.
 
 ## Install & updates
 

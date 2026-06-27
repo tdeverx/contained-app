@@ -26,7 +26,9 @@ struct ContainedApp: App {
                     .disabled(!app.updater.canCheckForUpdates)
             }
             CommandGroup(after: .newItem) {
-                // The former toolbar "＋" add-menu now lives here under File ▸ New.
+                // The toolbar "＋" add-menu — Container / Network / Volume.
+                Button("New…") { ui.toggleMorph(.add) }
+                    .keyboardShortcut("n", modifiers: .command)
                 Button("Run Container…") { ui.openCreateWizard() }
                     .keyboardShortcut("r", modifiers: .command)
                 Divider()
@@ -53,6 +55,13 @@ struct ContainedApp: App {
             CommandGroup(after: .toolbar) {
                 Button("Command Palette…") { ui.toggleMorph(.palette) }
                     .keyboardShortcut("k", modifiers: .command)
+                Button("Search This Page") { ui.focusSearch() }
+                    .keyboardShortcut("s", modifiers: .command)
+                Divider()
+                Button("Updates") { app.flash("Updates — coming soon") }
+                    .keyboardShortcut("u", modifiers: .command)
+                Button("Notifications") { app.flash("Notifications — coming soon") }
+                    .keyboardShortcut("i", modifiers: .command)
             }
             CommandMenu("Go") {
                 ForEach(Array(AppSection.allCases.enumerated()), id: \.element) { index, section in

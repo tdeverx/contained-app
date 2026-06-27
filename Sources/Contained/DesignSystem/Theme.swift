@@ -40,6 +40,34 @@ enum Tokens {
         static let chip: CGFloat = 30      // small status chips
         static let headerChip: CGFloat = 34 // detail-header chips
     }
+
+    /// The app toolbar band — custom (non-native) controls sized to macOS 26 Liquid Glass toolbar
+    /// proportions (tuned against Finder). `controlHeight` is shared by every band element (glass
+    /// button groups and the search field) so they align on one baseline; `groupRadius` is the
+    /// concentric capsule for them. Glyphs are a touch smaller than the capsule with horizontal glass
+    /// padding around them, matching the airy native look.
+    enum Toolbar {
+        // Exact spec: controls are 36pt tall (length hugs content), with 8pt of padding around the band
+        // (horizontal, top — matched below — and between groups), so the band is 8 + 36 + 8 = 52.
+        static let band: CGFloat = 52           // title-bar band height
+        static let controlHeight: CGFloat = 36  // glass groups + search field share this height
+        // Button glyphs use `.headline` + `.imageScale(.large)` (see ToolbarControls) so they scale
+        // with Dynamic Type — no fixed point size token.
+        static let iconInnerPadding: CGFloat = 5 // padding around the glyph inside the 36 button
+        static let outerPadding: CGFloat = 8    // band inset from the detail-column edges
+        static let groupPaddingH: CGFloat = 8   // horizontal glass margin inside a group
+        static let groupSpacing: CGFloat = 8    // spacing between buttons / groups
+        static let searchMaxWidth: CGFloat = 380
+        // Search field internals.
+        static let searchInnerPadding: CGFloat = 10 // padding inside the collapsed search capsule
+        static let searchIconGap: CGFloat = 6       // gap between icon and text
+        static let searchOpenHeaderHeight: CGFloat = 48 // taller header row once the palette expands
+        // The search icon + text use the semantic `.body` style (13pt on macOS; text adds medium weight),
+        // so they scale with Dynamic Type — no fixed point size tokens.
+        /// Padding above the controls (and matched below) — the controls sit on the native toolbar line.
+        static let topPadding: CGFloat = 8
+        static var groupRadius: CGFloat { controlHeight / 2 }  // concentric capsule
+    }
 }
 
 extension View {

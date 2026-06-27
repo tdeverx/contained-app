@@ -4,9 +4,11 @@ import SwiftUI
 /// window. Three compact glass groups — add menu (leading), search + command palette (center),
 /// updates + notifications (trailing) — stay **constant across pages** (high-level, not per-section).
 ///
-/// Mounted as a window-spanning top overlay in `RootView`: the band sits at the top, the rest of the
-/// area is hit-transparent until a button morphs open, at which point `MorphingExpander` grows a
-/// centered panel from that button's slot (the same grow the container cards use).
+/// Mounted as a top overlay over the **detail column** in `RootView` (never over the sidebar): the
+/// band sits in the title-bar region, the rest of the area is hit-transparent until a control opens.
+/// The add `+` grows a `MorphingExpander` panel from its slot; the center search field is a single
+/// item that expands *in place* into the command palette (one field, no separate panel). Control
+/// sizing comes from `Tokens.Toolbar` / `ToolbarControls`.
 struct AppToolbar: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -17,18 +19,23 @@ struct AppToolbar: View {
 
     static let space = "appToolbar"
     /// Title-bar band height. The toolbar lives in the detail column (no traffic lights there), so the
-    /// leading inset is just normal padding.
-    static let bandHeight: CGFloat = 48
+    /// leading inset is just normal padding. Sourced from `Tokens.Toolbar` so the band, the safe-area
+    /// manager, and the controls all agree.
+    static let bandHeight: CGFloat = Tokens.Toolbar.band
 
     var body: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
                 toolbarRow
-                    .frame(height: Self.bandHeight)
+                    .frame(height: Tokens.Toolbar.controlHeight)
+                    .padding(.top, rowTopInset)   // centered on the traffic-light line
                 Spacer(minLength: 0)            // empty + hit-transparent below the band
                     .allowsHitTesting(false)
             }
-            morphLayer
+            addMorphLayer
+            // The center search/command-palette is a single element that expands in place; it lives in
+            // its own full-area layer so its open state can float over the page with a backdrop.
+            ToolbarCommandPalette(insets: morphTargetInsets)
         }
         .coordinateSpace(.named(Self.space))
         .onPreferenceChange(ToolbarSlotKey.self) { slots = $0 }
@@ -37,168 +44,252 @@ struct AppToolbar: View {
     // MARK: Row
 
     private var toolbarRow: some View {
-        HStack(spacing: Tokens.Space.s) {
+        HStack(spacing: Tokens.Toolbar.groupSpacing) {
             leadingZone
-            Spacer(minLength: Tokens.Space.m)
-            centerZone
             Spacer(minLength: Tokens.Space.m)
             toolbarGroup { trailingZone }
         }
-        .padding(.horizontal, Tokens.Space.m)
-        .padding(.top, 4)
+        .padding(.horizontal, Tokens.Toolbar.outerPadding)
         .frame(maxWidth: .infinity)
     }
 
+    // The add control is a standalone circle (single action); the trailing updates/notifications are a
+    // grouped capsule.
     private var leadingZone: some View {
-        toolbarGroup(slot: .add) {
-            toolbarIcon(systemName: "plus", help: "Add") { ui.toggleMorph(.add) }
-        }
-    }
-
-    private var centerZone: some View {
-        ToolbarSearchField()
+        ToolbarIconButton(systemName: "plus", help: "Add") { ui.toggleMorph(.add) }
+            .frame(width: Tokens.Toolbar.controlHeight, height: Tokens.Toolbar.controlHeight)
+            .glassEffect(.regular.interactive(), in: Circle())
+            .opacity(ui.activeMorph == .add ? 0 : 1)
             .background(
                 GeometryReader { proxy in
                     Color.clear.preference(key: ToolbarSlotKey.self,
-                                           value: [.palette: proxy.frame(in: .named(Self.space))])
+                                           value: [.add: proxy.frame(in: .named(Self.space))])
                 }
             )
     }
 
     private var trailingZone: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: Tokens.Toolbar.groupSpacing) {
             // Placeholder surfaces — wired in a later pass (updates → #10 Phase 6, notifications later).
-            toolbarIcon(systemName: "arrow.down.circle", help: "Updates (coming soon)") {}
+            ToolbarIconButton(systemName: "arrow.down.circle", help: "Updates (coming soon)") {}
                 .disabled(true).opacity(0.45)
-            toolbarIcon(systemName: "bell", help: "Notifications (coming soon)") {}
+            ToolbarIconButton(systemName: "bell", help: "Notifications (coming soon)") {}
                 .disabled(true).opacity(0.45)
         }
     }
 
-    private func toolbarGroup<C: View>(slot: UIState.ToolbarMorph? = nil,
-                                       @ViewBuilder content: () -> C) -> some View {
-        HStack(spacing: 2) { content() }
-            .padding(4)
-            .glassSurface(.thin, cornerRadius: 18, glass: .regular)
-            .opacity(slot == ui.activeMorph ? 0 : 1)
-            .background(
-                GeometryReader { proxy in
-                    Color.clear.preference(
-                        key: ToolbarSlotKey.self,
-                        value: slot.map { [$0: proxy.frame(in: .named(Self.space))] } ?? [:]
-                    )
-                }
-            )
+    /// A grouped capsule of related buttons (e.g. updates + notifications).
+    private func toolbarGroup<C: View>(@ViewBuilder content: () -> C) -> some View {
+        HStack(spacing: Tokens.Toolbar.groupSpacing) { content() }
+            .padding(.horizontal, Tokens.Toolbar.groupPaddingH)
+            .frame(height: Tokens.Toolbar.controlHeight)
+            .toolbarControlGlass()
     }
 
-    private func toolbarIcon(systemName: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 13, weight: .medium))
-                .frame(width: 26, height: 26)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .buttonBorderShape(.circle)
-        .help(help)
-        .accessibilityLabel(help)
-    }
-
-    // MARK: Morph layer
+    // MARK: Add morph layer
 
     @ViewBuilder
-    private var morphLayer: some View {
-        if let morph = ui.activeMorph {
-            MorphingExpander(isPresented: morphBinding, originFrame: slots[morph] ?? .zero,
-                             panelSize: panelSize(morph),
-                             placement: morph == .add ? .anchored : .centered,
+    private var addMorphLayer: some View {
+        if ui.activeMorph == .add {
+            MorphingExpander(isPresented: addMorphBinding, originFrame: slots[.add] ?? .zero,
+                             panelSize: CGSize(width: 440, height: 300),   // initial; flow resizes per page
+                             placement: .anchored,
                              targetInsets: morphTargetInsets,
-                             onBackdropTap: morph == .add ? addSoftDismiss : nil) {
-                panel(morph)
+                             onBackdropTap: addSoftDismiss) {
+                CreationFlow(start: .menu,
+                             onClose: {
+                                 addSoftDismiss = nil
+                                 ui.activeMorph = nil
+                             },
+                             onSoftDismissChange: { addSoftDismiss = $0 })
             }
         }
     }
 
-    private var morphBinding: Binding<Bool> {
-        Binding(get: { ui.activeMorph != nil }, set: {
-            if !$0 {
-                if ui.activeMorph == .palette { ui.searchText = "" }
-                if ui.activeMorph == .add { addSoftDismiss = nil }
-                ui.activeMorph = nil
-            }
+    private var addMorphBinding: Binding<Bool> {
+        Binding(get: { ui.activeMorph == .add }, set: {
+            if !$0 { addSoftDismiss = nil; ui.activeMorph = nil }
         })
-    }
-
-    private func panelSize(_ morph: UIState.ToolbarMorph) -> CGSize {
-        switch morph {
-        case .add:     return CGSize(width: 440, height: 300)   // initial; the flow resizes per page
-        case .palette: return CGSize(width: 560, height: 480)
-        }
     }
 
     private var morphTargetInsets: EdgeInsets {
         safeAreas.morphInsets(.includingToolbar)
     }
 
-    @ViewBuilder
-    private func panel(_ morph: UIState.ToolbarMorph) -> some View {
-        switch morph {
-        case .add:
-            CreationFlow(start: .menu,
-                         onClose: {
-                             addSoftDismiss = nil
-                             ui.activeMorph = nil
-                         },
-                         onSoftDismissChange: { addSoftDismiss = $0 })
-        case .palette:
-            CommandPalette(onClose: {
-                ui.activeMorph = nil
-                ui.searchText = ""
-            })
-        }
-    }
+    private var rowTopInset: CGFloat { Tokens.Toolbar.topPadding }
 }
 
-/// The toolbar's center field: an in-window page search that filters the current section live
-/// (`ui.searchText`). When a query comes up empty on the page it escalates into the full command
-/// palette (the same panel ⌘K opens), carrying the typed text over.
-private struct ToolbarSearchField: View {
+/// The toolbar's center element: a single search field that filters the current page live
+/// (`ui.searchText`) and **expands in place** into the full command palette (it doesn't hide behind a
+/// separate panel — the same field stays as the header, the results list drops below it). Opens on ⌘K,
+/// on submit, or automatically when an in-page search comes up empty.
+private struct ToolbarCommandPalette: View {
+    @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @FocusState private var focused: Bool
+    let insets: EdgeInsets
+
+    private var isOpen: Bool { ui.activeMorph == .palette }
+    private var items: [PaletteItem] { PaletteItem.filtered(ui.searchText, app: app, ui: ui) }
+    private var spring: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
+
+    /// Visual open state, animated explicitly off `isOpen` so the grow plays for every trigger
+    /// (⌘K, submit, escalation) — implicit `.animation(value:)` wasn't firing for the size change.
+    @State private var expanded = false
+
+    private let collapsedWidth: CGFloat = Tokens.Toolbar.searchMaxWidth
+    private let openWidth: CGFloat = 560
+    private let openHeightCap: CGFloat = 480
+    private var topInset: CGFloat { Tokens.Toolbar.topPadding }
 
     var body: some View {
+        GeometryReader { geo in
+            let openHeight = max(Tokens.Toolbar.controlHeight,
+                                 min(openHeightCap, geo.size.height - topInset - insets.bottom))
+            ZStack(alignment: .top) {
+                if expanded {
+                    Rectangle()
+                        .fill(.black.opacity(0.28))
+                        .ignoresSafeArea()
+                        .contentShape(Rectangle())
+                        .onTapGesture { close() }
+                        .transition(.opacity)
+                }
+                panel(openHeight: openHeight)
+                    .frame(maxWidth: .infinity, alignment: .top)   // centered in the detail area
+            }
+        }
+        .onChange(of: ui.searchText) { _, _ in escalateIfEmpty() }
+        .onChange(of: ui.pageResultCount) { _, _ in escalateIfEmpty() }
+        .onChange(of: isOpen) { _, open in
+            if open { ui.paletteIndex = 0 }
+            focused = open
+            withAnimation(spring) { expanded = open }
+        }
+        // ⌘S focuses the page-search field (without opening the palette).
+        .onChange(of: ui.searchFocusToken) { _, _ in focused = true }
+    }
+
+    private func panel(openHeight: CGFloat) -> some View {
+        // Drive visuals off `expanded` (animated), keeping the list mounted but faded + clipped when
+        // collapsed so the height interpolates smoothly instead of the content popping in/out.
+        let radius = expanded ? Tokens.Radius.sheet : Tokens.Toolbar.controlHeight / 2
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        return VStack(spacing: 0) {
+            fieldRow
+                .frame(height: expanded ? Tokens.Toolbar.searchOpenHeaderHeight : Tokens.Toolbar.controlHeight)
+            Divider().opacity(expanded ? 0.5 : 0)
+            resultsList.opacity(expanded ? 1 : 0)
+        }
+        .frame(width: expanded ? openWidth : collapsedWidth,
+               height: expanded ? openHeight : Tokens.Toolbar.controlHeight,
+               alignment: .top)
+        // Same surface as the add-button morph (floatingPanelMaterial: shadow .24/24/12, border .18) so
+        // both toolbar morphs read as the one gesture.
+        .background { Color.clear.glassEffect(.regular.interactive(), in: shape) }
+        .clipShape(shape)
+        .overlay { if expanded { shape.strokeBorder(.white.opacity(0.18), lineWidth: 1) } }
+        .shadow(color: .black.opacity(expanded ? 0.24 : 0), radius: expanded ? 24 : 0, y: expanded ? 12 : 0)
+        .padding(.top, topInset)
+    }
+
+    private var fieldRow: some View {
         @Bindable var ui = ui
-        HStack(spacing: Tokens.Space.s) {
-            Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundStyle(.secondary)
-            TextField("Search this page, or ⌘K for commands", text: $ui.searchText)
+        return HStack(spacing: Tokens.Toolbar.searchIconGap) {
+            Image(systemName: "magnifyingglass")
+                .font(.body)                       // scales with the field text (Dynamic Type), like the buttons
+                .foregroundStyle(.secondary)
+            TextField(isOpen ? "Search or run a command…" : "Search this page, or ⌘K for commands",
+                      text: $ui.searchText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 13))
+                .font(.body).fontWeight(.medium)   // 13pt medium on macOS, Dynamic-Type scalable
                 .focused($focused)
-                .onSubmit { ui.toggleMorph(.palette) }
+                .onSubmit { onSubmit() }
+                .onKeyPress(.downArrow) { guard isOpen else { return .ignored }; move(1); return .handled }
+                .onKeyPress(.upArrow) { guard isOpen else { return .ignored }; move(-1); return .handled }
+                .onKeyPress(.escape) { guard isOpen else { return .ignored }; close(); return .handled }
             if !ui.searchText.isEmpty {
                 Button { ui.searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.plain).foregroundStyle(.secondary)
+                    .help("Clear search").accessibilityLabel("Clear search")
             } else {
-                Text("⌘K").font(.system(size: 10, weight: .medium)).foregroundStyle(.tertiary)
+                Text(isOpen ? "esc" : "⌘K").font(.caption2).fontWeight(.medium).foregroundStyle(.tertiary)
             }
         }
-        .padding(.horizontal, 10)
-        .frame(height: 30)
-        .frame(maxWidth: 330)
-        .glassSurface(.thin, cornerRadius: 15, glass: .regular)
-        .opacity(ui.activeMorph == .palette ? 0 : 1)
-        .onChange(of: ui.searchText) { _, _ in escalateIfEmpty() }
-        .onChange(of: ui.pageResultCount) { _, _ in escalateIfEmpty() }
+        // Roomier horizontal inset once expanded so the field breathes inside the larger panel.
+        .padding(.horizontal, expanded ? Tokens.Space.l : Tokens.Toolbar.searchInnerPadding)
     }
 
-    /// Morph into the command palette when an in-page search (≥2 chars) finds nothing on a page that
+    private var resultsList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 2) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        row(item, selected: index == ui.paletteIndex)
+                            .id(index)
+                            .contentShape(Rectangle())
+                            .onTapGesture { run(item) }
+                    }
+                }
+                .padding(.horizontal, Tokens.Space.m)   // roomier results gutter, matched to the open field
+                .padding(.vertical, Tokens.Space.s)
+            }
+            .onChange(of: ui.paletteIndex) { _, new in proxy.scrollTo(new, anchor: .center) }
+        }
+    }
+
+    private func row(_ item: PaletteItem, selected: Bool) -> some View {
+        HStack(spacing: Tokens.Space.m) {
+            Image(systemName: item.icon).foregroundStyle(item.tint).frame(width: 22)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.title)
+                if let subtitle = item.subtitle {
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if selected { Image(systemName: "return").font(.caption).foregroundStyle(.tertiary) }
+        }
+        .padding(.horizontal, Tokens.Space.m)
+        .padding(.vertical, Tokens.Space.s)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(selected ? AnyShapeStyle(.tint.opacity(0.18)) : AnyShapeStyle(.clear),
+                    in: RoundedRectangle(cornerRadius: Tokens.Radius.control))
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    // MARK: Behavior
+
+    private func onSubmit() {
+        if isOpen { runSelected() } else { ui.toggleMorph(.palette) }
+    }
+
+    /// Escalate an in-page search into the palette when a query (≥2 chars) finds nothing on a page that
     /// reports a count. Guards on `activeMorph == nil` so it only escalates once.
     private func escalateIfEmpty() {
         guard ui.activeMorph == nil else { return }
         let q = ui.searchText.trimmingCharacters(in: .whitespaces)
-        if q.count >= 2, ui.pageResultCount == 0 {
-            ui.activeMorph = .palette
-        }
+        if q.count >= 2, ui.pageResultCount == 0 { ui.activeMorph = .palette }
+    }
+
+    private func move(_ delta: Int) {
+        guard !items.isEmpty else { return }
+        ui.paletteIndex = min(max(0, ui.paletteIndex + delta), items.count - 1)
+    }
+
+    private func runSelected() {
+        guard items.indices.contains(ui.paletteIndex) else { return }
+        run(items[ui.paletteIndex])
+    }
+
+    private func run(_ item: PaletteItem) {
+        close()
+        item.action()
+    }
+
+    private func close() {
+        ui.activeMorph = nil
+        ui.searchText = ""
     }
 }
 

@@ -71,6 +71,13 @@ final class UIState {
         showCreateWizard = true
     }
 
+    /// Bumped by ⌘S to focus the toolbar page-search field (without opening the command palette).
+    private(set) var searchFocusToken = 0
+    func focusSearch() {
+        activeMorph = nil
+        searchFocusToken &+= 1
+    }
+
     func runImage(_ reference: String) {
         var spec = RunSpec()
         spec.image = reference
