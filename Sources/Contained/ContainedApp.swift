@@ -26,18 +26,22 @@ struct ContainedApp: App {
                     .disabled(!app.updater.canCheckForUpdates)
             }
             CommandGroup(after: .newItem) {
+                // The former toolbar "＋" add-menu now lives here under File ▸ New.
                 Button("New Container…") { ui.showRunSheet = true }
                     .keyboardShortcut("n", modifiers: .command)
                 Button("Run a Container…") { ui.showRunSheet = true }
                     .keyboardShortcut("r", modifiers: .command)
                 Divider()
-                Button("Pull Image…") { ui.section = .images; ui.requestPull += 1 }
+                Button("Pull Image…") { ui.dispatch(.pullImage) }
+                Button("Build Image…") { ui.dispatch(.build) }
+                Divider()
+                Button("New Volume…") { ui.dispatch(.createVolume) }
+                Button("New Network…") { ui.dispatch(.createNetwork) }
+                Divider()
                 Button("Import Compose…") { ui.section = .templates; ui.pendingComposeImport = true }
             }
-            CommandGroup(after: .textEditing) {
-                Button("Find") { ui.focusSearchTick += 1 }
-                    .keyboardShortcut("f", modifiers: .command)
-            }
+            // (Find / ⌘F intentionally omitted — in-window search is being reworked and will return
+            // with the new search affordance.)
             SidebarCommands()
             CommandGroup(after: .sidebar) {
                 Divider()

@@ -42,6 +42,6 @@ struct ActivityView: View {
             }
         }
         .frame(Tokens.SheetSize.wide)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 }

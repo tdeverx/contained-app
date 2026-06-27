@@ -6,6 +6,7 @@ struct GlassCircleButton: View {
     let systemName: String
     var prominent: Bool = false
     var role: ButtonRole? = nil
+    var tint: Color? = nil
     var help: String = ""
     /// Bind Escape to this button (sheet cancel/close), applied to the real Button so it actually fires.
     var isCancel: Bool = false
@@ -26,6 +27,7 @@ struct GlassCircleButton: View {
                 .frame(width: Tokens.IconSize.rowMenu, height: Tokens.IconSize.rowMenu)
         }
         .buttonBorderShape(.circle)
+        .tint(role == .destructive ? .red : tint)
         .help(help)
         .accessibilityLabel(help.isEmpty ? systemName : help)
         .keyboardShortcut(isCancel ? .cancelAction : nil)

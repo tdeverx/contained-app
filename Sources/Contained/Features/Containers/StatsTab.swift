@@ -59,7 +59,7 @@ struct StatsTab: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(Tokens.Space.m)
-                    .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: Tokens.Radius.control))
+                    .background(.quaternary.opacity(0.10), in: RoundedRectangle(cornerRadius: Tokens.Radius.control))
             }
             .padding(.horizontal, Tokens.Space.l)
             .padding(.bottom, Tokens.Space.l)

@@ -58,6 +58,8 @@ struct ContainerEditSheet: View {
                 }
             }
 
+            validationSummary
+
             RunSpecForm(spec: $spec)
 
             if app.settings.revealCLI {
@@ -66,13 +68,13 @@ struct ContainerEditSheet: View {
             }
         }
         .frame(Tokens.SheetSize.form)
-        .background(.regularMaterial)
+        .sheetMaterial()
         .onAppear(perform: load)
-        .confirmationDialog("Save changes to \(spec.name.isEmpty ? editID : spec.name)?",
+        .confirmationDialog("Replace \(spec.name.isEmpty ? editID : spec.name)?",
                             isPresented: $confirming) {
-            Button("Delete & recreate", role: .destructive) { save() }
+            Button("Delete current container and run replacement", role: .destructive) { save() }
         } message: {
-            Text("This deletes the current container and runs a new one with your changes. Data not on a volume is lost.")
+            Text("Contained will stop and delete the current container, then run a replacement from the command preview. Local style and health settings are reapplied. Data not stored in volumes is lost.")
         }
         .alert("Save as template", isPresented: $savingTemplate) {
             TextField("Template name", text: $templateName)
@@ -80,6 +82,30 @@ struct ContainerEditSheet: View {
             Button("Save") { saveTemplate() }
         } message: {
             Text("Save these settings as a reusable template.")
+        }
+    }
+
+    @ViewBuilder
+    private var validationSummary: some View {
+        let messages = spec.validationMessages
+        if !messages.isEmpty {
+            VStack(alignment: .leading, spacing: Tokens.Space.xs) {
+                ForEach(messages, id: \.self) { message in
+                    Label(message, systemImage: "exclamationmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Tokens.Space.l)
+            .padding(.bottom, Tokens.Space.s)
+        } else if let error = app.containers.errorMessage, isEdit {
+            Label(error, systemImage: "exclamationmark.triangle")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Tokens.Space.l)
+                .padding(.bottom, Tokens.Space.s)
         }
     }
 
@@ -111,37 +137,19 @@ struct ContainerEditSheet: View {
     }
 
     private func create() {
-        Task {
-            working = true
-            let newID = await app.containers.run(spec)
-            if let newID {
-                if !spec.personalization.isDefault {
-                    app.personalization.setOverride(spec.personalization, for: newID)
-                }
-                app.healthChecks.setCheck(spec.healthCheck, for: newID)
-            }
-            working = false
-            if newID != nil { dismiss() }
-        }
+        // Dismiss right away and let AppModel run the (possibly image-pulling) create in the
+        // background, surfacing progress in the floating bar. This fixes the old flow where a
+        // not-yet-pulled image made "Create" appear to do nothing until the image arrived.
+        app.beginCreate(spec)
+        dismiss()
     }
 
     private func save() {
         guard case .edit(let snapshot, let onComplete) = mode else { return }
         working = true
         Task {
-            let ok = await app.containers.recreate(originalID: snapshot.id, spec: spec)
-            if ok {
-                let newID = spec.name.isEmpty ? snapshot.id : spec.name
-                if newID != snapshot.id {
-                    app.personalization.clearOverride(id: snapshot.id)
-                    app.healthChecks.clear(id: snapshot.id)
-                }
-                if spec.personalization.isDefault {
-                    app.personalization.clearOverride(id: newID)
-                } else {
-                    app.personalization.setOverride(spec.personalization, for: newID)
-                }
-                app.healthChecks.setCheck(spec.healthCheck, for: newID)
+            let newID = await app.recreateContainer(originalID: snapshot.id, spec: spec)
+            if newID != nil {
                 working = false
                 onComplete()
                 dismiss()

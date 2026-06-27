@@ -10,6 +10,19 @@ enum Format {
     static func rate(_ bytesPerSec: Double) -> String {
         "\(bytes(bytesPerSec))/s"
     }
+    /// A tight throughput readout for the card footer chips: "0", "1.2K", "34M" (bytes/s, no unit
+    /// words or "/s" — the chip's up/down arrow already carries that). Keeps digits to a minimum
+    /// with one decimal only while the scaled value is under 10.
+    static func compactRate(_ bytesPerSec: Double) -> String {
+        let value = max(0, bytesPerSec)
+        if value < 1 { return "0" }
+        for (scale, suffix) in [(1e9, "G"), (1e6, "M"), (1e3, "K")] where value >= scale {
+            let scaled = value / scale
+            return scaled < 10 ? String(format: "%.1f%@", scaled, suffix)
+                               : String(format: "%.0f%@", scaled, suffix)
+        }
+        return String(format: "%.0f", value)
+    }
     static func percent(_ fraction: Double) -> String {
         fraction.formatted(.percent.precision(.fractionLength(0)))
     }

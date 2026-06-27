@@ -10,14 +10,16 @@ struct Personalization: Codable, Hashable, Sendable {
     var tint: AppTint = .multicolor
     var icon: String = ""            // SF Symbol name; empty = default
     var nickname: String = ""
-    var fillBackground: Bool = false
+    var fillBackground: Bool = true
     var backgroundOpacity: Double = Self.defaultBackgroundOpacity
-    var gradient: Bool = false
+    var gradient: Bool = true
     var gradientAngle: Double = Self.defaultGradientAngle   // degrees, 0 = leading→trailing, clockwise
     var graphMetric: GraphMetric = .cpu
 
     static let defaultSymbol = "shippingbox.fill"
-    static let defaultBackgroundOpacity = 0.18
+    // The shipped default: a colored gradient wash at 40%, angled 135°. Plain (no background) is
+    // still one toggle away in Customize.
+    static let defaultBackgroundOpacity = 0.40
     static let defaultGradientAngle = 135.0
 
     var color: Color { tint.color }

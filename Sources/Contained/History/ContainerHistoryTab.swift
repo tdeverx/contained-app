@@ -107,7 +107,7 @@ struct ContainerHistoryTab: View {
         }
         .padding(Tokens.Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
     }
 }
 

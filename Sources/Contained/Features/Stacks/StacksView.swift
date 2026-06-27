@@ -38,11 +38,6 @@ struct StacksView: View {
                 .scrollEdgeEffectStyle(.soft, for: .all)
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { importCompose() } label: { Image(systemName: "square.and.arrow.down") }.help("Import compose file")
-            }
-        }
         .sheet(item: $preview) { project in
             ComposePreviewSheet(project: project) { await launch(project) }
         }
@@ -67,18 +62,7 @@ struct StacksView: View {
                 Spacer()
                 let running = stack.containers.filter { $0.state == .running }.count
                 Text("\(running)/\(stack.containers.count) running").font(.caption).foregroundStyle(.secondary)
-                GlassRowMenu {
-                    Button { Task { for c in stack.containers { await app.containers.start(c.id) } } } label: {
-                        Label("Start all", systemImage: "play.fill")
-                    }
-                    Button { Task { for c in stack.containers { await app.containers.stop(c.id) } } } label: {
-                        Label("Stop all", systemImage: "stop.fill")
-                    }
-                    Divider()
-                    Button(role: .destructive) {
-                        Task { for c in stack.containers { await app.containers.remove(c.id, force: true) } }
-                    } label: { Label("Remove all", systemImage: "trash") }
-                }
+                GlassRowMenu { stackMenu(stack) }
             }
             ForEach(stack.containers) { container in
                 HStack(spacing: Tokens.Space.s) {
@@ -91,7 +75,22 @@ struct StacksView: View {
             }
         }
         .padding(Tokens.Space.l)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
+        .contextMenu { stackMenu(stack) }
+    }
+
+    @ViewBuilder
+    private func stackMenu(_ stack: (name: String, containers: [ContainerSnapshot])) -> some View {
+        Button { Task { for c in stack.containers { await app.containers.start(c.id) } } } label: {
+            Label("Start all", systemImage: "play.fill")
+        }
+        Button { Task { for c in stack.containers { await app.containers.stop(c.id) } } } label: {
+            Label("Stop all", systemImage: "stop.fill")
+        }
+        Divider()
+        Button(role: .destructive) {
+            Task { for c in stack.containers { await app.containers.remove(c.id, force: true) } }
+        } label: { Label("Remove all", systemImage: "trash") }
     }
 
     /// If a menu-driven import is pending, clear the flag and open the picker.
@@ -137,9 +136,8 @@ struct StacksView: View {
                 await waitHealthy(byKey[dep.service])
             }
             let spec = RunSpec(service: service, projectName: project.name)
-            if let id = await app.containers.run(spec), !spec.healthCheck.command.isEmpty {
-                app.healthChecks.setCheck(spec.healthCheck, for: id)   // keep probing after launch
-            }
+            // Pull the service image first (with progress) if it isn't local, then run.
+            _ = await app.createContainer(spec)
         }
         preview = nil
     }
@@ -215,6 +213,6 @@ struct ComposePreviewSheet: View {
             .scrollEdgeEffectStyle(.soft, for: .all)
         }
         .frame(Tokens.SheetSize.inspector)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 }

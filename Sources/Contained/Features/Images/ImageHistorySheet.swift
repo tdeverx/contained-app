@@ -43,6 +43,6 @@ struct ImageHistorySheet: View {
             }
         }
         .frame(Tokens.SheetSize.inspector)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 }

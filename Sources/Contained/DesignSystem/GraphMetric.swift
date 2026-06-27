@@ -41,6 +41,19 @@ enum GraphMetric: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
+    /// An ultra-compact value for the card footer chips (tight space): percent for CPU/memory,
+    /// `Format.compactRate` for the throughput metrics ("0", "1.2K", "34M").
+    func chipCaption(from delta: StatsDelta) -> String {
+        switch self {
+        case .cpu: return Format.percent(delta.cpuCoreFraction)
+        case .memory: return Format.percent(delta.memoryFraction)
+        case .netRx: return Format.compactRate(delta.netRxBytesPerSec)
+        case .netTx: return Format.compactRate(delta.netTxBytesPerSec)
+        case .diskRead: return Format.compactRate(delta.blockReadBytesPerSec)
+        case .diskWrite: return Format.compactRate(delta.blockWriteBytesPerSec)
+        }
+    }
+
     /// A short current-value label for the footer.
     func caption(from delta: StatsDelta) -> String {
         switch self {

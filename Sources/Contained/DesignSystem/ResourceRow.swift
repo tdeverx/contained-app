@@ -26,6 +26,6 @@ struct ResourceRow<Accessory: View>: View {
             accessory()
         }
         .padding(Tokens.Space.m)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
     }
 }

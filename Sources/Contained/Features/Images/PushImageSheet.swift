@@ -19,6 +19,6 @@ struct PushImageSheet: View {
             }
         }
         .frame(Tokens.SheetSize.console)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 }

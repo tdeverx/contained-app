@@ -80,7 +80,59 @@ struct RunSpec: Codable {
     // App-managed healthcheck — also stored locally (HealthCheckStore), not as labels.
     var healthCheck = HealthCheck()
 
-    var isRunnable: Bool { !image.trimmingCharacters(in: .whitespaces).isEmpty }
+    var validationMessages: [String] {
+        var messages: [String] = []
+        if image.trimmingCharacters(in: .whitespaces).isEmpty {
+            messages.append("Choose an image to run.")
+        }
+        for port in ports {
+            let hasHost = !port.hostPort.trimmingCharacters(in: .whitespaces).isEmpty
+            let hasContainer = !port.containerPort.trimmingCharacters(in: .whitespaces).isEmpty
+            if hasHost != hasContainer {
+                messages.append("Complete or remove partial port mappings.")
+                break
+            }
+        }
+        for volume in volumes {
+            let hasSource = !volume.source.trimmingCharacters(in: .whitespaces).isEmpty
+            let hasTarget = !volume.target.trimmingCharacters(in: .whitespaces).isEmpty
+            if hasSource != hasTarget {
+                messages.append("Complete or remove partial volume mounts.")
+                break
+            }
+        }
+        if env.contains(where: {
+            $0.key.trimmingCharacters(in: .whitespaces).isEmpty &&
+            !$0.value.trimmingCharacters(in: .whitespaces).isEmpty
+        }) {
+            messages.append("Environment variables with values need names.")
+        }
+        if !memory.trimmingCharacters(in: .whitespaces).isEmpty,
+           RunSpec.parseMemoryBytes(memory) == nil {
+            messages.append("Memory must use a value like 512M or 2G.")
+        }
+        return messages
+    }
+
+    var isRunnable: Bool { validationMessages.isEmpty }
+
+    private static func parseMemoryBytes(_ spec: String) -> UInt64? {
+        let trimmed = spec.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+        let suffix = trimmed.last?.isLetter == true ? trimmed.last! : nil
+        let numberPart = suffix == nil ? trimmed : String(trimmed.dropLast())
+        guard let value = Double(numberPart), value > 0 else { return nil }
+        let multiplier: Double
+        switch suffix?.uppercased() {
+        case nil: multiplier = 1
+        case "K": multiplier = 1024
+        case "M": multiplier = 1024 * 1024
+        case "G": multiplier = 1024 * 1024 * 1024
+        case "T": multiplier = 1024 * 1024 * 1024 * 1024
+        default: return nil
+        }
+        return UInt64(value * multiplier)
+    }
 
     init() {}
 

@@ -5,6 +5,7 @@ import ContainedCore
 /// properties, and a system-logs viewer.
 struct SystemView: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
     @State private var working = false
     @State private var pruneTarget: PruneTarget?
     @State private var showLogs = false
@@ -42,15 +43,9 @@ struct SystemView: View {
             .padding(Tokens.Space.l)
         }
         .scrollEdgeEffectStyle(.soft, for: .all)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { showActivity = true } label: { Image(systemName: "clock.arrow.circlepath") }.help("Activity history")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button { showLogs = true } label: { Image(systemName: "text.alignleft") }.help("System logs")
-            }
-        }
         .task { await app.refreshResource(.system); await loadDNS() }
+        .onAppear { consumePending() }
+        .onChange(of: ui.pendingAction) { _, _ in consumePending() }
         .sheet(isPresented: $showLogs) { SystemLogsSheet() }
         .sheet(isPresented: $showActivity) { ActivityView() }
         .confirmationDialog(pruneTarget?.title ?? "", isPresented: pruneBinding, presenting: pruneTarget) { target in
@@ -109,7 +104,7 @@ struct SystemView: View {
             }
             .padding(Tokens.Space.l)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
         }
     }
 
@@ -135,6 +130,15 @@ struct SystemView: View {
     private func loadDNS() async {
         guard let client = app.client else { return }
         if let domains = try? await client.dnsDomains() { dnsDomains = domains }
+    }
+
+    /// Pick up a toolbar/menu action addressed to the System page.
+    private func consumePending() {
+        switch ui.pendingAction {
+        case .activityHistory: ui.pendingAction = nil; showActivity = true
+        case .systemLogs:      ui.pendingAction = nil; showLogs = true
+        default: break
+        }
     }
 
     private func installKernel() async {
@@ -199,7 +203,7 @@ struct SystemView: View {
             }
             .padding(Tokens.Space.l)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
         }
     }
 
@@ -250,7 +254,7 @@ struct SystemView: View {
         }
         .padding(Tokens.Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, glass: .clear)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
     }
 
     private func diskSection(_ usage: DiskUsage) -> some View {
@@ -324,6 +328,6 @@ struct SystemLogsSheet: View {
             }
         }
         .frame(Tokens.SheetSize.wide)
-        .background(.regularMaterial)
+        .sheetMaterial()
     }
 }

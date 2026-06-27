@@ -68,7 +68,7 @@ struct PullImageSheet: View {
             }
         }
         .frame(width: Tokens.SheetSize.console.width, height: started ? Tokens.SheetSize.console.height : 460)
-        .background(.regularMaterial)
+        .sheetMaterial()
         .onAppear { if ref.isEmpty { ref = prefill } }
         .onChange(of: hubQuery) { _, _ in scheduleSearch() }
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Design tokens — the single source of truth for spacing, radii, and type used across the app.
 enum Tokens {
@@ -16,10 +17,12 @@ enum Tokens {
         static let xxl: CGFloat = 32
     }
     enum CardSize {
-        static let compactMin: CGFloat = 240
-        static let compactMax: CGFloat = 280
+        // Generous max widths so the adaptive grid stretches the fitted columns to fill the row,
+        // rather than capping them tightly and leaving trailing dead space on wide windows.
+        static let compactMin: CGFloat = 230
+        static let compactMax: CGFloat = 400
         static let largeMin: CGFloat = 300
-        static let largeMax: CGFloat = 360
+        static let largeMax: CGFloat = 520
     }
     /// Canonical sheet dimensions — pass to `.frame(Tokens.SheetSize.form)`. Replaces ad-hoc
     /// `width:height:` literals so every sheet snaps to one of a few sizes.
@@ -46,14 +49,19 @@ extension View {
     }
 }
 
-/// A curated color. Used as the app accent and as per-card personalization (icon + optional
-/// background wash). `.multicolor` follows the system accent.
+/// A curated color, used identically for the app accent (Settings) and per-card personalization
+/// (icon + optional background wash) so the palette is consistent everywhere. `.multicolor` is the
+/// "follow the app accent" option: it resolves to `Color.accentColor`, which the root sets to the
+/// chosen accent tint — so a container left on `.multicolor` tracks whatever the app accent is.
 enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
     case multicolor, graphite, azure, teal, coral, indigo, green, amber, pink
 
     var id: String { rawValue }
 
-    var displayName: String { self == .multicolor ? "Multicolor" : rawValue.capitalized }
+    var displayName: String { self == .multicolor ? "App Accent" : rawValue.capitalized }
+
+    /// True for the "follow the app accent" option (rendered with a marker in the swatch row).
+    var followsAppAccent: Bool { self == .multicolor }
 
     var color: Color {
         switch self {
@@ -95,8 +103,105 @@ enum CardDensity: String, CaseIterable, Identifiable, Codable, Sendable {
     var displayName: String { rawValue.capitalized }
 }
 
-enum BackdropStyle: String, CaseIterable, Identifiable, Codable, Sendable {
-    case mesh, solid
+/// The behind-window vibrancy material used for the main content area. A curated, ordered subset of
+/// `NSVisualEffectView.Material` (lightest → most opaque) so the picker reads sensibly.
+enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
+    case fullScreenUI, underWindowBackground, underPageBackground,
+         windowBackground, contentBackground, sidebar, headerView, titlebar,
+         sheet, popover, menu, selection, hudWindow, toolTip
+
     var id: String { rawValue }
-    var displayName: String { rawValue.capitalized }
+
+    var displayName: String {
+        switch self {
+        case .fullScreenUI:        return "Full-screen UI (default)"
+        case .underWindowBackground: return "Under Window"
+        case .underPageBackground: return "Under Page"
+        case .windowBackground:    return "Window"
+        case .contentBackground:   return "Content"
+        case .sidebar:             return "Sidebar"
+        case .headerView:          return "Header"
+        case .titlebar:            return "Titlebar"
+        case .sheet:               return "Sheet"
+        case .popover:             return "Popover"
+        case .menu:                return "Menu"
+        case .selection:           return "Selection"
+        case .hudWindow:           return "HUD"
+        case .toolTip:             return "Tooltip"
+        }
+    }
+
+    var nsMaterial: NSVisualEffectView.Material {
+        switch self {
+        case .fullScreenUI:          return .fullScreenUI
+        case .underWindowBackground: return .underWindowBackground
+        case .underPageBackground:   return .underPageBackground
+        case .windowBackground:      return .windowBackground
+        case .contentBackground:     return .contentBackground
+        case .sidebar:               return .sidebar
+        case .headerView:            return .headerView
+        case .titlebar:              return .titlebar
+        case .sheet:                 return .sheet
+        case .popover:               return .popover
+        case .menu:                  return .menu
+        case .selection:             return .selection
+        case .hudWindow:             return .hudWindow
+        case .toolTip:               return .toolTip
+        }
+    }
+}
+
+extension EnvironmentValues {
+    /// The user-chosen modal material, seeded at the app root and inherited by presented sheets.
+    @Entry var modalMaterial: WindowMaterial = .sheet
+}
+
+private struct SheetMaterial: ViewModifier {
+    @Environment(\.modalMaterial) private var material
+    func body(content: Content) -> some View {
+        content
+            .background {
+                VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                    .ignoresSafeArea()
+            }
+            .presentationBackground(.clear)
+    }
+}
+
+extension View {
+    /// Standard sheet background — the user-chosen modal material (read from the environment).
+    /// Replaces ad-hoc `.background(.regularMaterial)` so every sheet honors the setting.
+    func sheetMaterial() -> some View { modifier(SheetMaterial()) }
+
+    /// Apply the sheet material only when `active`. Popovers bring their own native vibrant
+    /// background, and layering an `NSVisualEffectView` + `presentationBackground(.clear)` inside one
+    /// leaves controls unpainted until the first mouse event — so popover presentations pass `false`.
+    @ViewBuilder
+    func sheetMaterial(_ active: Bool) -> some View {
+        if active { modifier(SheetMaterial()) } else { self }
+    }
+}
+
+private struct FloatingPanelMaterial: ViewModifier {
+    @Environment(\.modalMaterial) private var material
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Tokens.Radius.sheet, style: .continuous)
+        content
+            .background {
+                VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                    .clipShape(shape)
+            }
+            .clipShape(shape)
+            .overlay {
+                shape.strokeBorder(.white.opacity(0.18), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.24), radius: 24, y: 12)
+    }
+}
+
+extension View {
+    /// In-window floating panel material. Unlike `.sheet`, this samples the live app content instead
+    /// of the dimmed system-modal backdrop, so thin materials actually read thin.
+    func floatingPanelMaterial() -> some View { modifier(FloatingPanelMaterial()) }
 }

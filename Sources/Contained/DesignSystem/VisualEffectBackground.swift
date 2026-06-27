@@ -5,17 +5,37 @@ import AppKit
 /// equivalent for `.behindWindow` blending — flagged AppKit bridge.
 struct VisualEffectBackground: NSViewRepresentable {
     var material: NSVisualEffectView.Material = .fullScreenUI
+    var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
-        view.blendingMode = .behindWindow
+        view.blendingMode = blendingMode
         view.state = .active
         view.material = material
         return view
     }
 
     func updateNSView(_ view: NSVisualEffectView, context: Context) {
+        view.blendingMode = blendingMode
         view.material = material
+    }
+}
+
+/// Stable root-owned backing for the detail column. Pages render above this layer instead of
+/// applying their own window material.
+struct ContentBackgroundLayer: View {
+    var reduceTransparency: Bool
+    var material: NSVisualEffectView.Material = .fullScreenUI
+
+    var body: some View {
+        Group {
+            if reduceTransparency {
+                Color(nsColor: .windowBackgroundColor)
+            } else {
+                VisualEffectBackground(material: material)
+            }
+        }
+        .ignoresSafeArea()
     }
 }
 
@@ -25,11 +45,12 @@ extension View {
     /// layer here would double-frost and wash the cards out. Under Reduce Transparency we use a
     /// solid backing instead (and the window is made opaque).
     @ViewBuilder
-    func contentBackground(reduceTransparency: Bool) -> some View {
+    func contentBackground(reduceTransparency: Bool,
+                           material: NSVisualEffectView.Material = .fullScreenUI) -> some View {
         if reduceTransparency {
             self.background(Color(nsColor: .windowBackgroundColor))
         } else {
-            self.background(VisualEffectBackground().ignoresSafeArea())
+            self.background(VisualEffectBackground(material: material).ignoresSafeArea())
         }
     }
 }

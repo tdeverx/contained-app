@@ -15,6 +15,8 @@ struct SettingsView: View {
                 .tabItem { Label("Appearance", systemImage: "paintpalette") }
             GeneralTab(settings: settings)
                 .tabItem { Label("General", systemImage: "gearshape") }
+            RegistriesTab()
+                .tabItem { Label("Registries", systemImage: "key") }
             UpdatesTab()
                 .tabItem { Label("Updates", systemImage: "arrow.down.app") }
             AboutTab()
@@ -46,14 +48,18 @@ private struct AppearanceTab: View {
                     ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                Picker("Window backdrop", selection: $settings.backdrop) {
-                    ForEach(BackdropStyle.allCases) { Text($0.displayName).tag($0) }
+                Picker("Main background material", selection: $settings.windowMaterial) {
+                    ForEach(WindowMaterial.allCases) { Text($0.displayName).tag($0) }
+                }
+                Picker("Panel & sheet material", selection: $settings.modalMaterial) {
+                    ForEach(WindowMaterial.allCases) { Text($0.displayName).tag($0) }
                 }
                 Toggle("Reduce translucency", isOn: $settings.reduceTranslucency)
+                Toggle("Show info tips", isOn: $settings.showInfoTips)
             } header: {
                 Text("Layout & glass")
             } footer: {
-                Text("Reduce translucency falls back to solid surfaces — useful on slower displays or for legibility. Per-container colors are set from each container's Customize sheet.")
+                Text("Main background material controls the root content backing. Panel & sheet material controls floating detail panels, popovers, and sheets. Reduce translucency switches to solid system surfaces for legibility.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -119,6 +125,67 @@ private struct GeneralTab: View {
     private var retentionBinding: Binding<Int> {
         Binding(get: { settings.historyRetentionDays },
                 set: { app.applyHistoryRetention($0) })
+    }
+}
+
+// MARK: - Registries
+
+/// Registry logins live here (not the File menu): list signed-in registries and log in / out. The
+/// Registries sidebar page remains the same data; this is the credential-management home in Settings.
+private struct RegistriesTab: View {
+    @Environment(AppModel.self) private var app
+    @State private var loggingIn = false
+    @State private var loggingOut: RegistryLogin?
+
+    var body: some View {
+        Form {
+            Section {
+                if app.registries.isEmpty {
+                    Text("Not signed in to any registries.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(app.registries) { login in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(login.host)
+                                if let user = login.username {
+                                    Text("as \(user)").font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                            Button("Log Out", role: .destructive) { loggingOut = login }
+                        }
+                    }
+                }
+            } header: {
+                Text("Signed-in registries")
+            } footer: {
+                Text("Credentials are typed by you and piped to the CLI via stdin, so the password never lands in the process list. Contained doesn’t store it.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Button("Log In to Registry…") { loggingIn = true }
+            }
+        }
+        .formStyle(.grouped)
+        .task { await app.refreshResource(.registries) }
+        .sheet(isPresented: $loggingIn) { RegistryLoginSheet() }
+        .confirmationDialog("Log out of \(loggingOut?.host ?? "")?",
+                            isPresented: logoutBinding, presenting: loggingOut) { login in
+            Button("Log out", role: .destructive) { Task { await logout(login) } }
+        } message: { _ in Text("Removes the stored credentials for this registry.") }
+    }
+
+    private var logoutBinding: Binding<Bool> {
+        Binding(get: { loggingOut != nil }, set: { if !$0 { loggingOut = nil } })
+    }
+
+    private func logout(_ login: RegistryLogin) async {
+        guard let client = app.client else { return }
+        do { _ = try await client.registryLogout(server: login.host); await app.refreshResource(.registries) }
+        catch let error as CommandError { app.flash(error.userMessage) }
+        catch { app.flash(error.localizedDescription) }
     }
 }
 

@@ -20,6 +20,12 @@ struct TintSelector: View {
     private func swatch(_ tint: AppTint) -> some View {
         ZStack {
             Circle().fill(tint.color).frame(width: 22, height: 22)
+            // Mark the "follow the app accent" option so it reads as automatic, not a fixed color.
+            if tint.followsAppAccent {
+                Image(systemName: "link")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+            }
             Circle()
                 .strokeBorder(selection == tint ? Color.primary : Color.secondary.opacity(0.35),
                               lineWidth: selection == tint ? 2 : 1)
