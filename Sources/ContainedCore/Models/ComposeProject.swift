@@ -387,9 +387,10 @@ public enum ComposeParser {
         return raw == "unless-stopped" ? "always" : raw
     }
 
-    /// Prefer explicit `network_mode`; otherwise use the first named service network.
+    /// Prefer explicit `network_mode`; otherwise use the first named service network. Compose
+    /// `host` matches the default run form network for Apple's runtime, so leave it blank.
     private static func network(mode: Any?, networks: Any?) -> String? {
-        if let mode = stringValue(mode) { return mode }
+        if let mode = stringValue(mode) { return mode == "host" ? nil : mode }
         if let list = networks as? [Any] { return list.compactMap(stringValue).first }
         if let map = networks as? [String: Any] { return map.keys.sorted().first }
         return nil
