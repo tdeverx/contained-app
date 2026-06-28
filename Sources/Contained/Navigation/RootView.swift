@@ -98,17 +98,15 @@ struct RootView: View {
             ZStack {
                 ContentBackgroundLayer(reduceTransparency: settings.reduceTranslucency,
                                        material: settings.windowMaterial.nsMaterial)
-                // Pages respect the top safe area again now that the toolbar occupies that band — so their
-                // content starts below the toolbar rather than under it. (The background layer self-ignores
-                // the safe area, so the vibrancy still fills behind the toolbar.)
                 content
+                    .ignoresSafeArea(.container, edges: [.top, .bottom])
             }
-            // Reserve exactly the band height at the top regardless of how the real window toolbar
-            // reports its safe area — `toolbarHeight` makes up the difference so content always clears
-            // the band (whether the system inset is 0 or the full titlebar height).
+            // Bypass AppKit's titlebar safe-area math for app content; our custom toolbar bands are the
+            // source of truth so top and bottom spacing stay symmetrical.
             .environment(\.appSafeAreas,
-                         AppSafeAreaManager(system: proxy.safeAreaInsets,
-                                            toolbarHeight: max(0, AppToolbar.bandHeight - proxy.safeAreaInsets.top)))
+                         AppSafeAreaManager(system: EdgeInsets(),
+                                            topToolbarHeight: AppToolbar.bandHeight,
+                                            bottomToolbarHeight: AppToolbar.bandHeight))
             // The app-wide toolbar draws up into the title-bar band; its morph panels center within the
             // content area.
             .overlay { AppToolbar().ignoresSafeArea(.container, edges: .top) }
@@ -148,7 +146,7 @@ struct RootView: View {
         } label: { Label("Card Size", systemImage: "square.grid.2x2") }
         Divider()
         Button { ui.toggleMorph(.system) } label: { Label("System", systemImage: "gearshape.2") }
-        Button { ui.toggleMorph(.activity) } label: { Label("Activity", systemImage: "clock.arrow.circlepath") }
+        Button { ui.toggleMorph(.activity) } label: { Label("Activity", systemImage: "bell") }
         Divider()
         Button { ui.toggleMorph(.palette) } label: { Label("Command Palette…", systemImage: "command") }
     }

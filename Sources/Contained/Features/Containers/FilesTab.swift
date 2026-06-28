@@ -30,13 +30,21 @@ struct FilesTab: View {
 
     private var pathBar: some View {
         HStack(spacing: Tokens.Space.s) {
-            GlassCircleButton(systemName: "chevron.up", help: "Parent") { goUp() }
-                .disabled(path == "/")
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "chevron.up", help: "Parent") { goUp() }
+                    .disabled(path == "/")
+            }
             Text(path).font(.system(.callout, design: .monospaced)).lineLimit(1).truncationMode(.middle)
             Spacer()
             if loading { ProgressView().controlSize(.small) }
-            GlassCircleButton(systemName: "square.and.arrow.down", help: "Copy a file into this folder") { copyIn() }
-            GlassCircleButton(systemName: "arrow.clockwise", help: "Refresh") { Task { await load() } }
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "square.and.arrow.down", help: "Copy a file into this folder") {
+                    copyIn()
+                }
+            }
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "arrow.clockwise", help: "Refresh") { Task { await load() } }
+            }
         }
         .padding(Tokens.Space.m)
     }

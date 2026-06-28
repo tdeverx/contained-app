@@ -19,10 +19,12 @@ struct RegistryLoginSheet: View {
                 if busy {
                     ProgressView().controlSize(.small).frame(width: Tokens.IconSize.control, height: Tokens.IconSize.control)
                 } else {
-                    GlassCircleButton(systemName: "checkmark", prominent: true, help: "Log in") { submit() }
-                        .disabled(server.trimmingCharacters(in: .whitespaces).isEmpty
-                                  || username.trimmingCharacters(in: .whitespaces).isEmpty
-                                  || password.isEmpty)
+                    GlassButton(singleItem: true) {
+                        GlassButtonItem(systemName: "checkmark", help: "Log in") { submit() }
+                            .disabled(server.trimmingCharacters(in: .whitespaces).isEmpty
+                                      || username.trimmingCharacters(in: .whitespaces).isEmpty
+                                      || password.isEmpty)
+                    }
                 }
             }
             Form {

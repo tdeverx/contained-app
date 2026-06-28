@@ -21,7 +21,9 @@ struct SheetHeader<Trailing: View>: View {
                 }
             }
             Spacer()
-            GlassCircleButton(systemName: cancelIcon, help: cancelHelp, isCancel: true, action: onCancel)
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: cancelIcon, help: cancelHelp, isCancel: true, action: onCancel)
+            }
             trailing()
         }
         .padding(Tokens.Space.l)

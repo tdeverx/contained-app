@@ -20,8 +20,8 @@ struct PaletteItem: Identifiable {
         // Toolbar panels (the former sidebar pages) — open the matching morph.
         let panels: [(String, String, UIState.ToolbarMorph)] = [
             ("Images", "shippingbox.fill", .updates),
-            ("Templates", "square.on.square", .templates),
-            ("Activity", "clock.arrow.circlepath", .activity),
+            ("Templates", "bookmark", .templates),
+            ("Activity", "bell", .activity),
             ("System", "gearshape.2", .system),
         ]
         for (title, icon, morph) in panels {
@@ -52,7 +52,7 @@ struct PaletteItem: Identifiable {
         let pageActions: [(String, String, PendingAction)] = [
             ("Load image tar…", "square.and.arrow.down", .loadImage),
             ("Prune images…", "trash", .pruneImages),
-            ("Activity history", "clock.arrow.circlepath", .activityHistory),
+            ("Activity history", "bell", .activityHistory),
             ("System logs", "text.alignleft", .systemLogs),
         ]
         for (title, icon, action) in pageActions {

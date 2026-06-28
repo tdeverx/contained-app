@@ -117,20 +117,18 @@ struct EventRow: View {
     var elevated = true
     var body: some View {
         ResourceGlassCard(size: .small, elevated: elevated) {
-            HStack(spacing: Tokens.Space.s) {
+            ResourceCardHeader {
                 Image(systemName: event.kind.symbol)
                     .foregroundStyle(.secondary)
                     .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
                     .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            } content: {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(event.message)
-                        .font(.callout.weight(.medium))
-                        .lineLimit(1)
-                    Text(event.timestamp.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    ResourceCardTitleText(text: event.message)
+                    ResourceCardSubtitleText(text: event.timestamp.formatted(date: .abbreviated, time: .shortened))
                 }
-                Spacer(minLength: 0)
+            } trailing: {
+                EmptyView()
             }
         }
     }

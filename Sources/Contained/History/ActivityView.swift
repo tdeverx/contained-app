@@ -28,14 +28,20 @@ struct ActivityContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: Tokens.Space.s) {
+            ResourceCardHeader {
+                GlassButtonItem(systemName: "bell", help: "Activity", isLabel: true)
+            } content: {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Activity").font(.headline)
                     Text("\(filtered.count) events").font(.caption).foregroundStyle(.secondary)
                 }
-                Spacer()
+            } trailing: {
                 if showClose {
-                    GlassCircleButton(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                    GlassButton(singleItem: true) {
+                        GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                    }
+                } else {
+                    EmptyView()
                 }
             }
             .padding(Tokens.Space.l)
@@ -50,7 +56,7 @@ struct ActivityContent: View {
             .padding(.bottom, Tokens.Space.s)
             Divider()
             if filtered.isEmpty {
-                ContentUnavailableView("No activity", systemImage: "clock.arrow.circlepath",
+                ContentUnavailableView("No activity", systemImage: "bell",
                                        description: Text("Events from container lifecycle, the watchdog, and healthchecks land here."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

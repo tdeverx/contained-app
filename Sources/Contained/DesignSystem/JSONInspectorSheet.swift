@@ -11,8 +11,14 @@ struct JSONInspectorSheet<Value: Encodable>: View {
             HStack {
                 Text(title).font(.headline).lineLimit(1)
                 Spacer()
-                GlassCircleButton(systemName: "doc.on.doc", help: "Copy") { copyToPasteboard(json) }
-                GlassCircleButton(systemName: "xmark", help: "Close", isCancel: true) { dismiss() }
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "doc.on.doc", help: "Copy") { copyToPasteboard(json) }
+                }
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true) {
+                        dismiss()
+                    }
+                }
             }
             .padding(Tokens.Space.l)
             Divider()

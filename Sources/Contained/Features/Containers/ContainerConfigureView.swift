@@ -72,9 +72,13 @@ struct ContainerConfigureView: View {
         HStack(spacing: Tokens.Space.s) {
             switch leading {
             case .cancel(let action):
-                GlassCircleButton(systemName: "xmark", help: "Cancel", isCancel: true, action: action)
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "xmark", help: "Cancel", isCancel: true, action: action)
+                }
             case .back(let action):
-                GlassCircleButton(systemName: "chevron.left", help: "Back", action: action)
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "chevron.left", help: "Back", action: action)
+                }
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(isEdit ? "Edit container" : "Run a container").font(.headline)
@@ -88,14 +92,18 @@ struct ContainerConfigureView: View {
                 ProgressView().controlSize(.small)
                     .frame(width: Tokens.IconSize.control, height: Tokens.IconSize.control)
             } else {
-                GlassCircleButton(systemName: "bookmark", help: "Save as template") {
-                    templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
-                    savingTemplate = true
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "bookmark", help: "Save as template") {
+                        templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
+                        savingTemplate = true
+                    }
                 }
                 .disabled(!spec.isRunnable)
-                GlassCircleButton(systemName: isEdit ? "checkmark" : "play.fill",
-                                  prominent: true, help: isEdit ? "Save" : "Create") {
-                    if isEdit { confirming = true } else { create() }
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: isEdit ? "checkmark" : "play.fill",
+                                    help: isEdit ? "Save" : "Create") {
+                        if isEdit { confirming = true } else { create() }
+                    }
                 }
                 .disabled(!spec.isRunnable)
             }

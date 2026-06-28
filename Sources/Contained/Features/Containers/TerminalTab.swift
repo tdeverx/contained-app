@@ -59,7 +59,9 @@ struct TerminalTab: View {
             .onChange(of: shell) { _, _ in reconnect() }
             Text("exec into \(snapshot.id)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
             Spacer()
-            GlassCircleButton(systemName: "arrow.clockwise", help: "Reconnect") { reconnect() }
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "arrow.clockwise", help: "Reconnect") { reconnect() }
+            }
         }
         .padding(Tokens.Space.m)
     }

@@ -12,8 +12,10 @@ struct TagImageSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             SheetHeader(title: "Tag image", onCancel: { dismiss() }) {
-                GlassCircleButton(systemName: "checkmark", prominent: true, help: "Tag") { submit() }
-                    .disabled(target.trimmingCharacters(in: .whitespaces).isEmpty || busy)
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "checkmark", help: "Tag") { submit() }
+                        .disabled(target.trimmingCharacters(in: .whitespaces).isEmpty || busy)
+                }
             }
             Form {
                 LabeledContent("Source", value: Format.shortImage(source))

@@ -73,11 +73,20 @@ struct CustomizeSheet: View {
     @Environment(\.dismiss) private var dismiss
     let target: Target
     let presentation: Presentation
+    var onDraftChange: ((Personalization) -> Void)? = nil
 
     /// Convenience initializer for the container case (keeps existing call sites working).
     init(snapshot: ContainerSnapshot, presentation: Presentation = .popover) {
         self.target = .container(snapshot)
         self.presentation = presentation
+    }
+
+    init(snapshot: ContainerSnapshot,
+         presentation: Presentation = .popover,
+         onDraftChange: ((Personalization) -> Void)? = nil) {
+        self.target = .container(snapshot)
+        self.presentation = presentation
+        self.onDraftChange = onDraftChange
     }
 
     init(target: Target, presentation: Presentation = .sheet) {
@@ -99,7 +108,9 @@ struct CustomizeSheet: View {
             SheetHeader(title: headerTitle,
                         subtitle: imageSubtitle,
                         onCancel: { dismiss() }) {
-                GlassCircleButton(systemName: "checkmark", prominent: true, help: "Save") { save() }
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "checkmark", help: "Save") { save() }
+                }
             }
 
             Form {
@@ -113,15 +124,54 @@ struct CustomizeSheet: View {
                     TextField(nicknameLabel,
                               text: $style.nickname,
                               prompt: Text(nicknamePrompt))
-                    TextField("Icon", text: $style.icon, prompt: Text("SF Symbol, e.g. globe, bolt"))
+                    Toggle("Custom icon", isOn: $style.iconEnabled)
+                    if style.iconEnabled {
+                        TextField("Icon", text: $style.icon, prompt: Text("SF Symbol, e.g. globe, bolt"))
+                    } else {
+                        Text("Using the default icon")
+                            .foregroundStyle(.secondary)
+                    }
                     LabeledContent("Color") { TintSelector(selection: $style.tint) }
                         .fieldInfo("“App Accent” (the linked swatch) follows the app accent from Settings, so the card tracks your theme. Pick any other color to pin this card.")
-                    Picker("Graph", selection: $style.graphMetric) {
-                        ForEach(graphOptions) { Label(graphLabel($0), systemImage: $0.systemImage).tag($0) }
-                    }
                 }
                 .disabled(settingsDisabled)
                 .opacity(settingsDisabled ? 0.48 : 1)
+
+                if case .container = target {
+                    Section("Status") {
+                        Toggle("Show status indicator", isOn: $style.showStatusIndicator)
+                        if style.showStatusIndicator {
+                            Toggle("Show icon", isOn: $style.showStatusIcon)
+                            Toggle("Show text", isOn: $style.showStatusText)
+                        }
+                    }
+                    .disabled(settingsDisabled)
+                    .opacity(settingsDisabled ? 0.48 : 1)
+                }
+
+                if target.isImage {
+                    EmptyView()
+                } else {
+                    ForEach(0..<Personalization.widgetSlotCount, id: \.self) { index in
+                        Section("Widget \(index + 1)") {
+                            Toggle("Enabled", isOn: widgetEnabledBinding(index))
+                            if widgetEnabled(index) {
+                                Toggle("Show icon", isOn: widgetShowIconBinding(index))
+                                Toggle("Show text", isOn: widgetShowTextBinding(index))
+                                Picker("Graph Metric", selection: widgetMetricBinding(index)) {
+                                    ForEach(graphOptions) {
+                                        Label(graphLabel($0), systemImage: $0.systemImage).tag($0)
+                                    }
+                                }
+                                Picker("Graph Type", selection: widgetStyleBinding(index)) {
+                                    ForEach(GraphStyle.allCases) { Text($0.displayName).tag($0) }
+                                }
+                            }
+                        }
+                        .disabled(settingsDisabled)
+                        .opacity(settingsDisabled ? 0.48 : 1)
+                    }
+                }
 
                 Section("Background") {
                     Toggle("Color the card background", isOn: $style.fillBackground)
@@ -174,12 +224,14 @@ struct CustomizeSheet: View {
                 style = app.personalization.imageGroupDefault(for: id) ?? Personalization()
                 overrideContainerStyle = true
             case .volume(let name):
-                style = app.personalization.volumeStyle(for: name) ?? Personalization()
-                // Volumes graph read/write only; normalize any inherited default into that set.
-                if !Self.volumeMetrics.contains(style.graphMetric) { style.graphMetric = .diskRead }
+                style = app.volumeStyle(for: name)
                 overrideContainerStyle = true
             }
             loaded = true
+            onDraftChange?(style)
+        }
+        .onChange(of: style) { _, newValue in
+            onDraftChange?(newValue)
         }
     }
 
@@ -251,6 +303,65 @@ struct CustomizeSheet: View {
 
     private var settingsDisabled: Bool {
         target.supportsInheritance && !overrideContainerStyle
+    }
+
+    private func widgetEnabled(_ index: Int) -> Bool {
+        style.widget(at: index).enabled
+    }
+
+    private func widgetEnabledBinding(_ index: Int) -> Binding<Bool> {
+        Binding(
+            get: { style.widget(at: index).enabled },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.enabled = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetMetricBinding(_ index: Int) -> Binding<GraphMetric> {
+        Binding(
+            get: { style.widget(at: index).metric },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.metric = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetStyleBinding(_ index: Int) -> Binding<GraphStyle> {
+        Binding(
+            get: { style.widget(at: index).style },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.style = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetShowIconBinding(_ index: Int) -> Binding<Bool> {
+        Binding(
+            get: { style.widget(at: index).showIcon },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.showIcon = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetShowTextBinding(_ index: Int) -> Binding<Bool> {
+        Binding(
+            get: { style.widget(at: index).showText },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.showText = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
     }
 
     /// Whether there is a saved style to reset — a per-container override, or an image default.

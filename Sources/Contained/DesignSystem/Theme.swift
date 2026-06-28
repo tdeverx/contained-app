@@ -53,16 +53,18 @@ enum Tokens {
         static let controlHeight: CGFloat = 36  // glass groups + search field share this height
         // Button glyphs use `.headline` + `.imageScale(.large)` (see ToolbarControls) so they scale
         // with Dynamic Type — no fixed point size token.
-        static let iconInnerPadding: CGFloat = 5 // padding around the glyph inside the 36 button
+        static let iconInnerPadding: CGFloat = 4 // padding around the glyph inside the 28 item
+        static let buttonItemHeight: CGFloat = 28
+        static let buttonGroupHeight: CGFloat = 36
         static let outerPadding: CGFloat = 8    // band inset from the window edges
         // The toolbar now spans the whole window (no sidebar), so its leading edge must clear the
         // traffic-light cluster (close/min/zoom ≈ 70pt) plus a little breathing room.
         static let leadingInset: CGFloat = 80   // band inset on the left, past the traffic lights
-        static let groupPaddingH: CGFloat = 8   // horizontal glass margin inside a group
-        static let groupSpacing: CGFloat = 8    // spacing between buttons / groups
+        static let groupPaddingH: CGFloat = 0   // horizontal glass margin inside a group
+        static let groupSpacing: CGFloat = 4    // spacing between buttons / groups
         static let searchMaxWidth: CGFloat = 380
         // Search field internals.
-        static let searchInnerPadding: CGFloat = 10 // padding inside the collapsed search capsule
+        static let searchInnerPadding: CGFloat = iconInnerPadding * 2 // matches glass button edge inset
         static let searchIconGap: CGFloat = 6       // gap between icon and text
         static let searchOpenHeaderHeight: CGFloat = 48 // taller header row once the palette expands
         // The search icon + text use the semantic `.body` style (13pt on macOS; text adds medium weight),
@@ -78,6 +80,16 @@ extension View {
     func frame(_ size: CGSize) -> some View {
         frame(width: size.width, height: size.height)
     }
+}
+
+/// Material/elevation constants for reusable app surfaces. Keep glass, shadow, and stroke choices
+/// here so collapsed controls and expanded panels do not drift into near-duplicates.
+enum AppMaterial {
+    static let toolbarHoverFill = Color.white.opacity(0.1)
+    static let floatingPanelStroke = Color.white.opacity(0.18)
+    static let floatingPanelShadow = Color.black.opacity(0.24)
+    static let floatingPanelShadowRadius: CGFloat = 24
+    static let floatingPanelShadowY: CGFloat = 12
 }
 
 /// A curated color, used identically for the app accent (Settings) and per-card personalization
@@ -230,17 +242,18 @@ extension View {
 
 private struct FloatingPanelMaterial: ViewModifier {
     @Environment(\.modalMaterial) private var material
+    var cornerRadius = Tokens.Radius.sheet
     var showsShadow = true
 
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: Tokens.Radius.sheet, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         content
             .background {
                 if showsShadow {
-                    ExteriorShadow(cornerRadius: Tokens.Radius.sheet,
-                                   color: .black.opacity(0.24),
-                                   radius: 24,
-                                   y: 12)
+                    ExteriorShadow(cornerRadius: cornerRadius,
+                                   color: AppMaterial.floatingPanelShadow,
+                                   radius: AppMaterial.floatingPanelShadowRadius,
+                                   y: AppMaterial.floatingPanelShadowY)
                 }
             }
             .background {
@@ -249,15 +262,29 @@ private struct FloatingPanelMaterial: ViewModifier {
             }
             .clipShape(shape)
             .overlay {
-                shape.strokeBorder(.white.opacity(0.18), lineWidth: 1)
+                shape.strokeBorder(AppMaterial.floatingPanelStroke, lineWidth: 1)
             }
+    }
+}
+
+private struct ToolbarControlMaterial<S: Shape>: ViewModifier {
+    let shape: S
+
+    func body(content: Content) -> some View {
+        content.glassEffect(.regular.interactive(), in: shape)
     }
 }
 
 extension View {
     /// In-window floating panel material. Unlike `.sheet`, this samples the live app content instead
     /// of the dimmed system-modal backdrop, so thin materials actually read thin.
-    func floatingPanelMaterial(showsShadow: Bool = true) -> some View {
-        modifier(FloatingPanelMaterial(showsShadow: showsShadow))
+    func floatingPanelMaterial(cornerRadius: CGFloat = Tokens.Radius.sheet,
+                               showsShadow: Bool = true) -> some View {
+        modifier(FloatingPanelMaterial(cornerRadius: cornerRadius, showsShadow: showsShadow))
+    }
+
+    /// Standard interactive glass used by toolbar buttons and collapsed toolbar search.
+    func toolbarControlMaterial<S: Shape>(in shape: S) -> some View {
+        modifier(ToolbarControlMaterial(shape: shape))
     }
 }

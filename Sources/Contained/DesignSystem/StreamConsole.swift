@@ -56,8 +56,10 @@ struct StreamConsole: View {
             }
             Spacer()
             Text("\(lines.count) lines").font(.caption).foregroundStyle(.secondary).monospacedDigit()
-            GlassCircleButton(systemName: "doc.on.doc", help: "Copy log") {
-                copyToPasteboard(lines.joined(separator: "\n"))
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "doc.on.doc", help: "Copy log") {
+                    copyToPasteboard(lines.joined(separator: "\n"))
+                }
             }
         }
         .font(.callout)

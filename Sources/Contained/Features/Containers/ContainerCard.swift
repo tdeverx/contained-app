@@ -41,9 +41,9 @@ struct ContainerCard: View {
     @State private var confirmingDelete = false
     /// Customize popover, anchored to the whole card so the live card is the preview.
     @State private var showingCustomize = false
-    /// Footer-chip override for the plotted metric — session-only (never persisted). Nil falls back
-    /// to the resolved style's metric.
-    @State private var localMetric: GraphMetric? = nil
+    @State private var draftStyle: Personalization? = nil
+    /// Session-only graph tab selection. The footer chips act as tabs and switch the graph.
+    @State private var selectedWidgetIndex = 0
 
     enum Tab: String, CaseIterable, Identifiable {
         case overview = "Overview"
@@ -70,15 +70,16 @@ struct ContainerCard: View {
     }
 
     private var presentation: StatusPresentation { StatusPresentation(snapshot.state) }
-    private var tint: Color { style.color }
-    private var name: String { style.displayName(fallback: snapshot.id) }
+    private var styleForDisplay: Personalization { draftStyle ?? style }
+    private var tint: Color { styleForDisplay.color }
+    private var name: String { styleForDisplay.displayName(fallback: snapshot.id) }
     private var isRunning: Bool { presentation == .running }
-    private var metric: GraphMetric { localMetric ?? style.graphMetric }
-    /// The recent history for the currently-plotted metric (live switch in the expanded footer).
-    private var plotted: [Double] { histories[metric] ?? history }
+    private var activeWidgetIndex: Int {
+        let enabled = styleForDisplay.widgets.indices.filter { styleForDisplay.widget(at: $0).enabled }
+        return enabled.contains(selectedWidgetIndex) ? selectedWidgetIndex : (enabled.first ?? 0)
+    }
+    private var activeWidget: WidgetConfiguration { styleForDisplay.widget(at: activeWidgetIndex) }
     private var cardSize: ResourceCardSize { density.resourceSize }
-    /// The metrics offered as selectable footer chips (the runtime exposes no GPU stat).
-    private let footerMetrics: [GraphMetric] = [.cpu, .memory, .netRx, .netTx]
 
     var body: some View {
         Group {
@@ -91,10 +92,19 @@ struct ContainerCard: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(name), \(presentation.label)")
+        .onChange(of: showingCustomize) { _, isShowing in
+            if isShowing {
+                draftStyle = style
+            } else {
+                draftStyle = nil
+            }
+        }
         // Anchored to the whole card (via the surrounding Group), so the popover floats beside the
         // real, live card — which is itself the preview. The customizer carries only the form.
         .popover(isPresented: $showingCustomize, arrowEdge: .trailing) {
-            CustomizeSheet(snapshot: snapshot, presentation: .popover)
+            CustomizeSheet(snapshot: snapshot, presentation: .popover, onDraftChange: { draft in
+                draftStyle = draft
+            })
         }
         .confirmationDialog("Delete \(name)?", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) {
@@ -111,58 +121,139 @@ struct ContainerCard: View {
                           isExpanded: isExpanded,
                           controlsVisible: controlsVisible,
                           isSelected: isSelected,
-                          fill: style.fillBackground ? style.color : nil,
-                          fillOpacity: style.backgroundOpacity,
-                          gradient: style.gradient,
-                          gradientAngle: style.gradientAngle,
+                          fill: styleForDisplay.fillBackground ? styleForDisplay.color : nil,
+                          fillOpacity: styleForDisplay.backgroundOpacity,
+                          gradient: styleForDisplay.gradient,
+                          gradientAngle: styleForDisplay.gradientAngle,
                           onTap: onTap) {
             headerRow(controlsReveal: controlsVisible ? 1 : 0)
         } bodyContent: {
-            detailTabs
+            detailBody
         } footerLeading: {
-            ForEach(footerMetrics) { metricChip($0) }
+            if styleForDisplay.showStatusIndicator {
+                statusChip
+            }
+            ForEach(styleForDisplay.widgets.indices.filter { styleForDisplay.widget(at: $0).enabled }, id: \.self) { index in
+                widgetChip(index)
+            }
         } footerActions: {
             footerActions
         } widget: {
-            LiveSparkline(samples: plotted, color: tint)
+            LiveSparkline(samples: histories[activeWidget.metric] ?? history,
+                          color: tint,
+                          style: activeWidget.style)
+                .frame(maxWidth: .infinity)
                 .frame(height: 58)
         }
-        .overlay(alignment: .topTrailing) { if isBusy { ProgressView().controlSize(.small).padding(8) } }
+        .overlay { if isBusy { ProgressView().controlSize(.small) } }
     }
 
     private func headerRow(controlsReveal: Double = 1) -> some View {
-        HStack(spacing: Tokens.Space.s) {
+        ResourceCardHeader {
             iconChip
+        } content: {
             VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 6) {
-                    Text(name)
-                        .font(.callout.weight(.medium))
-                        .lineLimit(1)
-                    StatusOrb(presentation: presentation, size: 7)
-                    if health == .unhealthy {
-                        Image(systemName: "heart.slash.fill").font(.caption2)
-                            .foregroundStyle(.red).help("Healthcheck failing")
-                    } else if health == .healthy {
-                        Image(systemName: "heart.fill").font(.caption2)
-                            .foregroundStyle(.green).help("Healthy")
-                    }
+                HStack(alignment: .top, spacing: 4) {
+                    ResourceCardTitleText(text: name)
                 }
-                Text(Format.shortImage(snapshot.image))
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                HStack(alignment: .top, spacing: 4) {
+                    ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
+                }
             }
-            Spacer(minLength: 0)
-            if isExpanded {
-                closeAction
-                    .opacity(controlsReveal)
-                    .animation(.easeOut(duration: 0.18), value: controlsReveal)
-            }
+        } trailing: {
+            headerButtons(controlsReveal: controlsReveal)
         }
     }
 
+    private func headerButtons(controlsReveal: Double) -> some View {
+        GlassButton(singleItem: false) {
+            pagePicker
+            GlassButtonItem(systemName: "xmark", help: "Close") {
+                onClose()
+            }
+        }
+        .opacity(isExpanded ? controlsReveal : 0)
+        .animation(.easeOut(duration: 0.18), value: controlsReveal)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
     private var iconChip: some View {
-        ContainerCustomizeButton(snapshot: snapshot, style: style) { showingCustomize = true }
+        ContainerCustomizeButton(snapshot: snapshot, style: styleForDisplay) {
+            draftStyle = style
+            showingCustomize = true
+        }
+    }
+
+    private var statusChip: some View {
+        ResourceCardFooterMini {
+            if styleForDisplay.showStatusIcon {
+                Image(systemName: statusSymbol)
+                    .font(.caption2)
+                    .foregroundStyle(statusColor)
+                    .symbolEffect(.pulse, options: .repeating, value: statusState == .online)
+            }
+        } text: {
+            if styleForDisplay.showStatusText {
+                ResourceCardMetricText(text: statusLabel)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .help(statusHelp)
+    }
+
+    private enum StatusState: Hashable {
+        case online, restarting, stopped, unknown, failed
+    }
+
+    private var statusState: StatusState {
+        if health == .unhealthy { return .failed }
+        switch presentation {
+        case .running: return .online
+        case .stopping: return .restarting
+        case .stopped: return .stopped
+        case .unknown: return .unknown
+        case .errored: return .failed
+        }
+    }
+
+    private var statusLabel: String {
+        switch statusState {
+        case .online: return "Online"
+        case .restarting: return "Restarting"
+        case .stopped: return "Stopped"
+        case .unknown: return "Unknown"
+        case .failed: return "Failed"
+        }
+    }
+
+    private var statusSymbol: String {
+        switch statusState {
+        case .online: return "dot.radiowaves.left.and.right"
+        case .restarting: return "arrow.clockwise.circle.fill"
+        case .stopped: return "circle.fill"
+        case .unknown: return "questionmark.circle.fill"
+        case .failed: return "exclamationmark.circle.fill"
+        }
+    }
+
+    private var statusColor: Color {
+        switch statusState {
+        case .online: return .green
+        case .restarting: return .orange
+        case .stopped: return .secondary
+        case .unknown: return .gray
+        case .failed: return .red
+        }
+    }
+
+    private var statusHelp: String {
+        switch statusState {
+        case .online: return "Healthy"
+        case .restarting: return "Restarting"
+        case .stopped: return "Stopped"
+        case .unknown: return "Status unknown"
+        case .failed: return "Healthcheck failing"
+        }
     }
 
     /// The container's actions for the right-click context menu.
@@ -198,79 +289,90 @@ struct ContainerCard: View {
         Button(role: .destructive) { onDelete() } label: { Label("Delete", systemImage: "trash") }
     }
 
-    private var closeAction: some View {
-        GlassCircleButton(systemName: "xmark", tint: tint, help: "Close", isCancel: true) { onClose() }
-    }
-
-    private var detailTabs: some View {
-        TabView(selection: $tab) {
-            ContainerOverviewTab(snapshot: snapshot)
-                .tabItem { Label(Tab.overview.rawValue, systemImage: Tab.overview.systemImage) }
-                .tag(Tab.overview)
-            LogsTab(snapshot: snapshot)
-                .tabItem { Label(Tab.logs.rawValue, systemImage: Tab.logs.systemImage) }
-                .tag(Tab.logs)
-            TerminalTab(snapshot: snapshot)
-                .tabItem { Label(Tab.terminal.rawValue, systemImage: Tab.terminal.systemImage) }
-                .tag(Tab.terminal)
-            StatsTab(snapshot: snapshot)
-                .tabItem { Label(Tab.stats.rawValue, systemImage: Tab.stats.systemImage) }
-                .tag(Tab.stats)
-            ContainerHistoryTab(snapshot: snapshot)
-                .tabItem { Label(Tab.history.rawValue, systemImage: Tab.history.systemImage) }
-                .tag(Tab.history)
-            FilesTab(snapshot: snapshot)
-                .tabItem { Label(Tab.files.rawValue, systemImage: Tab.files.systemImage) }
-                .tag(Tab.files)
-            ContainerInspectTab(snapshot: snapshot)
-                .tabItem { Label(Tab.inspect.rawValue, systemImage: Tab.inspect.systemImage) }
-                .tag(Tab.inspect)
-        }
-        .tabViewStyle(.automatic)
-        .tint(tint)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    /// A selectable CPU·Memory·Net readout. Tapping flips the graph for this session only (not
-    /// persisted); the metric currently driving the graph is tinted, the rest are muted.
-    private func metricChip(_ chip: GraphMetric) -> some View {
-        let active = chip == metric
-        return Button {
-            // Temporary, session-only graph switch — deliberately NOT persisted, so flipping the
-            // graph never creates a per-container override or changes the saved default.
-            localMetric = chip
+    private var pagePicker: some View {
+        Menu {
+            ForEach(Tab.allCases) { item in
+                Button {
+                    tab = item
+                } label: {
+                    Label(item.rawValue, systemImage: item.systemImage)
+                }
+            }
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: chip.systemImage).font(.caption2)
-                Text(stats.map(chip.chipCaption(from:)) ?? "—")
-                    .font(.caption.weight(.medium))
-                    .monospacedDigit()
+            GlassButtonItem(systemName: "line.3.horizontal.decrease", help: "Filter", isLabel: true)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var detailBody: some View {
+        detailContent
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var detailContent: some View {
+        switch tab {
+        case .overview:
+            ContainerOverviewTab(snapshot: snapshot)
+        case .logs:
+            LogsTab(snapshot: snapshot)
+        case .terminal:
+            TerminalTab(snapshot: snapshot)
+        case .stats:
+            StatsTab(snapshot: snapshot)
+        case .history:
+            ContainerHistoryTab(snapshot: snapshot)
+        case .files:
+            FilesTab(snapshot: snapshot)
+        case .inspect:
+            ContainerInspectTab(snapshot: snapshot)
+        }
+    }
+
+    /// A selectable widget tab. Tapping flips the graph for this session only (not persisted).
+    private func widgetChip(_ index: Int) -> some View {
+        let widget = styleForDisplay.widget(at: index)
+        let active = index == activeWidgetIndex
+        return Button {
+            selectedWidgetIndex = index
+        } label: {
+            ResourceCardFooterMini {
+                if widget.showIcon {
+                    Image(systemName: widget.metric.systemImage).font(.caption2)
+                }
+            } text: {
+                if widget.showText {
+                    ResourceCardMetricText(text: stats.map(widget.metric.chipCaption(from:)) ?? "—")
+                }
             }
             .foregroundStyle(active ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
         }
         .buttonStyle(.plain)
-        .help(chip.displayName)
+        .help(widget.metric.displayName)
     }
 
     /// Lifecycle + edit/delete, styled to match the compact card's small plain play/stop glyph
     /// rather than the heavier prominent glass circles (per the simplified footer).
+    @ViewBuilder
     private var footerActions: some View {
-        HStack(spacing: Tokens.Space.m) {
-            if isRunning {
-                footerAction("stop.fill", help: "Stop", action: onStop)
-                footerAction("arrow.clockwise", help: "Restart", action: onRestart)
-            } else {
-                footerAction("play.fill", help: "Start", tint: tint, action: onStart)
-            }
-            footerAction("slider.horizontal.3", help: "Edit", action: onEdit)
-            footerAction("trash", help: "Delete", tint: .red) { confirmingDelete = true }
+        if isRunning {
+            footerAction("stop.fill", help: "Stop", action: onStop)
+            footerAction("arrow.clockwise", help: "Restart", action: onRestart)
+        } else {
+            footerAction("play.fill", help: "Start", tint: tint, action: onStart)
         }
+        footerAction("slider.horizontal.3", help: "Edit", action: onEdit)
+        footerAction("trash", help: "Delete", tint: .red) { confirmingDelete = true }
     }
 
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,
                               action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemName).font(.body)
+            ResourceCardFooterMini {
+                Image(systemName: systemName).font(.body)
+            } text: {
+                EmptyView()
+            }
         }
         .buttonStyle(.plain)
         .foregroundStyle(tint ?? .secondary)

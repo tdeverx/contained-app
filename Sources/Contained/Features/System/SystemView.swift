@@ -36,17 +36,21 @@ struct SystemContent: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Tokens.Space.l) {
-                serviceCard
-                backgroundTasksSection
-                volumesSection
-                if let usage = app.diskUsage { diskSection(usage) }
-                pruneSection
+        VStack(spacing: 0) {
+            header
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: Tokens.Space.l) {
+                    serviceCard
+                    backgroundTasksSection
+                    volumesSection
+                    if let usage = app.diskUsage { diskSection(usage) }
+                    pruneSection
+                }
+                .padding(Tokens.Space.l)
             }
-            .padding(Tokens.Space.l)
+            .scrollEdgeEffectStyle(.soft, for: .all)
         }
-        .scrollEdgeEffectStyle(.soft, for: .all)
         .task { await app.refreshSystemResources() }
         .sheet(isPresented: $showLogs) { SystemLogsSheet() }
         .sheet(item: $inspectingVolume) { JSONInspectorSheet(title: $0.name, value: $0) }
@@ -57,6 +61,24 @@ struct SystemContent: View {
         .confirmationDialog(pruneTarget?.title ?? "", isPresented: pruneBinding, presenting: pruneTarget) { target in
             Button("Remove", role: .destructive) { Task { await prune(target) } }
         } message: { _ in Text("This permanently removes unused resources to reclaim disk space.") }
+    }
+
+    private var header: some View {
+        ResourceCardHeader {
+            GlassButtonItem(systemName: "gearshape.2", help: "System", isLabel: true)
+        } content: {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("System").font(.headline)
+                Text("\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } trailing: {
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+            }
+        }
+        .padding(Tokens.Space.l)
     }
 
     // MARK: Volumes (migrated here from the standalone sidebar section)
@@ -90,17 +112,19 @@ struct SystemContent: View {
 
     private var emptyVolumesCard: some View {
         ResourceGlassCard(size: .small, elevated: elevated) {
-            HStack(spacing: Tokens.Space.s) {
+            ResourceCardHeader {
                 Image(systemName: "externaldrive")
                     .foregroundStyle(.secondary)
                     .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
                     .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            } content: {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("No volumes").font(.callout.weight(.medium))
                     Text("Create a volume to share persistent storage with containers.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Spacer(minLength: 0)
+            } trailing: {
+                EmptyView()
             }
         }
     }
@@ -334,35 +358,29 @@ private struct VolumeCard: View {
                           gradient: style.gradient,
                           gradientAngle: style.gradientAngle,
                           elevated: elevated) {
-            header
+            ResourceCardHeader {
+                CardStyleButton(style: style, target: .volume(name: volume.name), help: "Customize volume")
+            } content: {
+                VStack(alignment: .leading, spacing: 1) {
+                    ResourceCardTitleText(text: style.nickname.isEmpty ? volume.name : style.nickname)
+                    ResourceCardSubtitleText(text: subtitle)
+                }
+            } trailing: {
+                EmptyView()
+            }
         } bodyContent: {
             EmptyView()
         } footerLeading: {
-            HStack(spacing: Tokens.Space.m) { ForEach(Self.metrics) { chip($0) } }
+            ForEach(Self.metrics) { chip($0) }
         } footerActions: {
-            HStack(spacing: Tokens.Space.m) {
-                action("doc.text.magnifyingglass", help: "Inspect", action: onInspect)
-                action("doc.on.doc", help: "Copy name") { copyToPasteboard(volume.name) }
-                action("trash", help: "Delete", tint: .red, action: onDelete)
-            }
+            action("doc.text.magnifyingglass", help: "Inspect", action: onInspect)
+            action("doc.on.doc", help: "Copy name") { copyToPasteboard(volume.name) }
+            action("trash", help: "Delete", tint: .red, action: onDelete)
         } widget: {
-            LiveSparkline(samples: samples, color: style.color)
+            LiveSparkline(samples: samples, color: style.color, style: style.graphStyle)
                 .frame(height: 58)
         }
         .contextMenu { menu }
-    }
-
-    private var header: some View {
-        HStack(spacing: Tokens.Space.s) {
-            CardStyleButton(style: style, target: .volume(name: volume.name), help: "Customize volume")
-            VStack(alignment: .leading, spacing: 1) {
-                Text(style.nickname.isEmpty ? volume.name : style.nickname)
-                    .font(.callout.weight(.medium)).lineLimit(1)
-                Text(subtitle)
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            }
-            Spacer(minLength: 0)
-        }
     }
 
     /// A tappable read/write chip showing the current rate; selecting it switches the plotted metric.
@@ -370,9 +388,10 @@ private struct VolumeCard: View {
         let active = metric == which
         let rate = app.volumeIORate(for: volume.name, metric: which)
         return Button { localMetric = which } label: {
-            HStack(spacing: 4) {
+            ResourceCardFooterMini {
                 Image(systemName: which.systemImage).font(.caption2)
-                Text(Format.compactRate(rate)).font(.caption.weight(.medium)).monospacedDigit()
+            } text: {
+                ResourceCardMetricText(text: Format.compactRate(rate))
             }
             .foregroundStyle(active ? AnyShapeStyle(style.color) : AnyShapeStyle(.secondary))
         }
@@ -383,7 +402,13 @@ private struct VolumeCard: View {
 
     private func action(_ systemName: String, help: String, tint: Color? = nil,
                         action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: systemName).font(.body) }
+        Button(action: action) {
+            ResourceCardFooterMini {
+                Image(systemName: systemName).font(.body)
+            } text: {
+                EmptyView()
+            }
+        }
             .buttonStyle(.plain)
             .foregroundStyle(tint ?? .secondary)
             .help(help)
@@ -414,7 +439,11 @@ struct SystemLogsSheet: View {
                     .toggleStyle(.button).buttonStyle(.glass).buttonBorderShape(.capsule)
                     .onChange(of: follow) { _, _ in session += 1 }
                 Spacer()
-                GlassCircleButton(systemName: "xmark", help: "Close", isCancel: true) { dismiss() }
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true) {
+                        dismiss()
+                    }
+                }
             }
             .padding(Tokens.Space.l)
             if let client = app.client {

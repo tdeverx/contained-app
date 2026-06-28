@@ -4,14 +4,14 @@ import AppKit
 import ContainedCore
 
 /// The app-wide, custom (non-native) toolbar that lives in the title-bar band of the hidden-title-bar
-/// window. Three compact glass groups — add menu (leading), search + command palette (center),
-/// images + activity (trailing) — stay **constant across pages** (high-level, not per-section).
+/// window. Search stays in the top-right titlebar band; the add/images/templates/activity cluster and
+/// system status control float in a bottom toolbar area.
 ///
 /// Mounted as a top overlay over the **detail column** in `RootView` (never over the sidebar): the
 /// band sits in the title-bar region, the rest of the area is hit-transparent until a control opens.
-/// The add `+` grows a `MorphingExpander` panel from its slot; the center search field is a single
-/// item that expands *in place* into the command palette (one field, no separate panel). Control
-/// sizing comes from `Tokens.Toolbar` / `ToolbarControls`.
+/// The add `+`, search field, and bottom toolbar controls all grow through the same
+/// `MorphingExpander` shell from their measured toolbar slots. Control sizing and source radius come
+/// from `Tokens.Toolbar` / `ToolbarControls`.
 struct AppToolbar: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -21,9 +21,8 @@ struct AppToolbar: View {
     @State private var addSoftDismiss: (() -> Void)?
     @State private var toolbarImageDetail: LocalImageTagGroup?
     @State private var toolbarImageSourceFrame: CGRect?
-    @State private var toolbarImageExpanded = false
-
-    private let toolbarImageSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
+    @State private var toolbarImageDetailPresented = false
+    @State private var toolbarImageCloseRequestToken = 0
 
     static let space = "appToolbar"
     /// Title-bar band height. The toolbar lives in the detail column (no traffic lights there), so the
@@ -34,18 +33,19 @@ struct AppToolbar: View {
     var body: some View {
         ZStack(alignment: .top) {
             VStack(spacing: 0) {
-                toolbarRow
+                topToolbarRow
                     .frame(height: Tokens.Toolbar.controlHeight)
                     .padding(.top, rowTopInset)   // centered on the traffic-light line
-                Spacer(minLength: 0)            // empty + hit-transparent below the band
+                Spacer(minLength: 0)
                     .allowsHitTesting(false)
+                bottomToolbarRow
+                    .frame(height: Tokens.Toolbar.controlHeight)
+                    .padding(.bottom, bottomRowInset)
             }
-            // The center search / command palette is hidden for now (in-window search is being reworked
-            // on another branch). Re-enable by restoring this layer:
-            //   ToolbarCommandPalette(insets: morphTargetInsets)
-            //       .zIndex(ui.activeMorph == .palette ? 20 : 5)
             addMorphLayer
                 .zIndex(ui.activeMorph == .add ? 30 : 0)
+            paletteMorphLayer
+                .zIndex(ui.activeMorph == .palette ? 30 : 0)
             updatesMorphLayer
                 .zIndex(ui.activeMorph == .updates ? 30 : 0)
             activityMorphLayer
@@ -61,13 +61,12 @@ struct AppToolbar: View {
         .onPreferenceChange(ToolbarSlotKey.self) { slots = $0 }
     }
 
-    // MARK: Row
+    // MARK: Top Row
 
-    private var toolbarRow: some View {
+    private var topToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
-            leadingZone
             Spacer(minLength: Tokens.Space.m)
-            trailingZone
+            searchZone
         }
         // Leading inset clears the window traffic lights now that the toolbar spans the full window.
         .padding(.leading, Tokens.Toolbar.leadingInset)
@@ -75,39 +74,72 @@ struct AppToolbar: View {
         .frame(maxWidth: .infinity)
     }
 
-    // The add control is a standalone circle (single action); the trailing images/activity buttons are a
-    // grouped capsule.
-    private var leadingZone: some View {
-        ToolbarIconButton(systemName: "plus", help: "Add") { ui.toggleMorph(.add) }
-            .frame(width: Tokens.Toolbar.controlHeight, height: Tokens.Toolbar.controlHeight)
-            .opacity(ui.activeMorph == .add ? 0 : 1)
+    private var searchZone: some View {
+        ToolbarSearchSource()
+            .frame(width: Tokens.Toolbar.searchMaxWidth, height: Tokens.Toolbar.controlHeight)
+            .opacity(ui.activeMorph == .palette ? 0 : 1)
             .background(
                 GeometryReader { proxy in
                     Color.clear.preference(key: ToolbarSlotKey.self,
-                                           value: [.add: proxy.frame(in: .named(Self.space))])
+                                           value: [.palette: proxy.frame(in: .named(Self.space))])
                 }
             )
     }
 
-    // The trailing Images + Templates + Activity buttons share one glass capsule (a
-    // `ToolbarButtonCluster`); each morph grows out of that single capsule frame, so the group reads
-    // as one control.
-    private var trailingZone: some View {
-        ToolbarButtonCluster {
-            ToolbarIconButton(systemName: "shippingbox.fill", help: "Images",
-                              showsBackground: false) { ui.toggleMorph(.updates) }
-                .opacity(ui.activeMorph == .updates ? 0 : 1)
-            ToolbarIconButton(systemName: "square.on.square", help: "Templates",
-                              showsBackground: false) { ui.toggleMorph(.templates) }
-                .opacity(ui.activeMorph == .templates ? 0 : 1)
-            ToolbarIconButton(systemName: "clock.arrow.circlepath", help: "Activity",
-                              showsBackground: false) { ui.toggleMorph(.activity) }
-                .opacity(ui.activeMorph == .activity ? 0 : 1)
-            ToolbarIconButton(systemName: "gearshape.2", help: "System",
-                              showsBackground: false) { ui.toggleMorph(.system) }
-                .opacity(ui.activeMorph == .system ? 0 : 1)
+    @ViewBuilder
+    private var paletteMorphLayer: some View {
+        if ui.activeMorph == .palette {
+            MorphingExpander(isPresented: paletteMorphBinding,
+                             originFrame: slots[.palette] ?? .zero,
+                             target: toolbarMorphTarget(size: CGSize(width: 560, height: 480)),
+                             closeRequestToken: ui.morphCloseRequestToken) {
+                ToolbarCommandPalette { ui.requestMorphClose(.palette) }
+            }
         }
-        .background(clusterSlotReader([.updates, .templates, .activity, .system]))
+    }
+
+    // MARK: Bottom Row
+
+    private var bottomToolbarRow: some View {
+        HStack(spacing: Tokens.Toolbar.groupSpacing) {
+            systemStatusButton
+            Spacer(minLength: Tokens.Space.m)
+            bottomActionGroup
+        }
+        .padding(.horizontal, Tokens.Toolbar.outerPadding)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var systemStatusButton: some View {
+        GlassButton(singleItem: true) {
+            GlassButtonItem(help: "System \(app.serviceLabel)", action: {
+                ui.toggleMorph(.system)
+            }) {
+                HStack(spacing: Tokens.Toolbar.searchIconGap) {
+                    Image(systemName: systemStatusIcon)
+                        .foregroundStyle(systemStatusColor)
+                        .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
+                    Text(app.serviceLabel)
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
+                }
+            }
+        }
+        .opacity(ui.activeMorph == .system ? 0 : 1)
+        .background(singleSlotReader(.system))
+    }
+
+    private var bottomActionGroup: some View {
+        HStack(spacing: Tokens.Toolbar.groupSpacing) {
+            GlassButton {
+                GlassButtonItem(systemName: "plus", help: "Add") { ui.toggleMorph(.add) }
+                GlassButtonItem(systemName: "shippingbox", help: "Images") { ui.toggleMorph(.updates) }
+                GlassButtonItem(systemName: "bookmark", help: "Templates") { ui.toggleMorph(.templates) }
+                GlassButtonItem(systemName: "bell", help: "Activity") { ui.toggleMorph(.activity) }
+            }
+            .opacity(isBottomGroupMorphActive ? 0 : 1)
+            .background(clusterSlotReader([.add, .updates, .templates, .activity]))
+        }
     }
 
     // MARK: Add morph layer
@@ -116,14 +148,13 @@ struct AppToolbar: View {
     private var addMorphLayer: some View {
         if ui.activeMorph == .add {
             MorphingExpander(isPresented: addMorphBinding, originFrame: slots[.add] ?? .zero,
-                             panelSize: CGSize(width: 440, height: 300),   // initial; flow resizes per page
-                             placement: .anchored,
-                             targetInsets: morphTargetInsets,
+                             target: toolbarMorphTarget(size: CGSize(width: 440, height: 300)),
+                             closeRequestToken: ui.morphCloseRequestToken,
                              onBackdropTap: addSoftDismiss) {
                 CreationFlow(start: .menu,
                              onClose: {
                                  addSoftDismiss = nil
-                                 ui.activeMorph = nil
+                                 ui.requestMorphClose(.add)
                              },
                              onSoftDismissChange: { addSoftDismiss = $0 })
             }
@@ -135,11 +166,10 @@ struct AppToolbar: View {
         if ui.activeMorph == .updates {
             MorphingExpander(isPresented: morphBinding(.updates),
                              originFrame: slots[.updates] ?? .zero,
-                             panelSize: CGSize(width: 440, height: 300),
-                             placement: .anchored,
-                             targetInsets: morphTargetInsets) {
+                             target: toolbarMorphTarget(size: CGSize(width: 440, height: 300)),
+                             closeRequestToken: ui.morphCloseRequestToken) {
                 ToolbarUpdatesPanel(onOpenImage: openToolbarImageDetail) {
-                    ui.activeMorph = nil
+                    ui.requestMorphClose(.updates)
                 }
             }
         }
@@ -147,26 +177,17 @@ struct AppToolbar: View {
 
     @ViewBuilder
     private var toolbarImageDetailLayer: some View {
-        if let detail = toolbarImageDetail {
-            GeometryReader { proxy in
-                let bounds = safeBounds(in: proxy.size)
-                let current = currentToolbarImageGroup(detail)
-                let target = toolbarImageTargetRect(in: bounds)
-                let source = usableToolbarImageSource ?? target
-                let rect = toolbarImageExpanded ? target : source
-                ZStack {
-                    Color.clear
-                        .globalBackdrop(style: .dim, progress: toolbarImageExpanded ? 1 : 0)
-                        .contentShape(Rectangle())
-                        .onTapGesture { closeToolbarImageDetail() }
-
-                    ToolbarImageGroupCard(group: current,
-                                          isExpanded: true,
-                                          onTap: {},
-                                          onClose: closeToolbarImageDetail)
-                        .frame(width: rect.width, height: rect.height, alignment: .top)
-                        .position(x: rect.midX, y: rect.midY)
-                }
+        if let detail = toolbarImageDetail, toolbarImageDetailPresented {
+            MorphingExpander(isPresented: toolbarImageDetailBinding,
+                             originFrame: usableToolbarImageSource ?? .zero,
+                             target: .anchored(size: toolbarImageDetailSize,
+                                               safeArea: toolbarMorphSafeArea,
+                                               margin: 0),
+                             closeRequestToken: toolbarImageCloseRequestToken) {
+                ToolbarImageGroupCard(group: currentToolbarImageGroup(detail),
+                                      isExpanded: true,
+                                      onTap: {},
+                                      onClose: closeToolbarImageDetail)
             }
         }
     }
@@ -176,11 +197,10 @@ struct AppToolbar: View {
         if ui.activeMorph == .activity {
             MorphingExpander(isPresented: morphBinding(.activity),
                              originFrame: slots[.activity] ?? .zero,
-                             panelSize: CGSize(width: 460, height: 360),
-                             placement: .anchored,
-                             targetInsets: morphTargetInsets) {
+                             target: toolbarMorphTarget(size: CGSize(width: 460, height: 360)),
+                             closeRequestToken: ui.morphCloseRequestToken) {
                 ToolbarActivityPanel {
-                    ui.activeMorph = nil
+                    ui.requestMorphClose(.activity)
                 }
             }
         }
@@ -191,11 +211,10 @@ struct AppToolbar: View {
         if ui.activeMorph == .templates {
             MorphingExpander(isPresented: morphBinding(.templates),
                              originFrame: slots[.templates] ?? .zero,
-                             panelSize: CGSize(width: 440, height: 300),
-                             placement: .anchored,
-                             targetInsets: morphTargetInsets) {
+                             target: toolbarMorphTarget(size: CGSize(width: 440, height: 300)),
+                             closeRequestToken: ui.morphCloseRequestToken) {
                 ToolbarTemplatesPanel {
-                    ui.activeMorph = nil
+                    ui.requestMorphClose(.templates)
                 }
             }
         }
@@ -206,10 +225,9 @@ struct AppToolbar: View {
         if ui.activeMorph == .system {
             MorphingExpander(isPresented: morphBinding(.system),
                              originFrame: slots[.system] ?? .zero,
-                             panelSize: CGSize(width: 580, height: 600),
-                             placement: .anchored,
-                             targetInsets: morphTargetInsets) {
-                ToolbarSystemPanel { ui.activeMorph = nil }
+                             target: toolbarMorphTarget(size: CGSize(width: 580, height: 600)),
+                             closeRequestToken: ui.morphCloseRequestToken) {
+                ToolbarSystemPanel { ui.requestMorphClose(.system) }
             }
         }
     }
@@ -226,8 +244,28 @@ struct AppToolbar: View {
         })
     }
 
-    /// Report one shared frame (the cluster capsule) as the morph origin for several morphs at once,
-    /// so both the Images and Activity panels grow out of the same grouped pill.
+    private var paletteMorphBinding: Binding<Bool> {
+        Binding(get: { ui.activeMorph == .palette }, set: {
+            if !$0 {
+                ui.searchText = ""
+                ui.activeMorph = nil
+            }
+        })
+    }
+
+    private var toolbarImageDetailBinding: Binding<Bool> {
+        Binding(get: { toolbarImageDetailPresented }, set: {
+            guard !$0 else {
+                toolbarImageDetailPresented = true
+                return
+            }
+            toolbarImageDetailPresented = false
+            toolbarImageDetail = nil
+            toolbarImageSourceFrame = nil
+        })
+    }
+
+    /// Report one shared frame (the cluster capsule) as the morph origin for several morphs at once.
     private func clusterSlotReader(_ morphs: [UIState.ToolbarMorph]) -> some View {
         GeometryReader { proxy in
             let frame = proxy.frame(in: .named(Self.space))
@@ -236,11 +274,69 @@ struct AppToolbar: View {
         }
     }
 
-    private var morphTargetInsets: EdgeInsets {
-        safeAreas.morphInsets(.includingToolbar)
+    private func singleSlotReader(_ morph: UIState.ToolbarMorph) -> some View {
+        GeometryReader { proxy in
+            Color.clear.preference(key: ToolbarSlotKey.self,
+                                   value: [morph: proxy.frame(in: .named(Self.space))])
+        }
+    }
+
+    private var toolbarMorphSafeArea: AppSafeAreaPolicy {
+        .toolbarChrome
+    }
+
+    private func toolbarMorphTarget(size: CGSize,
+                                    placement: MorphPanelPlacement = .anchored) -> AppMorphTarget {
+        switch placement {
+        case .anchored:
+            .anchored(size: size, safeArea: toolbarMorphSafeArea, margin: 0)
+        case .centered:
+            .centered(size: size, safeArea: toolbarMorphSafeArea, margin: 0)
+        case .topCentered:
+            .topCentered(safeArea: toolbarMorphSafeArea, margin: 0) { _ in size }
+        }
     }
 
     private var rowTopInset: CGFloat { Tokens.Toolbar.topPadding }
+
+    private var bottomRowInset: CGFloat {
+        max(Tokens.Toolbar.outerPadding, safeAreas.system.bottom + Tokens.Toolbar.outerPadding)
+    }
+
+    private var systemStatusColor: Color {
+        switch app.serviceLabel {
+        case "Running":
+            .green
+        case "Checking…":
+            .blue
+        case "Stopped":
+            .orange
+        default:
+            .red
+        }
+    }
+
+    private var systemStatusIcon: String {
+        switch app.serviceLabel {
+        case "Running":
+            "circle.fill"
+        case "Checking…":
+            "arrow.triangle.2.circlepath"
+        case "Stopped":
+            "pause.circle.fill"
+        default:
+            "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var isBottomGroupMorphActive: Bool {
+        switch ui.activeMorph {
+        case .add, .updates, .templates, .activity:
+            true
+        case .palette, .system, nil:
+            false
+        }
+    }
 
     private var usableToolbarImageSource: CGRect? {
         guard let frame = toolbarImageSourceFrame,
@@ -251,22 +347,8 @@ struct AppToolbar: View {
         return frame
     }
 
-    private func safeBounds(in size: CGSize) -> CGRect {
-        let insets = morphTargetInsets
-        return CGRect(x: insets.leading,
-                      y: insets.top,
-                      width: max(1, size.width - insets.leading - insets.trailing),
-                      height: max(1, size.height - insets.top - insets.bottom))
-    }
-
-    private func toolbarImageTargetRect(in bounds: CGRect) -> CGRect {
-        let proposed = CGSize(width: min(max(bounds.width * 0.72, 560), 760),
-                              height: min(max(bounds.height * 0.68, 440), 620))
-        return MorphGeometry.targetRect(origin: .zero,
-                                        proposedSize: proposed,
-                                        bounds: bounds,
-                                        placement: .centered,
-                                        margin: Tokens.Space.xxl)
+    private var toolbarImageDetailSize: CGSize {
+        CGSize(width: 560, height: 520)
     }
 
     private func currentToolbarImageGroup(_ group: LocalImageTagGroup) -> LocalImageTagGroup {
@@ -276,17 +358,11 @@ struct AppToolbar: View {
     private func openToolbarImageDetail(_ group: LocalImageTagGroup, sourceFrame: CGRect) {
         toolbarImageDetail = group
         toolbarImageSourceFrame = sourceFrame
-        toolbarImageExpanded = false
-        DispatchQueue.main.async {
-            withAnimation(toolbarImageSpring) { toolbarImageExpanded = true }
-        }
+        toolbarImageDetailPresented = true
     }
 
     private func closeToolbarImageDetail() {
-        withAnimation(toolbarImageSpring) { toolbarImageExpanded = false } completion: {
-            toolbarImageDetail = nil
-            toolbarImageSourceFrame = nil
-        }
+        toolbarImageCloseRequestToken &+= 1
     }
 }
 
@@ -295,6 +371,7 @@ private struct ToolbarUpdatesPanel: View {
     @Environment(UIState.self) private var ui
     var onOpenImage: (LocalImageTagGroup, CGRect) -> Void
     var onClose: () -> Void
+    @State private var imageFrames: [LocalImageTagGroup.ID: CGRect] = [:]
 
     private var imageGroups: [LocalImageTagGroup] {
         LocalImageTagGroup.groups(for: app.images).sorted { lhs, rhs in
@@ -341,48 +418,57 @@ private struct ToolbarUpdatesPanel: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            GlassCircleButton(systemName: "square.and.arrow.down", help: "Load Image Tar") {
-                ui.dispatch(.loadImage)
-                onClose()
+            GlassButton {
+                GlassButtonItem(systemName: "square.and.arrow.down", help: "Load Image Tar") {
+                    ui.dispatch(.loadImage)
+                    onClose()
+                }
+                GlassButtonItem(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
+                    Task { await app.runImageUpdateSweepNow() }
+                }
+                GlassButtonItem(systemName: "trash", help: "Prune Images") {
+                    ui.dispatch(.pruneImages)
+                    onClose()
+                }
+                GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
             }
-            GlassCircleButton(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
-                Task { await app.runImageUpdateSweepNow() }
-            }
-            GlassCircleButton(systemName: "trash", help: "Prune Images") {
-                ui.dispatch(.pruneImages)
-                onClose()
-            }
-            GlassCircleButton(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
         }
         .padding(Tokens.Space.m)
     }
 
     private var emptyCard: some View {
         ResourceGlassCard(size: .small, elevated: false) {
-            HStack(spacing: Tokens.Space.s) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-                    .background(.green.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            ResourceCardHeader {
+                ResourceCardIconChip(symbol: "checkmark.circle.fill", tint: .green)
+            } content: {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("No images").font(.callout.weight(.medium))
-                    Text("Pull or build an image to see it here").font(.caption).foregroundStyle(.secondary)
+                    ResourceCardTitleText(text: "No images")
+                    ResourceCardSubtitleText(text: "Pull or build an image to see it here")
                 }
-                Spacer(minLength: 0)
+            } trailing: {
+                EmptyView()
             }
         }
     }
 
     private func imageRow(_ group: LocalImageTagGroup) -> some View {
-        GeometryReader { proxy in
-            ToolbarImageGroupCard(group: group,
-                                  isExpanded: false,
-                                  onTap: {
-                                      onOpenImage(group, proxy.frame(in: .named(AppToolbar.space)))
-                                  },
-                                  onClose: {})
-        }
-        .frame(height: ResourceCardSize.medium.height)
+        ToolbarImageGroupCard(group: group,
+                              isExpanded: false,
+                              onTap: {
+                                  onOpenImage(group, imageFrames[group.id] ?? .zero)
+                              },
+                              onClose: {})
+            .background {
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear {
+                            imageFrames[group.id] = proxy.frame(in: .named(AppToolbar.space))
+                        }
+                        .onChange(of: proxy.frame(in: .named(AppToolbar.space))) { _, frame in
+                            imageFrames[group.id] = frame
+                        }
+                }
+            }
     }
 
     private func imageRank(_ group: LocalImageTagGroup) -> Int {
@@ -425,10 +511,13 @@ private struct ToolbarImageGroupCard: View {
                           elevated: false,
                           onTap: onTap) {
             cardHeader(group, image: image, style: resolved)
-        } bodyContent: {
+            } bodyContent: {
             tagList(group)
         } footerLeading: {
-            imageFooterInfo(status)
+            HStack(spacing: 10) {
+                imageFooterTagCount(group)
+                imageFooterInfo(status)
+            }
         } footerActions: {
             imageFooterActions(group)
         }
@@ -452,7 +541,7 @@ private struct ToolbarImageGroupCard: View {
 
     private func cardHeader(_ group: LocalImageTagGroup, image: ContainedCore.ImageResource?,
                             style: Personalization) -> some View {
-        HStack(spacing: Tokens.Space.s) {
+        ResourceCardHeader {
             if let image {
                 ImageStyleButton(reference: image.reference,
                                  style: style,
@@ -460,54 +549,62 @@ private struct ToolbarImageGroupCard: View {
             } else {
                 imageChip(style)
             }
+        } content: {
             VStack(alignment: .leading, spacing: 1) {
-                Text(repositoryName(group.primaryReference))
-                    .font(.callout.weight(.medium))
-                    .lineLimit(1)
-                Text("\(group.references.count) tag\(group.references.count == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                ResourceCardTitleText(text: repositoryTitle(group.primaryReference))
+                ResourceCardSubtitleText(text: repositoryOwner(group.primaryReference))
             }
-            Spacer(minLength: 0)
+        } trailing: {
             if isExpanded {
-                GlassCircleButton(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                }
+            } else {
+                EmptyView()
             }
         }
     }
 
     private func imageFooterInfo(_ status: ImageUpdateStatus) -> some View {
-        HStack(spacing: Tokens.Space.s) {
+        ResourceCardFooterMini {
             Image(systemName: updateSymbol(status.state))
                 .font(.caption)
                 .foregroundStyle(updateTint(status.state))
-            Text(updateFooterText(status))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+        } text: {
+            ResourceCardSubtitleText(text: updateFooterText(status))
         }
     }
 
-    private func imageFooterActions(_ group: LocalImageTagGroup) -> some View {
-        HStack(spacing: Tokens.Space.m) {
-            footerAction("play", help: "Run") {
-                ui.runImage(group.primaryReference)
-                if isExpanded { onClose() }
-            }
-            footerAction("arrow.triangle.2.circlepath", help: "Check for Updates") {
-                Task { await app.checkImageUpdate(group.primaryReference) }
-            }
-            if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
-                footerAction("arrow.down.circle", help: "Pull Update", tint: .orange) {
-                    Task { await app.pullImageUpdate(group.primaryReference) }
-                }
-            }
-            if let image = primaryImage(group) {
-                footerAction("tag", help: "Add Tag") { tagging = image }
-                footerAction("arrow.up.circle", help: "Push") { pushing = image }
-                footerAction("arrow.up.doc", help: "Save") { save(image) }
-            }
-            footerAction("trash", help: "Prune", tint: .red) { pruning = true }
+    private func imageFooterTagCount(_ group: LocalImageTagGroup) -> some View {
+        ResourceCardFooterMini {
+            Image(systemName: "tag")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } text: {
+            ResourceCardMetricText(text: "\(group.references.count)")
         }
+    }
+
+    @ViewBuilder
+    private func imageFooterActions(_ group: LocalImageTagGroup) -> some View {
+        footerAction("play", help: "Run") {
+            ui.runImage(group.primaryReference)
+            if isExpanded { onClose() }
+        }
+        footerAction("arrow.triangle.2.circlepath", help: "Check for Updates") {
+            Task { await app.checkImageUpdate(group.primaryReference) }
+        }
+        if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
+            footerAction("arrow.down.circle", help: "Pull Update", tint: .orange) {
+                Task { await app.pullImageUpdate(group.primaryReference) }
+            }
+        }
+        if let image = primaryImage(group) {
+            footerAction("tag", help: "Add Tag") { tagging = image }
+            footerAction("arrow.up.circle", help: "Push") { pushing = image }
+            footerAction("arrow.up.doc", help: "Save") { save(image) }
+        }
+        footerAction("trash", help: "Prune", tint: .red) { pruning = true }
     }
 
     private func tagList(_ group: LocalImageTagGroup) -> some View {
@@ -522,15 +619,8 @@ private struct ToolbarImageGroupCard: View {
                 }
                 .padding(Tokens.Space.s)
             }
-            .frame(height: tagListHeight(for: group))
             .scrollEdgeEffectStyle(.soft, for: .all)
         }
-    }
-
-    private func tagListHeight(for group: LocalImageTagGroup) -> CGFloat {
-        let rows = CGFloat(max(group.references.count, 1))
-        let content = rows * ResourceCardSize.medium.height + max(0, rows - 1) * Tokens.Space.s
-        return min(content + Tokens.Space.s * 2, 360)
     }
 
     private func tagRow(_ reference: String, in group: LocalImageTagGroup) -> some View {
@@ -546,37 +636,33 @@ private struct ToolbarImageGroupCard: View {
                                  style: style,
                                  target: .imageTag(reference: reference, groupID: group.id))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(Format.shortImage(reference))
-                        .font(.system(.callout, design: .monospaced).weight(.medium))
-                        .lineLimit(1)
-                    Text(repositoryName(reference))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    ResourceCardMonospacedTitleText(text: Format.shortImage(reference))
+                    ResourceCardSubtitleText(text: repositoryName(reference))
                 }
-                Spacer(minLength: 0)
             }
         } footerLeading: {
             Text("Local tag")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         } footerActions: {
-            HStack(spacing: Tokens.Space.m) {
-                footerAction("play", help: "Run") {
-                    ui.runImage(reference)
-                    if isExpanded { onClose() }
-                }
-                footerAction("doc.on.doc", help: "Copy reference") { copyToPasteboard(reference) }
-                footerAction("doc.text.magnifyingglass", help: "Inspect") { inspect(reference, in: group) }
-                footerAction("trash", help: "Delete tag", tint: .red) { deletingReference = reference }
+            footerAction("play", help: "Run") {
+                ui.runImage(reference)
+                if isExpanded { onClose() }
             }
+            footerAction("doc.on.doc", help: "Copy reference") { copyToPasteboard(reference) }
+            footerAction("doc.text.magnifyingglass", help: "Inspect") { inspect(reference, in: group) }
+            footerAction("trash", help: "Delete tag", tint: .red) { deletingReference = reference }
         }
     }
 
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,
                               action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemName).font(.body)
+            ResourceCardFooterMini {
+                Image(systemName: systemName).font(.body)
+            } text: {
+                EmptyView()
+            }
         }
         .buttonStyle(.plain)
         .foregroundStyle(tint ?? .secondary)
@@ -644,12 +730,26 @@ private struct ToolbarImageGroupCard: View {
         return parsed.repository
     }
 
+    private func repositoryTitle(_ reference: String) -> String {
+        let parsed = RegistryImageReference.parse(reference)
+        return parsed.repository.split(separator: "/").map(String.init).last ?? parsed.repository
+    }
+
+    private func repositoryOwner(_ reference: String) -> String {
+        let parsed = RegistryImageReference.parse(reference)
+        let parts = parsed.repository.split(separator: "/").map(String.init)
+        if parts.count > 1 {
+            return parts.dropLast().joined(separator: "/")
+        }
+        return parsed.registry == "registry-1.docker.io" ? "docker.io" : parsed.registry
+    }
+
     private func updateFooterText(_ status: ImageUpdateStatus) -> String {
         switch status.state {
         case .unknown: return "Not checked"
         case .checking: return "Checking"
         case .current: return "Up to date"
-        case .updateAvailable: return "Update available"
+        case .updateAvailable: return "Updates available"
         case .error: return "Check failed"
         }
     }
@@ -708,13 +808,13 @@ private struct ToolbarActivityPanel: View {
     var body: some View {
         ActivityContent(showClose: true, elevated: false, onClose: onClose)
             .morphPanelSize(CGSize(width: 560, height: 520))
-        .morphPanelPlacement(.anchored)
+            .morphPanelPlacement(.anchored)
     }
 }
 
 /// The toolbar System panel — service status, volumes, disk usage, and the Prune Center as flat glass
-/// cards (the same treatment as the Images/Templates panels). Header-less by design: it dismisses on
-/// backdrop tap or Escape. New Volume hands off to the creation flow (closing the panel first).
+/// cards (the same treatment as the Images/Templates panels). New Volume hands off to the creation
+/// flow (closing the panel first).
 private struct ToolbarSystemPanel: View {
     var onClose: () -> Void
 
@@ -754,58 +854,63 @@ private struct ToolbarTemplatesPanel: View {
     }
 
     private var header: some View {
-        HStack(spacing: Tokens.Space.s) {
+        ResourceCardHeader {
+            GlassButtonItem(systemName: "bookmark", help: "Templates", isLabel: true)
+        } content: {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Templates").font(.headline)
                 Text("\(saved.count) saved").font(.caption).foregroundStyle(.secondary)
             }
-            Spacer()
-            GlassCircleButton(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+        } trailing: {
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+            }
         }
         .padding(Tokens.Space.m)
     }
 
     private var emptyCard: some View {
         ResourceGlassCard(size: .small, elevated: false) {
-            HStack(spacing: Tokens.Space.s) {
-                Image(systemName: "bookmark")
-                    .foregroundStyle(.secondary)
-                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-                    .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            ResourceCardHeader {
+                ResourceCardIconChip(symbol: "bookmark", tint: .secondary, backgroundOpacity: 0.22)
+            } content: {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("No templates").font(.callout.weight(.medium))
-                    Text("Save a container's settings as a template from the create form.")
-                        .font(.caption).foregroundStyle(.secondary)
+                    ResourceCardTitleText(text: "No templates")
+                    ResourceCardSubtitleText(text: "Save a container's settings as a template from the create form.")
                 }
-                Spacer(minLength: 0)
+            } trailing: {
+                EmptyView()
             }
         }
     }
 
     private func templateCard(_ template: Template) -> some View {
         ResourceGlassCard(size: .medium, elevated: false, onTap: { use(template) }) {
-            HStack(spacing: Tokens.Space.s) {
-                Image(systemName: "bookmark.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.accentColor)
-                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-                    .background(Color.accentColor.opacity(0.16), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            ResourceCardHeader {
+                ResourceCardIconChip(symbol: "bookmark.fill", tint: .accentColor)
+            } content: {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(template.name).font(.callout.weight(.medium)).lineLimit(1)
-                    Text(Format.shortImage(template.spec?.image ?? "—"))
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary).lineLimit(1)
+                    ResourceCardTitleText(text: template.name)
+                    ResourceCardMonospacedSubtitleText(text: Format.shortImage(template.spec?.image ?? "—"))
                 }
-                Spacer(minLength: 0)
+            } trailing: {
+                EmptyView()
             }
         } footerLeading: {
-            Text("Saved run configuration").font(.caption).foregroundStyle(.secondary)
+            ResourceCardSubtitleText(text: "Saved run configuration")
         } footerActions: {
-            HStack(spacing: Tokens.Space.m) {
-                Button(role: .destructive) { delete(template) } label: { Image(systemName: "trash").font(.body) }
-                    .buttonStyle(.plain).foregroundStyle(.red).help("Delete").accessibilityLabel("Delete")
-                Button("Use") { use(template) }.buttonStyle(.glassProminent).controlSize(.small)
+            Button(role: .destructive) { delete(template) } label: {
+                ResourceCardFooterMini {
+                    Image(systemName: "trash").font(.body)
+                } text: {
+                    EmptyView()
+                }
             }
+            .buttonStyle(.plain)
+            .foregroundStyle(.red)
+            .help("Delete")
+            .accessibilityLabel("Delete")
+            Button("Use") { use(template) }.buttonStyle(.glassProminent).controlSize(.small)
         }
         .contextMenu {
             Button { use(template) } label: { Label("Use", systemImage: "plus.circle") }
@@ -826,92 +931,85 @@ private struct ToolbarTemplatesPanel: View {
     }
 }
 
-/// The toolbar's center element: a single search field that filters the current page live
-/// (`ui.searchText`) and **expands in place** into the full command palette (it doesn't hide behind a
-/// separate panel — the same field stays as the header, the results list drops below it). Opens on ⌘K,
-/// on submit, or automatically when an in-page search comes up empty.
+/// The collapsed toolbar search source. It owns the measured `.palette` slot; the expanded command
+/// surface is rendered by `MorphingExpander`, so the source can hide while the panel owns the glass.
+private struct ToolbarSearchSource: View {
+    @Environment(UIState.self) private var ui
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        @Bindable var ui = ui
+        return GlassButton(singleItem: true) {
+            GlassButtonInputItem {
+                Image(systemName: "magnifyingglass")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                TextField("Search this page, or ⌘K for commands", text: $ui.searchText)
+                    .textFieldStyle(.plain)
+                    .font(.body).fontWeight(.medium)
+                    .focused($focused)
+                    .onSubmit { ui.activeMorph = .palette }
+                if !ui.searchText.isEmpty {
+                    Button { ui.searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .help("Clear search")
+                        .accessibilityLabel("Clear search")
+                } else {
+                    Text("⌘K")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .contentShape(Capsule(style: .continuous))
+        .simultaneousGesture(TapGesture().onEnded { focused = true })
+        .onChange(of: ui.searchText) { _, _ in escalateIfEmpty() }
+        .onChange(of: ui.pageResultCount) { _, _ in escalateIfEmpty() }
+        .onChange(of: ui.searchFocusToken) { _, _ in focused = true }
+        .onChange(of: ui.activeMorph) { _, morph in
+            if morph != nil { focused = false }
+        }
+        .onExitCommand { focused = false }
+        .onKeyPress(.escape) {
+            focused = false
+            return .handled
+        }
+    }
+
+    private func escalateIfEmpty() {
+        guard ui.activeMorph == nil else { return }
+        let query = ui.searchText.trimmingCharacters(in: .whitespaces)
+        if query.count >= 2, ui.pageResultCount == 0 {
+            ui.activeMorph = .palette
+        }
+    }
+}
+
+/// The expanded command palette content hosted inside `MorphingExpander`.
 private struct ToolbarCommandPalette: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @Environment(\.modalMaterial) private var modalMaterial
     @FocusState private var focused: Bool
-    let insets: EdgeInsets
+    var onClose: () -> Void
 
     private var isOpen: Bool { ui.activeMorph == .palette }
     private var items: [PaletteItem] { PaletteItem.filtered(ui.searchText, app: app, ui: ui) }
-    private var spring: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
-
-    /// Visual open state, animated explicitly off `isOpen` so the grow plays for every trigger
-    /// (⌘K, submit, escalation) — implicit `.animation(value:)` wasn't firing for the size change.
-    @State private var expanded = false
-
-    private let collapsedWidth: CGFloat = Tokens.Toolbar.searchMaxWidth
-    private let openWidth: CGFloat = 560
-    private let openHeightCap: CGFloat = 480
-    private var topInset: CGFloat { Tokens.Toolbar.topPadding }
 
     var body: some View {
-        GeometryReader { geo in
-            let openHeight = max(Tokens.Toolbar.controlHeight,
-                                 min(openHeightCap, geo.size.height - topInset - insets.bottom))
-            ZStack(alignment: .top) {
-                if expanded {
-                    Rectangle()
-                        .fill(.black.opacity(0.28))
-                        .ignoresSafeArea()
-                        .contentShape(Rectangle())
-                        .onTapGesture { close() }
-                        .transition(.opacity)
-                }
-                panel(openHeight: openHeight)
-                    .frame(maxWidth: .infinity, alignment: .top)   // centered in the detail area
-            }
-        }
-        .onChange(of: ui.searchText) { _, _ in escalateIfEmpty() }
-        .onChange(of: ui.pageResultCount) { _, _ in escalateIfEmpty() }
-        .onChange(of: isOpen) { _, open in
-            if open { ui.paletteIndex = 0 }
-            focused = open
-            withAnimation(spring) { expanded = open }
-        }
-        // ⌘S focuses the page-search field (without opening the palette).
-        .onChange(of: ui.searchFocusToken) { _, _ in focused = true }
-    }
-
-    private func panel(openHeight: CGFloat) -> some View {
-        // Drive visuals off `expanded` (animated), keeping the list mounted but faded + clipped when
-        // collapsed so the height interpolates smoothly instead of the content popping in/out.
-        let radius = expanded ? Tokens.Radius.sheet : Tokens.Toolbar.controlHeight / 2
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        return VStack(spacing: 0) {
+        VStack(spacing: 0) {
             fieldRow
-                .frame(height: expanded ? Tokens.Toolbar.searchOpenHeaderHeight : Tokens.Toolbar.controlHeight)
-            Divider().opacity(expanded ? 0.5 : 0)
-            resultsList.opacity(expanded ? 1 : 0)
+                .frame(height: Tokens.Toolbar.searchOpenHeaderHeight)
+            Divider().opacity(0.5)
+            resultsList
         }
-        .frame(width: expanded ? openWidth : collapsedWidth,
-               height: expanded ? openHeight : Tokens.Toolbar.controlHeight,
-               alignment: .top)
-        // Expanded, this reproduces `floatingPanelMaterial` exactly (ExteriorShadow .24/24/12 →
-        // VisualEffectBackground in the chosen modal material → white .18 stroke), so the search palette
-        // and the add-button morph render on the *same* surface and read as one gesture. Collapsed, it's
-        // an interactive-glass capsule like the toolbar buttons.
-        .background {
-            if expanded {
-                ExteriorShadow(cornerRadius: radius, color: .black.opacity(0.24), radius: 24, y: 12)
-            }
+        .morphPanelSize(CGSize(width: 560, height: 480))
+        .morphPanelPlacement(.anchored)
+        .onAppear {
+            ui.paletteIndex = 0
+            focused = true
         }
-        .background {
-            if expanded {
-                VisualEffectBackground(material: modalMaterial.nsMaterial, blendingMode: .withinWindow)
-                    .clipShape(shape)
-            } else {
-                Color.clear.glassEffect(.regular.interactive(), in: shape)
-            }
-        }
-        .clipShape(shape)
-        .overlay { if expanded { shape.strokeBorder(.white.opacity(0.18), lineWidth: 1) } }
-        .padding(.top, topInset)
     }
 
     private var fieldRow: some View {
@@ -920,8 +1018,7 @@ private struct ToolbarCommandPalette: View {
             Image(systemName: "magnifyingglass")
                 .font(.body)                       // scales with the field text (Dynamic Type), like the buttons
                 .foregroundStyle(.secondary)
-            TextField(isOpen ? "Search or run a command…" : "Search this page, or ⌘K for commands",
-                      text: $ui.searchText)
+            TextField("Search or run a command…", text: $ui.searchText)
                 .textFieldStyle(.plain)
                 .font(.body).fontWeight(.medium)   // 13pt medium on macOS, Dynamic-Type scalable
                 .focused($focused)
@@ -934,11 +1031,10 @@ private struct ToolbarCommandPalette: View {
                     .buttonStyle(.plain).foregroundStyle(.secondary)
                     .help("Clear search").accessibilityLabel("Clear search")
             } else {
-                Text(isOpen ? "esc" : "⌘K").font(.caption2).fontWeight(.medium).foregroundStyle(.tertiary)
+                Text("esc").font(.caption2).fontWeight(.medium).foregroundStyle(.tertiary)
             }
         }
-        // Roomier horizontal inset once expanded so the field breathes inside the larger panel.
-        .padding(.horizontal, expanded ? Tokens.Space.l : Tokens.Toolbar.searchInnerPadding)
+        .padding(.horizontal, Tokens.Space.l)
     }
 
     private var resultsList: some View {
@@ -982,15 +1078,7 @@ private struct ToolbarCommandPalette: View {
     // MARK: Behavior
 
     private func onSubmit() {
-        if isOpen { runSelected() } else { ui.toggleMorph(.palette) }
-    }
-
-    /// Escalate an in-page search into the palette when a query (≥2 chars) finds nothing on a page that
-    /// reports a count. Guards on `activeMorph == nil` so it only escalates once.
-    private func escalateIfEmpty() {
-        guard ui.activeMorph == nil else { return }
-        let q = ui.searchText.trimmingCharacters(in: .whitespaces)
-        if q.count >= 2, ui.pageResultCount == 0 { ui.activeMorph = .palette }
+        runSelected()
     }
 
     private func move(_ delta: Int) {
@@ -1009,8 +1097,7 @@ private struct ToolbarCommandPalette: View {
     }
 
     private func close() {
-        ui.activeMorph = nil
-        ui.searchText = ""
+        onClose()
     }
 }
 

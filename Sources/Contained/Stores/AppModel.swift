@@ -86,7 +86,9 @@ final class AppModel {
     }
 
     func volumeStyle(for name: String) -> Personalization {
-        personalization.volumeStyle(for: name) ?? Personalization()
+        var style = personalization.volumeStyle(for: name) ?? Personalization()
+        style.normalizeVolumeWidgets()
+        return style
     }
 
     // MARK: Per-volume I/O (aggregated from the containers that mount the volume)

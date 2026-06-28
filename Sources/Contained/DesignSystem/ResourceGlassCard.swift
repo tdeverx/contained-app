@@ -3,14 +3,6 @@ import SwiftUI
 enum ResourceCardSize {
     case small, medium, large
 
-    var height: CGFloat {
-        switch self {
-        case .small: return 54
-        case .medium: return 78
-        case .large: return 176
-        }
-    }
-
     var showsFooter: Bool { self != .small }
     var showsWidget: Bool { self == .large }
 }
@@ -97,11 +89,8 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     private var surface: some View {
         let shape = RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
         return cardContent
-            .padding(Tokens.Space.m)
             .frame(maxWidth: isExpanded ? ResourceCardExpandedMetrics.maxWidth : .infinity,
-                   minHeight: isExpanded ? 0 : size.height,
-                   maxHeight: isExpanded ? nil : size.height,
-                   alignment: .topLeading)
+                   alignment: .leading)
             .clipShape(shape)
             .glassSurface(.regular, cornerRadius: Tokens.Radius.card,
                           shadow: elevated,
@@ -123,6 +112,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
         if isExpanded {
             VStack(alignment: .leading, spacing: 0) {
                 header()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 expandedBody()
                 if size != .small {
                     footer(showWidget: size.showsWidget, showActions: controlsVisible)
@@ -132,17 +122,17 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
             switch size {
             case .small:
                 header()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             case .medium:
                 VStack(alignment: .leading, spacing: 0) {
                     header()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     footer(showWidget: false, showActions: hovering)
                 }
             case .large:
-                VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                VStack(alignment: .leading, spacing: 0) {
                     header()
-                    Spacer(minLength: 0)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     footer(showWidget: true, showActions: hovering)
                 }
             }
@@ -152,7 +142,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     private func expandedBody() -> some View {
         VStack(alignment: .leading, spacing: 0) {
             bodyContent()
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             if size == .small {
                 footer(showWidget: false, showActions: controlsVisible)
             }
@@ -160,20 +150,15 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     }
 
     private func footer(showWidget: Bool, showActions: Bool) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
-            if showWidget {
-                widget()
-            }
-            HStack(spacing: Tokens.Space.m) {
-                footerLeading()
-                Spacer(minLength: 0)
-                footerActions()
-                    .opacity(showActions ? 1 : 0)
-                    .allowsHitTesting(showActions)
-                    .animation(.easeOut(duration: 0.18), value: showActions)
-            }
+        ResourceCardFooter(showWidget: showWidget, actionsVisible: showActions) {
+            footerLeading()
+        } trailing: {
+            footerActions()
+        } widget: {
+            widget()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 10)
         }
-        .padding(.top, showWidget ? Tokens.Space.s : 0)
     }
 }
 

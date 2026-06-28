@@ -41,10 +41,16 @@ struct LogsTab: View {
             }
             Spacer()
             Text("\(lines.count) lines").font(.caption).foregroundStyle(.secondary).monospacedDigit()
-            GlassCircleButton(systemName: "doc.on.doc", help: "Copy all") {
-                copyToPasteboard(lines.joined(separator: "\n"))
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "doc.on.doc", help: "Copy all") {
+                    copyToPasteboard(lines.joined(separator: "\n"))
+                }
             }
-            GlassCircleButton(systemName: "trash", help: "Clear") { lines.removeAll(); carry = "" }
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "trash", help: "Clear") {
+                    lines.removeAll(); carry = ""
+                }
+            }
         }
         .padding(Tokens.Space.m)
     }

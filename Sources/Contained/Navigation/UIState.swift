@@ -22,10 +22,20 @@ final class UIState {
     /// reads this to grow the matching panel from that button's slot.
     enum ToolbarMorph: Hashable { case add, palette, updates, activity, templates, system }
     var activeMorph: ToolbarMorph?
+    private(set) var morphCloseRequestToken = 0
 
     /// Toggle a toolbar morph panel (open it, or close it if already open).
     func toggleMorph(_ morph: ToolbarMorph) {
-        activeMorph = (activeMorph == morph) ? nil : morph
+        if activeMorph == morph {
+            requestMorphClose(morph)
+        } else {
+            activeMorph = morph
+        }
+    }
+
+    func requestMorphClose(_ morph: ToolbarMorph? = nil) {
+        guard let activeMorph, morph == nil || activeMorph == morph else { return }
+        morphCloseRequestToken &+= 1
     }
 
     /// The number of results the current page is showing for `searchText` (nil = page doesn't report
@@ -90,8 +100,14 @@ final class UIState {
     /// Bumped by ⌘S to focus the toolbar page-search field (without opening the command palette).
     private(set) var searchFocusToken = 0
     func focusSearch() {
-        activeMorph = nil
-        searchFocusToken &+= 1
+        if activeMorph != nil {
+            requestMorphClose()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { [weak self] in
+                self?.searchFocusToken &+= 1
+            }
+        } else {
+            searchFocusToken &+= 1
+        }
     }
 
     func runImage(_ reference: String) {

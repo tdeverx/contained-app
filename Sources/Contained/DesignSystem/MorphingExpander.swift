@@ -3,6 +3,63 @@ import SwiftUI
 enum MorphPanelPlacement: Equatable {
     case anchored
     case centered
+    case topCentered
+}
+
+struct AppMorphTarget {
+    var placement: MorphPanelPlacement
+    var safeArea: AppSafeAreaPolicy
+    var margin: CGFloat
+    var proposedSize: (CGRect) -> CGSize
+
+    static func anchored(size: CGSize,
+                         safeArea: AppSafeAreaPolicy = .toolbarChrome,
+                         margin: CGFloat = MorphGeometry.defaultMargin) -> AppMorphTarget {
+        AppMorphTarget(placement: .anchored,
+                       safeArea: safeArea,
+                       margin: margin,
+                       proposedSize: { _ in size })
+    }
+
+    static func centered(size: CGSize,
+                         safeArea: AppSafeAreaPolicy = .content,
+                         margin: CGFloat = MorphGeometry.defaultMargin) -> AppMorphTarget {
+        AppMorphTarget(placement: .centered,
+                       safeArea: safeArea,
+                       margin: margin,
+                       proposedSize: { _ in size })
+    }
+
+    static func centered(safeArea: AppSafeAreaPolicy = .content,
+                         margin: CGFloat = MorphGeometry.defaultMargin,
+                         proposedSize: @escaping (CGRect) -> CGSize) -> AppMorphTarget {
+        AppMorphTarget(placement: .centered,
+                       safeArea: safeArea,
+                       margin: margin,
+                       proposedSize: proposedSize)
+    }
+
+    static func topCentered(safeArea: AppSafeAreaPolicy = .content,
+                            margin: CGFloat = MorphGeometry.defaultMargin,
+                            proposedSize: @escaping (CGRect) -> CGSize) -> AppMorphTarget {
+        AppMorphTarget(placement: .topCentered,
+                       safeArea: safeArea,
+                       margin: margin,
+                       proposedSize: proposedSize)
+    }
+
+    func rect(origin: CGRect,
+              in container: CGSize,
+              safeAreas: AppSafeAreaManager,
+              proposedSize overrideSize: CGSize? = nil,
+              placement overridePlacement: MorphPanelPlacement? = nil) -> CGRect {
+        let bounds = safeAreas.bounds(in: container, policy: safeArea)
+        return MorphGeometry.targetRect(origin: origin,
+                                        proposedSize: overrideSize ?? proposedSize(bounds),
+                                        bounds: bounds,
+                                        placement: overridePlacement ?? placement,
+                                        margin: margin)
+    }
 }
 
 struct GlobalBackdropStyle: OptionSet {
@@ -50,6 +107,11 @@ enum MorphGeometry {
             let y = bounds.minY + (bounds.height - size.height) / 2
             return clamped(CGRect(origin: CGPoint(x: x, y: y), size: size),
                            in: bounds, margin: margin)
+        case .topCentered:
+            let x = bounds.minX + (bounds.width - size.width) / 2
+            let y = bounds.minY + margin
+            return clamped(CGRect(origin: CGPoint(x: x, y: y), size: size),
+                           in: bounds, margin: margin)
         case .anchored:
             let fallback = CGPoint(x: bounds.minX + margin, y: bounds.minY + margin)
             let originPoint = origin.isUsable ? origin.origin : fallback
@@ -95,11 +157,12 @@ struct MorphingExpander<Content: View>: View {
     @Binding var isPresented: Bool
     /// The slot the panel grows out of / collapses back into, in this view's coordinate space.
     let originFrame: CGRect
-    var panelSize: CGSize = CGSize(width: 460, height: 440)
-    var placement: MorphPanelPlacement = .centered
-    var targetInsets: EdgeInsets = EdgeInsets()
+    var target: AppMorphTarget
     var backdropStyle: GlobalBackdropStyle = .dim
     var showsPanelShadow = true
+    var closeRequestToken = 0
+    var sourceCornerRadius = Tokens.Toolbar.groupRadius
+    var targetCornerRadius = Tokens.Radius.sheet
     var onBackdropTap: (() -> Void)?
     @ViewBuilder var content: () -> Content
 
@@ -111,12 +174,36 @@ struct MorphingExpander<Content: View>: View {
     @State private var livePlacement: MorphPanelPlacement?
     @Namespace private var shellNamespace
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appSafeAreas) private var safeAreas
     private var spring: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
+
+    init(isPresented: Binding<Bool>,
+         originFrame: CGRect,
+         target: AppMorphTarget = .centered(size: CGSize(width: 460, height: 440)),
+         backdropStyle: GlobalBackdropStyle = .dim,
+         showsPanelShadow: Bool = true,
+         closeRequestToken: Int = 0,
+         sourceCornerRadius: CGFloat = Tokens.Toolbar.groupRadius,
+         targetCornerRadius: CGFloat = Tokens.Radius.sheet,
+         onBackdropTap: (() -> Void)? = nil,
+         @ViewBuilder content: @escaping () -> Content) {
+        self._isPresented = isPresented
+        self.originFrame = originFrame
+        self.target = target
+        self.backdropStyle = backdropStyle
+        self.showsPanelShadow = showsPanelShadow
+        self.closeRequestToken = closeRequestToken
+        self.sourceCornerRadius = sourceCornerRadius
+        self.targetCornerRadius = targetCornerRadius
+        self.onBackdropTap = onBackdropTap
+        self.content = content
+    }
 
     var body: some View {
         GeometryReader { geo in
             let target = targetRect(in: geo.size)
             let rect = expanded ? target : originFrame
+            let cornerRadius = expanded ? targetCornerRadius : sourceCornerRadius
             ZStack {
                 Color.clear
                     .globalBackdrop(style: backdropStyle,
@@ -131,7 +218,8 @@ struct MorphingExpander<Content: View>: View {
                     .opacity(0)
                     .accessibilityHidden(true)
 
-                MorphPanelShell(showsShadow: showsPanelShadow)
+                MorphPanelShell(cornerRadius: cornerRadius,
+                                showsShadow: showsPanelShadow)
                     .matchedGeometryEffect(id: "morph-panel-shell",
                                            in: shellNamespace,
                                            properties: .frame)
@@ -143,7 +231,7 @@ struct MorphingExpander<Content: View>: View {
                     // visible layers so elevation participates in the morph instead of popping in late.
                     .opacity(expanded ? 1 : 0)
                     .frame(width: rect.width, height: rect.height)
-                    .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.sheet, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                     .position(x: rect.midX, y: rect.midY)
             }
         }
@@ -160,24 +248,16 @@ struct MorphingExpander<Content: View>: View {
             // Grow on the next runloop so the panel has a real starting (origin) frame to animate from.
             DispatchQueue.main.async { withAnimation(spring) { expanded = true } }
         }
+        .onChange(of: closeRequestToken) { _, _ in close() }
         .onExitCommand(perform: close)
     }
 
     private func targetRect(in size: CGSize) -> CGRect {
-        let bounds = safeBounds(in: size)
-        return MorphGeometry.targetRect(origin: originFrame,
-                                        proposedSize: liveSize ?? panelSize,
-                                        bounds: bounds,
-                                        placement: livePlacement ?? placement,
-                                        margin: Tokens.Space.l)
-    }
-
-    private func safeBounds(in size: CGSize) -> CGRect {
-        let minX = targetInsets.leading
-        let minY = targetInsets.top
-        let width = max(1, size.width - targetInsets.leading - targetInsets.trailing)
-        let height = max(1, size.height - targetInsets.top - targetInsets.bottom)
-        return CGRect(x: minX, y: minY, width: width, height: height)
+        target.rect(origin: originFrame,
+                    in: size,
+                    safeAreas: safeAreas,
+                    proposedSize: liveSize,
+                    placement: livePlacement)
     }
 
     private func close() {
@@ -210,11 +290,12 @@ extension View {
 }
 
 private struct MorphPanelShell: View {
+    var cornerRadius = Tokens.Radius.sheet
     var showsShadow = true
 
     var body: some View {
         Color.clear
-            .floatingPanelMaterial(showsShadow: showsShadow)
+            .floatingPanelMaterial(cornerRadius: cornerRadius, showsShadow: showsShadow)
     }
 }
 

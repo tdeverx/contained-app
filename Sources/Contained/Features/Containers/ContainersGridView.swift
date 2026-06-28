@@ -8,6 +8,7 @@ import ContainedCore
 struct ContainersGridView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
+    @Environment(\.appSafeAreas) private var safeAreas
 
     @State private var detail: ContainerSnapshot?
     @State private var editing: ContainerSnapshot?
@@ -93,6 +94,7 @@ struct ContainersGridView: View {
     var body: some View {
         @Bindable var ui = ui
         return GeometryReader { viewport in
+            let scrollBounds = safeAreas.bounds(in: viewport.size, policy: .content)
             ZStack {
                 ScrollView {
                     ZStack(alignment: .top) {
@@ -100,7 +102,7 @@ struct ContainersGridView: View {
                         // window. As a sibling — not an ancestor — of the cards, it never delays or
                         // intercepts their taps; only clicks that fall through the gaps reach it.
                         Color.clear
-                            .frame(maxWidth: .infinity, minHeight: viewport.size.height)
+                            .frame(maxWidth: .infinity, minHeight: scrollBounds.height)
                             .contentShape(Rectangle())
                             .onTapGesture(count: 2) { zoomFrontWindow() }
                         LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
@@ -111,6 +113,8 @@ struct ContainersGridView: View {
                         .padding(Tokens.Space.l)
                     }
                 }
+                .frame(width: scrollBounds.width, height: scrollBounds.height)
+                .position(x: scrollBounds.midX, y: scrollBounds.midY)
                 .scrollEdgeEffectStyle(.soft, for: .all)
                 .disabled(detail != nil)
 
@@ -123,11 +127,20 @@ struct ContainersGridView: View {
                 }
 
                 if let detail {
-                    let target = panelRect(in: viewport.size)
+                    let safeBounds = safeAreas.bounds(in: viewport.size, policy: cardDetailSafeAreaPolicy)
+                    let target = cardDetailTarget.rect(origin: .zero,
+                                                       in: viewport.size,
+                                                       safeAreas: safeAreas)
                     let source = cardFrames[detail.id].flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
                     let rect = expanded ? target : source
+                    morphDebugBorders(viewport: viewport.size,
+                                      safeBounds: safeBounds,
+                                      source: source,
+                                      target: target)
+                        .zIndex(9)
                     expandedCard(detail)
                         .frame(width: rect.width, height: rect.height, alignment: .top)
+                        .border(.red, width: 2)
                         .position(x: rect.midX, y: rect.midY)
                         .zIndex(10)
                 }
@@ -199,56 +212,37 @@ struct ContainersGridView: View {
             Button {
                 toggleCollapsed(group.name)
             } label: {
-                HStack(spacing: Tokens.Space.s) {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(collapsed ? 0 : 90))
-                    Image(systemName: "network").font(.callout).foregroundStyle(.secondary)
-                    Text(group.name).font(.headline)
-                    Text("\(group.containers.count)")
-                        .font(.caption.weight(.medium))
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(collapsed ? 0 : 90))
+            }
+            .buttonStyle(.plain)
+            HStack(spacing: Tokens.Space.s) {
+                Image(systemName: "network").font(.callout).foregroundStyle(.secondary)
+                Text(group.name).font(.headline)
+                Text("\(group.containers.count)")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7).padding(.vertical, 2)
+                    .background(.quaternary, in: Capsule())
+                if group.isBuiltin {
+                    Text("builtin").font(.caption2.weight(.medium))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 7).padding(.vertical, 2)
                         .background(.quaternary, in: Capsule())
-                    if group.isBuiltin {
-                        Text("builtin").font(.caption2.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(.quaternary, in: Capsule())
-                    }
                 }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             Spacer(minLength: 0)
             if let resource = group.resource {
-                networkOptionsMenu(resource)
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "ellipsis", help: "Inspect network") { inspectingNetwork = resource }
+                }
             }
         }
         .padding(.horizontal, Tokens.Space.xs)
         .padding(.vertical, Tokens.Space.xs)
         .contextMenu { if let resource = group.resource { networkMenu(resource) } }
-    }
-
-    /// The header's ⋯ menu, styled to match the cards' non-prominent round glass buttons (a neutral
-    /// glass circle — not the accent-tinted resource-row menu).
-    private func networkOptionsMenu(_ resource: NetworkResource) -> some View {
-        Menu {
-            networkMenu(resource)
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.body.weight(.medium))
-                .frame(width: Tokens.IconSize.rowMenu, height: Tokens.IconSize.rowMenu)
-        }
-        .menuStyle(.button)
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .tint(.secondary)
-        .help("Network options")
-        .accessibilityLabel("Network options")
     }
 
     @ViewBuilder
@@ -343,24 +337,50 @@ struct ContainersGridView: View {
         )
     }
 
-    private func panelSize(in viewport: CGSize) -> CGSize {
+    private var cardDetailTarget: AppMorphTarget {
+        .topCentered(safeArea: cardDetailSafeAreaPolicy, margin: 0) { bounds in
+            panelSize(in: bounds.size)
+        }
+    }
+
+    private var cardDetailSafeAreaPolicy: AppSafeAreaPolicy {
+        AppSafeAreaPolicy(excluding: .both, padding: .none, includesSystemInsets: false)
+    }
+
+    private func panelSize(in available: CGSize) -> CGSize {
         let fitted = MorphGeometry.fittedSize(
-            CGSize(width: max(viewport.width * 0.62, 680), height: 620),
-            in: viewport,
-            margin: Tokens.Space.xxl
+            CGSize(width: max(available.width * 0.62, 680), height: 620),
+            in: available,
+            margin: 0
         )
-        let width = max(min(fitted.width, viewport.width - Tokens.Space.xxl * 2), min(360, fitted.width))
-        let height = max(min(fitted.height, viewport.height - Tokens.Space.xxl * 2), min(420, fitted.height))
+        let width = max(min(fitted.width, available.width), min(360, fitted.width))
+        let height = available.height
         return CGSize(width: width, height: height)
     }
 
-    /// The centered final frame the promoted card grows into.
-    private func panelRect(in viewport: CGSize) -> CGRect {
-        MorphGeometry.targetRect(origin: .zero,
-                                 proposedSize: panelSize(in: viewport),
-                                 container: viewport,
-                                 placement: .centered,
-                                 margin: Tokens.Space.xxl)
+    private func morphDebugBorders(viewport: CGSize,
+                                   safeBounds: CGRect,
+                                   source: CGRect,
+                                   target: CGRect) -> some View {
+        ZStack {
+            Rectangle()
+                .stroke(.blue, style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
+                .frame(width: viewport.width, height: viewport.height)
+                .position(x: viewport.width / 2, y: viewport.height / 2)
+            Rectangle()
+                .stroke(.purple, style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
+                .frame(width: safeBounds.width, height: safeBounds.height)
+                .position(x: safeBounds.midX, y: safeBounds.midY)
+            Rectangle()
+                .stroke(.orange, style: StrokeStyle(lineWidth: 2, dash: [4, 4]))
+                .frame(width: source.width, height: source.height)
+                .position(x: source.midX, y: source.midY)
+            Rectangle()
+                .stroke(.green, lineWidth: 2)
+                .frame(width: target.width, height: target.height)
+                .position(x: target.midX, y: target.midY)
+        }
+        .allowsHitTesting(false)
     }
 
     private func openDetail(_ snapshot: ContainerSnapshot) {

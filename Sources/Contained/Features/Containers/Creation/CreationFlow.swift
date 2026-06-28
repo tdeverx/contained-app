@@ -366,9 +366,15 @@ struct CreationFlow: View {
             HStack(spacing: Tokens.Space.s) {
                 switch leading {
                 case .close:
-                    GlassCircleButton(systemName: "xmark", help: "Cancel", isCancel: true) { onClose() }
+                    GlassButton(singleItem: true) {
+                        GlassButtonItem(systemName: "xmark", help: "Cancel", isCancel: true) {
+                            onClose()
+                        }
+                    }
                 case .back(let action):
-                    GlassCircleButton(systemName: "chevron.left", help: "Back", action: action)
+                    GlassButton(singleItem: true) {
+                        GlassButtonItem(systemName: "chevron.left", help: "Back", action: action)
+                    }
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title).font(.headline)
@@ -512,12 +518,7 @@ struct CreationFlow: View {
     }
 
     private func placement(for page: Page) -> MorphPanelPlacement {
-        switch page {
-        case .menu, .chooser, .compose:
-            return .anchored
-        case .search, .localImages, .pasteCompose, .imageArchive, .templates, .network, .volume, .build, .configure:
-            return .centered
-        }
+        .anchored
     }
 
     /// Pick a compose file, then use the existing prefill queue (one form per service).

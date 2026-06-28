@@ -22,10 +22,15 @@ struct PullImageSheet: View {
             HStack {
                 Text("Pull image").font(.headline)
                 Spacer()
-                GlassCircleButton(systemName: "xmark", help: started ? "Close" : "Cancel", isCancel: true) { finish() }
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "xmark", help: started ? "Close" : "Cancel",
+                                    isCancel: true) { finish() }
+                }
                 if !started {
-                    GlassCircleButton(systemName: "arrow.down.circle.fill", prominent: true, help: "Pull") {
-                        started = true
+                    GlassButton(singleItem: true) {
+                        GlassButtonItem(systemName: "arrow.down.circle.fill", help: "Pull") {
+                            started = true
+                        }
                     }
                     .disabled(ref.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
