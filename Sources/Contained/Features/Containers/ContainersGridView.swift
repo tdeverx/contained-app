@@ -138,14 +138,6 @@ struct ContainersGridView: View {
         .overlay(alignment: .bottom) {
             if selecting && !selection.isEmpty { batchBar } else if let message = store.errorMessage { ErrorToast(message: message) }
         }
-        .safeAreaInset(edge: .bottom) {
-            HStack {
-                Spacer()
-                CardSizePicker(selection: densityBinding)
-            }
-            .padding(.horizontal, Tokens.Space.l)
-            .padding(.bottom, Tokens.Space.l)
-        }
         .overlay {
             if store.snapshots.isEmpty && app.networks.isEmpty { emptyState }
         }
@@ -280,10 +272,6 @@ struct ContainersGridView: View {
 
     private var deleteNetworkBinding: Binding<Bool> {
         Binding(get: { deletingNetwork != nil }, set: { if !$0 { deletingNetwork = nil } })
-    }
-
-    private var densityBinding: Binding<CardDensity> {
-        Binding(get: { app.settings.density }, set: { app.settings.density = $0 })
     }
 
     private func deleteNetwork(_ network: NetworkResource) async {

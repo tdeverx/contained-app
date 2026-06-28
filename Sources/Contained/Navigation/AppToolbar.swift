@@ -40,10 +40,10 @@ struct AppToolbar: View {
                 Spacer(minLength: 0)            // empty + hit-transparent below the band
                     .allowsHitTesting(false)
             }
-            // The center search/command-palette is a single element that expands in place; it lives in
-            // its own full-area layer so its open state can float over the page with a backdrop.
-            ToolbarCommandPalette(insets: morphTargetInsets)
-                .zIndex(ui.activeMorph == .palette ? 20 : 5)
+            // The center search / command palette is hidden for now (in-window search is being reworked
+            // on another branch). Re-enable by restoring this layer:
+            //   ToolbarCommandPalette(insets: morphTargetInsets)
+            //       .zIndex(ui.activeMorph == .palette ? 20 : 5)
             addMorphLayer
                 .zIndex(ui.activeMorph == .add ? 30 : 0)
             updatesMorphLayer
@@ -69,7 +69,9 @@ struct AppToolbar: View {
             Spacer(minLength: Tokens.Space.m)
             trailingZone
         }
-        .padding(.horizontal, Tokens.Toolbar.outerPadding)
+        // Leading inset clears the window traffic lights now that the toolbar spans the full window.
+        .padding(.leading, Tokens.Toolbar.leadingInset)
+        .padding(.trailing, Tokens.Toolbar.outerPadding)
         .frame(maxWidth: .infinity)
     }
 

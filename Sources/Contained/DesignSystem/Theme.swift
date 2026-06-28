@@ -54,7 +54,10 @@ enum Tokens {
         // Button glyphs use `.headline` + `.imageScale(.large)` (see ToolbarControls) so they scale
         // with Dynamic Type — no fixed point size token.
         static let iconInnerPadding: CGFloat = 5 // padding around the glyph inside the 36 button
-        static let outerPadding: CGFloat = 8    // band inset from the detail-column edges
+        static let outerPadding: CGFloat = 8    // band inset from the window edges
+        // The toolbar now spans the whole window (no sidebar), so its leading edge must clear the
+        // traffic-light cluster (close/min/zoom ≈ 70pt) plus a little breathing room.
+        static let leadingInset: CGFloat = 80   // band inset on the left, past the traffic lights
         static let groupPaddingH: CGFloat = 8   // horizontal glass margin inside a group
         static let groupSpacing: CGFloat = 8    // spacing between buttons / groups
         static let searchMaxWidth: CGFloat = 380

@@ -103,12 +103,19 @@ struct RootView: View {
                 // the safe area, so the vibrancy still fills behind the toolbar.)
                 content
             }
-            .environment(\.appSafeAreas, AppSafeAreaManager(system: proxy.safeAreaInsets,
-                                                            toolbarHeight: AppToolbar.bandHeight))
+            // Reserve exactly the band height at the top regardless of how the real window toolbar
+            // reports its safe area — `toolbarHeight` makes up the difference so content always clears
+            // the band (whether the system inset is 0 or the full titlebar height).
+            .environment(\.appSafeAreas,
+                         AppSafeAreaManager(system: proxy.safeAreaInsets,
+                                            toolbarHeight: max(0, AppToolbar.bandHeight - proxy.safeAreaInsets.top)))
             // The app-wide toolbar draws up into the title-bar band; its morph panels center within the
             // content area.
             .overlay { AppToolbar().ignoresSafeArea(.container, edges: .top) }
         }
+        // Attach a real (empty, transparent) unified window toolbar so AppKit sizes and vertically
+        // centers the traffic lights in the titlebar band — our custom glass controls float over it.
+        .background(WindowChromeConfigurator())
         // Right-click the empty background for the page's overflow actions (cards/rows keep their own
         // context menus, which take precedence). Double-click it to zoom the window — the gesture the
         // title bar used to provide.
@@ -220,4 +227,30 @@ struct RootView: View {
         }
     }
 
+}
+
+/// Attaches an empty, transparent **unified** `NSToolbar` to the hosting window. With no native title
+/// bar and no toolbar, AppKit pins the traffic lights tight against the top; a unified toolbar gives
+/// the titlebar its proper band height so the close/min/zoom buttons are sized and vertically centered
+/// correctly. The toolbar carries no items — our custom glass controls (`AppToolbar`) float over it.
+private struct WindowChromeConfigurator: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { configure(view.window) }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { configure(nsView.window) }
+    }
+
+    private func configure(_ window: NSWindow?) {
+        guard let window else { return }
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        if window.toolbar == nil {
+            window.toolbar = NSToolbar(identifier: "ContainedTitlebar")
+        }
+        window.toolbarStyle = .unified
+    }
 }
