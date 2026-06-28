@@ -12,14 +12,14 @@ struct ResourceRow<Accessory: View>: View {
         ResourceGlassCard(size: .small) {
             HStack(spacing: Tokens.Space.m) {
                 Image(systemName: symbol)
-                    .font(.system(size: 15))
+                    .font(.title3)
                     .foregroundStyle(tint)
                     .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
                     .background(tint.opacity(0.16), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                    Text(title).font(.callout.weight(.medium)).lineLimit(1)
                     if !subtitle.isEmpty {
-                        Text(subtitle).font(.system(size: 11, design: .monospaced))
+                        Text(subtitle).font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary).lineLimit(1)
                     }
                 }

@@ -1,26 +1,29 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 import ContainedCore
 
-/// The native macOS shell: a system sidebar (whose header carries the global add ＋ / overflow ⋯
-/// menus) over a translucent content area. There is no window toolbar; the command palette (⌘K)
-/// covers global quick actions and in-window search is being reworked.
+/// The app shell: a single translucent content area (Containers) with the app-wide toolbar floating in
+/// the title-bar band. The sidebar is gone — global actions live in the toolbar morph panels, the
+/// command palette (⌘K), and the page-background overflow menu.
 struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Image load/prune used to live on the Images page; now they're global (the page is gone).
+    @State private var pruningImages = false
+    /// Registry login used to live on the Registries page; the page is gone (credentials live in
+    /// Settings), so the login sheet is presented globally instead.
+    @State private var registryLogin = false
+    /// System logs used to live on the System page; the page is now a toolbar panel, so the standalone
+    /// viewer (reachable from menus / the command palette) is presented globally.
+    @State private var showSystemLogs = false
 
     var body: some View {
         @Bindable var settings = app.settings
         @Bindable var ui = ui
-        NavigationSplitView {
-            Sidebar(selection: $ui.section)
-                .navigationSplitViewColumnWidth(min: 210, ideal: 224, max: 264)
-        } detail: {
-            detailShell(settings: settings)
-        }
-        .navigationTitle(ui.section.title)
+        detailShell(settings: settings)
         .sheet(isPresented: $ui.showCreateWizard, onDismiss: { ui.creationPrefillSpec = nil }) {
             CreationWizard(entry: ui.creationEntry, prefill: ui.creationPrefillSpec)
         }
@@ -37,6 +40,25 @@ struct RootView: View {
             ReleaseNotesView(title: "What’s New",
                              html: app.updater.currentReleaseNotesHTML,
                              onClose: { app.updater.markWhatsNewSeen() })
+        }
+        // These used to live on now-removed pages (Images / Registries / System); they're dispatched
+        // globally from the toolbar panels, menus, and the command palette.
+        .onChange(of: ui.pendingAction) { _, action in
+            switch action {
+            case .loadImage:     ui.pendingAction = nil; loadImageTar()
+            case .pruneImages:   ui.pendingAction = nil; pruningImages = true
+            case .registryLogin: ui.pendingAction = nil; registryLogin = true
+            case .systemLogs:    ui.pendingAction = nil; showSystemLogs = true
+            default: break
+            }
+        }
+        .sheet(isPresented: $registryLogin) { RegistryLoginSheet() }
+        .sheet(isPresented: $showSystemLogs) { SystemLogsSheet() }
+        .confirmationDialog("Prune images?", isPresented: $pruningImages) {
+            Button("Remove unused", role: .destructive) { Task { await pruneImages(all: false) } }
+            Button("Remove all unreferenced", role: .destructive) { Task { await pruneImages(all: true) } }
+        } message: {
+            Text("Unused images aren't referenced by any container. “All” also removes dangling layers.")
         }
         // App-wide drop: a compose file opens the creation flow prefilled; an image .tar loads into the
         // store. The Images page keeps its own .tar drop target, which takes precedence there.
@@ -63,16 +85,8 @@ struct RootView: View {
         .environment(\.modalMaterial, settings.modalMaterial)
         .preferredColorScheme(settings.appearance.colorScheme)
         .task {
-            if let restored = AppSection(rawValue: settings.lastSection) { ui.section = restored }
             await app.bootstrapIfNeeded()
             app.coordinator.start(app: app)
-        }
-        .onChange(of: ui.section) { _, new in
-            ui.searchText = ""
-            ui.pageResultCount = nil
-            settings.lastSection = new.rawValue
-            app.coordinator.activeSection = new
-            app.coordinator.wake()
         }
         .onChange(of: scenePhase) { _, phase in
             app.coordinator.isActive = (phase == .active)
@@ -91,8 +105,8 @@ struct RootView: View {
             }
             .environment(\.appSafeAreas, AppSafeAreaManager(system: proxy.safeAreaInsets,
                                                             toolbarHeight: AppToolbar.bandHeight))
-            // The app-wide toolbar lives in the detail column only (never over the sidebar) and draws up
-            // into the title-bar band; its morph panels center within the content area.
+            // The app-wide toolbar draws up into the title-bar band; its morph panels center within the
+            // content area.
             .overlay { AppToolbar().ignoresSafeArea(.container, edges: .top) }
         }
         // Right-click the empty background for the page's overflow actions (cards/rows keep their own
@@ -120,29 +134,33 @@ struct RootView: View {
         @Bindable var ui = ui
         @Bindable var settings = app.settings
         Button { app.coordinator.wake() } label: { Label("Refresh", systemImage: "arrow.clockwise") }
-        switch ui.section {
-        case .containers:
-            Divider()
-            Toggle(isOn: $ui.runningOnly) { Label("Show Running Only", systemImage: "play.circle") }
-            Picker(selection: $settings.density) {
-                ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
-            } label: { Label("Card Size", systemImage: "square.grid.2x2") }
-        case .images:
-            Divider()
-            Picker(selection: $settings.density) {
-                ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
-            } label: { Label("Card Size", systemImage: "square.grid.2x2") }
-            Button { ui.dispatch(.loadImage) } label: { Label("Load Image Tar…", systemImage: "square.and.arrow.down") }
-            Button { ui.dispatch(.pruneImages) } label: { Label("Prune Images…", systemImage: "trash") }
-        case .system:
-            Divider()
-            Button { ui.dispatch(.activityHistory) } label: { Label("Activity History", systemImage: "clock.arrow.circlepath") }
-            Button { ui.dispatch(.systemLogs) } label: { Label("System Logs", systemImage: "text.alignleft") }
-        default:
-            EmptyView()
-        }
+        Divider()
+        Toggle(isOn: $ui.runningOnly) { Label("Show Running Only", systemImage: "play.circle") }
+        Picker(selection: $settings.density) {
+            ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
+        } label: { Label("Card Size", systemImage: "square.grid.2x2") }
+        Divider()
+        Button { ui.toggleMorph(.system) } label: { Label("System", systemImage: "gearshape.2") }
+        Button { ui.toggleMorph(.activity) } label: { Label("Activity", systemImage: "clock.arrow.circlepath") }
         Divider()
         Button { ui.toggleMorph(.palette) } label: { Label("Command Palette…", systemImage: "command") }
+    }
+
+    /// Pick an image `.tar` and load it into the local store (formerly the Images page loader).
+    private func loadImageTar() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.init(filenameExtension: "tar") ?? .data]
+        panel.message = "Choose an image tar archive"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        app.loadImageTar(at: url)
+    }
+
+    private func pruneImages(all: Bool) async {
+        guard let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.pruneImages(all: all) }) { app.flash(error) }
+        await app.refreshImagesIfStale(force: true)
     }
 
     /// Toggle the front window between its zoomed (filled) and restored size — emulates the
@@ -197,21 +215,8 @@ struct RootView: View {
     @ViewBuilder
     private var content: some View {
         switch app.bootstrap {
-        case .ready: destination
+        case .ready: ContainersGridView()   // the only standing page; everything else is a toolbar panel
         default: BootstrapView()
-        }
-    }
-
-    @ViewBuilder
-    private var destination: some View {
-        switch ui.section {
-        case .containers: ContainersGridView()
-        case .images: ImagesListView()
-        case .build: BuildWorkspaceView()
-        case .volumes: VolumesListView()
-        case .registries: RegistriesView()
-        case .system: SystemView()
-        case .templates: TemplatesView()
         }
     }
 

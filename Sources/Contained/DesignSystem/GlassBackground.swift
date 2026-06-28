@@ -7,6 +7,9 @@ struct GlassSurface: ViewModifier {
     var level: Level = .regular
     var cornerRadius: CGFloat = Tokens.Radius.card
     var glass: Glass = .regular
+    /// Lift the surface off the backdrop with a soft shadow. Pass `false` for flat tiles that sit
+    /// inside an already-elevated panel (e.g. cards in the toolbar morph panels / the creation menu).
+    var shadow: Bool = true
     var fill: Color? = nil
     var fillOpacity: Double = 0.18
     var gradient: Bool = false
@@ -24,10 +27,12 @@ struct GlassSurface: ViewModifier {
         return content
             .clipShape(shape)
             .background {
-                ExteriorShadow(cornerRadius: cornerRadius,
-                               color: shadowColor,
-                               radius: shadowRadius,
-                               y: shadowY)
+                if shadow {
+                    ExteriorShadow(cornerRadius: cornerRadius,
+                                   color: shadowColor,
+                                   radius: shadowRadius,
+                                   y: shadowY)
+                }
             }
             .glassEffect(glass, in: shape)
             .background {
@@ -73,12 +78,13 @@ extension View {
     func glassSurface(_ level: GlassSurface.Level = .regular,
                       cornerRadius: CGFloat = Tokens.Radius.card,
                       glass: Glass = .regular,
+                      shadow: Bool = true,
                       fill: Color? = nil,
                       fillOpacity: Double = 0.18,
                       gradient: Bool = false,
                       gradientAngle: Double = 135) -> some View {
         modifier(GlassSurface(level: level, cornerRadius: cornerRadius, glass: glass,
-                              fill: fill, fillOpacity: fillOpacity, gradient: gradient,
+                              shadow: shadow, fill: fill, fillOpacity: fillOpacity, gradient: gradient,
                               gradientAngle: gradientAngle))
     }
 }

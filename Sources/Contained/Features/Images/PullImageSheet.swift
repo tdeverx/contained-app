@@ -38,7 +38,7 @@ struct PullImageSheet: View {
                                       platform: platform.isEmpty ? nil : platform)
                 }, onComplete: { ok in
                     succeeded = ok
-                    if ok { Task { await app.refreshResource(.images) } }
+                    if ok { Task { await app.refreshImagesIfStale(force: true) } }
                 })
                 .padding(.horizontal, Tokens.Space.l)
                 .padding(.bottom, Tokens.Space.l)
@@ -120,7 +120,7 @@ struct PullImageSheet: View {
     }
 
     private func finish() {
-        if succeeded { Task { await app.refreshResource(.images) } }
+        if succeeded { Task { await app.refreshImagesIfStale(force: true) } }
         dismiss()
     }
 }

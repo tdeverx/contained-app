@@ -13,16 +13,16 @@ struct MetricTile: View {
             HStack(spacing: Tokens.Space.s) {
                 if let systemImage {
                     Image(systemName: systemImage)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(tint)
                 }
                 Text(label)
-                    .font(.system(size: 11))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             }
             Text(value)
-                .font(.system(size: 24, weight: .semibold))
+                .font(.title.weight(.semibold))
                 .contentTransition(.numericText())
             if let samples {
                 LiveSparkline(samples: samples, color: tint)

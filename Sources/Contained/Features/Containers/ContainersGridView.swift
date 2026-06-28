@@ -209,18 +209,18 @@ struct ContainersGridView: View {
             } label: {
                 HStack(spacing: Tokens.Space.s) {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .rotationEffect(.degrees(collapsed ? 0 : 90))
-                    Image(systemName: "network").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Image(systemName: "network").font(.callout).foregroundStyle(.secondary)
                     Text(group.name).font(.headline)
                     Text("\(group.containers.count)")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 7).padding(.vertical, 2)
                         .background(.quaternary, in: Capsule())
                     if group.isBuiltin {
-                        Text("builtin").font(.system(size: 10, weight: .medium))
+                        Text("builtin").font(.caption2.weight(.medium))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 7).padding(.vertical, 2)
                             .background(.quaternary, in: Capsule())
@@ -246,7 +246,7 @@ struct ContainersGridView: View {
             networkMenu(resource)
         } label: {
             Image(systemName: "ellipsis")
-                .font(.system(size: 13, weight: .medium))
+                .font(.body.weight(.medium))
                 .frame(width: Tokens.IconSize.rowMenu, height: Tokens.IconSize.rowMenu)
         }
         .menuStyle(.button)

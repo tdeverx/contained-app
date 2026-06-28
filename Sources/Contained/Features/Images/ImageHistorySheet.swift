@@ -29,7 +29,7 @@ struct ImageHistorySheet: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 if let created = entry.created {
                                     Text(created.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                                        .font(.caption2).foregroundStyle(.secondary)
                                 }
                             }
                             .padding(Tokens.Space.m)

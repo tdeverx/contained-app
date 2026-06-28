@@ -17,6 +17,8 @@ struct ActivityContent: View {
     @Query(sort: \EventRecord.timestamp, order: .reverse) private var events: [EventRecord]
     @State private var filter: EventKind?
     var showClose = false
+    /// Flat tiles (no shadow) when hosted in the toolbar morph panel; elevated in the standalone sheet.
+    var elevated = true
     var onClose: () -> Void = {}
 
     private var filtered: [EventRecord] {
@@ -54,7 +56,7 @@ struct ActivityContent: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
-                        ForEach(filtered) { event in EventRow(event: event) }
+                        ForEach(filtered) { event in EventRow(event: event, elevated: elevated) }
                     }
                     .padding(Tokens.Space.l)
                 }

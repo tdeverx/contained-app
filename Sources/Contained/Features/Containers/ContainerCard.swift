@@ -136,19 +136,19 @@ struct ContainerCard: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(name)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.callout.weight(.medium))
                         .lineLimit(1)
                     StatusOrb(presentation: presentation, size: 7)
                     if health == .unhealthy {
-                        Image(systemName: "heart.slash.fill").font(.system(size: 9))
+                        Image(systemName: "heart.slash.fill").font(.caption2)
                             .foregroundStyle(.red).help("Healthcheck failing")
                     } else if health == .healthy {
-                        Image(systemName: "heart.fill").font(.system(size: 9))
+                        Image(systemName: "heart.fill").font(.caption2)
                             .foregroundStyle(.green).help("Healthy")
                     }
                 }
                 Text(Format.shortImage(snapshot.image))
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -241,9 +241,9 @@ struct ContainerCard: View {
             localMetric = chip
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: chip.systemImage).font(.system(size: 10))
+                Image(systemName: chip.systemImage).font(.caption2)
                 Text(stats.map(chip.chipCaption(from:)) ?? "—")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.caption.weight(.medium))
                     .monospacedDigit()
             }
             .foregroundStyle(active ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
@@ -270,7 +270,7 @@ struct ContainerCard: View {
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,
                               action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemName).font(.system(size: 13))
+            Image(systemName: systemName).font(.body)
         }
         .buttonStyle(.plain)
         .foregroundStyle(tint ?? .secondary)

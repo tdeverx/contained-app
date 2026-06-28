@@ -23,7 +23,7 @@ struct GlassCircleButton: View {
     private var base: some View {
         Button(role: role, action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 13, weight: .medium))
+                .font(.body.weight(.medium))
                 .frame(width: Tokens.IconSize.rowMenu, height: Tokens.IconSize.rowMenu)
         }
         .buttonBorderShape(.circle)

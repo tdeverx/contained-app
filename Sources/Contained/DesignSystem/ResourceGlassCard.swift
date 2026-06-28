@@ -43,6 +43,9 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     var fillOpacity: Double = 0.18
     var gradient: Bool = false
     var gradientAngle: Double = 135
+    /// Lift the card with a shadow. Pass `false` for flat tiles inside an already-elevated panel
+    /// (e.g. the toolbar Images/Activity morph panels), matching the creation-menu tile style.
+    var elevated: Bool = true
     var onTap: () -> Void = {}
     @ViewBuilder var header: () -> Header
     @ViewBuilder var bodyContent: () -> BodyContent
@@ -60,6 +63,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
+         elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header,
          @ViewBuilder bodyContent: @escaping () -> BodyContent,
@@ -74,6 +78,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
         self.fillOpacity = fillOpacity
         self.gradient = gradient
         self.gradientAngle = gradientAngle
+        self.elevated = elevated
         self.onTap = onTap
         self.header = header
         self.bodyContent = bodyContent
@@ -99,6 +104,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
                    alignment: .topLeading)
             .clipShape(shape)
             .glassSurface(.regular, cornerRadius: Tokens.Radius.card,
+                          shadow: elevated,
                           fill: fill,
                           fillOpacity: fillOpacity,
                           gradient: gradient,
@@ -178,6 +184,7 @@ extension ResourceGlassCard where BodyContent == EmptyView, FooterLeading == Emp
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
+         elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header) {
         self.init(size: size,
@@ -185,6 +192,7 @@ extension ResourceGlassCard where BodyContent == EmptyView, FooterLeading == Emp
                   fillOpacity: fillOpacity,
                   gradient: gradient,
                   gradientAngle: gradientAngle,
+                  elevated: elevated,
                   onTap: onTap,
                   header: header,
                   bodyContent: { EmptyView() },
@@ -203,6 +211,7 @@ extension ResourceGlassCard where BodyContent == EmptyView, Widget == EmptyView 
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
+         elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header,
          @ViewBuilder footerLeading: @escaping () -> FooterLeading,
@@ -215,6 +224,7 @@ extension ResourceGlassCard where BodyContent == EmptyView, Widget == EmptyView 
                   fillOpacity: fillOpacity,
                   gradient: gradient,
                   gradientAngle: gradientAngle,
+                  elevated: elevated,
                   onTap: onTap,
                   header: header,
                   bodyContent: { EmptyView() },
@@ -233,6 +243,7 @@ extension ResourceGlassCard where Widget == EmptyView {
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
+         elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header,
          @ViewBuilder bodyContent: @escaping () -> BodyContent,
@@ -246,6 +257,7 @@ extension ResourceGlassCard where Widget == EmptyView {
                   fillOpacity: fillOpacity,
                   gradient: gradient,
                   gradientAngle: gradientAngle,
+                  elevated: elevated,
                   onTap: onTap,
                   header: header,
                   bodyContent: bodyContent,

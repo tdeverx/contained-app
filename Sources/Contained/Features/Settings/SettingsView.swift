@@ -15,6 +15,8 @@ struct SettingsView: View {
                 .tabItem { Label("Appearance", systemImage: "paintpalette") }
             GeneralTab(settings: settings)
                 .tabItem { Label("General", systemImage: "gearshape") }
+            RuntimeTab()
+                .tabItem { Label("Runtime", systemImage: "cpu") }
             RegistriesTab()
                 .tabItem { Label("Registries", systemImage: "key") }
             UpdatesTab()
@@ -129,10 +131,144 @@ private struct GeneralTab: View {
     }
 }
 
+// MARK: - Runtime
+
+/// Daemon runtime configuration: the editable bits (recommended kernel, local DNS domains) plus a
+/// read-only view of the daemon defaults. Defaults are read-only because the `container` CLI exposes
+/// no setter for them — `system property` only lists; only the kernel and DNS are settable.
+private struct RuntimeTab: View {
+    @Environment(AppModel.self) private var app
+    @State private var dnsDomains: [String] = []
+    @State private var confirmingKernel = false
+    @State private var addingDNS = false
+    @State private var newDomain = ""
+    @State private var deletingDomain: String?
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Recommended kernel") {
+                    Button("Install…") { confirmingKernel = true }
+                }
+                revealCLIHint("container system kernel set --recommended")
+            } header: {
+                Text("Kernel")
+            } footer: {
+                Text("Downloads and sets the recommended kernel as the default. May prompt for your administrator password — handled by the container CLI; Contained never sees it.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                if dnsDomains.isEmpty {
+                    Text("No local DNS domains.").foregroundStyle(.secondary)
+                } else {
+                    ForEach(dnsDomains, id: \.self) { domain in
+                        HStack {
+                            Text(domain).font(.system(.callout, design: .monospaced))
+                            Spacer()
+                            Button(role: .destructive) { deletingDomain = domain } label: {
+                                Image(systemName: "trash")
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                    }
+                }
+                Button("Add Domain…") { newDomain = ""; addingDNS = true }
+            } header: {
+                Text("Local DNS domains")
+            } footer: {
+                Text("Creating or deleting a domain may prompt for your administrator password — handled by the container CLI.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            if let props = app.properties {
+                Section {
+                    if let d = props.container {
+                        if let c = d.cpus { LabeledContent("Default CPUs", value: "\(c)") }
+                        if let m = d.memory { LabeledContent("Default memory", value: m) }
+                    }
+                    if let b = props.build {
+                        if let img = b.image { LabeledContent("Builder image", value: img) }
+                        if let r = b.rosetta { LabeledContent("Builder Rosetta", value: r ? "On" : "Off") }
+                    }
+                    if let k = props.kernel, let path = k.binaryPath { LabeledContent("Kernel", value: path) }
+                } header: {
+                    Text("Defaults")
+                } footer: {
+                    Text("Read-only — the container runtime provides no command to change these. They apply when a container or build doesn’t specify its own resources.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .task { await app.loadPropertiesIfNeeded(); await loadDNS() }
+        .confirmationDialog("Install the recommended kernel?", isPresented: $confirmingKernel) {
+            Button("Download & install") { Task { await installKernel() } }
+        } message: {
+            Text("Downloads and sets the recommended kernel as the default. This may take a moment.")
+        }
+        .confirmationDialog("Delete DNS domain \(deletingDomain ?? "")?",
+                            isPresented: deletingDomainBinding, presenting: deletingDomain) { domain in
+            Button("Delete", role: .destructive) { Task { await deleteDNS(domain) } }
+        } message: { _ in Text("This may prompt for your administrator password (handled by the container CLI).") }
+        .alert("New local DNS domain", isPresented: $addingDNS) {
+            TextField("example.test", text: $newDomain)
+            Button("Cancel", role: .cancel) { newDomain = "" }
+            Button("Create") { Task { await addDNS() } }
+        } message: {
+            Text("Creating a domain may prompt for your administrator password (handled by the container CLI).")
+        }
+    }
+
+    /// A small copyable CLI hint, shown only when the Reveal-CLI setting is on.
+    @ViewBuilder
+    private func revealCLIHint(_ command: String) -> some View {
+        if app.settings.revealCLI {
+            HStack(spacing: Tokens.Space.s) {
+                Image(systemName: "terminal").foregroundStyle(.secondary)
+                Text(command).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
+                Spacer()
+                Button { copyToPasteboard(command) } label: { Image(systemName: "doc.on.doc") }
+                    .buttonStyle(.borderless).foregroundStyle(.secondary).help("Copy command")
+            }
+        }
+    }
+
+    private var deletingDomainBinding: Binding<Bool> {
+        Binding(get: { deletingDomain != nil }, set: { if !$0 { deletingDomain = nil } })
+    }
+
+    private func loadDNS() async {
+        guard let client = app.client else { return }
+        if let domains = try? await client.dnsDomains() { dnsDomains = domains }
+    }
+
+    private func installKernel() async {
+        guard let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.setRecommendedKernel() }) { app.flash(error) }
+        else { app.flash("Recommended kernel installed"); await app.reloadProperties() }
+    }
+
+    private func addDNS() async {
+        let domain = newDomain.trimmingCharacters(in: .whitespaces)
+        newDomain = ""
+        guard !domain.isEmpty, let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.createDNSDomain(domain) }) { app.flash(error) }
+        else { await loadDNS() }
+    }
+
+    private func deleteDNS(_ domain: String) async {
+        guard let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.deleteDNSDomain(domain) }) { app.flash(error) }
+        else { await loadDNS() }
+    }
+}
+
 // MARK: - Registries
 
-/// Registry logins live here (not the File menu): list signed-in registries and log in / out. The
-/// Registries sidebar page remains the same data; this is the credential-management home in Settings.
+/// Registry logins live here (not the File menu): list signed-in registries and log in / out. This
+/// is the credential-management home now that the Registries sidebar page is gone.
 private struct RegistriesTab: View {
     @Environment(AppModel.self) private var app
     @State private var loggingIn = false
@@ -170,7 +306,7 @@ private struct RegistriesTab: View {
             }
         }
         .formStyle(.grouped)
-        .task { await app.refreshResource(.registries) }
+        .task { await app.refreshRegistries() }
         .sheet(isPresented: $loggingIn) { RegistryLoginSheet() }
         .confirmationDialog("Log out of \(loggingOut?.host ?? "")?",
                             isPresented: logoutBinding, presenting: loggingOut) { login in
@@ -184,7 +320,7 @@ private struct RegistriesTab: View {
 
     private func logout(_ login: RegistryLogin) async {
         guard let client = app.client else { return }
-        do { _ = try await client.registryLogout(server: login.host); await app.refreshResource(.registries) }
+        do { _ = try await client.registryLogout(server: login.host); await app.refreshRegistries() }
         catch let error as CommandError { app.flash(error.userMessage) }
         catch { app.flash(error.localizedDescription) }
     }

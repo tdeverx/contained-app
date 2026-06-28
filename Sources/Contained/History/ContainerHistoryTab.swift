@@ -114,8 +114,9 @@ struct ContainerHistoryTab: View {
 /// One row in an event log (used by the history tab and the system Activity view).
 struct EventRow: View {
     let event: EventRecord
+    var elevated = true
     var body: some View {
-        ResourceGlassCard(size: .small) {
+        ResourceGlassCard(size: .small, elevated: elevated) {
             HStack(spacing: Tokens.Space.s) {
                 Image(systemName: event.kind.symbol)
                     .foregroundStyle(.secondary)

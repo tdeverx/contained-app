@@ -80,6 +80,51 @@ final class AppModel {
         personalization.imageGroupDefault(for: group.id) ?? Personalization()
     }
 
+    /// The group's style by id (used where only the id is known, e.g. a tag resolving its parent).
+    func imageGroupStyle(forID id: String) -> Personalization {
+        personalization.imageGroupDefault(for: id) ?? Personalization()
+    }
+
+    func volumeStyle(for name: String) -> Personalization {
+        personalization.volumeStyle(for: name) ?? Personalization()
+    }
+
+    // MARK: Per-volume I/O (aggregated from the containers that mount the volume)
+
+    /// Containers that mount the named volume (matches a named-volume mount source).
+    func containersMounting(volume name: String) -> [ContainerSnapshot] {
+        containers.snapshots.filter { snapshot in
+            snapshot.configuration.mounts.contains { $0.source == name }
+        }
+    }
+
+    /// The current block read/write rate for a volume — summed across every container mounting it.
+    func volumeIORate(for name: String, metric: GraphMetric) -> Double {
+        containersMounting(volume: name).reduce(0) { total, snapshot in
+            total + (containers.statsByID[snapshot.id].map { metric.value(from: $0) } ?? 0)
+        }
+    }
+
+    /// A read/write sparkline series for a volume — the element-wise sum of the mounting containers'
+    /// block-I/O history, right-aligned so the most recent samples line up.
+    func volumeIOHistory(for name: String, metric: GraphMetric) -> [Double] {
+        let series = containersMounting(volume: name).compactMap {
+            containers.historyByID[$0.id]?[metric]?.values
+        }
+        return Self.sumRightAligned(series)
+    }
+
+    private static func sumRightAligned(_ series: [[Double]]) -> [Double] {
+        let maxLen = series.map(\.count).max() ?? 0
+        guard maxLen > 0 else { return [] }
+        var result = [Double](repeating: 0, count: maxLen)
+        for s in series {
+            let offset = maxLen - s.count
+            for (i, value) in s.enumerated() { result[offset + i] += value }
+        }
+        return result
+    }
+
     func containerStyle(for snapshot: ContainerSnapshot) -> Personalization {
         let groupID = LocalImageTagGroup.groups(for: images).first { group in
             group.references.contains(snapshot.image)
@@ -207,6 +252,18 @@ final class AppModel {
         if let usage = try? await client.diskUsage() { diskUsage = usage; lastDiskUsageDate = Date() }
     }
 
+    /// `images list` is needed off the Images page now too (the toolbar Images panel + update badges),
+    /// so it runs every tick — but throttled to avoid spawning a process each poll. `force` (the Images
+    /// page / opening the panel) bypasses the throttle for an immediate, fresh list.
+    private static let imagesThrottle: TimeInterval = 15
+    private var lastImagesDate: Date?
+    func refreshImagesIfStale(force: Bool = false) async {
+        guard let client, bootstrap == .ready else { return }
+        if !force, let last = lastImagesDate, Date().timeIntervalSince(last) < Self.imagesThrottle { return }
+        imagesError = await captured { self.images = try await client.images() }
+        lastImagesDate = Date()
+    }
+
     /// Run a throwing CLI action, returning a user-facing error string on failure (nil on success).
     /// Collapses the repeated `do / catch CommandError / catch` blocks across the stores and sheets.
     func captured(_ work: () async throws -> Void) async -> String? {
@@ -224,27 +281,54 @@ final class AppModel {
         await health.evaluate(snapshots: containers.snapshots, store: healthChecks, client: client)
         historyStore.recordMetrics(containers.statsByID)
         await refreshResource(section)
+        // Keep the image list warm app-wide (throttled), so the toolbar Images panel and the
+        // update badges populate without first visiting the Images page.
+        await refreshImagesIfStale()
         await checkImageUpdatesIfNeeded()
     }
 
     /// Refresh the cached list backing a resource page. Failures keep the last good data.
     func refreshResource(_ section: AppSection) async {
-        guard let client, bootstrap == .ready else { return }
+        guard bootstrap == .ready else { return }
         switch section {
-        case .images:
-            imagesError = await captured { self.images = try await client.images() }
-        case .volumes:
-            if let v = try? await client.volumes() { volumes = v }
         case .containers:
             await refreshNetworks()   // networks are grouped into the Containers page now
-        case .registries:
-            if let r = try? await client.registries() { registries = r }
-        case .system:
-            await refreshDiskUsage(force: true)   // System page wants fresh numbers each tick
-            if properties == nil, let p = try? await client.systemProperties() { properties = p }
-        default:
-            break
         }
+    }
+
+    /// Refresh the data behind the System toolbar panel (volumes + a forced `system df`). Called from
+    /// the panel's `.task` since there's no standing System page to refresh it on the tick.
+    func refreshSystemResources() async {
+        guard client != nil, bootstrap == .ready else { return }
+        await refreshDiskUsage(force: true)
+        await refreshVolumes()
+    }
+
+    /// Refresh the registry-login list. Registry credentials live in Settings now (no standalone
+    /// section), so this is exposed directly and called from the Settings Registries tab.
+    func refreshRegistries() async {
+        guard let client, bootstrap == .ready else { return }
+        if let r = try? await client.registries() { registries = r }
+    }
+
+    /// Load the daemon's system properties once (the read-only Defaults shown in Settings). Cheap and
+    /// idempotent — skips the call when already loaded.
+    func loadPropertiesIfNeeded() async {
+        guard properties == nil else { return }
+        await reloadProperties()
+    }
+
+    /// Force-reload the daemon's system properties (e.g. after a kernel change).
+    func reloadProperties() async {
+        guard let client, bootstrap == .ready else { return }
+        if let p = try? await client.systemProperties() { properties = p }
+    }
+
+    /// Refresh the cached volume list. Volumes live on the System page now (no standalone section), so
+    /// this is exposed directly — like `refreshNetworks` — and called from the `.system` tick.
+    func refreshVolumes() async {
+        guard let client, bootstrap == .ready else { return }
+        if let v = try? await client.volumes() { volumes = v }
     }
 
     /// Refresh the cached network list. Networks back the collapsible groups on the Containers page
@@ -313,7 +397,7 @@ final class AppModel {
             if let error = await captured({ _ = try await client.loadImages(from: url.path) }) {
                 flash(error)
             } else {
-                await refreshResource(.images)
+                await refreshImagesIfStale(force: true)
                 flash("Loaded \(url.lastPathComponent)")
             }
         }
@@ -324,7 +408,7 @@ final class AppModel {
         guard let client else { return false }
         let error = await captured {
             _ = try await client.createVolume(name: name, size: size)
-            await refreshResource(.volumes)
+            await refreshVolumes()
         }
         if let error {
             flash(error)
@@ -370,7 +454,7 @@ final class AppModel {
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty { activity?.detail = trimmed }
             }
-            await refreshResource(.images)
+            await refreshImagesIfStale(force: true)
             historyStore.record(.pull, message: "Pulled \(Format.shortImage(reference))")
             return true
         } catch let error as CommandError { flash(error.userMessage); return false }

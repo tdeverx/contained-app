@@ -50,6 +50,10 @@ struct AppToolbar: View {
                 .zIndex(ui.activeMorph == .updates ? 30 : 0)
             activityMorphLayer
                 .zIndex(ui.activeMorph == .activity ? 30 : 0)
+            templatesMorphLayer
+                .zIndex(ui.activeMorph == .templates ? 30 : 0)
+            systemMorphLayer
+                .zIndex(ui.activeMorph == .system ? 30 : 0)
             toolbarImageDetailLayer
                 .zIndex(toolbarImageDetail == nil ? 0 : 50)
         }
@@ -63,7 +67,7 @@ struct AppToolbar: View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             leadingZone
             Spacer(minLength: Tokens.Space.m)
-            toolbarGroup { trailingZone }
+            trailingZone
         }
         .padding(.horizontal, Tokens.Toolbar.outerPadding)
         .frame(maxWidth: .infinity)
@@ -83,23 +87,25 @@ struct AppToolbar: View {
             )
     }
 
+    // The trailing Images + Templates + Activity buttons share one glass capsule (a
+    // `ToolbarButtonCluster`); each morph grows out of that single capsule frame, so the group reads
+    // as one control.
     private var trailingZone: some View {
-        HStack(spacing: Tokens.Toolbar.groupSpacing) {
-            ToolbarIconButton(systemName: "shippingbox.fill", help: "Images") { ui.toggleMorph(.updates) }
+        ToolbarButtonCluster {
+            ToolbarIconButton(systemName: "shippingbox.fill", help: "Images",
+                              showsBackground: false) { ui.toggleMorph(.updates) }
                 .opacity(ui.activeMorph == .updates ? 0 : 1)
-                .background(slotReader(.updates))
-            ToolbarIconButton(systemName: "clock.arrow.circlepath", help: "Activity") { ui.toggleMorph(.activity) }
+            ToolbarIconButton(systemName: "square.on.square", help: "Templates",
+                              showsBackground: false) { ui.toggleMorph(.templates) }
+                .opacity(ui.activeMorph == .templates ? 0 : 1)
+            ToolbarIconButton(systemName: "clock.arrow.circlepath", help: "Activity",
+                              showsBackground: false) { ui.toggleMorph(.activity) }
                 .opacity(ui.activeMorph == .activity ? 0 : 1)
-                .background(slotReader(.activity))
+            ToolbarIconButton(systemName: "gearshape.2", help: "System",
+                              showsBackground: false) { ui.toggleMorph(.system) }
+                .opacity(ui.activeMorph == .system ? 0 : 1)
         }
-    }
-
-    /// A grouped capsule of related buttons (e.g. updates + activity).
-    private func toolbarGroup<C: View>(@ViewBuilder content: () -> C) -> some View {
-        HStack(spacing: Tokens.Toolbar.groupSpacing) { content() }
-            .padding(.horizontal, Tokens.Toolbar.groupPaddingH)
-            .frame(height: Tokens.Toolbar.controlHeight)
-            .toolbarControlGlass()
+        .background(clusterSlotReader([.updates, .templates, .activity, .system]))
     }
 
     // MARK: Add morph layer
@@ -129,8 +135,7 @@ struct AppToolbar: View {
                              originFrame: slots[.updates] ?? .zero,
                              panelSize: CGSize(width: 440, height: 300),
                              placement: .anchored,
-                             targetInsets: morphTargetInsets,
-                             showsPanelShadow: false) {
+                             targetInsets: morphTargetInsets) {
                 ToolbarUpdatesPanel(onOpenImage: openToolbarImageDetail) {
                     ui.activeMorph = nil
                 }
@@ -179,6 +184,34 @@ struct AppToolbar: View {
         }
     }
 
+    @ViewBuilder
+    private var templatesMorphLayer: some View {
+        if ui.activeMorph == .templates {
+            MorphingExpander(isPresented: morphBinding(.templates),
+                             originFrame: slots[.templates] ?? .zero,
+                             panelSize: CGSize(width: 440, height: 300),
+                             placement: .anchored,
+                             targetInsets: morphTargetInsets) {
+                ToolbarTemplatesPanel {
+                    ui.activeMorph = nil
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var systemMorphLayer: some View {
+        if ui.activeMorph == .system {
+            MorphingExpander(isPresented: morphBinding(.system),
+                             originFrame: slots[.system] ?? .zero,
+                             panelSize: CGSize(width: 580, height: 600),
+                             placement: .anchored,
+                             targetInsets: morphTargetInsets) {
+                ToolbarSystemPanel { ui.activeMorph = nil }
+            }
+        }
+    }
+
     private var addMorphBinding: Binding<Bool> {
         Binding(get: { ui.activeMorph == .add }, set: {
             if !$0 { addSoftDismiss = nil; ui.activeMorph = nil }
@@ -191,10 +224,13 @@ struct AppToolbar: View {
         })
     }
 
-    private func slotReader(_ morph: UIState.ToolbarMorph) -> some View {
+    /// Report one shared frame (the cluster capsule) as the morph origin for several morphs at once,
+    /// so both the Images and Activity panels grow out of the same grouped pill.
+    private func clusterSlotReader(_ morphs: [UIState.ToolbarMorph]) -> some View {
         GeometryReader { proxy in
+            let frame = proxy.frame(in: .named(Self.space))
             Color.clear.preference(key: ToolbarSlotKey.self,
-                                   value: [morph: proxy.frame(in: .named(Self.space))])
+                                   value: Dictionary(uniqueKeysWithValues: morphs.map { ($0, frame) }))
         }
     }
 
@@ -291,6 +327,7 @@ private struct ToolbarUpdatesPanel: View {
         }
         .morphPanelSize(CGSize(width: 520, height: 520))
         .morphPanelPlacement(.anchored)
+        .task { await app.refreshImagesIfStale(force: true) }
     }
 
     private var header: some View {
@@ -319,7 +356,7 @@ private struct ToolbarUpdatesPanel: View {
     }
 
     private var emptyCard: some View {
-        ResourceGlassCard(size: .small) {
+        ResourceGlassCard(size: .small, elevated: false) {
             HStack(spacing: Tokens.Space.s) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
@@ -383,6 +420,7 @@ private struct ToolbarImageGroupCard: View {
                           fillOpacity: resolved.backgroundOpacity,
                           gradient: resolved.gradient,
                           gradientAngle: resolved.gradientAngle,
+                          elevated: false,
                           onTap: onTap) {
             cardHeader(group, image: image, style: resolved)
         } bodyContent: {
@@ -422,7 +460,7 @@ private struct ToolbarImageGroupCard: View {
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(repositoryName(group.primaryReference))
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.callout.weight(.medium))
                     .lineLimit(1)
                 Text("\(group.references.count) tag\(group.references.count == 1 ? "" : "s")")
                     .font(.caption)
@@ -499,7 +537,8 @@ private struct ToolbarImageGroupCard: View {
                                  fill: style.fillBackground ? style.color : nil,
                                  fillOpacity: style.backgroundOpacity,
                                  gradient: style.gradient,
-                                 gradientAngle: style.gradientAngle) {
+                                 gradientAngle: style.gradientAngle,
+                                 elevated: false) {
             HStack(spacing: Tokens.Space.s) {
                 ImageStyleButton(reference: reference,
                                  style: style,
@@ -535,7 +574,7 @@ private struct ToolbarImageGroupCard: View {
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,
                               action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemName).font(.system(size: 13))
+            Image(systemName: systemName).font(.body)
         }
         .buttonStyle(.plain)
         .foregroundStyle(tint ?? .secondary)
@@ -570,7 +609,7 @@ private struct ToolbarImageGroupCard: View {
 
     private func imageChip(_ style: Personalization) -> some View {
         Image(systemName: style.symbol)
-            .font(.system(size: 15))
+            .font(.title3)
             .foregroundStyle(style.color)
             .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
             .background(style.color.opacity(0.16), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
@@ -629,7 +668,7 @@ private struct ToolbarImageGroupCard: View {
         guard let client = app.client else { return }
         do {
             _ = try await client.deleteImages([reference])
-            await app.refreshResource(.images)
+            await app.refreshImagesIfStale(force: true)
             app.flash("Deleted \(Format.shortImage(reference))")
             deletingReference = nil
         } catch let error as CommandError { app.flash(error.userMessage) }
@@ -638,7 +677,7 @@ private struct ToolbarImageGroupCard: View {
 
     private func prune(all: Bool) async {
         guard let client = app.client else { return }
-        do { _ = try await client.pruneImages(all: all); await app.refreshResource(.images) }
+        do { _ = try await client.pruneImages(all: all); await app.refreshImagesIfStale(force: true) }
         catch let error as CommandError { app.flash(error.userMessage) }
         catch { app.flash(error.localizedDescription) }
     }
@@ -665,9 +704,123 @@ private struct ToolbarActivityPanel: View {
     var onClose: () -> Void
 
     var body: some View {
-        ActivityContent(showClose: true, onClose: onClose)
+        ActivityContent(showClose: true, elevated: false, onClose: onClose)
             .morphPanelSize(CGSize(width: 560, height: 520))
         .morphPanelPlacement(.anchored)
+    }
+}
+
+/// The toolbar System panel — service status, volumes, disk usage, and the Prune Center as flat glass
+/// cards (the same treatment as the Images/Templates panels). Header-less by design: it dismisses on
+/// backdrop tap or Escape. New Volume hands off to the creation flow (closing the panel first).
+private struct ToolbarSystemPanel: View {
+    var onClose: () -> Void
+
+    var body: some View {
+        SystemContent(elevated: false, onClose: onClose)
+            .morphPanelSize(CGSize(width: 580, height: 600))
+            .morphPanelPlacement(.anchored)
+    }
+}
+
+/// The toolbar Templates panel — saved run configurations as flat glass cards (the same treatment as
+/// the Images panel). "Use" prefills the create form; cards can be deleted.
+private struct ToolbarTemplatesPanel: View {
+    @Environment(UIState.self) private var ui
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Template.createdAt, order: .reverse) private var saved: [Template]
+    var onClose: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            Divider()
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
+                    if saved.isEmpty {
+                        emptyCard
+                    } else {
+                        ForEach(saved) { template in templateCard(template) }
+                    }
+                }
+                .padding(Tokens.Space.m)
+            }
+            .scrollEdgeEffectStyle(.soft, for: .all)
+        }
+        .morphPanelSize(CGSize(width: 460, height: 480))
+        .morphPanelPlacement(.anchored)
+    }
+
+    private var header: some View {
+        HStack(spacing: Tokens.Space.s) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Templates").font(.headline)
+                Text("\(saved.count) saved").font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            GlassCircleButton(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+        }
+        .padding(Tokens.Space.m)
+    }
+
+    private var emptyCard: some View {
+        ResourceGlassCard(size: .small, elevated: false) {
+            HStack(spacing: Tokens.Space.s) {
+                Image(systemName: "bookmark")
+                    .foregroundStyle(.secondary)
+                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
+                    .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("No templates").font(.callout.weight(.medium))
+                    Text("Save a container's settings as a template from the create form.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private func templateCard(_ template: Template) -> some View {
+        ResourceGlassCard(size: .medium, elevated: false, onTap: { use(template) }) {
+            HStack(spacing: Tokens.Space.s) {
+                Image(systemName: "bookmark.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
+                    .background(Color.accentColor.opacity(0.16), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(template.name).font(.callout.weight(.medium)).lineLimit(1)
+                    Text(Format.shortImage(template.spec?.image ?? "—"))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+        } footerLeading: {
+            Text("Saved run configuration").font(.caption).foregroundStyle(.secondary)
+        } footerActions: {
+            HStack(spacing: Tokens.Space.m) {
+                Button(role: .destructive) { delete(template) } label: { Image(systemName: "trash").font(.body) }
+                    .buttonStyle(.plain).foregroundStyle(.red).help("Delete").accessibilityLabel("Delete")
+                Button("Use") { use(template) }.buttonStyle(.glassProminent).controlSize(.small)
+            }
+        }
+        .contextMenu {
+            Button { use(template) } label: { Label("Use", systemImage: "plus.circle") }
+            Divider()
+            Button(role: .destructive) { delete(template) } label: { Label("Delete", systemImage: "trash") }
+        }
+    }
+
+    private func use(_ template: Template) {
+        guard let spec = template.spec else { return }
+        onClose()
+        ui.useTemplate(spec)
+    }
+
+    private func delete(_ template: Template) {
+        modelContext.delete(template)
+        try? modelContext.save()
     }
 }
 
@@ -678,6 +831,7 @@ private struct ToolbarActivityPanel: View {
 private struct ToolbarCommandPalette: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
+    @Environment(\.modalMaterial) private var modalMaterial
     @FocusState private var focused: Bool
     let insets: EdgeInsets
 
@@ -736,12 +890,25 @@ private struct ToolbarCommandPalette: View {
         .frame(width: expanded ? openWidth : collapsedWidth,
                height: expanded ? openHeight : Tokens.Toolbar.controlHeight,
                alignment: .top)
-        // Same surface as the add-button morph (floatingPanelMaterial: shadow .24/24/12, border .18) so
-        // both toolbar morphs read as the one gesture.
+        // Expanded, this reproduces `floatingPanelMaterial` exactly (ExteriorShadow .24/24/12 →
+        // VisualEffectBackground in the chosen modal material → white .18 stroke), so the search palette
+        // and the add-button morph render on the *same* surface and read as one gesture. Collapsed, it's
+        // an interactive-glass capsule like the toolbar buttons.
+        .background {
+            if expanded {
+                ExteriorShadow(cornerRadius: radius, color: .black.opacity(0.24), radius: 24, y: 12)
+            }
+        }
+        .background {
+            if expanded {
+                VisualEffectBackground(material: modalMaterial.nsMaterial, blendingMode: .withinWindow)
+                    .clipShape(shape)
+            } else {
+                Color.clear.glassEffect(.regular.interactive(), in: shape)
+            }
+        }
         .clipShape(shape)
-        .background { Color.clear.glassEffect(.regular.interactive(), in: shape) }
         .overlay { if expanded { shape.strokeBorder(.white.opacity(0.18), lineWidth: 1) } }
-        .shadow(color: .black.opacity(expanded ? 0.24 : 0), radius: expanded ? 24 : 0, y: expanded ? 12 : 0)
         .padding(.top, topInset)
     }
 

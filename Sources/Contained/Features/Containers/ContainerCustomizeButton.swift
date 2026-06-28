@@ -14,7 +14,7 @@ struct ContainerCustomizeButton: View {
     var body: some View {
         Button(action: onTap) {
             Image(systemName: hovering ? "paintbrush.pointed.fill" : style.symbol)
-                .font(.system(size: 15))
+                .font(.title3)
                 .foregroundStyle(style.color)
                 .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
                 .background(style.color.opacity(0.16), in: RoundedRectangle(cornerRadius: 9, style: .continuous))

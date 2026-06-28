@@ -92,7 +92,7 @@ struct RegistryImageSearch: View {
                     .frame(width: 18)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title).font(.callout.weight(.medium)).lineLimit(1)
-                    Text(subtitle).font(.system(size: 10, design: .monospaced))
+                    Text(subtitle).font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer(minLength: 0)

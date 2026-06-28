@@ -16,6 +16,7 @@ struct CustomizeSheet: View {
         case image(reference: String)
         case imageGroup(id: String, reference: String)
         case imageTag(reference: String, groupID: String?)
+        case volume(name: String)
 
         var id: String {
             switch self {
@@ -23,6 +24,7 @@ struct CustomizeSheet: View {
             case .image(let r):     return "image:\(r)"
             case .imageGroup(let id, _): return "image-group:\(id)"
             case .imageTag(let r, let groupID): return "image-tag:\(groupID ?? "none"):\(r)"
+            case .volume(let name): return "volume:\(name)"
             }
         }
         var image: String {
@@ -31,25 +33,38 @@ struct CustomizeSheet: View {
             case .image(let r):     return r
             case .imageGroup(_, let r): return r
             case .imageTag(let r, _): return r
+            case .volume(let name): return name
             }
         }
+        /// True for image-scoped targets — drives the "image style" wording.
         var isImage: Bool {
             switch self {
             case .image, .imageGroup, .imageTag: return true
-            case .container: return false
+            case .container, .volume: return false
             }
         }
-        var isImageGroup: Bool {
-            if case .imageGroup = self { return true }
-            return false
+        /// Targets that inherit from a parent and so offer an override toggle: a container (inherits the
+        /// image style) and an image tag (inherits its group's style). Direct targets edit in place.
+        var supportsInheritance: Bool {
+            switch self {
+            case .container, .imageTag: return true
+            case .image, .imageGroup, .volume: return false
+            }
+        }
+        /// The group id a tag inherits from (nil for everything else).
+        var tagGroupID: String? {
+            if case .imageTag(_, let groupID) = self { return groupID }
+            return nil
         }
         /// The snapshot the live preview renders — the real one for a container, a synthetic one for
-        /// an image (so we can show how cards from that image will look).
+        /// an image/volume (so we can show how cards from it will look).
         var previewSnapshot: ContainerSnapshot {
             switch self {
             case .container(let s): return s
             case .image(let r), .imageGroup(_, let r), .imageTag(let r, _):
                 return .placeholder(id: Format.shortImage(r), image: r)
+            case .volume(let name):
+                return .placeholder(id: name, image: "")
             }
         }
     }
@@ -81,28 +96,28 @@ struct CustomizeSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SheetHeader(title: target.isImage ? "Customize image style" : "Customize card",
+            SheetHeader(title: headerTitle,
                         subtitle: imageSubtitle,
                         onCancel: { dismiss() }) {
                 GlassCircleButton(systemName: "checkmark", prominent: true, help: "Save") { save() }
             }
 
             Form {
-                if !target.isImage {
+                if target.supportsInheritance {
                     Section("Inheritance") {
-                        Toggle("Override image style", isOn: overrideBinding)
-                            .fieldInfo("Turn this on to customize only this container. Leave it off to inherit the image style from the Images page.")
+                        Toggle(overrideToggleTitle, isOn: overrideBinding)
+                            .fieldInfo(overrideToggleHint)
                     }
                 }
                 Section("Style") {
-                    TextField(target.isImage ? "Display name" : "Nickname",
+                    TextField(nicknameLabel,
                               text: $style.nickname,
-                              prompt: Text(target.isImage ? Format.shortImage(target.image) : target.previewSnapshot.id))
+                              prompt: Text(nicknamePrompt))
                     TextField("Icon", text: $style.icon, prompt: Text("SF Symbol, e.g. globe, bolt"))
                     LabeledContent("Color") { TintSelector(selection: $style.tint) }
                         .fieldInfo("“App Accent” (the linked swatch) follows the app accent from Settings, so the card tracks your theme. Pick any other color to pin this card.")
                     Picker("Graph", selection: $style.graphMetric) {
-                        ForEach(GraphMetric.allCases) { Label($0.displayName, systemImage: $0.systemImage).tag($0) }
+                        ForEach(graphOptions) { Label(graphLabel($0), systemImage: $0.systemImage).tag($0) }
                     }
                 }
                 .disabled(settingsDisabled)
@@ -127,7 +142,7 @@ struct CustomizeSheet: View {
                         Label(target.isImage ? "Reset image style" : "Reset", systemImage: "arrow.counterclockwise")
                     }
                     .disabled(!canReset)
-                    if !target.isImage {
+                    if case .container = target {
                         Button { applyToImage() } label: {
                             Label("Apply to image", systemImage: "square.stack.3d.up")
                         }
@@ -150,14 +165,72 @@ struct CustomizeSheet: View {
             case .image(let reference):
                 style = app.personalization.imageDefault(for: reference) ?? Personalization()
                 overrideContainerStyle = true
-            case .imageTag(let reference, let groupID):
-                style = app.personalization.imageDefault(for: reference, groupID: groupID) ?? Personalization()
-                overrideContainerStyle = true
+            case .imageTag(let reference, _):
+                // A tag inherits its group's style unless it has its own saved default (override on).
+                let own = app.personalization.imageDefault(for: reference)
+                overrideContainerStyle = own != nil
+                style = own ?? inheritedStyle()
             case .imageGroup(let id, _):
                 style = app.personalization.imageGroupDefault(for: id) ?? Personalization()
                 overrideContainerStyle = true
+            case .volume(let name):
+                style = app.personalization.volumeStyle(for: name) ?? Personalization()
+                // Volumes graph read/write only; normalize any inherited default into that set.
+                if !Self.volumeMetrics.contains(style.graphMetric) { style.graphMetric = .diskRead }
+                overrideContainerStyle = true
             }
             loaded = true
+        }
+    }
+
+    /// The graph metrics offered for the current target — volumes plot read/write, everything else
+    /// gets the full set.
+    private static let volumeMetrics: [GraphMetric] = [.diskRead, .diskWrite]
+    private var graphOptions: [GraphMetric] {
+        if case .volume = target { return Self.volumeMetrics }
+        return GraphMetric.allCases
+    }
+    private func graphLabel(_ metric: GraphMetric) -> String {
+        if case .volume = target {
+            switch metric {
+            case .diskRead: return "Read"
+            case .diskWrite: return "Write"
+            default: return metric.displayName
+            }
+        }
+        return metric.displayName
+    }
+
+    private var headerTitle: String {
+        switch target {
+        case .container: return "Customize card"
+        case .volume: return "Customize volume"
+        case .image, .imageGroup, .imageTag: return "Customize image style"
+        }
+    }
+
+    private var overrideToggleTitle: String {
+        if case .imageTag = target { return "Override group style" }
+        return "Override image style"
+    }
+
+    private var overrideToggleHint: String {
+        if case .imageTag = target {
+            return "Turn this on to style only this tag. Leave it off to inherit the image group's style."
+        }
+        return "Turn this on to customize only this container. Leave it off to inherit the image style."
+    }
+
+    private var nicknameLabel: String {
+        if case .container = target { return "Nickname" }
+        return "Display name"
+    }
+
+    private var nicknamePrompt: String {
+        switch target {
+        case .container: return target.previewSnapshot.id
+        case .volume(let name): return name
+        default: return Format.shortImage(target.image)
         }
     }
 
@@ -166,16 +239,18 @@ struct CustomizeSheet: View {
         case .imageGroup:
             return "Default for this local image group"
         case .imageTag:
-            return "Override for \(Format.shortImage(target.image))"
+            return "Style for \(Format.shortImage(target.image))"
         case .image:
             return "Default for every container from \(Format.shortImage(target.image))"
+        case .volume:
+            return "Style for this volume"
         case .container:
             return nil
         }
     }
 
     private var settingsDisabled: Bool {
-        !target.isImage && !overrideContainerStyle
+        target.supportsInheritance && !overrideContainerStyle
     }
 
     /// Whether there is a saved style to reset — a per-container override, or an image default.
@@ -187,6 +262,7 @@ struct CustomizeSheet: View {
         case .imageGroup(let id, _):
             return app.personalization.imageGroupDefault(for: id) != nil
         case .container(let snapshot): return app.personalization.hasOverride(id: snapshot.id)
+        case .volume(let name): return app.personalization.volumeStyle(for: name) != nil
         }
     }
 
@@ -195,18 +271,27 @@ struct CustomizeSheet: View {
             overrideContainerStyle
         } set: { newValue in
             overrideContainerStyle = newValue
-            if case .container(let snapshot) = target {
-                style = newValue
-                    ? app.containerStyle(for: snapshot)
-                    : inheritedStyle(for: snapshot)
+            // Seed the editable style: from the saved own-style when turning the override on, or the
+            // inherited parent style (read-only, disabled) when turning it off.
+            switch target {
+            case .container, .imageTag:
+                style = newValue ? ownStyle() : inheritedStyle()
+            default:
+                break
             }
         }
     }
 
     private func save() {
         switch target {
-        case .image(let reference), .imageTag(let reference, _):
+        case .image(let reference):
             app.personalization.setImageDefault(style, for: reference)
+        case .imageTag(let reference, _):
+            if overrideContainerStyle {
+                app.personalization.setImageDefault(style, for: reference)
+            } else {
+                app.personalization.clearImageDefault(for: reference)   // back to inheriting the group
+            }
         case .imageGroup(let id, _):
             app.personalization.setImageGroupDefault(style, for: id)
         case .container(let snapshot):
@@ -215,6 +300,8 @@ struct CustomizeSheet: View {
             } else {
                 app.personalization.clearOverride(id: snapshot.id)
             }
+        case .volume(let name):
+            app.personalization.setVolumeStyle(style, for: name)
         }
         dismiss()
     }
@@ -226,6 +313,7 @@ struct CustomizeSheet: View {
         case .imageGroup(let id, _):
             app.personalization.clearImageGroupDefault(for: id)
         case .container(let snapshot): app.personalization.clearOverride(id: snapshot.id)
+        case .volume(let name): app.personalization.clearVolumeStyle(for: name)
         }
         dismiss()
     }
@@ -238,8 +326,26 @@ struct CustomizeSheet: View {
         dismiss()
     }
 
-    private func inheritedStyle(for snapshot: ContainerSnapshot) -> Personalization {
-        app.imageStyle(for: snapshot.image)
+    /// The style this target inherits when its override is off: a container inherits the image style;
+    /// a tag inherits its group's style.
+    private func inheritedStyle() -> Personalization {
+        switch target {
+        case .container(let snapshot): return app.imageStyle(for: snapshot.image)
+        case .imageTag(_, let groupID): return groupID.map { app.imageGroupStyle(forID: $0) } ?? Personalization()
+        default: return Personalization()
+        }
+    }
+
+    /// The target's own saved style when overriding (falls back to the inherited style as a starting
+    /// point if nothing's saved yet).
+    private func ownStyle() -> Personalization {
+        switch target {
+        case .container(let snapshot):
+            return app.personalization.hasOverride(id: snapshot.id) ? app.containerStyle(for: snapshot) : inheritedStyle()
+        case .imageTag(let reference, _):
+            return app.personalization.imageDefault(for: reference) ?? inheritedStyle()
+        default: return inheritedStyle()
+        }
     }
 
 }

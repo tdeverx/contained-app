@@ -32,7 +32,7 @@ struct TagImageSheet: View {
         Task {
             do {
                 _ = try await client.tagImage(source: source, target: target.trimmingCharacters(in: .whitespaces))
-                await app.refreshResource(.images)
+                await app.refreshImagesIfStale(force: true)
                 dismiss()
             } catch let error as CommandError { app.flash(error.userMessage); busy = false }
             catch { app.flash(error.localizedDescription); busy = false }

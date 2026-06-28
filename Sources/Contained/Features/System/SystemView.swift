@@ -1,22 +1,26 @@
 import SwiftUI
 import ContainedCore
 
-/// System overview: service status + controls, `system df` disk usage, a Prune Center, the daemon
-/// properties, and a system-logs viewer.
-struct SystemView: View {
+/// System overview content: service status + controls, volumes, `system df` disk usage, a Prune
+/// Center, and a system-logs viewer. Hosted header-less in the toolbar System morph panel (there's no
+/// standalone System page). Daemon defaults, kernel, and DNS configuration live in Settings → Runtime.
+struct SystemContent: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
+    /// Flat cards (no shadow) when hosted in the toolbar morph panel; elevated if shown standalone.
+    var elevated = true
+    var onClose: () -> Void = {}
+
     @State private var working = false
     @State private var pruneTarget: PruneTarget?
     @State private var showLogs = false
-    @State private var showActivity = false
-    @State private var dnsDomains: [String] = []
-    @State private var confirmingKernel = false
-    @State private var addingDNS = false
-    @State private var newDomain = ""
-    @State private var deletingDomain: String?
+    @State private var inspectingVolume: VolumeResource?
+    @State private var deletingVolume: VolumeResource?
 
     private let columns = [GridItem(.adaptive(minimum: 220), spacing: Tokens.Space.m)]
+    private let volumeColumns = [GridItem(.adaptive(minimum: Tokens.CardSize.largeMin,
+                                                    maximum: Tokens.CardSize.largeMax),
+                                          spacing: Tokens.Space.m)]
 
     enum PruneTarget: String, Identifiable {
         case containers, images, volumes, networks
@@ -36,130 +40,79 @@ struct SystemView: View {
             VStack(alignment: .leading, spacing: Tokens.Space.l) {
                 serviceCard
                 backgroundTasksSection
+                volumesSection
                 if let usage = app.diskUsage { diskSection(usage) }
                 pruneSection
-                kernelDNSSection
-                if let props = app.properties { propertiesSection(props) }
             }
             .padding(Tokens.Space.l)
         }
         .scrollEdgeEffectStyle(.soft, for: .all)
-        .task { await app.refreshResource(.system); await loadDNS() }
-        .onAppear { consumePending() }
-        .onChange(of: ui.pendingAction) { _, _ in consumePending() }
+        .task { await app.refreshSystemResources() }
         .sheet(isPresented: $showLogs) { SystemLogsSheet() }
-        .sheet(isPresented: $showActivity) { ActivityView() }
+        .sheet(item: $inspectingVolume) { JSONInspectorSheet(title: $0.name, value: $0) }
+        .confirmationDialog("Delete volume \(deletingVolume?.name ?? "")?",
+                            isPresented: deletingVolumeBinding, presenting: deletingVolume) { volume in
+            Button("Delete", role: .destructive) { Task { await deleteVolume(volume) } }
+        } message: { _ in Text("This permanently removes the volume and its data.") }
         .confirmationDialog(pruneTarget?.title ?? "", isPresented: pruneBinding, presenting: pruneTarget) { target in
             Button("Remove", role: .destructive) { Task { await prune(target) } }
         } message: { _ in Text("This permanently removes unused resources to reclaim disk space.") }
-        .confirmationDialog("Install the recommended kernel?", isPresented: $confirmingKernel) {
-            Button("Download & install") { Task { await installKernel() } }
-        } message: {
-            Text("Downloads and sets the recommended kernel as the default. This may take a moment.")
-        }
-        .confirmationDialog("Delete DNS domain \(deletingDomain ?? "")?",
-                            isPresented: deletingDomainBinding, presenting: deletingDomain) { domain in
-            Button("Delete", role: .destructive) { Task { await deleteDNS(domain) } }
-        } message: { _ in Text("This may prompt for your administrator password (handled by the container CLI).") }
-        .alert("New local DNS domain", isPresented: $addingDNS) {
-            TextField("example.test", text: $newDomain)
-            Button("Cancel", role: .cancel) { newDomain = "" }
-            Button("Create") { Task { await addDNS() } }
-        } message: {
-            Text("Creating a domain may prompt for your administrator password (handled by the container CLI).")
-        }
     }
 
-    // MARK: Kernel & DNS (privileged)
+    // MARK: Volumes (migrated here from the standalone sidebar section)
 
-    private var kernelDNSSection: some View {
+    private var sortedVolumes: [VolumeResource] {
+        app.volumes.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private var volumesSection: some View {
         VStack(alignment: .leading, spacing: Tokens.Space.m) {
-            Text("Kernel & DNS").font(.headline)
-            VStack(alignment: .leading, spacing: Tokens.Space.s) {
-                HStack {
-                    Label("Recommended kernel", systemImage: "cpu")
-                    Spacer()
-                    Button("Install recommended…") { confirmingKernel = true }.buttonStyle(.glass)
-                }
-                revealCLIHint("container system kernel set --recommended")
-                Divider()
-                HStack {
-                    Label("Local DNS domains", systemImage: "globe")
-                    Spacer()
-                    Button { newDomain = ""; addingDNS = true } label: { Image(systemName: "plus") }.buttonStyle(.glass)
-                }
-                if dnsDomains.isEmpty {
-                    Text("No local DNS domains.").font(.caption).foregroundStyle(.secondary)
-                } else {
-                    ForEach(dnsDomains, id: \.self) { domain in
-                        HStack {
-                            Text(domain).font(.system(.callout, design: .monospaced))
-                            Spacer()
-                            Button(role: .destructive) { deletingDomain = domain } label: { Image(systemName: "trash") }
-                                .buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.small)
-                        }
+            HStack {
+                Text("Volumes").font(.headline)
+                Spacer()
+                Button { onClose(); ui.dispatch(.createVolume) } label: { Label("New Volume", systemImage: "plus") }
+                    .buttonStyle(.glass)
+            }
+            if app.volumes.isEmpty {
+                emptyVolumesCard
+            } else {
+                LazyVGrid(columns: volumeColumns, spacing: Tokens.Space.m) {
+                    ForEach(sortedVolumes) { volume in
+                        VolumeCard(volume: volume,
+                                   elevated: elevated,
+                                   onInspect: { inspectingVolume = volume },
+                                   onDelete: { deletingVolume = volume })
                     }
                 }
-                Text("Kernel and DNS changes may prompt for your administrator password — handled by the container CLI; Contained never sees it.")
-                    .font(.caption2).foregroundStyle(.secondary)
             }
-            .padding(Tokens.Space.l)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
         }
     }
 
-    /// A small copyable CLI hint, shown only when the Reveal-CLI setting is on.
-    @ViewBuilder
-    private func revealCLIHint(_ command: String) -> some View {
-        if app.settings.revealCLI {
+    private var emptyVolumesCard: some View {
+        ResourceGlassCard(size: .small, elevated: elevated) {
             HStack(spacing: Tokens.Space.s) {
-                Image(systemName: "terminal").foregroundStyle(.secondary)
-                Text(command).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
-                    .lineLimit(1).truncationMode(.middle)
-                Spacer()
-                Button { copyToPasteboard(command) } label: { Image(systemName: "doc.on.doc") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary).help("Copy command")
+                Image(systemName: "externaldrive")
+                    .foregroundStyle(.secondary)
+                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
+                    .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("No volumes").font(.callout.weight(.medium))
+                    Text("Create a volume to share persistent storage with containers.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
             }
         }
     }
 
-    private var deletingDomainBinding: Binding<Bool> {
-        Binding(get: { deletingDomain != nil }, set: { if !$0 { deletingDomain = nil } })
+    private var deletingVolumeBinding: Binding<Bool> {
+        Binding(get: { deletingVolume != nil }, set: { if !$0 { deletingVolume = nil } })
     }
 
-    private func loadDNS() async {
+    private func deleteVolume(_ volume: VolumeResource) async {
         guard let client = app.client else { return }
-        if let domains = try? await client.dnsDomains() { dnsDomains = domains }
-    }
-
-    /// Pick up a toolbar/menu action addressed to the System page.
-    private func consumePending() {
-        switch ui.pendingAction {
-        case .activityHistory: ui.pendingAction = nil; showActivity = true
-        case .systemLogs:      ui.pendingAction = nil; showLogs = true
-        default: break
-        }
-    }
-
-    private func installKernel() async {
-        guard let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.setRecommendedKernel() }) { app.flash(error) }
-        else { app.flash("Recommended kernel installed"); await app.refreshResource(.system) }
-    }
-
-    private func addDNS() async {
-        let domain = newDomain.trimmingCharacters(in: .whitespaces)
-        newDomain = ""
-        guard !domain.isEmpty, let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.createDNSDomain(domain) }) { app.flash(error) }
-        else { await loadDNS() }
-    }
-
-    private func deleteDNS(_ domain: String) async {
-        guard let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.deleteDNSDomain(domain) }) { app.flash(error) }
-        else { await loadDNS() }
+        if let error = await app.captured({ _ = try await client.deleteVolumes([volume.name]) }) { app.flash(error) }
+        await app.refreshVolumes()
     }
 
     private var pruneSection: some View {
@@ -181,7 +134,7 @@ struct SystemView: View {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     HStack(spacing: Tokens.Space.m) {
                         Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 18))
+                            .font(.title2)
                             .foregroundStyle(Color.accentColor)
                             .frame(width: Tokens.IconSize.headerChip, height: Tokens.IconSize.headerChip)
                             .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -218,7 +171,7 @@ struct SystemView: View {
             }
             .padding(Tokens.Space.l)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: elevated)
         }
     }
 
@@ -243,35 +196,15 @@ struct SystemView: View {
     private func pruneButton(_ title: String, _ symbol: String, _ target: PruneTarget, _ reclaimable: UInt64?) -> some View {
         Button { pruneTarget = target } label: {
             VStack(spacing: 4) {
-                Image(systemName: symbol).font(.system(size: 16))
+                Image(systemName: symbol).font(.title3)
                 Text(title).font(.caption).multilineTextAlignment(.center)
                 if let reclaimable, reclaimable > 0 {
-                    Text(Format.bytes(reclaimable)).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(Format.bytes(reclaimable)).font(.caption2).foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity).padding(.vertical, Tokens.Space.m)
         }
         .buttonStyle(.glass)
-    }
-
-    private func propertiesSection(_ props: SystemProperties) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.m) {
-            Text("Defaults").font(.headline)
-            VStack(alignment: .leading, spacing: Tokens.Space.s) {
-                if let d = props.container {
-                    if let c = d.cpus { labeled("Default CPUs", "\(c)") }
-                    if let m = d.memory { labeled("Default memory", m) }
-                }
-                if let b = props.build {
-                    if let img = b.image { labeled("Builder image", img) }
-                    if let r = b.rosetta { labeled("Builder Rosetta", r ? "on" : "off") }
-                }
-                if let k = props.kernel, let path = k.binaryPath { labeled("Kernel", path) }
-            }
-            .padding(Tokens.Space.l)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
-        }
     }
 
     private var pruneBinding: Binding<Bool> {
@@ -287,7 +220,7 @@ struct SystemView: View {
             case .volumes: _ = try await client.pruneVolumes()
             case .networks: _ = try await client.pruneNetworks()
             }
-            await app.refreshResource(.system)
+            await app.refreshSystemResources()
             await app.refreshSystem()
         } catch let error as CommandError { app.flash(error.userMessage) }
         catch { app.flash(error.localizedDescription) }
@@ -302,11 +235,9 @@ struct SystemView: View {
                 Text(app.serviceLabel).font(.callout).foregroundStyle(.secondary)
             }
             if let status = app.systemStatus {
-                if let version = status.apiServerVersion { labeled("API server", version) }
                 if let root = status.installRoot { labeled("Install root", root) }
                 if let appRoot = status.appRoot { labeled("App root", appRoot) }
             }
-            if let cli = app.cliVersion { labeled("CLI", "v\(cli)") }
             HStack(spacing: Tokens.Space.s) {
                 Button { run { await app.startService() } } label: { Label("Start", systemImage: "play.fill") }
                     .disabled(app.serviceHealthy || working)
@@ -314,6 +245,8 @@ struct SystemView: View {
                     .disabled(!app.serviceHealthy || working)
                 Button { run { await app.restartService() } } label: { Label("Restart", systemImage: "arrow.clockwise") }
                     .disabled(working)
+                Spacer(minLength: 0)
+                Button { showLogs = true } label: { Label("Logs", systemImage: "text.alignleft") }
                 if working { ProgressView().controlSize(.small) }
             }
             .buttonStyle(.glass)
@@ -321,7 +254,7 @@ struct SystemView: View {
         }
         .padding(Tokens.Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: elevated)
     }
 
     private func diskSection(_ usage: DiskUsage) -> some View {
@@ -347,7 +280,7 @@ struct SystemView: View {
             .overlay(alignment: .bottomTrailing) {
                 if category.reclaimable > 0 {
                     Text("\(Format.bytes(category.reclaimable)) reclaimable")
-                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                        .font(.caption2).foregroundStyle(.secondary)
                         .padding(Tokens.Space.m)
                 }
             }
@@ -366,6 +299,103 @@ struct SystemView: View {
     private func run(_ action: @escaping () async -> Void) {
         working = true
         Task { await action(); working = false }
+    }
+}
+
+/// A large, customizable volume card for the System page. Plots aggregated read/write I/O (summed
+/// across the containers that mount the volume) and offers inspect / copy / delete.
+private struct VolumeCard: View {
+    @Environment(AppModel.self) private var app
+    let volume: VolumeResource
+    var elevated = true
+    var onInspect: () -> Void
+    var onDelete: () -> Void
+
+    @State private var localMetric: GraphMetric?
+
+    private static let metrics: [GraphMetric] = [.diskRead, .diskWrite]
+    private var style: Personalization { app.volumeStyle(for: volume.name) }
+    private var metric: GraphMetric {
+        let stored = Self.metrics.contains(style.graphMetric) ? style.graphMetric : .diskRead
+        return localMetric ?? stored
+    }
+    private var samples: [Double] { app.volumeIOHistory(for: volume.name, metric: metric) }
+
+    private var subtitle: String {
+        let config = volume.configuration
+        let parts = [config.sizeInBytes.map { Format.bytes($0) }, config.format, config.source].compactMap { $0 }
+        return parts.isEmpty ? "Local volume" : parts.joined(separator: "  ·  ")
+    }
+
+    var body: some View {
+        ResourceGlassCard(size: .large,
+                          fill: style.fillBackground ? style.color : nil,
+                          fillOpacity: style.backgroundOpacity,
+                          gradient: style.gradient,
+                          gradientAngle: style.gradientAngle,
+                          elevated: elevated) {
+            header
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            HStack(spacing: Tokens.Space.m) { ForEach(Self.metrics) { chip($0) } }
+        } footerActions: {
+            HStack(spacing: Tokens.Space.m) {
+                action("doc.text.magnifyingglass", help: "Inspect", action: onInspect)
+                action("doc.on.doc", help: "Copy name") { copyToPasteboard(volume.name) }
+                action("trash", help: "Delete", tint: .red, action: onDelete)
+            }
+        } widget: {
+            LiveSparkline(samples: samples, color: style.color)
+                .frame(height: 58)
+        }
+        .contextMenu { menu }
+    }
+
+    private var header: some View {
+        HStack(spacing: Tokens.Space.s) {
+            CardStyleButton(style: style, target: .volume(name: volume.name), help: "Customize volume")
+            VStack(alignment: .leading, spacing: 1) {
+                Text(style.nickname.isEmpty ? volume.name : style.nickname)
+                    .font(.callout.weight(.medium)).lineLimit(1)
+                Text(subtitle)
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// A tappable read/write chip showing the current rate; selecting it switches the plotted metric.
+    private func chip(_ which: GraphMetric) -> some View {
+        let active = metric == which
+        let rate = app.volumeIORate(for: volume.name, metric: which)
+        return Button { localMetric = which } label: {
+            HStack(spacing: 4) {
+                Image(systemName: which.systemImage).font(.caption2)
+                Text(Format.compactRate(rate)).font(.caption.weight(.medium)).monospacedDigit()
+            }
+            .foregroundStyle(active ? AnyShapeStyle(style.color) : AnyShapeStyle(.secondary))
+        }
+        .buttonStyle(.plain)
+        .help(which == .diskRead ? "Read" : "Write")
+        .accessibilityLabel(which == .diskRead ? "Read" : "Write")
+    }
+
+    private func action(_ systemName: String, help: String, tint: Color? = nil,
+                        action: @escaping () -> Void) -> some View {
+        Button(action: action) { Image(systemName: systemName).font(.body) }
+            .buttonStyle(.plain)
+            .foregroundStyle(tint ?? .secondary)
+            .help(help)
+            .accessibilityLabel(help)
+    }
+
+    @ViewBuilder
+    private var menu: some View {
+        Button(action: onInspect) { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
+        Button { copyToPasteboard(volume.name) } label: { Label("Copy name", systemImage: "doc.on.doc") }
+        Divider()
+        Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
     }
 }
 

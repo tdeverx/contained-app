@@ -5,9 +5,13 @@ import SwiftUI
 /// (`GlassOptionTile`), and any future band controls visually consistent and on one source of truth.
 
 /// A single icon button for the toolbar band — a borderless SF Symbol in a circular hit target.
+/// Standalone, it carries its own circular glass; placed inside a `ToolbarButtonCluster`, pass
+/// `showsBackground: false` so the cluster's shared capsule provides the glass instead.
 struct ToolbarIconButton: View {
     let systemName: String
     var help: String = ""
+    /// When false, the button draws no glass of its own (the enclosing cluster supplies it).
+    var showsBackground = true
     var action: () -> Void
 
     var body: some View {
@@ -22,7 +26,9 @@ struct ToolbarIconButton: View {
         .buttonStyle(.plain)
         .buttonBorderShape(.circle)
         .background {
-            Circle().fill(.clear).glassEffect(.regular.interactive(), in: Circle())
+            if showsBackground {
+                Circle().fill(.clear).glassEffect(.regular.interactive(), in: Circle())
+            }
         }
         .clipShape(Circle())
         .help(help)
@@ -30,11 +36,17 @@ struct ToolbarIconButton: View {
     }
 }
 
-extension View {
-    /// The capsule Liquid Glass background shared by toolbar control groups and the search field —
-    /// interactive `.regular` glass in a concentric capsule, padded so grouped buttons sit on one
-    /// baseline. Matches the interactive glass used by `GlassOptionTile`.
-    func toolbarControlGlass() -> some View {
-        clipShape(Capsule())
+/// A pill that groups related toolbar buttons under one shared interactive-glass capsule (e.g.
+/// Images + Activity). Place bare `ToolbarIconButton`s (`showsBackground: false`) inside; the cluster
+/// owns the capsule glass, so the group reads as a single control — and its frame is what a morph
+/// grows out of (see `AppToolbar`).
+struct ToolbarButtonCluster<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        HStack(spacing: Tokens.Toolbar.groupSpacing) { content() }
+            .padding(.horizontal, Tokens.Toolbar.groupPaddingH)
+            .frame(height: Tokens.Toolbar.controlHeight)
+            .glassEffect(.regular.interactive(), in: Capsule())
     }
 }

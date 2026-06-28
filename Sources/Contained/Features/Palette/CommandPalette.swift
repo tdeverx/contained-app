@@ -15,10 +15,18 @@ struct PaletteItem: Identifiable {
     @MainActor
     static func all(app: AppModel, ui: UIState) -> [PaletteItem] {
         var items: [PaletteItem] = []
-        for section in AppSection.allCases {
-            items.append(PaletteItem(title: "Go to \(section.title)", subtitle: "navigate",
-                                     icon: section.systemImage, tint: .secondary) {
-                ui.section = section
+        items.append(PaletteItem(title: "Containers", subtitle: "navigate",
+                                 icon: "shippingbox", tint: .secondary) { ui.activeMorph = nil })
+        // Toolbar panels (the former sidebar pages) — open the matching morph.
+        let panels: [(String, String, UIState.ToolbarMorph)] = [
+            ("Images", "shippingbox.fill", .updates),
+            ("Templates", "square.on.square", .templates),
+            ("Activity", "clock.arrow.circlepath", .activity),
+            ("System", "gearshape.2", .system),
+        ]
+        for (title, icon, morph) in panels {
+            items.append(PaletteItem(title: title, subtitle: "navigate", icon: icon, tint: .secondary) {
+                ui.toggleMorph(morph)
             })
         }
         // Add anything, from anywhere.

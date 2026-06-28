@@ -15,7 +15,7 @@ import ContainedCore
 struct CreationFlow: View {
     /// Where the flow starts: the toolbar `+` begins at `menu`; other entry points begin at `chooser`.
     enum Start {
-        case menu, chooser, search, configure, network, volume
+        case menu, chooser, search, configure, network, volume, build
 
         init(_ entry: UIState.CreationEntry) {
             switch entry {
@@ -24,6 +24,7 @@ struct CreationFlow: View {
             case .configure: self = .configure
             case .network: self = .network
             case .volume: self = .volume
+            case .build: self = .build
             }
         }
     }
@@ -39,7 +40,7 @@ struct CreationFlow: View {
 
     enum Page: Hashable {
         case menu, chooser, search, localImages, compose, pasteCompose, imageArchive, templates
-        case network, volume, configure
+        case network, volume, build, configure
     }
     @State private var page: Page
     @State private var spec = RunSpec()
@@ -73,6 +74,7 @@ struct CreationFlow: View {
         case .configure: _page = State(initialValue: .configure)
         case .network: _page = State(initialValue: .network)
         case .volume:  _page = State(initialValue: .volume)
+        case .build:   _page = State(initialValue: .build)
         }
     }
 
@@ -100,6 +102,7 @@ struct CreationFlow: View {
         case .templates: templatesPage
         case .network:   networkPage
         case .volume:    volumePage
+        case .build:     buildPage
         case .configure:
             ContainerConfigureView(mode: .new(prefill: spec),
                                    leading: .back { go(.chooser) },
@@ -116,12 +119,15 @@ struct CreationFlow: View {
                     box(symbol: "shippingbox", title: "Container",
                         subtitle: "Configure and run an image",
                         matchedID: "creation-option-0") { go(.chooser) }
+                    box(symbol: "hammer", title: "Build",
+                        subtitle: "Build an image from a Dockerfile",
+                        matchedID: "creation-option-1") { go(.build) }
                     box(symbol: "network", title: "Network",
                         subtitle: "Create a container network",
-                        matchedID: "creation-option-1") { go(.network) }
+                        matchedID: "creation-option-2") { go(.network) }
                     box(symbol: "externaldrive", title: "Volume",
                         subtitle: "Create persistent storage",
-                        matchedID: "creation-option-2") { go(.volume) }
+                        matchedID: "creation-option-3") { go(.volume) }
                 }
             }
         }
@@ -190,6 +196,13 @@ struct CreationFlow: View {
         }
     }
 
+    private var buildPage: some View {
+        pageScaffold(title: "Build an image", subtitle: "From a Dockerfile + build context",
+                     leading: resourceLeading) {
+            BuildWorkspaceView()
+        }
+    }
+
     private var searchPage: some View {
         pageScaffold(title: "Search for an image", subtitle: "Pick one to configure and run",
                      leading: .back { go(.chooser) }) {
@@ -240,7 +253,7 @@ struct CreationFlow: View {
                     }
                 }
             }
-            .task { await app.refreshResource(.images) }
+            .task { await app.refreshImagesIfStale(force: true) }
         }
     }
 
@@ -264,7 +277,7 @@ struct CreationFlow: View {
                      leading: .back { go(.compose) }) {
             VStack(alignment: .leading, spacing: Tokens.Space.m) {
                 TextEditor(text: $composeText)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(.callout, design: .monospaced))
                     .scrollContentBackground(.hidden)
                     .padding(Tokens.Space.s)
                     .glassSurface(.thin, cornerRadius: Tokens.Radius.control)
@@ -318,7 +331,7 @@ struct CreationFlow: View {
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(template.name).font(.callout.weight(.medium)).lineLimit(1)
                                     Text(Format.shortImage(template.spec?.image ?? "—"))
-                                        .font(.system(size: 11, design: .monospaced))
+                                        .font(.system(.caption, design: .monospaced))
                                         .foregroundStyle(.secondary).lineLimit(1)
                                 }
                                 Spacer(minLength: 0)
@@ -438,7 +451,7 @@ struct CreationFlow: View {
                 Text(Format.shortImage(image.reference)).font(.callout.weight(.medium)).lineLimit(1)
                 if !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -467,10 +480,10 @@ struct CreationFlow: View {
         switch page {
         case .menu:
             onClose()
-        case .chooser, .network, .volume:
+        case .chooser, .network, .volume, .build:
             switch start {
             case .menu: go(.menu)
-            case .chooser, .search, .configure, .network, .volume: onClose()
+            default: onClose()
             }
         case .compose:
             go(.chooser)
@@ -483,7 +496,7 @@ struct CreationFlow: View {
 
     private func size(for page: Page) -> CGSize {
         switch page {
-        case .menu:      return CGSize(width: 640, height: optionPageHeight)
+        case .menu:      return CGSize(width: 760, height: optionPageHeight)
         case .chooser:   return CGSize(width: 640, height: twoRowOptionPageHeight)
         case .search:    return CGSize(width: 560, height: 540)
         case .localImages: return CGSize(width: 560, height: 520)
@@ -493,6 +506,7 @@ struct CreationFlow: View {
         case .templates: return CGSize(width: 520, height: 470)
         case .network:   return Tokens.SheetSize.small
         case .volume:    return Tokens.SheetSize.small
+        case .build:     return CGSize(width: 640, height: 680)
         case .configure: return Tokens.SheetSize.form
         }
     }
@@ -501,7 +515,7 @@ struct CreationFlow: View {
         switch page {
         case .menu, .chooser, .compose:
             return .anchored
-        case .search, .localImages, .pasteCompose, .imageArchive, .templates, .network, .volume, .configure:
+        case .search, .localImages, .pasteCompose, .imageArchive, .templates, .network, .volume, .build, .configure:
             return .centered
         }
     }

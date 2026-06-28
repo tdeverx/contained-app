@@ -42,7 +42,6 @@ struct ContainedApp: App {
             }
             // (Find / ⌘F intentionally omitted — in-window search is being reworked and will return
             // with the new search affordance.)
-            SidebarCommands()
             CommandGroup(after: .sidebar) {
                 Divider()
                 Button("Reload") { app.coordinator.wake() }
@@ -64,10 +63,14 @@ struct ContainedApp: App {
                     .keyboardShortcut("i", modifiers: .command)
             }
             CommandMenu("Go") {
-                ForEach(Array(AppSection.allCases.enumerated()), id: \.element) { index, section in
-                    Button(section.title) { ui.section = section }
-                        .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
-                }
+                Button("Containers") { ui.activeMorph = nil }
+                    .keyboardShortcut("1", modifiers: .command)
+                Button("Images") { ui.toggleMorph(.updates) }
+                    .keyboardShortcut("2", modifiers: .command)
+                Button("Templates") { ui.toggleMorph(.templates) }
+                    .keyboardShortcut("3", modifiers: .command)
+                Button("System") { ui.toggleMorph(.system) }
+                    .keyboardShortcut("4", modifiers: .command)
             }
             CommandGroup(replacing: .help) {
                 Button("Contained Help") { NSWorkspace.shared.open(Links.helpURL) }

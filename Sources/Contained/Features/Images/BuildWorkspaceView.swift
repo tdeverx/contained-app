@@ -31,7 +31,7 @@ struct BuildWorkspaceView: View {
                                        dockerfile: dockerfile.isEmpty ? nil : dockerfile,
                                        buildArgs: argsDict, noCache: noCache,
                                        platform: platform.isEmpty ? nil : platform)
-                }, onComplete: { ok in if ok { Task { await app.refreshResource(.images) } } })
+                }, onComplete: { ok in if ok { Task { await app.refreshImagesIfStale(force: true) } } })
                 .id(run)
                 .padding(Tokens.Space.l)
             } else {

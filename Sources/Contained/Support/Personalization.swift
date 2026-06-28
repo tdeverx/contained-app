@@ -68,10 +68,12 @@ struct Personalization: Codable, Hashable, Sendable {
 final class PersonalizationStore {
     private var overrides: [String: Personalization]      // keyed by container id (== stable name)
     private var imageDefaults: [String: Personalization]   // keyed by image reference
+    private var volumeStyles: [String: Personalization]    // keyed by volume name
     private let defaults: UserDefaults
     private enum Keys {
         static let overrides = "personalizationOverrides"
         static let imageDefaults = "personalizationImageDefaults"
+        static let volumeStyles = "personalizationVolumeStyles"
         static let migrated = "personalizationLabelsMigrated"
     }
 
@@ -79,6 +81,7 @@ final class PersonalizationStore {
         self.defaults = defaults
         overrides = Self.load(defaults, Keys.overrides)
         imageDefaults = Self.load(defaults, Keys.imageDefaults)
+        volumeStyles = Self.load(defaults, Keys.volumeStyles)
     }
 
     func backupSnapshot() -> PersonalizationBackup {
@@ -165,6 +168,20 @@ final class PersonalizationStore {
 
     static func imageGroupKey(_ groupID: String) -> String {
         "image-group:\(groupID)"
+    }
+
+    // MARK: Volume styles (direct, keyed by volume name)
+
+    func volumeStyle(for name: String) -> Personalization? { volumeStyles[name] }
+
+    func setVolumeStyle(_ personalization: Personalization, for name: String) {
+        volumeStyles[name] = personalization
+        persist(Keys.volumeStyles, volumeStyles)
+    }
+
+    func clearVolumeStyle(for name: String) {
+        volumeStyles[name] = nil
+        persist(Keys.volumeStyles, volumeStyles)
     }
 
     // MARK: One-time migration
