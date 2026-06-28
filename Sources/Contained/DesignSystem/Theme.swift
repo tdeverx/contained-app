@@ -272,7 +272,7 @@ private struct ToolbarControlMaterial<S: Shape>: ViewModifier {
     let shape: S
 
     func body(content: Content) -> some View {
-        content.glassEffect(.regular.interactive(), in: shape)
+        content.glassEffect(.clear.interactive(), in: shape)
     }
 }
 

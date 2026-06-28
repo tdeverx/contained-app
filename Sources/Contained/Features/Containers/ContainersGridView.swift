@@ -184,8 +184,8 @@ struct ContainersGridView: View {
                     Text("No containers on this network.")
                         .font(.callout)
                         .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, Tokens.Space.s)
-                        .padding(.leading, Tokens.Space.xs)
                 } else {
                     LazyVGrid(columns: columns, spacing: Tokens.Space.m) {
                         ForEach(group.containers) { snapshot in
@@ -208,28 +208,21 @@ struct ContainersGridView: View {
                     .rotationEffect(.degrees(collapsed ? 0 : 90))
             }
             .buttonStyle(.plain)
-            HStack(spacing: Tokens.Space.s) {
-                Image(systemName: "network").font(.callout).foregroundStyle(.secondary)
-                Text(group.name).font(.headline)
-                Text("\(group.containers.count)")
-                    .font(.caption.weight(.medium))
+            Image(systemName: "network").font(.callout).foregroundStyle(.secondary)
+            Text(group.name).font(.headline)
+            Text("\(group.containers.count)")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 7).padding(.vertical, 2)
+                .background(.quaternary, in: Capsule())
+            if group.isBuiltin {
+                Text("builtin").font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 7).padding(.vertical, 2)
                     .background(.quaternary, in: Capsule())
-                if group.isBuiltin {
-                    Text("builtin").font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 7).padding(.vertical, 2)
-                        .background(.quaternary, in: Capsule())
-                }
-            }
-            Spacer(minLength: 0)
-            if let resource = group.resource {
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(systemName: "ellipsis", help: "Inspect network") { inspectingNetwork = resource }
-                }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, Tokens.Space.xs)
         .padding(.vertical, Tokens.Space.xs)
         .contextMenu { if let resource = group.resource { networkMenu(resource) } }
