@@ -2,29 +2,93 @@ import SwiftUI
 import AppKit
 import ContainedCore
 
-/// App preferences. Four tabs, each built from the same grouped-`Form` + `Section` model so spacing,
+/// App preferences. Six sections, each built from the same grouped-`Form` + `Section` model so spacing,
 /// headers, and explanatory footers stay consistent: Appearance (theme + glass), General (behavior,
-/// data, CLI), Updates (Sparkle), and About.
-struct SettingsView: View {
+/// data, CLI), Runtime, Registries, Updates, and About.
+///
+/// Hosted in the toolbar Settings morph panel (there's no standalone Settings window). Sections switch
+/// via a header menu (page switching) rather than a `TabView` — `NSTabView`'s Auto Layout constraints
+/// crash when the morph grow proposes a tiny size. Pass `onClose` to show a close button in the header.
+struct SettingsContent: View {
     @Environment(AppModel.self) private var app
+    @State private var page: SettingsPage = .appearance
+    var onClose: (() -> Void)?
+
+    enum SettingsPage: String, CaseIterable, Identifiable {
+        case appearance = "Appearance"
+        case general = "General"
+        case runtime = "Runtime"
+        case registries = "Registries"
+        case updates = "Updates"
+        case about = "About"
+
+        var id: String { rawValue }
+
+        var systemImage: String {
+            switch self {
+            case .appearance: "paintpalette"
+            case .general: "gearshape"
+            case .runtime: "cpu"
+            case .registries: "key"
+            case .updates: "arrow.down.app"
+            case .about: "info.circle"
+            }
+        }
+    }
 
     var body: some View {
         @Bindable var settings = app.settings
-        TabView {
-            AppearanceTab(settings: settings)
-                .tabItem { Label("Appearance", systemImage: "paintpalette") }
-            GeneralTab(settings: settings)
-                .tabItem { Label("General", systemImage: "gearshape") }
-            RuntimeTab()
-                .tabItem { Label("Runtime", systemImage: "cpu") }
-            RegistriesTab()
-                .tabItem { Label("Registries", systemImage: "key") }
-            UpdatesTab()
-                .tabItem { Label("Updates", systemImage: "arrow.down.app") }
-            AboutTab()
-                .tabItem { Label("About", systemImage: "info.circle") }
+        VStack(spacing: 0) {
+            header
+            Divider()
+            sectionBody(settings: settings)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Drop the grouped-Form backing so the morph panel's glass material shows through —
+                // the sections read as inset cards floating on the panel instead of a solid sheet.
+                .scrollContentBackground(.hidden)
         }
-        .frame(width: 500, height: 460)
+    }
+
+    private var header: some View {
+        ResourceCardHeader {
+            GlassButtonItem(systemName: page.systemImage, help: "Settings", isLabel: true)
+        } content: {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Settings").font(.headline)
+                Text(page.rawValue).font(.caption).foregroundStyle(.secondary)
+            }
+        } trailing: {
+            GlassButton(singleItem: onClose == nil) {
+                pagePicker
+                if let onClose {
+                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                }
+            }
+        }
+        .padding(Tokens.Space.m)
+    }
+
+    private var pagePicker: some View {
+        Menu {
+            ForEach(SettingsPage.allCases) { item in
+                Button { page = item } label: { Label(item.rawValue, systemImage: item.systemImage) }
+            }
+        } label: {
+            GlassButtonItem(systemName: "list.bullet", help: "Section", isLabel: true)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func sectionBody(settings: SettingsStore) -> some View {
+        switch page {
+        case .appearance: AppearanceTab(settings: settings)
+        case .general: GeneralTab(settings: settings)
+        case .runtime: RuntimeTab()
+        case .registries: RegistriesTab()
+        case .updates: UpdatesTab()
+        case .about: AboutTab()
+        }
     }
 }
 

@@ -13,7 +13,7 @@ struct ContainedApp: App {
                 .environment(app)
                 .environment(ui)
                 .modelContainer(app.historyStore.container)
-                .frame(minWidth: 920, minHeight: 620)
+                .frame(minWidth: 720, minHeight: 480)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1200, height: 800)
@@ -24,6 +24,12 @@ struct ContainedApp: App {
             CommandGroup(after: .appInfo) {
                 Button("Check for Updates…") { app.updater.checkForUpdates() }
                     .disabled(!app.updater.canCheckForUpdates)
+            }
+            // Settings now lives in the toolbar morph panel (no separate Settings window), so ⌘,
+            // opens that instead of the standard Settings scene.
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { ui.toggleMorph(.settings) }
+                    .keyboardShortcut(",", modifiers: .command)
             }
             CommandGroup(after: .newItem) {
                 // The toolbar "＋" add-menu — Container / Network / Volume.
@@ -88,11 +94,6 @@ struct ContainedApp: App {
                 Divider()
                 Button("Reveal CLI Binary in Finder") { revealCLIBinary() }
             }
-        }
-
-        Settings {
-            SettingsView()
-                .environment(app)
         }
 
         MenuBarExtra(isInserted: menuBarInserted) {

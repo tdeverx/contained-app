@@ -45,9 +45,11 @@ struct AppSafeAreaManager: Equatable {
     func insets(_ policy: AppSafeAreaPolicy = .content) -> EdgeInsets {
         let padding = policy.padding.rawValue
         let systemInsets = policy.includesSystemInsets ? system : EdgeInsets()
-        return EdgeInsets(top: systemInsets.top + (policy.excluding.contains(.top) ? topToolbarHeight : 0) + padding,
+        // On an edge that excludes its toolbar, the band *is* the inset — the padding doesn't stack on
+        // top of it. Edges without a toolbar exclusion get the padding instead.
+        return EdgeInsets(top: systemInsets.top + (policy.excluding.contains(.top) ? topToolbarHeight : padding),
                           leading: systemInsets.leading + padding,
-                          bottom: systemInsets.bottom + (policy.excluding.contains(.bottom) ? bottomToolbarHeight : 0) + padding,
+                          bottom: systemInsets.bottom + (policy.excluding.contains(.bottom) ? bottomToolbarHeight : padding),
                           trailing: systemInsets.trailing + padding)
     }
 

@@ -42,6 +42,9 @@ struct AppToolbar: View {
                     .frame(height: Tokens.Toolbar.controlHeight)
                     .padding(.bottom, bottomRowInset)
             }
+            // Toolbar controls sit above the morph dim/blur backdrop so they stay crisp while a panel
+            // is open (each panel grows from its own — hidden — control, so it never occludes them).
+            .zIndex(100)
             addMorphLayer
                 .zIndex(ui.activeMorph == .add ? 30 : 0)
             paletteMorphLayer
@@ -54,6 +57,8 @@ struct AppToolbar: View {
                 .zIndex(ui.activeMorph == .templates ? 30 : 0)
             systemMorphLayer
                 .zIndex(ui.activeMorph == .system ? 30 : 0)
+            settingsMorphLayer
+                .zIndex(ui.activeMorph == .settings ? 30 : 0)
             toolbarImageDetailLayer
                 .zIndex(toolbarImageDetail == nil ? 0 : 50)
         }
@@ -65,13 +70,28 @@ struct AppToolbar: View {
 
     private var topToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
+            settingsZone
             Spacer(minLength: Tokens.Space.m)
             searchZone
         }
-        // Leading inset clears the window traffic lights now that the toolbar spans the full window.
-        .padding(.leading, Tokens.Toolbar.leadingInset)
+        // No leading inset here — the Settings button sits at the window edge, behind the traffic lights.
+        .padding(.leading, Tokens.Toolbar.outerPadding)
         .padding(.trailing, Tokens.Toolbar.outerPadding)
         .frame(maxWidth: .infinity)
+    }
+
+    /// Top-left empty glass container mirroring the traffic-light cluster width. It has no controls —
+    /// it's vanity chrome that owns the `.settings` morph slot so the Settings panel (opened via ⌘, or
+    /// the menu) has a frame to grow from.
+    private var settingsZone: some View {
+        // The same GlassButton container as the other toolbar controls (for consistency), but empty and
+        // non-interactive — vanity chrome and a stable morph origin, sized by a min width.
+        GlassButton(minWidth: Tokens.Toolbar.trafficLightsWidth, singleItem: true, interactive: false) {
+            Color.clear
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .opacity(ui.activeMorph == .settings ? 0 : 1)
+        .background(singleSlotReader(.settings))
     }
 
     private var searchZone: some View {
@@ -91,7 +111,7 @@ struct AppToolbar: View {
         if ui.activeMorph == .palette {
             MorphingExpander(isPresented: paletteMorphBinding,
                              originFrame: slots[.palette] ?? .zero,
-                             target: toolbarMorphTarget(size: CGSize(width: 560, height: 480)),
+                             target: toolbarMorphTarget(for: .palette, size: CGSize(width: 560, height: 480)),
                              closeRequestToken: ui.morphCloseRequestToken) {
                 ToolbarCommandPalette { ui.requestMorphClose(.palette) }
             }
@@ -148,7 +168,7 @@ struct AppToolbar: View {
     private var addMorphLayer: some View {
         if ui.activeMorph == .add {
             MorphingExpander(isPresented: addMorphBinding, originFrame: slots[.add] ?? .zero,
-                             target: toolbarMorphTarget(size: CGSize(width: 440, height: 300)),
+                             target: toolbarMorphTarget(for: .add, size: CGSize(width: 440, height: 300)),
                              closeRequestToken: ui.morphCloseRequestToken,
                              onBackdropTap: addSoftDismiss) {
                 CreationFlow(start: .menu,
@@ -166,7 +186,7 @@ struct AppToolbar: View {
         if ui.activeMorph == .updates {
             MorphingExpander(isPresented: morphBinding(.updates),
                              originFrame: slots[.updates] ?? .zero,
-                             target: toolbarMorphTarget(size: CGSize(width: 440, height: 300)),
+                             target: toolbarMorphTarget(for: .updates, size: CGSize(width: 440, height: 300)),
                              closeRequestToken: ui.morphCloseRequestToken) {
                 ToolbarUpdatesPanel(onOpenImage: openToolbarImageDetail) {
                     ui.requestMorphClose(.updates)
@@ -181,7 +201,7 @@ struct AppToolbar: View {
             MorphingExpander(isPresented: toolbarImageDetailBinding,
                              originFrame: usableToolbarImageSource ?? .zero,
                              target: .anchored(size: toolbarImageDetailSize,
-                                               safeArea: toolbarMorphSafeArea,
+                                               safeArea: toolbarMorphSafeArea(for: .updates),
                                                margin: 0),
                              closeRequestToken: toolbarImageCloseRequestToken) {
                 ToolbarImageGroupCard(group: currentToolbarImageGroup(detail),
@@ -197,7 +217,7 @@ struct AppToolbar: View {
         if ui.activeMorph == .activity {
             MorphingExpander(isPresented: morphBinding(.activity),
                              originFrame: slots[.activity] ?? .zero,
-                             target: toolbarMorphTarget(size: CGSize(width: 460, height: 360)),
+                             target: toolbarMorphTarget(for: .activity, size: CGSize(width: 460, height: 360)),
                              closeRequestToken: ui.morphCloseRequestToken) {
                 ToolbarActivityPanel {
                     ui.requestMorphClose(.activity)
@@ -211,7 +231,7 @@ struct AppToolbar: View {
         if ui.activeMorph == .templates {
             MorphingExpander(isPresented: morphBinding(.templates),
                              originFrame: slots[.templates] ?? .zero,
-                             target: toolbarMorphTarget(size: CGSize(width: 440, height: 300)),
+                             target: toolbarMorphTarget(for: .templates, size: CGSize(width: 440, height: 300)),
                              closeRequestToken: ui.morphCloseRequestToken) {
                 ToolbarTemplatesPanel {
                     ui.requestMorphClose(.templates)
@@ -225,9 +245,21 @@ struct AppToolbar: View {
         if ui.activeMorph == .system {
             MorphingExpander(isPresented: morphBinding(.system),
                              originFrame: slots[.system] ?? .zero,
-                             target: toolbarMorphTarget(size: CGSize(width: 580, height: 600)),
+                             target: toolbarMorphTarget(for: .system, size: CGSize(width: 580, height: 600)),
                              closeRequestToken: ui.morphCloseRequestToken) {
                 ToolbarSystemPanel { ui.requestMorphClose(.system) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var settingsMorphLayer: some View {
+        if ui.activeMorph == .settings {
+            MorphingExpander(isPresented: morphBinding(.settings),
+                             originFrame: slots[.settings] ?? .zero,
+                             target: toolbarMorphTarget(for: .settings, size: CGSize(width: 560, height: 560)),
+                             closeRequestToken: ui.morphCloseRequestToken) {
+                ToolbarSettingsPanel { ui.requestMorphClose(.settings) }
             }
         }
     }
@@ -281,19 +313,31 @@ struct AppToolbar: View {
         }
     }
 
-    private var toolbarMorphSafeArea: AppSafeAreaPolicy {
-        .toolbarChrome
+    /// A panel only needs to clear the *opposite* toolbar: a bottom-row control grows upward, so the
+    /// top toolbar is the unsafe edge; a top-row control grows downward, so the bottom toolbar is. The
+    /// toolbar the control lives in is its own anchor, so it stays safe.
+    private func toolbarMorphSafeArea(for morph: UIState.ToolbarMorph) -> AppSafeAreaPolicy {
+        AppSafeAreaPolicy(excluding: isTopRowMorph(morph) ? .bottom : .top, padding: .small)
     }
 
-    private func toolbarMorphTarget(size: CGSize,
+    private func isTopRowMorph(_ morph: UIState.ToolbarMorph) -> Bool {
+        switch morph {
+        case .settings, .palette: true
+        case .add, .updates, .templates, .activity, .system: false
+        }
+    }
+
+    private func toolbarMorphTarget(for morph: UIState.ToolbarMorph,
+                                    size: CGSize,
                                     placement: MorphPanelPlacement = .anchored) -> AppMorphTarget {
+        let safeArea = toolbarMorphSafeArea(for: morph)
         switch placement {
         case .anchored:
-            .anchored(size: size, safeArea: toolbarMorphSafeArea, margin: 0)
+            return .anchored(size: size, safeArea: safeArea, margin: 0)
         case .centered:
-            .centered(size: size, safeArea: toolbarMorphSafeArea, margin: 0)
+            return .centered(size: size, safeArea: safeArea, margin: 0)
         case .topCentered:
-            .topCentered(safeArea: toolbarMorphSafeArea, margin: 0) { _ in size }
+            return .topCentered(safeArea: safeArea, margin: 0) { _ in size }
         }
     }
 
@@ -333,7 +377,7 @@ struct AppToolbar: View {
         switch ui.activeMorph {
         case .add, .updates, .templates, .activity:
             true
-        case .palette, .system, nil:
+        case .palette, .system, .settings, nil:
             false
         }
     }
@@ -821,6 +865,22 @@ private struct ToolbarSystemPanel: View {
     var body: some View {
         SystemContent(elevated: false, onClose: onClose)
             .morphPanelSize(CGSize(width: 580, height: 600))
+            .morphPanelPlacement(.anchored)
+    }
+}
+
+/// The toolbar Settings panel — the app preferences (Appearance, General, Runtime, Registries,
+/// Updates, About) hosted in the morph panel instead of the separate `Settings` window. Sections switch
+/// via the header menu inside `SettingsContent` (no `TabView`).
+private struct ToolbarSettingsPanel: View {
+    var onClose: () -> Void
+
+    private static let panelSize = CGSize(width: 560, height: 560)
+
+    var body: some View {
+        SettingsContent(onClose: onClose)
+            .frame(width: Self.panelSize.width, height: Self.panelSize.height)
+            .morphPanelSize(Self.panelSize)
             .morphPanelPlacement(.anchored)
     }
 }

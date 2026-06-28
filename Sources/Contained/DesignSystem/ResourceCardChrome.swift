@@ -15,7 +15,6 @@ struct ResourceCardHeader<Leading: View, Content: View, Trailing: View>: View {
             content()
                 .frame(maxWidth: .infinity, alignment: .leading)
             trailing()
-                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(padding)
     }

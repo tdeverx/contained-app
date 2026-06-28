@@ -60,6 +60,7 @@ enum Tokens {
         // The toolbar now spans the whole window (no sidebar), so its leading edge must clear the
         // traffic-light cluster (close/min/zoom ≈ 70pt) plus a little breathing room.
         static let leadingInset: CGFloat = 80   // band inset on the left, past the traffic lights
+        static let trafficLightsWidth: CGFloat = 82 // close/min/zoom cluster width — the Settings slot min width
         static let groupPaddingH: CGFloat = 0   // horizontal glass margin inside a group
         static let groupSpacing: CGFloat = 4    // spacing between buttons / groups
         static let searchMaxWidth: CGFloat = 380

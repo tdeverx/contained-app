@@ -107,7 +107,10 @@ extension GlassButtonItem where Label == Image {
 struct GlassButton<Content: View>: View {
     var spacing: CGFloat = 0
     var height: CGFloat = Tokens.Toolbar.buttonGroupHeight
+    var minWidth: CGFloat? = nil
     var singleItem: Bool = false
+    /// Set `false` for a static glass container (no hover treatment) — e.g. vanity toolbar chrome.
+    var interactive: Bool = true
     @ViewBuilder var content: () -> Content
 
     @State private var hovering = false
@@ -116,14 +119,15 @@ struct GlassButton<Content: View>: View {
         HStack(spacing: spacing) { content() }
             .padding(.horizontal, Tokens.Toolbar.iconInnerPadding)
             .frame(height: height)
+            .frame(minWidth: minWidth)
             .background {
-                if singleItem {
+                if singleItem && interactive {
                     Capsule(style: .continuous)
                         .fill(hovering ? AppMaterial.toolbarHoverFill : .clear)
                 }
             }
-            .environment(\.glassButtonItemHoverEnabled, !singleItem)
-            .onHover { hovering = $0 }
+            .environment(\.glassButtonItemHoverEnabled, !singleItem && interactive)
+            .onHover { if interactive { hovering = $0 } }
             .animation(.easeOut(duration: 0.15), value: hovering)
             .toolbarControlMaterial(in: Capsule())
     }

@@ -20,7 +20,7 @@ final class UIState {
 
     /// Which toolbar button is currently morphed open into a centered panel (nil = none). The toolbar
     /// reads this to grow the matching panel from that button's slot.
-    enum ToolbarMorph: Hashable { case add, palette, updates, activity, templates, system }
+    enum ToolbarMorph: Hashable { case add, palette, updates, activity, templates, system, settings }
     var activeMorph: ToolbarMorph?
     private(set) var morphCloseRequestToken = 0
 

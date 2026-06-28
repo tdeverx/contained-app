@@ -101,15 +101,16 @@ struct RootView: View {
                 content
                     .ignoresSafeArea(.container, edges: [.top, .bottom])
             }
+            // The app-wide toolbar draws up into the title-bar band; its morph panels center within the
+            // content area.
+            .overlay { AppToolbar().ignoresSafeArea(.container, edges: .top) }
             // Bypass AppKit's titlebar safe-area math for app content; our custom toolbar bands are the
-            // source of truth so top and bottom spacing stay symmetrical.
+            // source of truth so top and bottom spacing stay symmetrical. Applied here (outside the
+            // overlay) so AppToolbar's morph panels also see the real band heights.
             .environment(\.appSafeAreas,
                          AppSafeAreaManager(system: EdgeInsets(),
                                             topToolbarHeight: AppToolbar.bandHeight,
                                             bottomToolbarHeight: AppToolbar.bandHeight))
-            // The app-wide toolbar draws up into the title-bar band; its morph panels center within the
-            // content area.
-            .overlay { AppToolbar().ignoresSafeArea(.container, edges: .top) }
         }
         // Attach a real (empty, transparent) unified window toolbar so AppKit sizes and vertically
         // centers the traffic lights in the titlebar band — our custom glass controls float over it.

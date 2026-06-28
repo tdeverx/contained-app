@@ -110,13 +110,10 @@ struct ContainersGridView: View {
                                 networkSection(group)
                             }
                         }
-                        .padding(Tokens.Space.l)
+                        .padding(.horizontal, Tokens.Space.l)
                     }
                 }
-                .frame(width: scrollBounds.width, height: scrollBounds.height)
-                .position(x: scrollBounds.midX, y: scrollBounds.midY)
-                .scrollEdgeEffectStyle(.soft, for: .all)
-                .disabled(detail != nil)
+                .contentMargins(.vertical, Tokens.Toolbar.band, for: .scrollContent)
 
                 if detail != nil {
                     Color.clear
@@ -127,20 +124,13 @@ struct ContainersGridView: View {
                 }
 
                 if let detail {
-                    let safeBounds = safeAreas.bounds(in: viewport.size, policy: cardDetailSafeAreaPolicy)
                     let target = cardDetailTarget.rect(origin: .zero,
                                                        in: viewport.size,
                                                        safeAreas: safeAreas)
                     let source = cardFrames[detail.id].flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
                     let rect = expanded ? target : source
-                    morphDebugBorders(viewport: viewport.size,
-                                      safeBounds: safeBounds,
-                                      source: source,
-                                      target: target)
-                        .zIndex(9)
                     expandedCard(detail)
                         .frame(width: rect.width, height: rect.height, alignment: .top)
-                        .border(.red, width: 2)
                         .position(x: rect.midX, y: rect.midY)
                         .zIndex(10)
                 }
@@ -356,31 +346,6 @@ struct ContainersGridView: View {
         let width = max(min(fitted.width, available.width), min(360, fitted.width))
         let height = available.height
         return CGSize(width: width, height: height)
-    }
-
-    private func morphDebugBorders(viewport: CGSize,
-                                   safeBounds: CGRect,
-                                   source: CGRect,
-                                   target: CGRect) -> some View {
-        ZStack {
-            Rectangle()
-                .stroke(.blue, style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
-                .frame(width: viewport.width, height: viewport.height)
-                .position(x: viewport.width / 2, y: viewport.height / 2)
-            Rectangle()
-                .stroke(.purple, style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
-                .frame(width: safeBounds.width, height: safeBounds.height)
-                .position(x: safeBounds.midX, y: safeBounds.midY)
-            Rectangle()
-                .stroke(.orange, style: StrokeStyle(lineWidth: 2, dash: [4, 4]))
-                .frame(width: source.width, height: source.height)
-                .position(x: source.midX, y: source.midY)
-            Rectangle()
-                .stroke(.green, lineWidth: 2)
-                .frame(width: target.width, height: target.height)
-                .position(x: target.midX, y: target.midY)
-        }
-        .allowsHitTesting(false)
     }
 
     private func openDetail(_ snapshot: ContainerSnapshot) {
