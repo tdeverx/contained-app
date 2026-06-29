@@ -53,6 +53,21 @@ final class HistoryStore {
         try? context.save()
     }
 
+    /// Mark every recorded event as read (clears the toolbar unread badge).
+    func markAllEventsRead() {
+        let unread = (try? context.fetch(FetchDescriptor<EventRecord>(
+            predicate: #Predicate { !$0.isRead }))) ?? []
+        guard !unread.isEmpty else { return }
+        for event in unread { event.isRead = true }
+        try? context.save()
+    }
+
+    /// Delete every recorded event (keeps metric samples + templates). Backs the Activity "Clear" action.
+    func clearEvents() {
+        try? context.delete(model: EventRecord.self)
+        try? context.save()
+    }
+
     // MARK: Retention
 
     func pruneOld(now: Date = Date()) {

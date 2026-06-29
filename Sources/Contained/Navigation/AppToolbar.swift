@@ -87,6 +87,7 @@ struct AppToolbar: View {
     private var topToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             settingsZone
+            ToolbarViewOptions()
             Spacer(minLength: Tokens.Space.m)
             searchZone
         }
@@ -150,21 +151,26 @@ struct AppToolbar: View {
 
     private var systemStatusButton: some View {
         GlassButton(singleItem: true) {
-            GlassButtonItem(help: "System \(app.serviceLabel)", action: {
+            GlassButtonItem(help: app.activity?.title ?? "System \(app.serviceLabel)", action: {
                 ui.toggleMorph(.system)
             }) {
-                HStack(spacing: Tokens.Toolbar.searchIconGap) {
-                    Image(systemName: systemStatusIcon)
-                        .foregroundStyle(systemStatusColor)
-                        .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
-                    Text(app.serviceLabel)
-                        .foregroundStyle(.secondary)
-                        .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
+                if let activity = app.activity {
+                    ActivityStatusView(activity: activity, style: .inline)
+                } else {
+                    HStack(spacing: Tokens.Toolbar.searchIconGap) {
+                        Image(systemName: systemStatusIcon)
+                            .foregroundStyle(systemStatusColor)
+                            .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
+                        Text(app.serviceLabel)
+                            .foregroundStyle(.secondary)
+                            .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
+                    }
                 }
             }
         }
         .opacity(ui.activeMorph == .system ? 0 : 1)
         .background(singleSlotReader(.system))
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: app.activity != nil)
     }
 
     private var bottomActionGroup: some View {
@@ -173,7 +179,7 @@ struct AppToolbar: View {
                 GlassButtonItem(systemName: "plus", help: "Add") { ui.openCreationPanel() }
                 GlassButtonItem(systemName: "shippingbox", help: "Images") { ui.toggleMorph(.updates) }
                 GlassButtonItem(systemName: "bookmark", help: "Templates") { ui.toggleMorph(.templates) }
-                GlassButtonItem(systemName: "bell", help: "Activity") { ui.toggleMorph(.activity) }
+                ActivityToolbarButton()
             }
             .opacity(isBottomGroupMorphActive ? 0 : 1)
             .background(clusterSlotReader([.add, .updates, .templates, .activity]))
@@ -317,6 +323,7 @@ struct AppToolbar: View {
         Binding(get: { ui.activeMorph == .palette }, set: {
             if !$0 {
                 ui.searchText = ""
+                ui.paletteScope = nil
                 ui.activeMorph = nil
             }
         })
@@ -451,6 +458,32 @@ struct AppToolbar: View {
 
     private func closeToolbarImageDetail() {
         toolbarImageCloseRequestToken &+= 1
+    }
+}
+
+/// The Activity bell in the bottom toolbar cluster. Filled + accent-tinted with a red dot when there
+/// are unread events; plain otherwise. Owns its own `@Query` so the badge updates live as events land.
+private struct ActivityToolbarButton: View {
+    @Environment(UIState.self) private var ui
+    @Query(filter: #Predicate<EventRecord> { !$0.isRead }) private var unread: [EventRecord]
+
+    var body: some View {
+        let count = unread.count
+        let hasUnread = count > 0
+        return GlassButtonItem(help: hasUnread ? "Activity — \(count) unread" : "Activity",
+                               isIcon: true,
+                               action: { ui.toggleMorph(.activity) }) {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: hasUnread ? "bell.fill" : "bell")
+                    .foregroundStyle(hasUnread ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.primary))
+                if hasUnread {
+                    Circle()
+                        .fill(.red)
+                        .frame(width: 7, height: 7)
+                        .offset(x: 4, y: -3)
+                }
+            }
+        }
     }
 }
 

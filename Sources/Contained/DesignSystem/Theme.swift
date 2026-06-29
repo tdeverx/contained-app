@@ -149,6 +149,22 @@ enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
+    /// Common color words that should also surface this tint in search (e.g. typing "purple" finds
+    /// `indigo`, "blue" finds `azure`). Keeps the curated palette discoverable under everyday names.
+    var searchAliases: [String] {
+        switch self {
+        case .multicolor: return ["default", "app accent", "system", "auto", "rainbow"]
+        case .graphite:   return ["gray", "grey", "slate", "charcoal", "silver", "neutral", "mono"]
+        case .azure:      return ["blue", "sky", "ocean", "cobalt"]
+        case .teal:       return ["cyan", "aqua", "turquoise", "mint", "seafoam"]
+        case .coral:      return ["orange", "salmon", "burnt", "terracotta", "rust"]
+        case .indigo:     return ["purple", "violet", "blurple", "royal"]
+        case .green:      return ["lime", "olive", "emerald", "forest", "moss"]
+        case .amber:      return ["yellow", "gold", "honey", "mustard"]
+        case .pink:       return ["magenta", "rose", "fuchsia", "crimson", "hot pink"]
+        }
+    }
+
     /// Parse a `contained.tint` label value, falling back to multicolor.
     static func parse(_ raw: String?) -> AppTint {
         guard let raw, let tint = AppTint(rawValue: raw.lowercased()) else { return .multicolor }

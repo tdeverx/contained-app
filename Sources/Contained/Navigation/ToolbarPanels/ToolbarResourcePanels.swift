@@ -100,7 +100,9 @@ struct ToolbarTemplatesPanel: View {
                     ResourceCardMonospacedSubtitleText(text: Format.shortImage(template.spec?.image ?? "—"))
                 }
             } trailing: {
-                EmptyView()
+                // Chevron affordance: tapping the card hands off to the create morph (parity with the
+                // image cards that grow into the morph detail).
+                GlassListRowChevron()
             }
         } footerLeading: {
             ResourceCardSubtitleText(text: "Saved run configuration")

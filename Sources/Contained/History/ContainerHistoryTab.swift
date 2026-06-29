@@ -115,17 +115,31 @@ struct ContainerHistoryTab: View {
 struct EventRow: View {
     let event: EventRecord
     var elevated = true
+    /// When true, the row is highlighted (accent dot + accent icon tint) to mark an event the user
+    /// hasn't seen yet. The Activity panel passes this; the per-container history tab leaves it false.
+    var isUnread = false
     var body: some View {
-        ResourceGlassCard(size: .small, elevated: elevated) {
+        ResourceGlassCard(size: .small,
+                          isSelected: isUnread,
+                          fill: isUnread ? Color.accentColor : nil,
+                          fillOpacity: 0.10,
+                          elevated: elevated) {
             ResourceCardHeader {
-                ResourceCardIconChip(symbol: event.kind.symbol, backgroundOpacity: 0.22)
+                ResourceCardIconChip(symbol: event.kind.symbol,
+                                     tint: isUnread ? .accentColor : .secondary,
+                                     backgroundOpacity: 0.22)
             } content: {
                 VStack(alignment: .leading, spacing: 1) {
                     ResourceCardTitleText(text: event.message)
                     ResourceCardSubtitleText(text: event.timestamp.formatted(date: .abbreviated, time: .shortened))
                 }
             } trailing: {
-                EmptyView()
+                if isUnread {
+                    Circle().fill(Color.accentColor).frame(width: 8, height: 8)
+                        .accessibilityLabel("Unread")
+                } else {
+                    EmptyView()
+                }
             }
         }
     }

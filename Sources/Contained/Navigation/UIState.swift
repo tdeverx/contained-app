@@ -28,6 +28,9 @@ final class UIState {
         var pageResultCount: Int?
         var paletteIndex = 0
         var focusToken = 0
+        /// The active palette scope. `nil` searches commands; a scope pins a chip to the search field
+        /// and searches in-place (Docker Hub or local images) without leaving the palette.
+        var scope: PaletteScope?
     }
 
     struct PrefillPresentation {
@@ -41,6 +44,10 @@ final class UIState {
     var search = SearchPresentation()
     var prefill = PrefillPresentation()
     var runningOnly = false
+    /// How the Containers page groups its cards (Network / Volume / Image / Flat) and orders them —
+    /// driven by the top-left toolbar view-options control.
+    var grouping: ContainerGrouping = .network
+    var sort: ContainerSort = .name
 
     /// When set, `SettingsContent` will switch to this page as soon as it appears / becomes active.
     /// Cleared by `SettingsContent` after it consumes the value.
@@ -105,6 +112,11 @@ final class UIState {
     var paletteIndex: Int {
         get { search.paletteIndex }
         set { search.paletteIndex = newValue }
+    }
+
+    var paletteScope: PaletteScope? {
+        get { search.scope }
+        set { search.scope = newValue }
     }
 
     var prefillSpec: RunSpec? {

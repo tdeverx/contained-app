@@ -30,14 +30,15 @@ struct ContainersGridView: View {
 
     private var store: ContainersStore { app.containers }
 
-    /// A network and the (filtered) containers attached to it. `resource` is nil for the synthetic
-    /// "default" bucket when the runtime has no builtin network of its own.
-    private struct NetworkGroup: Identifiable {
+    /// A bucket of containers under one heading. `resource` is set only for network grouping (so the
+    /// section keeps its network context menu); `symbol` drives the section header glyph.
+    private struct ContainerGroup: Identifiable {
         let name: String
+        let symbol: String
         let resource: NetworkResource?
         let containers: [ContainerSnapshot]
+        let isBuiltin: Bool
         var id: String { name }
-        var isBuiltin: Bool { resource?.isBuiltin ?? true }
     }
 
     /// The network names a container is attached to (requested config ∪ runtime status).
@@ -46,9 +47,19 @@ struct ContainersGridView: View {
         return Array(Set(names)).sorted()
     }
 
-    /// Containers grouped by network. Every known network gets a section (empty ones included);
-    /// containers on multiple networks appear under each; unattached containers fall to "default".
-    private var groups: [NetworkGroup] {
+    /// Containers bucketed according to the toolbar grouping choice, each bucket sorted by the chosen
+    /// sort. Network grouping keeps every known network as a section (empty ones included).
+    private var groups: [ContainerGroup] {
+        switch ui.grouping {
+        case .network: return networkGroups
+        case .volume:  return volumeGroups
+        case .image:   return imageGroups
+        case .flat:    return [ContainerGroup(name: "All containers", symbol: "square.grid.2x2",
+                                              resource: nil, containers: sorted(filtered), isBuiltin: false)]
+        }
+    }
+
+    private var networkGroups: [ContainerGroup] {
         let byNetworkName = Dictionary(app.networks.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
         let defaultName = app.networks.first { $0.isBuiltin }?.name ?? "default"
 
@@ -66,12 +77,69 @@ struct ContainersGridView: View {
         }
 
         return buckets.keys.sorted { lhs, rhs in
-            // The default / builtin network sorts first, then alphabetical.
             if lhs == defaultName { return true }
             if rhs == defaultName { return false }
             return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
         }.map { name in
-            NetworkGroup(name: name, resource: byNetworkName[name], containers: buckets[name] ?? [])
+            ContainerGroup(name: name, symbol: "network", resource: byNetworkName[name],
+                           containers: sorted(buckets[name] ?? []),
+                           isBuiltin: byNetworkName[name]?.isBuiltin ?? true)
+        }
+    }
+
+    private var volumeGroups: [ContainerGroup] {
+        let noVolume = "No volume"
+        var buckets: [String: [ContainerSnapshot]] = [:]
+        for snapshot in filtered {
+            let volumes = Set(snapshot.configuration.mounts.compactMap { mount -> String? in
+                guard let source = mount.source, !source.isEmpty else { return nil }
+                return source
+            })
+            if volumes.isEmpty {
+                buckets[noVolume, default: []].append(snapshot)
+            } else {
+                for volume in volumes { buckets[volume, default: []].append(snapshot) }
+            }
+        }
+        return buckets.keys.sorted { lhs, rhs in
+            if lhs == noVolume { return false }
+            if rhs == noVolume { return true }
+            return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+        }.map { name in
+            ContainerGroup(name: name, symbol: "externaldrive", resource: nil,
+                           containers: sorted(buckets[name] ?? []), isBuiltin: false)
+        }
+    }
+
+    private var imageGroups: [ContainerGroup] {
+        var buckets: [String: [ContainerSnapshot]] = [:]
+        for snapshot in filtered {
+            buckets[Format.shortImage(snapshot.image), default: []].append(snapshot)
+        }
+        return buckets.keys.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+            .map { name in
+                ContainerGroup(name: name, symbol: "shippingbox", resource: nil,
+                               containers: sorted(buckets[name] ?? []), isBuiltin: false)
+            }
+    }
+
+    /// Order a bucket of containers by the chosen sort.
+    private func sorted(_ containers: [ContainerSnapshot]) -> [ContainerSnapshot] {
+        switch ui.sort {
+        case .name:
+            return containers.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        case .status:
+            return containers.sorted { lhs, rhs in
+                let lhsRunning = lhs.state == .running, rhsRunning = rhs.state == .running
+                if lhsRunning != rhsRunning { return lhsRunning }
+                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+            }
+        case .image:
+            return containers.sorted { lhs, rhs in
+                let cmp = lhs.image.localizedCaseInsensitiveCompare(rhs.image)
+                if cmp != .orderedSame { return cmp == .orderedAscending }
+                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+            }
         }
     }
 
@@ -105,7 +173,7 @@ struct ContainersGridView: View {
                             .onTapGesture(count: 2) { zoomFrontWindow() }
                         LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
                             ForEach(groups) { group in
-                                networkSection(group)
+                                groupSection(group)
                             }
                         }
                         .padding(.horizontal, Tokens.Space.l)
@@ -170,13 +238,13 @@ struct ContainersGridView: View {
     // MARK: - Network sections
 
     @ViewBuilder
-    private func networkSection(_ group: NetworkGroup) -> some View {
+    private func groupSection(_ group: ContainerGroup) -> some View {
         let collapsed = collapsedNetworks.contains(group.name)
         VStack(alignment: .leading, spacing: Tokens.Space.s) {
             sectionHeader(group, collapsed: collapsed)
             if !collapsed {
                 if group.containers.isEmpty {
-                    Text("No containers on this network.")
+                    Text(ui.grouping == .network ? "No containers on this network." : "No containers.")
                         .font(.callout)
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -192,7 +260,7 @@ struct ContainersGridView: View {
         }
     }
 
-    private func sectionHeader(_ group: NetworkGroup, collapsed: Bool) -> some View {
+    private func sectionHeader(_ group: ContainerGroup, collapsed: Bool) -> some View {
         HStack(spacing: Tokens.Space.s) {
             Button {
                 toggleCollapsed(group.name)
@@ -203,7 +271,7 @@ struct ContainersGridView: View {
                     .rotationEffect(.degrees(collapsed ? 0 : 90))
             }
             .buttonStyle(.plain)
-            Image(systemName: "network").font(.callout).foregroundStyle(.secondary)
+            Image(systemName: group.symbol).font(.callout).foregroundStyle(.secondary)
             Text(group.name).font(.headline)
             ResourceBadgeText(text: "\(group.containers.count)")
             if group.isBuiltin {

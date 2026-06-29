@@ -68,12 +68,11 @@ struct RootView: View {
             }
             return false
         }
+        // Long-running operations (image pulls, etc.) now surface in the bottom-left status capsule
+        // (see `AppToolbar` → `ActivityStatusView`); only transient banners float at the bottom.
         .overlay(alignment: .bottom) {
-            VStack(spacing: Tokens.Space.s) {
-                activityBar
-                bannerView
-            }
-            .padding(.bottom, Tokens.Space.l)
+            bannerView
+                .padding(.bottom, Tokens.Space.l)
         }
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: app.banner)
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: app.activity)
@@ -191,37 +190,6 @@ struct RootView: View {
                 .padding(.vertical, Tokens.Space.s)
                 .glassEffect(.regular, in: Capsule())
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-        }
-    }
-
-    /// Floating progress bar for a long operation (e.g. pulling an image before a run).
-    @ViewBuilder
-    private var activityBar: some View {
-        if let activity = app.activity {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: Tokens.Space.s) {
-                    ProgressView().controlSize(.small)
-                    Text(activity.title).font(.callout.weight(.medium))
-                    Spacer(minLength: 0)
-                }
-                if let fraction = activity.fraction {
-                    ProgressView(value: fraction).progressViewStyle(.linear)
-                } else {
-                    ProgressView().progressViewStyle(.linear)
-                }
-                if !activity.detail.isEmpty {
-                    Text(activity.detail)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-            }
-            .padding(.horizontal, Tokens.Space.l)
-            .padding(.vertical, Tokens.Space.m)
-            .frame(maxWidth: 460)
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
-            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 

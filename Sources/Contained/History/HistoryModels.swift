@@ -39,12 +39,17 @@ final class EventRecord {
     var containerID: String?
     var kindRaw: String
     var message: String
+    /// Whether the user has seen this event in the Activity panel. New events start unread so the
+    /// toolbar bell can surface a badge; opening (and dismissing) the panel marks them read. Defaulted
+    /// so the SwiftData schema migrates in place for stores written before this column existed.
+    var isRead: Bool = false
 
-    init(timestamp: Date, containerID: String?, kind: EventKind, message: String) {
+    init(timestamp: Date, containerID: String?, kind: EventKind, message: String, isRead: Bool = false) {
         self.timestamp = timestamp
         self.containerID = containerID
         self.kindRaw = kind.rawValue
         self.message = message
+        self.isRead = isRead
     }
 
     init(snapshot: EventRecordSnapshot) {

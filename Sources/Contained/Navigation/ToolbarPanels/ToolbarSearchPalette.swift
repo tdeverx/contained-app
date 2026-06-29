@@ -57,6 +57,14 @@ struct ToolbarSearchSource: View {
     }
 }
 
+/// A labelled group of palette rows (a heading + its items). Title is nil for a query's flat ranked
+/// list.
+private struct PaletteSection: Identifiable {
+    let title: String?
+    let items: [PaletteItem]
+    var id: String { title ?? "__results" }
+}
+
 /// The expanded command palette content hosted inside `MorphingExpander`.
 struct ToolbarCommandPalette: View {
     @Environment(AppModel.self) private var app
@@ -64,15 +72,41 @@ struct ToolbarCommandPalette: View {
     @FocusState private var focused: Bool
     var onClose: () -> Void
 
+    @State private var hubResults: [HubSearchResult] = []
+    @State private var hubSearching = false
+    @State private var hubError: String?
+
     private var isOpen: Bool { ui.activeMorph == .palette }
-    private var items: [PaletteItem] { PaletteItem.filtered(ui.searchText, app: app, ui: ui) }
+    private var scope: PaletteScope? { ui.paletteScope }
     private var trimmedQuery: String { ui.searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Live `@State` would normally back this, but the section model recomputes cheaply each render.
+    private var sections: [PaletteSection] {
+        switch scope {
+        case .dockerHub:
+            return [PaletteSection(title: "Docker Hub", items: hubItems())]
+        case .localImages:
+            return [PaletteSection(title: "Local images", items: localImageItems())]
+        case nil:
+            if trimmedQuery.isEmpty {
+                return browseSections()
+            }
+            return [PaletteSection(title: nil, items: PaletteItem.filtered(trimmedQuery, app: app, ui: ui))]
+        }
+    }
+
+    private var flatItems: [PaletteItem] { sections.flatMap(\.items) }
+
     private var localImageMatches: Int {
         guard !trimmedQuery.isEmpty else { return app.images.count }
         return app.images.filter {
             PaletteSearch.score(query: trimmedQuery, in: [$0.reference, Format.shortImage($0.reference)]) != nil
         }.count
     }
+
+    /// Key for the inline Docker Hub search task — changes (and so re-runs, debounced) whenever the
+    /// scope toggles to/from Docker Hub or the query changes.
+    private var hubSearchKey: String { "\(scope == .dockerHub)|\(trimmedQuery)" }
 
     var body: some View {
         MorphPanelScaffold(width: Tokens.PanelSize.palette.width, scrolls: false) {
@@ -96,24 +130,35 @@ struct ToolbarCommandPalette: View {
             ui.paletteIndex = 0
         }
         .task(id: isOpen) { await focusSearchField() }
+        .task(id: hubSearchKey) { await runHubSearch() }
         .onChange(of: ui.searchText) { _, _ in ui.paletteIndex = 0 }
-        .onChange(of: items.count) { _, _ in clampSelection() }
+        .onChange(of: ui.paletteScope) { _, _ in ui.paletteIndex = 0 }
+        .onChange(of: flatItems.count) { _, _ in clampSelection() }
     }
 
     private var fieldRow: some View {
         @Bindable var ui = ui
         return HStack(spacing: Tokens.Toolbar.searchIconGap) {
-            Image(systemName: "magnifyingglass")
-                .font(.body)                       // scales with the field text (Dynamic Type), like the buttons
-                .foregroundStyle(.secondary)
-            TextField("Search or run a command…", text: $ui.searchText)
+            Image(systemName: scope?.symbol ?? "magnifyingglass")
+                .font(.body)
+                .foregroundStyle(scope == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.accentColor))
+            if let scope {
+                scopeChip(scope)
+            }
+            TextField(scope?.placeholder ?? "Search or run a command…", text: $ui.searchText)
                 .textFieldStyle(.plain)
-                .font(.body).fontWeight(.medium)   // 13pt medium on macOS, Dynamic-Type scalable
+                .font(.body).fontWeight(.medium)
                 .focused($focused)
                 .onSubmit { onSubmit() }
                 .onKeyPress(.downArrow) { guard isOpen else { return .ignored }; move(1); return .handled }
                 .onKeyPress(.upArrow) { guard isOpen else { return .ignored }; move(-1); return .handled }
-                .onKeyPress(.escape) { guard isOpen else { return .ignored }; close(); return .handled }
+                .onKeyPress(.escape) { guard isOpen else { return .ignored }; escape(); return .handled }
+                // Backspace on an empty field pops the active scope chip (like removing a token).
+                .onKeyPress(.delete) {
+                    guard isOpen, scope != nil, ui.searchText.isEmpty else { return .ignored }
+                    ui.paletteScope = nil
+                    return .handled
+                }
             if !ui.searchText.isEmpty {
                 Button { ui.searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.plain).foregroundStyle(.secondary)
@@ -125,40 +170,92 @@ struct ToolbarCommandPalette: View {
         .padding(.horizontal, Tokens.Space.l)
     }
 
+    /// The pinned scope token shown in the search field.
+    private func scopeChip(_ scope: PaletteScope) -> some View {
+        Button { ui.paletteScope = nil } label: {
+            HStack(spacing: 4) {
+                Image(systemName: scope.symbol).font(.caption2)
+                Text(scope.title).font(.caption.weight(.semibold))
+                Image(systemName: "xmark").font(.caption2.weight(.bold))
+            }
+            .padding(.horizontal, Tokens.Space.s)
+            .padding(.vertical, 3)
+            .background(Color.accentColor.opacity(0.16), in: Capsule(style: .continuous))
+            .foregroundStyle(Color.accentColor)
+        }
+        .buttonStyle(.plain)
+        .help("Remove \(scope.title) scope")
+        .accessibilityLabel("Remove \(scope.title) scope")
+        .fixedSize()
+    }
+
     private var inlineSearchRow: some View {
         HStack(spacing: Tokens.Space.s) {
-            ResourceBadgeText(text: "\(items.count) match\(items.count == 1 ? "" : "es")")
-            ResourceBadgeText(text: "\(localImageMatches) local image\(localImageMatches == 1 ? "" : "s")")
-            Spacer()
-            if !trimmedQuery.isEmpty {
-                Button {
-                    ui.openCreationPanel(entry: .search, searchQuery: trimmedQuery)
-                } label: {
-                    Label("Docker Hub", systemImage: "globe")
+            if let scope {
+                ResourceBadgeText(text: scopeCountText(scope))
+                Spacer()
+                Button { ui.paletteScope = nil } label: {
+                    Label("Commands", systemImage: "command")
                         .labelStyle(.titleAndIcon)
                 }
                 .buttonStyle(.plain)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
-                .help("Search Docker Hub for \(trimmedQuery)")
+                .help("Back to commands")
+            } else {
+                ResourceBadgeText(text: "\(flatItems.count) match\(flatItems.count == 1 ? "" : "es")")
+                ResourceBadgeText(text: "\(localImageMatches) local image\(localImageMatches == 1 ? "" : "s")")
+                Spacer()
+                if !trimmedQuery.isEmpty {
+                    // "Hit search on a search entry" — pins the Docker Hub scope and keeps the typed
+                    // query, searching in-place inside the same panel area.
+                    Button { ui.paletteScope = .dockerHub } label: {
+                        Label("Search Docker Hub", systemImage: "globe")
+                            .labelStyle(.titleAndIcon)
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .help("Search Docker Hub for \(trimmedQuery)")
+                }
             }
         }
         .padding(.horizontal, Tokens.Space.l)
     }
 
+    private func scopeCountText(_ scope: PaletteScope) -> String {
+        switch scope {
+        case .dockerHub:
+            if hubSearching { return "Searching…" }
+            if hubError != nil { return "Couldn't reach Docker Hub" }
+            if trimmedQuery.isEmpty { return "Popular images" }
+            let n = hubResults.count
+            return "\(n) result\(n == 1 ? "" : "s")"
+        case .localImages:
+            let n = flatItems.count
+            return "\(n) image\(n == 1 ? "" : "s")"
+        }
+    }
+
     private var resultsList: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: Tokens.Space.s) {
-                    if items.isEmpty {
+                LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
+                    if flatItems.isEmpty {
                         emptyState
                     } else {
-                        ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                            PaletteResultCard(item: item,
-                                              selected: index == ui.paletteIndex,
-                                              action: { ui.paletteIndex = index; run(item) })
-                            .id(index)
-                            .contentShape(Rectangle())
+                        ForEach(sections) { section in
+                            if let title = section.title {
+                                sectionHeader(title)
+                            }
+                            ForEach(section.items) { item in
+                                let index = flatIndex(of: item)
+                                PaletteResultCard(item: item,
+                                                  selected: index == ui.paletteIndex,
+                                                  action: { ui.paletteIndex = index; run(item) })
+                                .id(index)
+                                .contentShape(Rectangle())
+                            }
                         }
                     }
                 }
@@ -168,11 +265,44 @@ struct ToolbarCommandPalette: View {
         }
     }
 
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, Tokens.Space.xs)
+            .padding(.top, Tokens.Space.xs)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No matches", systemImage: "magnifyingglass")
-        } description: {
-            Text("Try a setting, image, container, network, or action.")
+        if scope == .dockerHub {
+            dockerHubPlaceholder
+        } else {
+            ContentUnavailableView {
+                Label("No matches", systemImage: "magnifyingglass")
+            } description: {
+                Text("Try a setting, image, container, network, or action.")
+            }
+            .frame(maxWidth: .infinity, minHeight: 260)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
+        }
+    }
+
+    private var dockerHubPlaceholder: some View {
+        VStack(spacing: Tokens.Space.s) {
+            if hubSearching {
+                ProgressView()
+                Text("Searching Docker Hub…").font(.callout).foregroundStyle(.secondary)
+            } else if let hubError {
+                Image(systemName: "wifi.exclamationmark").font(.title2).foregroundStyle(.orange)
+                Text("Couldn't search Docker Hub").font(.callout.weight(.medium))
+                Text(hubError).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            } else {
+                Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.tertiary)
+                Text(trimmedQuery.isEmpty ? "Type to search Docker Hub" : "No images found for “\(trimmedQuery)”")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, minHeight: 260)
         .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
@@ -182,7 +312,7 @@ struct ToolbarCommandPalette: View {
         HStack(spacing: Tokens.Space.m) {
             keyboardHint("↑↓", "Select")
             keyboardHint("return", "Run")
-            keyboardHint("esc", "Close")
+            keyboardHint("esc", scope == nil ? "Close" : "Clear scope")
             Spacer()
             if let selected = selectedItem {
                 ResourceBadgeText(text: selected.kind.rawValue)
@@ -193,8 +323,12 @@ struct ToolbarCommandPalette: View {
     }
 
     private var selectedItem: PaletteItem? {
-        guard items.indices.contains(ui.paletteIndex) else { return nil }
-        return items[ui.paletteIndex]
+        guard flatItems.indices.contains(ui.paletteIndex) else { return nil }
+        return flatItems[ui.paletteIndex]
+    }
+
+    private func flatIndex(of item: PaletteItem) -> Int {
+        flatItems.firstIndex { $0.id == item.id } ?? 0
     }
 
     private func keyboardHint(_ key: String, _ label: String) -> some View {
@@ -209,6 +343,62 @@ struct ToolbarCommandPalette: View {
         }
     }
 
+    // MARK: Sections
+
+    /// Group the full command set into labelled, ordered sections for the no-query browse view.
+    private func browseSections() -> [PaletteSection] {
+        let all = PaletteItem.all(app: app, ui: ui)
+        let grouped = Dictionary(grouping: all) { $0.kind.section.title }
+        let orderByTitle = Dictionary(all.map { ($0.kind.section.title, $0.kind.section.order) },
+                                      uniquingKeysWith: { a, _ in a })
+        return grouped.keys
+            .sorted { (orderByTitle[$0] ?? 0) < (orderByTitle[$1] ?? 0) }
+            .map { PaletteSection(title: $0, items: grouped[$0] ?? []) }
+    }
+
+    private func hubItems() -> [PaletteItem] {
+        if trimmedQuery.isEmpty {
+            return RecommendedImage.all.map { rec in
+                PaletteItem(title: "Run \(rec.name)", subtitle: rec.reference,
+                            keywords: [rec.reference], kind: .image,
+                            icon: rec.symbol, tint: .accentColor) {
+                    ui.runImage(rec.reference)
+                }
+            }
+        }
+        return hubResults.map { result in
+            let subtitle = result.shortDescription?.isEmpty == false
+                ? result.shortDescription
+                : (result.isOfficial ? "Official image" : "Docker Hub")
+            return PaletteItem(title: result.repoName,
+                               subtitle: subtitle,
+                               keywords: [result.repoName],
+                               kind: .image,
+                               icon: result.isOfficial ? "checkmark.seal.fill" : "shippingbox",
+                               tint: .accentColor) {
+                ui.runImage(result.pullReference)
+            }
+        }
+    }
+
+    private func localImageItems() -> [PaletteItem] {
+        let groups = LocalImageTagGroup.groups(for: app.images)
+            .sorted { $0.primaryReference.localizedCaseInsensitiveCompare($1.primaryReference) == .orderedAscending }
+        let matched = trimmedQuery.isEmpty ? groups : groups.filter {
+            PaletteSearch.score(query: trimmedQuery, in: $0.references + [Format.shortImage($0.primaryReference)]) != nil
+        }
+        return matched.map { group in
+            PaletteItem(title: "Run \(Format.shortImage(group.primaryReference))",
+                        subtitle: "\(group.references.count) tag\(group.references.count == 1 ? "" : "s")",
+                        keywords: group.references,
+                        kind: .image,
+                        visual: .imageGroup(group),
+                        icon: "play.fill", tint: .green) {
+                ui.runImage(group.primaryReference)
+            }
+        }
+    }
+
     // MARK: Behavior
 
     private func onSubmit() {
@@ -216,30 +406,69 @@ struct ToolbarCommandPalette: View {
     }
 
     private func move(_ delta: Int) {
-        guard !items.isEmpty else { return }
-        ui.paletteIndex = min(max(0, ui.paletteIndex + delta), items.count - 1)
+        guard !flatItems.isEmpty else { return }
+        ui.paletteIndex = min(max(0, ui.paletteIndex + delta), flatItems.count - 1)
     }
 
     private func clampSelection() {
-        if items.isEmpty {
+        if flatItems.isEmpty {
             ui.paletteIndex = 0
         } else {
-            ui.paletteIndex = min(max(0, ui.paletteIndex), items.count - 1)
+            ui.paletteIndex = min(max(0, ui.paletteIndex), flatItems.count - 1)
         }
     }
 
     private func runSelected() {
-        guard items.indices.contains(ui.paletteIndex) else { return }
-        run(items[ui.paletteIndex])
+        guard flatItems.indices.contains(ui.paletteIndex) else { return }
+        run(flatItems[ui.paletteIndex])
     }
 
     private func run(_ item: PaletteItem) {
-        close()
+        if !item.keepsPaletteOpen { close() }
         item.action()
     }
 
+    /// Escape pops the scope first (one level), then closes the palette.
+    private func escape() {
+        if scope != nil {
+            ui.paletteScope = nil
+        } else {
+            close()
+        }
+    }
+
     private func close() {
+        ui.paletteScope = nil
         onClose()
+    }
+
+    /// Debounced inline Docker Hub search, driven by `hubSearchKey`. Cancels automatically when the
+    /// key changes (scope toggled or query edited).
+    @MainActor
+    private func runHubSearch() async {
+        guard scope == .dockerHub, !trimmedQuery.isEmpty else {
+            hubResults = []; hubSearching = false; hubError = nil
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(350))
+        guard !Task.isCancelled else { return }
+        guard let url = HubSearch.url(query: trimmedQuery) else { return }
+        hubSearching = true
+        hubError = nil
+        defer { hubSearching = false }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                throw URLError(.badServerResponse)
+            }
+            let decoded = try JSONDecoder().decode(HubSearchResponse.self, from: data)
+            guard !Task.isCancelled else { return }
+            hubResults = decoded.results
+        } catch {
+            guard !Task.isCancelled else { return }
+            hubResults = []
+            hubError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
     }
 
     @MainActor

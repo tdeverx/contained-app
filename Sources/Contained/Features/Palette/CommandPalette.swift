@@ -1,6 +1,34 @@
 import SwiftUI
 import ContainedCore
 
+/// A palette search scope. Pins a chip to the search field and searches in-place instead of leaving
+/// the palette — Docker Hub (live registry search) or the local image store.
+enum PaletteScope: Hashable {
+    case dockerHub
+    case localImages
+
+    var title: String {
+        switch self {
+        case .dockerHub:   return "Docker Hub"
+        case .localImages: return "Local images"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .dockerHub:   return "globe"
+        case .localImages: return "square.stack.3d.up"
+        }
+    }
+
+    var placeholder: String {
+        switch self {
+        case .dockerHub:   return "Search Docker Hub…"
+        case .localImages: return "Filter local images…"
+        }
+    }
+}
+
 /// One command-palette entry: a titled, icon'd action.
 struct PaletteItem: Identifiable {
     let id = UUID()
@@ -10,6 +38,9 @@ struct PaletteItem: Identifiable {
     var kind: PaletteItemKind = .action
     var accessory: PaletteItemAccessory = .run
     var visual: PaletteItemVisual = .plain
+    /// When true, running the item does not dismiss the palette (used by scope-setting entries that
+    /// search in-place).
+    var keepsPaletteOpen = false
     let icon: String
     let tint: Color
     let action: () -> Void
@@ -36,13 +67,12 @@ struct PaletteItem: Identifiable {
                 ui.toggleMorph(morph)
             })
         }
-        // Add anything, from anywhere.
+        // Add anything, from anywhere. (Pulling an image is covered by the Docker Hub search scope
+        // below, so there's no separate "Pull an image" entry.)
         let adds: [(String, String, PendingAction)] = [
             ("Run a container", "shippingbox", .runContainer),
-            ("Pull an image", "arrow.down.circle", .pullImage),
             ("New volume", "externaldrive.badge.plus", .createVolume),
             ("New network", "network", .createNetwork),
-            ("Registry login", "person.badge.key", .registryLogin),
         ]
         for (title, icon, action) in adds {
             items.append(PaletteItem(title: title, subtitle: "create", kind: .create, icon: icon, tint: .accentColor) {
@@ -52,14 +82,25 @@ struct PaletteItem: Identifiable {
         items.append(PaletteItem(title: "Import compose…", subtitle: "create", kind: .create, icon: "square.on.square", tint: .accentColor) {
             ComposeImport.pickAndImport(app: app, ui: ui)
         })
-        items.append(PaletteItem(title: "Search Docker Hub", subtitle: "images", keywords: ["registry", "pull", "dockerhub"],
-                                 kind: .search, icon: "magnifyingglass", tint: .accentColor) {
-            ui.openCreationPanel(entry: .search)
+        // Registry credentials live on the Settings → Registries morph page (not a modal sheet).
+        items.append(PaletteItem(title: "Registry login", subtitle: "create",
+                                 keywords: ["registry", "credentials", "docker login", "sign in"],
+                                 kind: .create, icon: "person.badge.key", tint: .accentColor) {
+            ui.openSettings(to: .registries)
         })
-        items.append(PaletteItem(title: "Search local images", subtitle: "inline results",
+        // Search scopes: these pin a chip to the search field and search in-place (they keep the
+        // palette open) instead of opening another panel.
+        items.append(PaletteItem(title: "Search Docker Hub", subtitle: "scope",
+                                 keywords: ["registry", "pull", "dockerhub", "image"],
+                                 kind: .search, keepsPaletteOpen: true,
+                                 icon: "globe", tint: .accentColor) {
+            ui.paletteScope = .dockerHub
+        })
+        items.append(PaletteItem(title: "Search local images", subtitle: "scope",
                                  keywords: ["image", "tag", "local", "filter"],
-                                 kind: .search, icon: "square.stack.3d.up", tint: .accentColor) {
-            ui.toggleMorph(.updates)
+                                 kind: .search, keepsPaletteOpen: true,
+                                 icon: "square.stack.3d.up", tint: .accentColor) {
+            ui.paletteScope = .localImages
         })
         // Page / global actions.
         items.append(PaletteItem(title: "Refresh", subtitle: "action", kind: .action, icon: "arrow.clockwise", tint: .secondary) {
@@ -96,17 +137,23 @@ struct PaletteItem: Identifiable {
                                  kind: .container, icon: "arrow.down.circle", tint: .orange) {
             Task { await app.pullAvailableContainerImageUpdates() }
         })
+        // Maintenance actions. Load uses a native open panel and Prune a native confirmation; "System
+        // logs" opens the System morph page rather than a modal sheet. (Activity is reachable via the
+        // Activity navigation entry above, so it isn't duplicated here.)
         let pageActions: [(String, String, PendingAction)] = [
             ("Load image tar…", "square.and.arrow.down", .loadImage),
             ("Prune images…", "trash", .pruneImages),
-            ("Activity history", "bell", .activityHistory),
-            ("System logs", "text.alignleft", .systemLogs),
         ]
         for (title, icon, action) in pageActions {
             items.append(PaletteItem(title: title, subtitle: "action", kind: .action, icon: icon, tint: .secondary) {
                 ui.dispatch(action)
             })
         }
+        items.append(PaletteItem(title: "System logs", subtitle: "action",
+                                 keywords: ["service", "runtime", "diagnostics"],
+                                 kind: .action, icon: "text.alignleft", tint: .secondary) {
+            ui.toggleMorph(.system)
+        })
         items.append(contentsOf: settingsItems(app: app, ui: ui))
         items.append(contentsOf: imageItems(app: app, ui: ui))
         items.append(contentsOf: volumeItems(app: app, ui: ui))
@@ -206,7 +253,7 @@ struct PaletteItem: Identifiable {
         for tint in AppTint.allCases {
             items.append(PaletteItem(title: "Set app tint to \(tint.displayName)",
                                      subtitle: "appearance",
-                                     keywords: ["accent", "color", "theme", tint.rawValue],
+                                     keywords: ["accent", "color", "theme", "tint", tint.rawValue] + tint.searchAliases,
                                      kind: .settings,
                                      visual: .tint(tint),
                                      icon: "paintpalette",
@@ -335,6 +382,20 @@ enum PaletteItemKind: String {
     case container = "Container"
     case resource = "Resource"
     case search = "Search"
+
+    /// The browse-mode section a kind belongs under, with a stable display order. Used to group the
+    /// palette into labelled sections when there's no active query.
+    var section: (order: Int, title: String) {
+        switch self {
+        case .navigation:        return (0, "Navigate")
+        case .create, .search:   return (1, "Create & Search")
+        case .container:         return (2, "Containers")
+        case .image:             return (3, "Images")
+        case .resource:          return (4, "Volumes & Networks")
+        case .settings, .toggle: return (5, "Settings")
+        case .action:            return (6, "Actions")
+        }
+    }
 }
 
 enum PaletteItemAccessory {

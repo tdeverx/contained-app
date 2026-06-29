@@ -15,6 +15,7 @@ struct ActivityView: View {
 
 struct ActivityContent: View {
     @Query(sort: \EventRecord.timestamp, order: .reverse) private var events: [EventRecord]
+    @Environment(\.modelContext) private var modelContext
     @State private var filter: EventKind?
     var showClose = false
     /// Flat tiles (no shadow) when hosted in the toolbar morph panel; elevated in the standalone sheet.
@@ -26,9 +27,12 @@ struct ActivityContent: View {
         return events.filter { $0.kind == filter }
     }
 
+    private var unreadCount: Int { events.lazy.filter { !$0.isRead }.count }
+
     private var subtitle: String {
         let base = "\(filtered.count) event\(filtered.count == 1 ? "" : "s")"
-        return filter == nil ? base : "\(base) · \(filter!.rawValue.capitalized)"
+        let scoped = filter == nil ? base : "\(base) · \(filter!.rawValue.capitalized)"
+        return unreadCount > 0 ? "\(scoped) · \(unreadCount) unread" : scoped
     }
 
     /// The event-kind filter as a grouped-glass-button menu in the header (replacing the segmented
@@ -54,6 +58,13 @@ struct ActivityContent: View {
                             subtitle: subtitle) {
                     GlassButton {
                         filterMenu
+                        if unreadCount > 0 {
+                            GlassButtonItem(systemName: "checkmark.circle", help: "Mark all as read",
+                                            action: markAllRead)
+                        }
+                        if !events.isEmpty {
+                            GlassButtonItem(systemName: "trash", help: "Clear activity", action: clearAll)
+                        }
                         if showClose {
                             GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
                         }
@@ -68,10 +79,26 @@ struct ActivityContent: View {
                     .padding(.vertical, Tokens.Space.xl)
             } else {
                 LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
-                    ForEach(filtered) { event in EventRow(event: event, elevated: elevated) }
+                    ForEach(filtered) { event in
+                        EventRow(event: event, elevated: elevated, isUnread: !event.isRead)
+                    }
                 }
                 .padding(Tokens.Space.l)
             }
         }
+        // Once the user has seen the panel, the events are read — clears the toolbar badge on dismiss.
+        .onDisappear(perform: markAllRead)
+    }
+
+    private func markAllRead() {
+        let unread = events.filter { !$0.isRead }
+        guard !unread.isEmpty else { return }
+        for event in unread { event.isRead = true }
+        try? modelContext.save()
+    }
+
+    private func clearAll() {
+        try? modelContext.delete(model: EventRecord.self)
+        try? modelContext.save()
     }
 }
