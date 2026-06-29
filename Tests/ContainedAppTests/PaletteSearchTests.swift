@@ -22,4 +22,34 @@ struct PaletteSearchTests {
         let score = PaletteSearch.score(query: "dockerhub", in: ["Search Docker Hub", "images", "registry pull dockerhub"])
         #expect(score != nil)
     }
+
+    @Test func scoresFieldsIndependently() {
+        let exactKeyword = PaletteSearch.score(query: "dockerhub", in: ["Search Docker Hub", "images", "registry pull dockerhub"]) ?? 0
+        let fuzzyTitle = PaletteSearch.score(query: "dockerhub", in: ["Search Docker Hub", "images"]) ?? 0
+
+        #expect(exactKeyword > fuzzyTitle)
+    }
+
+    @Test func wordInitialsMatchCommonPaletteQueries() {
+        #expect(PaletteSearch.score(query: "dh", in: ["Search Docker Hub"]) != nil)
+        #expect(PaletteSearch.score(query: "mb", in: ["Show Menu Bar Item"]) != nil)
+        #expect(PaletteSearch.score(query: "cli", in: ["Reveal CLI Previews"]) != nil)
+        #expect(PaletteSearch.score(query: "d hub", in: ["Search Docker Hub"]) != nil)
+    }
+
+    @Test func typoToleranceHandlesSmallSingleWordMistakes() {
+        #expect(PaletteSearch.score(query: "settigns", in: ["Settings"]) != nil)
+        #expect(PaletteSearch.score(query: "dockre", in: ["Docker"]) != nil)
+        #expect(PaletteSearch.score(query: "zzzz", in: ["Settings"]) == nil)
+    }
+
+    @Test func rankingKeepsStrongMatchesAboveLooseMatches() {
+        let prefix = PaletteSearch.score(query: "set", in: ["Settings"]) ?? 0
+        let typo = PaletteSearch.score(query: "settigns", in: ["Settings"]) ?? 0
+        let initials = PaletteSearch.score(query: "dh", in: ["Search Docker Hub"]) ?? 0
+        let loose = PaletteSearch.score(query: "dh", in: ["Dark theme"]) ?? 0
+
+        #expect(prefix > typo)
+        #expect(initials > loose)
+    }
 }
