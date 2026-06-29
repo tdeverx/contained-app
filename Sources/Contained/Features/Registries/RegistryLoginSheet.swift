@@ -3,7 +3,7 @@ import ContainedCore
 
 /// Sign in to a registry. The user types their own credentials; the password is sent via stdin.
 /// Registry credential management lives in Settings → Registries; this sheet is shared by that tab
-/// and the global "Registry login" command (there's no standalone Registries page anymore).
+/// and the global "Registry login" command.
 struct RegistryLoginSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss

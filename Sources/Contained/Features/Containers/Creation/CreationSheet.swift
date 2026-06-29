@@ -1,10 +1,9 @@
 import SwiftUI
 
-/// Sheet host for the creation flow — the entry point used away from the toolbar (empty state,
-/// File ▸ New, ⌘K, menu bar). It presents the same paged `CreationFlow` the toolbar `+` shows, just in
-/// a fixed-size modal instead of a resizing morph panel. Starts at the chooser (the toolbar's add
-/// menu — Container/Network/Volume — is the toolbar-only entry that precedes it).
-struct CreationWizard: View {
+/// Modal host for `CreationFlow` — used by File ▸ New, the command palette, and menu-bar actions.
+/// The toolbar `+` hosts the same flow in a resizing morph panel; this variant gives it a fixed sheet
+/// frame for entry points that are not anchored to a toolbar button.
+struct CreationSheet: View {
     @Environment(\.dismiss) private var dismiss
     let entry: UIState.CreationEntry
     let prefill: RunSpec?

@@ -198,7 +198,6 @@ struct ContainerConfigureView: View {
             let newID = await app.createContainer(spec)
             working = false
             if newID != nil {
-                ui.section = .containers
                 onFinished()
             }
             // else: stay open — `app.createError` drives the inline error.

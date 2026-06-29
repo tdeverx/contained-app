@@ -6,8 +6,8 @@ import ContainedCore
 /// explicit loading and empty states. Selecting anything yields a prefilled `RunSpec` (the starters
 /// carry a full recipe; a Hub result or popular image carries just the image reference).
 ///
-/// Extracted from `PullImageSheet` so the creation wizard and the pull sheet share one search surface.
-/// (Inline fuzzy matching is tracked separately in #5 — this uses Hub's own substring ranking.)
+/// Used by `CreationFlow` for the image-search entry point. Inline fuzzy matching is separate from
+/// this Docker Hub lookup; Hub's own ranking handles typed queries here.
 struct RegistryImageSearch: View {
     /// Called with a prefilled spec when the user picks a starter, a popular image, or a search result.
     var onSelect: (RunSpec) -> Void
@@ -87,21 +87,7 @@ struct RegistryImageSearch: View {
     private func quickPick(symbol: String, title: String, subtitle: String,
                            action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: Tokens.Space.s) {
-                Image(systemName: symbol).font(.callout).foregroundStyle(Color.accentColor)
-                    .frame(width: 18)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.callout.weight(.medium)).lineLimit(1)
-                    Text(subtitle).font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary).lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, Tokens.Space.s)
-            .padding(.vertical, Tokens.Space.s)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .glassSurface(.ultraThin, cornerRadius: Tokens.Radius.control)
+            GlassListRow(symbol: symbol, title: title, subtitle: subtitle)
         }
         .buttonStyle(.plain)
     }
@@ -143,30 +129,23 @@ struct RegistryImageSearch: View {
     }
 
     private func resultRow(_ result: HubSearchResult) -> some View {
-        HStack(spacing: Tokens.Space.s) {
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 4) {
-                    Text(result.repoName).font(.callout.weight(.medium)).lineLimit(1)
-                    if result.isOfficial {
-                        Image(systemName: "checkmark.seal.fill").font(.caption2).foregroundStyle(.blue)
-                    }
+        GlassListRow(symbol: "shippingbox",
+                     title: result.repoName,
+                     subtitle: result.shortDescription?.isEmpty == false ? result.shortDescription : nil,
+                     monospacedSubtitle: false) {
+            HStack(spacing: Tokens.Space.s) {
+                if result.isOfficial {
+                    Image(systemName: "checkmark.seal.fill").font(.caption2).foregroundStyle(.blue)
                 }
-                if let desc = result.shortDescription, !desc.isEmpty {
-                    Text(desc).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
+                Label("\(result.starCount)", systemImage: "star.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .labelStyle(.titleAndIcon)
             }
-            Spacer(minLength: Tokens.Space.s)
-            Label("\(result.starCount)", systemImage: "star.fill")
-                .font(.caption).foregroundStyle(.secondary).labelStyle(.titleAndIcon)
         }
-        .padding(.horizontal, Tokens.Space.m)
-        .padding(.vertical, Tokens.Space.s)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
-        .glassSurface(.ultraThin, cornerRadius: Tokens.Radius.control)
     }
 
-    // MARK: Search plumbing (lifted from PullImageSheet)
+    // MARK: Search plumbing
 
     /// Debounce typing, then search.
     private func scheduleSearch() {

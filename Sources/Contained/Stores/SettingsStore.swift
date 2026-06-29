@@ -27,9 +27,6 @@ final class SettingsStore {
     var historyRetentionDays: Int { didSet { defaults.set(historyRetentionDays, forKey: Keys.historyRetention) } }
     /// Which Sparkle update channel the user opts into (stable / beta / nightly).
     var updateChannel: UpdateChannel { didSet { defaults.set(updateChannel.rawValue, forKey: Keys.updateChannel) } }
-    /// Last-selected sidebar section, restored on launch.
-    var lastSection: String { didSet { defaults.set(lastSection, forKey: Keys.lastSection) } }
-
     /// Register/unregister the app as a login item via `SMAppService`. Backed by the live service
     /// status; failures (e.g. unsigned dev build) leave the stored value and the status governs.
     var launchAtLogin: Bool {
@@ -65,7 +62,6 @@ final class SettingsStore {
         // Default to Nightly while the app is pre-1.0 — that's where the only builds ship, so a fresh
         // install actually receives updates. Users can switch to Beta/Stable in Settings → Updates.
         updateChannel = UpdateChannel(rawValue: defaults.string(forKey: Keys.updateChannel) ?? "") ?? .nightly
-        lastSection = defaults.string(forKey: Keys.lastSection) ?? ""
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
@@ -121,7 +117,6 @@ final class SettingsStore {
         static let revealCLI = "revealCLI"
         static let historyRetention = "historyRetentionDays"
         static let updateChannel = "updateChannel"
-        static let lastSection = "lastSection"
     }
 }
 

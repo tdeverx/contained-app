@@ -6,9 +6,9 @@ import ContainedCore
 /// headers, and explanatory footers stay consistent: Appearance (theme + glass), General (behavior,
 /// data, CLI), Runtime, Registries, Updates, and About.
 ///
-/// Hosted in the toolbar Settings morph panel (there's no standalone Settings window). Sections switch
-/// via a header menu (page switching) rather than a `TabView` — `NSTabView`'s Auto Layout constraints
-/// crash when the morph grow proposes a tiny size. Pass `onClose` to show a close button in the header.
+/// Hosted in the toolbar Settings morph panel. Sections switch via a header menu rather than a
+/// `TabView` because `NSTabView`'s Auto Layout constraints crash when the morph grow proposes a tiny
+/// size. Pass `onClose` to show a close button in the header.
 struct SettingsContent: View {
     @Environment(AppModel.self) private var app
     @State private var page: SettingsPage = .appearance
@@ -50,14 +50,10 @@ struct SettingsContent: View {
     }
 
     private var header: some View {
-        ResourceCardHeader {
-            GlassButtonItem(systemName: page.systemImage, help: "Settings", isLabel: true)
-        } content: {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Settings").font(.headline)
-                Text(page.rawValue).font(.caption).foregroundStyle(.secondary)
-            }
-        } trailing: {
+        PanelHeader(symbol: page.systemImage,
+                    title: "Settings",
+                    subtitle: page.rawValue,
+                    padding: Tokens.Space.m) {
             GlassButton(singleItem: onClose == nil) {
                 pagePicker
                 if let onClose {
@@ -65,7 +61,6 @@ struct SettingsContent: View {
                 }
             }
         }
-        .padding(Tokens.Space.m)
     }
 
     private var pagePicker: some View {
@@ -331,8 +326,7 @@ private struct RuntimeTab: View {
 
 // MARK: - Registries
 
-/// Registry logins live here (not the File menu): list signed-in registries and log in / out. This
-/// is the credential-management home now that the Registries sidebar page is gone.
+/// Registry logins live here: list signed-in registries and log in / out.
 private struct RegistriesTab: View {
     @Environment(AppModel.self) private var app
     @State private var loggingIn = false

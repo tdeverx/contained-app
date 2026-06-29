@@ -2,8 +2,8 @@ import SwiftUI
 import ContainedCore
 
 /// System overview content: service status + controls, volumes, `system df` disk usage, a Prune
-/// Center, and a system-logs viewer. Hosted header-less in the toolbar System morph panel (there's no
-/// standalone System page). Daemon defaults, kernel, and DNS configuration live in Settings → Runtime.
+/// Center, and a system-logs viewer. Hosted header-less in the toolbar System morph panel. Daemon
+/// defaults, kernel, and DNS configuration live in Settings → Runtime.
 struct SystemContent: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -64,24 +64,16 @@ struct SystemContent: View {
     }
 
     private var header: some View {
-        ResourceCardHeader {
-            GlassButtonItem(systemName: "gearshape.2", help: "System", isLabel: true)
-        } content: {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("System").font(.headline)
-                Text("\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        } trailing: {
+        PanelHeader(symbol: "gearshape.2",
+                    title: "System",
+                    subtitle: "\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")") {
             GlassButton(singleItem: true) {
                 GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
             }
         }
-        .padding(Tokens.Space.l)
     }
 
-    // MARK: Volumes (migrated here from the standalone sidebar section)
+    // MARK: Volumes
 
     private var sortedVolumes: [VolumeResource] {
         app.volumes.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -113,10 +105,7 @@ struct SystemContent: View {
     private var emptyVolumesCard: some View {
         ResourceGlassCard(size: .small, elevated: elevated) {
             ResourceCardHeader {
-                Image(systemName: "externaldrive")
-                    .foregroundStyle(.secondary)
-                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-                    .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                ResourceCardIconChip(symbol: "externaldrive", backgroundOpacity: 0.22)
             } content: {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("No volumes").font(.callout.weight(.medium))
@@ -161,7 +150,9 @@ struct SystemContent: View {
                             .font(.title2)
                             .foregroundStyle(Color.accentColor)
                             .frame(width: Tokens.IconSize.headerChip, height: Tokens.IconSize.headerChip)
-                            .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .background(Color.accentColor.opacity(0.14),
+                                        in: RoundedRectangle(cornerRadius: Tokens.Radius.control,
+                                                             style: .continuous))
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Image update check").font(.callout.weight(.medium))
                             Text(backgroundTaskDetail(now: context.date))
@@ -326,7 +317,7 @@ struct SystemContent: View {
     }
 }
 
-/// A large, customizable volume card for the System page. Plots aggregated read/write I/O (summed
+/// A large, customizable volume card for the System panel. Plots aggregated read/write I/O (summed
 /// across the containers that mount the volume) and offers inspect / copy / delete.
 private struct VolumeCard: View {
     @Environment(AppModel.self) private var app

@@ -7,8 +7,8 @@ import ContainedCore
 /// window. Search stays in the top-right titlebar band; the add/images/templates/activity cluster and
 /// system status control float in a bottom toolbar area.
 ///
-/// Mounted as a top overlay over the **detail column** in `RootView` (never over the sidebar): the
-/// band sits in the title-bar region, the rest of the area is hit-transparent until a control opens.
+/// Mounted as a top overlay in `RootView`: the band sits in the title-bar region, and the rest of the
+/// area is hit-transparent until a control opens.
 /// The add `+`, search field, and bottom toolbar controls all grow through the same
 /// `MorphingExpander` shell from their measured toolbar slots. Control sizing and source radius come
 /// from `Tokens.Toolbar` / `ToolbarControls`.
@@ -454,14 +454,10 @@ private struct ToolbarUpdatesPanel: View {
     }
 
     private var header: some View {
-        HStack(spacing: Tokens.Space.s) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Images").font(.headline)
-                Text("\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
+        PanelHeader(symbol: "square.stack.3d.up",
+                    title: "Images",
+                    subtitle: "\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")",
+                    padding: Tokens.Space.m) {
             GlassButton {
                 GlassButtonItem(systemName: "square.and.arrow.down", help: "Load Image Tar") {
                     ui.dispatch(.loadImage)
@@ -477,7 +473,6 @@ private struct ToolbarUpdatesPanel: View {
                 GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
             }
         }
-        .padding(Tokens.Space.m)
     }
 
     private var emptyCard: some View {
@@ -740,11 +735,7 @@ private struct ToolbarImageGroupCard: View {
     }
 
     private func imageChip(_ style: Personalization) -> some View {
-        Image(systemName: style.symbol)
-            .font(.title3)
-            .foregroundStyle(style.color)
-            .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-            .background(style.color.opacity(0.16), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+        ResourceCardIconChip(symbol: style.symbol, tint: style.color)
     }
 
     private func updateSymbol(_ state: ImageUpdateState) -> String {
@@ -914,19 +905,14 @@ private struct ToolbarTemplatesPanel: View {
     }
 
     private var header: some View {
-        ResourceCardHeader {
-            GlassButtonItem(systemName: "bookmark", help: "Templates", isLabel: true)
-        } content: {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Templates").font(.headline)
-                Text("\(saved.count) saved").font(.caption).foregroundStyle(.secondary)
-            }
-        } trailing: {
+        PanelHeader(symbol: "bookmark",
+                    title: "Templates",
+                    subtitle: "\(saved.count) saved",
+                    padding: Tokens.Space.m) {
             GlassButton(singleItem: true) {
                 GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
             }
         }
-        .padding(Tokens.Space.m)
     }
 
     private var emptyCard: some View {

@@ -4,7 +4,7 @@ import AppKit
 import ContainedCore
 
 /// The unified, **paged** creation flow. The same content drives both the toolbar's `+` morph panel
-/// (where each page resizes the panel in place via `.morphPanelSize`) and the `CreationWizard` sheet
+/// (where each page resizes the panel in place via `.morphPanelSize`) and the `CreationSheet` modal
 /// (fixed frame). It never opens a nested modal for the container path — selecting a box resizes and
 /// advances to the next section.
 ///
@@ -326,21 +326,9 @@ struct CreationFlow: View {
                         Button {
                             if let s = template.spec { spec = s; go(.configure) }
                         } label: {
-                            HStack(spacing: Tokens.Space.m) {
-                                Image(systemName: "bookmark.fill").foregroundStyle(Color.accentColor)
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(template.name).font(.callout.weight(.medium)).lineLimit(1)
-                                    Text(Format.shortImage(template.spec?.image ?? "—"))
-                                        .font(.system(.caption, design: .monospaced))
-                                        .foregroundStyle(.secondary).lineLimit(1)
-                                }
-                                Spacer(minLength: 0)
-                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
-                            }
-                            .padding(Tokens.Space.m)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .glassSurface(.ultraThin, cornerRadius: Tokens.Radius.control)
+                            GlassListRow(symbol: "bookmark.fill",
+                                         title: template.name,
+                                         subtitle: Format.shortImage(template.spec?.image ?? "—"))
                         }
                         .buttonStyle(.plain)
                     }
@@ -448,28 +436,9 @@ struct CreationFlow: View {
         let subtitle = [size.map { Format.bytes(UInt64($0)) }, arches.isEmpty ? nil : arches]
             .compactMap { $0 }.joined(separator: "  ·  ")
 
-        return HStack(spacing: Tokens.Space.s) {
-            Image(systemName: "square.stack.3d.up")
-                .font(.callout)
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 18)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(Format.shortImage(image.reference)).font(.callout.weight(.medium)).lineLimit(1)
-                if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
-        }
-        .padding(.horizontal, Tokens.Space.m)
-        .padding(.vertical, Tokens.Space.s)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
-        .glassSurface(.ultraThin, cornerRadius: Tokens.Radius.control)
+        return GlassListRow(symbol: "square.stack.3d.up",
+                            title: Format.shortImage(image.reference),
+                            subtitle: subtitle)
     }
 
     // MARK: Navigation + actions

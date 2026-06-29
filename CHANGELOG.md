@@ -13,8 +13,8 @@
 - **Toolbar keyboard shortcuts**: `⌘N` (New), `⌘S` (Search), `⌘U` (Updates), `⌘I` (Activity)
 
 #### Creation & Resource Management
-- **Paged creation flow**: Multi-step wizard for creating containers, networks, volumes, and building images
-- **Unified creation entry point**: Single `CreationWizard` sheet used for all resource creation (File ▸ New, ⌘K, empty state)
+- **Paged creation flow**: Multi-step flow for creating containers, networks, volumes, and building images
+- **Unified creation entry point**: Single `CreationSheet` host used for all non-toolbar resource creation (File ▸ New, ⌘K, empty state)
 - **Compose import UI**: Paste YAML or select compose files; services with images auto-populate the prefill queue
 - **Image archive support**: Load OCI image `.tar` files directly into the local store
 - **Local image filtering**: Searchable local image list with architecture and size info

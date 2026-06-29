@@ -118,10 +118,7 @@ struct EventRow: View {
     var body: some View {
         ResourceGlassCard(size: .small, elevated: elevated) {
             ResourceCardHeader {
-                Image(systemName: event.kind.symbol)
-                    .foregroundStyle(.secondary)
-                    .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-                    .background(.quaternary.opacity(0.22), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                ResourceCardIconChip(symbol: event.kind.symbol, backgroundOpacity: 0.22)
             } content: {
                 VStack(alignment: .leading, spacing: 1) {
                     ResourceCardTitleText(text: event.message)

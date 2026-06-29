@@ -3,8 +3,8 @@ import AppKit
 import ContainedCore
 
 /// The Containers screen: a responsive grid of personalized glass cards. Density and the running
-/// filter live in the sidebar header's ⋯ menu; tapping a card grows it in place into a centered
-/// detail panel.
+/// filter live in the background context menu and menu commands; tapping a card grows it in place
+/// into a centered detail panel.
 struct ContainersGridView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -22,8 +22,7 @@ struct ContainersGridView: View {
     /// can start from the exact slot it was tapped in.
     @State private var cardFrames: [String: CGRect] = [:]
 
-    // Network grouping is folded into this page: each network is a collapsible section of the
-    // containers attached to it. These drive the network-level CRUD (no separate Networks page).
+    // Each network is a collapsible section of the containers attached to it.
     @State private var collapsedNetworks: Set<String> = []
     @State private var inspectingNetwork: NetworkResource?
     @State private var deletingNetwork: NetworkResource?
@@ -159,7 +158,7 @@ struct ContainersGridView: View {
         } message: {
             Text("This removes the container. This can't be undone.")
         }
-        // Network-level actions (formerly the Networks page).
+        // Network-level actions.
         .task { await app.refreshNetworks() }
         .sheet(item: $inspectingNetwork) { JSONInspectorSheet(title: $0.name, value: $0) }
         .confirmationDialog("Delete network \(deletingNetwork?.name ?? "")?",
@@ -210,16 +209,9 @@ struct ContainersGridView: View {
             .buttonStyle(.plain)
             Image(systemName: "network").font(.callout).foregroundStyle(.secondary)
             Text(group.name).font(.headline)
-            Text("\(group.containers.count)")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 7).padding(.vertical, 2)
-                .background(.quaternary, in: Capsule())
+            ResourceBadgeText(text: "\(group.containers.count)")
             if group.isBuiltin {
-                Text("builtin").font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 7).padding(.vertical, 2)
-                    .background(.quaternary, in: Capsule())
+                ResourceBadgeText(text: "builtin", font: .caption2.weight(.medium))
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
@@ -418,7 +410,7 @@ struct ContainersGridView: View {
         } description: {
             Text(ui.runningOnly ? "No running containers." : "Run a container to see it here.")
         } actions: {
-            Button("Run a container") { ui.openCreateWizard() }
+            Button("Run a container") { ui.openCreationSheet() }
         }
     }
 }

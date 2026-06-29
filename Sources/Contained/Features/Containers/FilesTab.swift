@@ -72,7 +72,7 @@ struct FilesTab: View {
         return HStack(spacing: Tokens.Space.s) {
             Image(systemName: isDir ? "folder.fill" : "doc")
                 .foregroundStyle(isDir ? Color.accentColor : Color.secondary)
-                .frame(width: 18)
+                .frame(width: Tokens.IconSize.rowMenu)
             Text(name).font(.system(.callout, design: .monospaced))
             Spacer()
             if isDir {
@@ -82,7 +82,8 @@ struct FilesTab: View {
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("Copy to host")
             }
         }
-        .padding(.vertical, 4).padding(.horizontal, Tokens.Space.s)
+        .padding(.vertical, Tokens.Space.xs)
+        .padding(.horizontal, Tokens.Space.s)
         .contentShape(Rectangle())
         .onTapGesture { if isDir { path = joined(name) + "/" } }
     }

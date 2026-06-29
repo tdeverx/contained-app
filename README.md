@@ -17,12 +17,12 @@ A native, SwiftUI-first macOS app for Apple's [`container`](https://github.com/a
 
 - **Grid of glass cards** — each container is a clear Liquid Glass card with a customizable tint, gradient, icon, nickname, an app-managed health badge, and a selectable live sparkline (CPU / memory / network / disk).
 - **Full lifecycle + 7 detail tabs** — start/stop/restart, plus Overview, Logs, Terminal (SwiftTerm), Stats, History, Files, and Inspect for each container.
-- **Images, Build, Volumes, Networks, Registries, System** — pull (with Docker Hub search), build (streamed BuildKit log), tag/push/save/load, filesystem export, volume/network CRUD, registry login, service control, `df`, a Prune Center, and guarded kernel/DNS management.
+- **Images, Build, Volumes, Networks, Registries, System** — toolbar panels and creation flows cover pull (with Docker Hub search), build (streamed BuildKit log), tag/push/save/load, filesystem export, volume/network CRUD, registry login, service control, `df`, a Prune Center, and guarded kernel/DNS management.
 - **Templates & Compose import** — a library of saved run recipes plus built-in starters, and `compose.yaml` import that opens editable, prefilled Run forms for each service.
 - **One Edit form** — progressive-disclosure mapping of the `container run` flags with host-bounded CPU/RAM controls and a live "reveal the CLI" preview.
 - **Persistent history** — SwiftData-backed events and metrics power a per-container History tab and a system-wide Activity view (Swift Charts), with configurable retention.
 - **App-managed restart & healthchecks** — `container` has no native `--restart` or healthcheck, so Contained runs both itself.
-- **Mac-native throughout** — `NavigationSplitView`, an app-wide custom Liquid Glass toolbar (add menu, page search, command palette, updates/notifications) whose buttons morph open into resizing panels, a command palette (⌘K), a menu-bar extra, full keyboard shortcuts, and accessibility (Reduce Transparency / Reduce Motion / VoiceOver). AppKit bridges are used only where SwiftUI has no equivalent, and are flagged in the source.
+- **Mac-native throughout** — a single-window SwiftUI shell with an app-wide custom Liquid Glass toolbar (add menu, page search, command palette, updates/notifications) whose buttons morph open into resizing panels, a command palette (⌘K), a menu-bar extra, full keyboard shortcuts, and accessibility (Reduce Transparency / Reduce Motion / VoiceOver). AppKit bridges are used only where SwiftUI has no equivalent, and are flagged in the source.
 
 ## Install & updates
 
@@ -57,8 +57,11 @@ Or from the command line:
 ```sh
 swift build               # compile
 swift test                # run the unit tests
-./scripts/bundle.sh       # assemble a runnable Contained.app
+./scripts/bundle.sh debug # assemble a runnable Contained.app
 open Contained.app        # launch it
+
+# Convenience wrapper used by Codex Run:
+./script/build_and_run.sh --verify
 ```
 
 ## Architecture
@@ -98,12 +101,10 @@ Every screen gets the same pass before tagging 1.0. Criteria per page: **G** Liq
 | Container Detail · History | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | Container Detail · Files | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | Container Detail · Inspect | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| Images | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| Build | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| Volumes | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| Networks | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| Registries | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| System | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| Toolbar · Images / Updates | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| Creation · Build | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| Toolbar · System / Volumes / Networks | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
+| Settings · Registries | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | System · Activity | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | Templates | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 | Compose import | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |

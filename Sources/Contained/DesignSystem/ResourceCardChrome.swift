@@ -145,6 +145,80 @@ struct ResourceCardIconChip: View {
     }
 }
 
+/// Small capsule count/state badge used in section headers and compact metadata rows.
+struct ResourceBadgeText: View {
+    let text: String
+    var font: Font = .caption.weight(.medium)
+    var foreground: Color = .secondary
+
+    var body: some View {
+        Text(text)
+            .font(font)
+            .foregroundStyle(foreground)
+            .padding(.horizontal, Tokens.Space.s)
+            .padding(.vertical, Tokens.Space.xs / 2)
+            .background(.quaternary, in: Capsule())
+    }
+}
+
+/// Flat glass row for selectable lists inside panels and sheets.
+struct GlassListRow<Accessory: View>: View {
+    var symbol: String
+    var tint: Color = .accentColor
+    var title: String
+    var subtitle: String?
+    var monospacedSubtitle = true
+    @ViewBuilder var accessory: () -> Accessory
+
+    var body: some View {
+        HStack(spacing: Tokens.Space.s) {
+            Image(systemName: symbol)
+                .font(.callout)
+                .foregroundStyle(tint)
+                .frame(width: Tokens.IconSize.rowMenu)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.callout.weight(.medium))
+                    .lineLimit(1)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(monospacedSubtitle ? .system(.caption, design: .monospaced) : .caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: Tokens.Space.s)
+            accessory()
+        }
+        .padding(.horizontal, Tokens.Space.m)
+        .padding(.vertical, Tokens.Space.s)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .glassSurface(.ultraThin, cornerRadius: Tokens.Radius.control)
+    }
+}
+
+struct GlassListRowChevron: View {
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+    }
+}
+
+extension GlassListRow where Accessory == GlassListRowChevron {
+    init(symbol: String, tint: Color = .accentColor, title: String, subtitle: String?,
+         monospacedSubtitle: Bool = true) {
+        self.init(symbol: symbol,
+                  tint: tint,
+                  title: title,
+                  subtitle: subtitle,
+                  monospacedSubtitle: monospacedSubtitle) {
+            GlassListRowChevron()
+        }
+    }
+}
+
 struct ResourceCardMetricText: View {
     let text: String
 

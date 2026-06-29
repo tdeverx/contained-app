@@ -28,14 +28,9 @@ struct ActivityContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ResourceCardHeader {
-                GlassButtonItem(systemName: "bell", help: "Activity", isLabel: true)
-            } content: {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Activity").font(.headline)
-                    Text("\(filtered.count) events").font(.caption).foregroundStyle(.secondary)
-                }
-            } trailing: {
+            PanelHeader(symbol: "bell",
+                        title: "Activity",
+                        subtitle: "\(filtered.count) events") {
                 if showClose {
                     GlassButton(singleItem: true) {
                         GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
@@ -44,7 +39,6 @@ struct ActivityContent: View {
                     EmptyView()
                 }
             }
-            .padding(Tokens.Space.l)
             Picker("Filter", selection: $filter) {
                 Text("All").tag(EventKind?.none)
                 ForEach(EventKind.allCases, id: \.self) { kind in

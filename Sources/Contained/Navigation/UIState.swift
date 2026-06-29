@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Cross-cutting UI state shared between the sidebar header menus, the menu-bar commands, and the
-/// content views.
+/// Cross-cutting UI state shared between toolbar panels, menu commands, and content views.
 @MainActor
 @Observable
 final class UIState {
@@ -13,10 +12,9 @@ final class UIState {
     enum CreationEntry: Hashable { case chooser, search, configure, network, volume, build }
     var creationEntry: CreationEntry = .chooser
     var creationPrefillSpec: RunSpec?
-    /// The unified creation wizard (the front door for "new container"). Distinct from `showRunSheet`,
-    /// which presents the configure form directly — that's the wizard's handoff target as well as the
-    /// direct-prefill paths (Run-image, Use-template, compose queue).
-    var showCreateWizard = false
+    /// The unified creation sheet. Distinct from `showRunSheet`, which presents the configure form
+    /// directly for compose queues and other direct-prefill paths.
+    var showCreationSheet = false
 
     /// Which toolbar button is currently morphed open into a centered panel (nil = none). The toolbar
     /// reads this to grow the matching panel from that button's slot.
@@ -44,57 +42,53 @@ final class UIState {
     var pageResultCount: Int?
     /// Highlighted row in the global command palette.
     var paletteIndex = 0
-    /// The selected sidebar section (here, not RootView, so the command palette can navigate).
-    var section: AppSection = .containers
     /// A spec to prefill the next Create/Run sheet — from "Run" on an image or "Use" on a template.
     var prefillSpec: RunSpec?
     /// Remaining specs to step through as prefilled New-Container windows. Compose import enqueues one
     /// per service; each opens after the previous window closes (Create or Cancel both advance).
     var prefillQueue: [RunSpec] = []
 
-    /// A one-shot action requested from the sidebar header or a menu, addressed to a specific
-    /// section's view. The view consumes it (clearing it) on appear *and* on change, which is
-    /// race-free across the section switch that mounts the view.
+    /// A one-shot action requested by menus or the command palette. `RootView` consumes global
+    /// actions, while toolbar panels and the Containers page handle their local operations directly.
     var pendingAction: PendingAction?
 
-    /// Run an action — navigating to its owning section where one applies, and arming section-targeted
-    /// actions for the destination view to pick up. Image load/prune are global (no Images page).
+    /// Run an action by opening the right creation page, morph panel, or global sheet.
     func dispatch(_ action: PendingAction) {
         switch action {
         case .runContainer:
             creationEntry = .chooser
-            showCreateWizard = true   // front door is the wizard, not the bare form
+            showCreationSheet = true
         case .pullImage:
             creationEntry = .search
-            showCreateWizard = true
+            showCreationSheet = true
         case .createVolume:
             creationEntry = .volume   // volumes live in the System panel; creation is the `+` flow
-            showCreateWizard = true
+            showCreationSheet = true
         case .createNetwork:
             creationEntry = .network  // networks fold into Containers
-            showCreateWizard = true
+            showCreationSheet = true
         case .build:
             creationEntry = .build    // build is a page in the creation flow now
-            showCreateWizard = true
+            showCreationSheet = true
         case .activityHistory:
             activeMorph = .activity   // Activity is its own toolbar panel
         case .loadImage, .pruneImages, .registryLogin, .systemLogs:
-            pendingAction = action    // handled globally in RootView (no standalone pages)
+            pendingAction = action    // handled globally in RootView
         }
     }
 
-    /// Open the creation wizard from scratch (the paged chooser). The flow handles its own steps and
+    /// Open the creation sheet from scratch (the paged chooser). The flow handles its own steps and
     /// hands off to compose/tar imports internally, so there's no post-dismiss outcome to resolve.
-    func openCreateWizard() {
+    func openCreationSheet() {
         creationEntry = .chooser
         creationPrefillSpec = nil
-        showCreateWizard = true
+        showCreationSheet = true
     }
 
-    func openCreateWizard(prefill spec: RunSpec) {
+    func openCreationSheet(prefill spec: RunSpec) {
         creationEntry = .configure
         creationPrefillSpec = spec
-        showCreateWizard = true
+        showCreationSheet = true
     }
 
     /// Bumped by ⌘S to focus the toolbar page-search field (without opening the command palette).
@@ -114,12 +108,12 @@ final class UIState {
         var spec = RunSpec()
         spec.image = reference
         prefillQueue = []
-        openCreateWizard(prefill: spec)
+        openCreationSheet(prefill: spec)
     }
 
     func useTemplate(_ spec: RunSpec) {
         prefillQueue = []
-        openCreateWizard(prefill: spec)
+        openCreationSheet(prefill: spec)
     }
 
     /// Open the New-Container window prefilled with `spec`.
@@ -148,8 +142,7 @@ final class UIState {
     }
 }
 
-/// A one-shot, section-targeted action requested from the sidebar header (or a menu). Each knows
-/// which sidebar section owns it, so `UIState.dispatch` can navigate there first.
+/// One-shot commands that may come from menus, the command palette, or toolbar panels.
 enum PendingAction: Equatable {
     case runContainer
     case pullImage, loadImage, pruneImages

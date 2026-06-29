@@ -36,7 +36,7 @@ final class AppModel {
     private(set) var diskUsage: DiskUsage?
     private(set) var cliVersion: String?
 
-    // Resource caches for the Images/Volumes/Networks pages, refreshed by the coordinator.
+    // Resource caches shared by toolbar panels, creation pages, and the container grid.
     private(set) var images: [ContainedCore.ImageResource] = []
     private(set) var volumes: [VolumeResource] = []
     private(set) var networks: [NetworkResource] = []
@@ -227,7 +227,7 @@ final class AppModel {
             systemStatus = status
             if status.isRunning {
                 bootstrap = .ready
-                await refreshDiskUsage()        // throttled — only the sidebar badge needs it off-page
+                await refreshDiskUsage()        // throttled; the System panel can force a fresh read
                 await containers.refresh()
                 // One-time: import legacy contained.* card styles into the local store, now that we
                 // no longer write personalization labels.
@@ -241,22 +241,21 @@ final class AppModel {
         }
     }
 
-    /// `system df` is throttled off the System page (sidebar badge only); the banner self-clears.
+    /// `system df` is throttled during background refresh; the System panel can force a fresh read.
     private static let diskUsageThrottle: TimeInterval = 8
     private static let bannerDuration: TimeInterval = 4
 
     private var lastDiskUsageDate: Date?
-    /// Fetch `system df`. It's only needed for the sidebar badge off the System page, so throttle it
-    /// to avoid spawning a process every tick; `force` (used by the System page) bypasses the throttle.
+    /// Fetch `system df`. Throttle background ticks to avoid spawning a process every poll; `force`
+    /// bypasses the throttle for explicit System-panel refreshes.
     private func refreshDiskUsage(force: Bool = false) async {
         guard let client else { return }
         if !force, let last = lastDiskUsageDate, Date().timeIntervalSince(last) < Self.diskUsageThrottle { return }
         if let usage = try? await client.diskUsage() { diskUsage = usage; lastDiskUsageDate = Date() }
     }
 
-    /// `images list` is needed off the Images page now too (the toolbar Images panel + update badges),
-    /// so it runs every tick — but throttled to avoid spawning a process each poll. `force` (the Images
-    /// page / opening the panel) bypasses the throttle for an immediate, fresh list.
+    /// `images list` backs the toolbar Images panel, creation local-image choices, and update badges.
+    /// Keep it warm app-wide, but throttle background ticks to avoid spawning a process each poll.
     private static let imagesThrottle: TimeInterval = 15
     private var lastImagesDate: Date?
     func refreshImagesIfStale(force: Bool = false) async {
@@ -274,40 +273,30 @@ final class AppModel {
         catch { return error.localizedDescription }
     }
 
-    /// One polling tick: refresh system + containers, run the restart watchdog, and refresh the
-    /// resource list for whichever section is on screen. Called by `RefreshCoordinator`.
-    func tick(section: AppSection) async {
+    /// One polling tick: refresh system + containers, run the restart watchdog, and keep the cached
+    /// resources warm. Called by `RefreshCoordinator`.
+    func tick() async {
         await refreshSystem()
         guard bootstrap == .ready, let client else { return }
         await watchdog.evaluate(snapshots: containers.snapshots, store: containers, client: client)
         await health.evaluate(snapshots: containers.snapshots, store: healthChecks, client: client)
         historyStore.recordMetrics(containers.statsByID)
-        await refreshResource(section)
+        await refreshNetworks()
         // Keep the image list warm app-wide (throttled), so the toolbar Images panel and the
-        // update badges populate without first visiting the Images page.
+        // update badges populate without first opening the Images panel.
         await refreshImagesIfStale()
         await checkImageUpdatesIfNeeded()
     }
 
-    /// Refresh the cached list backing a resource page. Failures keep the last good data.
-    func refreshResource(_ section: AppSection) async {
-        guard bootstrap == .ready else { return }
-        switch section {
-        case .containers:
-            await refreshNetworks()   // networks are grouped into the Containers page now
-        }
-    }
-
     /// Refresh the data behind the System toolbar panel (volumes + a forced `system df`). Called from
-    /// the panel's `.task` since there's no standing System page to refresh it on the tick.
+    /// the panel's `.task` since System is no longer a standing page refreshed by the tick.
     func refreshSystemResources() async {
         guard client != nil, bootstrap == .ready else { return }
         await refreshDiskUsage(force: true)
         await refreshVolumes()
     }
 
-    /// Refresh the registry-login list. Registry credentials live in Settings now (no standalone
-    /// section), so this is exposed directly and called from the Settings Registries tab.
+    /// Refresh the registry-login list for Settings.
     func refreshRegistries() async {
         guard let client, bootstrap == .ready else { return }
         if let r = try? await client.registries() { registries = r }
@@ -326,15 +315,14 @@ final class AppModel {
         if let p = try? await client.systemProperties() { properties = p }
     }
 
-    /// Refresh the cached volume list. Volumes live on the System page now (no standalone section), so
-    /// this is exposed directly — like `refreshNetworks` — and called from the `.system` tick.
+    /// Refresh the cached volume list. Volumes live in the System panel, so this is exposed directly
+    /// and called when that panel opens.
     func refreshVolumes() async {
         guard let client, bootstrap == .ready else { return }
         if let v = try? await client.volumes() { volumes = v }
     }
 
-    /// Refresh the cached network list. Networks back the collapsible groups on the Containers page
-    /// (there's no standalone Networks section), so this is exposed directly rather than via a key.
+    /// Refresh the cached network list. Networks back the collapsible groups on the Containers page.
     func refreshNetworks() async {
         guard let client, bootstrap == .ready else { return }
         if let n = try? await client.networks() { networks = n }
@@ -391,8 +379,8 @@ final class AppModel {
         return newID
     }
 
-    /// Load images from an OCI `.tar` archive into the local store. Shared by the Images page drop
-    /// target, the menu loader, and the creation wizard's "Select a file" path.
+    /// Load images from an OCI `.tar` archive into the local store. Shared by app-wide drop, the menu
+    /// loader, and the creation sheet's image-archive path.
     func loadImageTar(at url: URL) {
         guard let client else { return }
         Task {
@@ -445,7 +433,7 @@ final class AppModel {
     }
 
     /// Pull an image, streaming `--progress` lines into the floating activity bar. Returns true on
-    /// success. Used both by the create flow and as a standalone progress surface.
+    /// success.
     @discardableResult
     func pullImage(_ reference: String) async -> Bool {
         guard let client else { return false }

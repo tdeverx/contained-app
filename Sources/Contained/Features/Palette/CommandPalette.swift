@@ -10,14 +10,14 @@ struct PaletteItem: Identifiable {
     let tint: Color
     let action: () -> Void
 
-    /// Every available command: navigation, add actions, page/global actions, and per-container
-    /// lifecycle. This is the app's single command surface now that the sidebar and toolbar are gone.
+    /// Every available command: toolbar-panel navigation, add actions, global actions, and
+    /// per-container lifecycle.
     @MainActor
     static func all(app: AppModel, ui: UIState) -> [PaletteItem] {
         var items: [PaletteItem] = []
         items.append(PaletteItem(title: "Containers", subtitle: "navigate",
                                  icon: "shippingbox", tint: .secondary) { ui.activeMorph = nil })
-        // Toolbar panels (the former sidebar pages) — open the matching morph.
+        // Toolbar panels open the matching morph.
         let panels: [(String, String, UIState.ToolbarMorph)] = [
             ("Images", "shippingbox.fill", .updates),
             ("Templates", "bookmark", .templates),

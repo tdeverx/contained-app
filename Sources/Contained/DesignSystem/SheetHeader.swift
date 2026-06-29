@@ -38,3 +38,28 @@ extension SheetHeader where Trailing == EmptyView {
                   onCancel: onCancel) { EmptyView() }
     }
 }
+
+/// Standard in-window panel header for toolbar morphs and embedded panels.
+struct PanelHeader<Trailing: View>: View {
+    let symbol: String
+    let title: String
+    var subtitle: String?
+    var padding: CGFloat = Tokens.Space.l
+    @ViewBuilder var trailing: () -> Trailing
+
+    var body: some View {
+        ResourceCardHeader {
+            GlassButtonItem(systemName: symbol, help: title, isLabel: true)
+        } content: {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.headline)
+                if let subtitle {
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        } trailing: {
+            trailing()
+        }
+        .padding(padding)
+    }
+}

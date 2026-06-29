@@ -3,29 +3,28 @@ import AppKit
 import UniformTypeIdentifiers
 import ContainedCore
 
-/// The app shell: a single translucent content area (Containers) with the app-wide toolbar floating in
-/// the title-bar band. The sidebar is gone — global actions live in the toolbar morph panels, the
-/// command palette (⌘K), and the page-background overflow menu.
+/// The app shell: a single translucent Containers surface with the app-wide toolbar floating in the
+/// title-bar band. Global actions live in toolbar morph panels, the command palette (⌘K), and the
+/// page-background overflow menu.
 struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// Image load/prune used to live on the Images page; now they're global (the page is gone).
+    /// Image load/prune are global actions because images now live in a toolbar panel.
     @State private var pruningImages = false
-    /// Registry login used to live on the Registries page; the page is gone (credentials live in
-    /// Settings), so the login sheet is presented globally instead.
+    /// Registry login is presented globally while saved credentials are managed in Settings.
     @State private var registryLogin = false
-    /// System logs used to live on the System page; the page is now a toolbar panel, so the standalone
-    /// viewer (reachable from menus / the command palette) is presented globally.
+    /// System logs are reachable from menus and the command palette while system resources live in a
+    /// toolbar panel.
     @State private var showSystemLogs = false
 
     var body: some View {
         @Bindable var settings = app.settings
         @Bindable var ui = ui
         detailShell(settings: settings)
-        .sheet(isPresented: $ui.showCreateWizard, onDismiss: { ui.creationPrefillSpec = nil }) {
-            CreationWizard(entry: ui.creationEntry, prefill: ui.creationPrefillSpec)
+        .sheet(isPresented: $ui.showCreationSheet, onDismiss: { ui.creationPrefillSpec = nil }) {
+            CreationSheet(entry: ui.creationEntry, prefill: ui.creationPrefillSpec)
         }
         .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil; ui.advancePrefillQueue() }) {
             ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
@@ -60,8 +59,8 @@ struct RootView: View {
         } message: {
             Text("Unused images aren't referenced by any container. “All” also removes dangling layers.")
         }
-        // App-wide drop: a compose file opens the creation flow prefilled; an image .tar loads into the
-        // store. The Images page keeps its own .tar drop target, which takes precedence there.
+        // App-wide drop: compose opens editable prefilled run forms; an image .tar loads into the
+        // local image store.
         .dropDestination(for: URL.self) { urls, _ in
             for url in urls {
                 switch url.pathExtension.lowercased() {
@@ -134,7 +133,7 @@ struct RootView: View {
                 set: { if !$0 { app.updater.markWhatsNewSeen() } })
     }
 
-    /// The page-overflow menu (formerly the toolbar's ⋯), shown by right-clicking the background.
+    /// The page-overflow menu, shown by right-clicking the background.
     @ViewBuilder
     private func backgroundMenu() -> some View {
         @Bindable var ui = ui
@@ -152,7 +151,7 @@ struct RootView: View {
         Button { ui.toggleMorph(.palette) } label: { Label("Command Palette…", systemImage: "command") }
     }
 
-    /// Pick an image `.tar` and load it into the local store (formerly the Images page loader).
+    /// Pick an image `.tar` and load it into the local store.
     private func loadImageTar() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
