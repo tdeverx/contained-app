@@ -22,7 +22,7 @@ A native, SwiftUI-first macOS app for Apple's [`container`](https://github.com/a
 - **One Edit form** — progressive-disclosure mapping of the `container run` flags with host-bounded CPU/RAM controls and a live "reveal the CLI" preview.
 - **Persistent history** — SwiftData-backed events and metrics power a per-container History tab and a system-wide Activity view (Swift Charts), with configurable retention.
 - **App-managed restart & healthchecks** — `container` has no native `--restart` or healthcheck, so Contained runs both itself.
-- **Mac-native throughout** — a single-window SwiftUI shell with an app-wide custom Liquid Glass toolbar (add menu, page search, command palette, updates/notifications) whose buttons morph open into resizing panels, a command palette (⌘K), a menu-bar extra, full keyboard shortcuts, and accessibility (Reduce Transparency / Reduce Motion / VoiceOver). AppKit bridges are used only where SwiftUI has no equivalent, and are flagged in the source.
+- **Mac-native throughout** — a single-window SwiftUI shell with an app-wide custom Liquid Glass toolbar (add menu, page search, command palette, updates/notifications) whose buttons morph open into resizing panels, a visual command palette (⌘K), a menu-bar extra, full keyboard shortcuts, and accessibility (Reduce Transparency / Reduce Motion / VoiceOver). AppKit bridges are used only where SwiftUI has no equivalent, and are flagged in the source.
 
 ## Install & updates
 
@@ -36,7 +36,7 @@ Channels are cumulative (Nightly still receives Beta and Stable). See the [Relea
 
 ## Documentation
 
-Full docs live in the **[wiki](https://github.com/tdeverx/contained-app/wiki)** — [Features](https://github.com/tdeverx/contained-app/wiki/Features) · [Run / Edit Form](https://github.com/tdeverx/contained-app/wiki/Run-Edit-Form) · [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts) · [Installation](https://github.com/tdeverx/contained-app/wiki/Installation) · [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting) · [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture) · [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing).
+Full docs live in the **[wiki](https://github.com/tdeverx/contained-app/wiki)** — [Features](https://github.com/tdeverx/contained-app/wiki/Features) · [Command Palette](https://github.com/tdeverx/contained-app/wiki/Command-Palette) · [Design System](https://github.com/tdeverx/contained-app/wiki/Design-System) · [Run / Edit Form](https://github.com/tdeverx/contained-app/wiki/Run-Edit-Form) · [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts) · [Installation](https://github.com/tdeverx/contained-app/wiki/Installation) · [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting) · [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture) · [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing).
 
 ## Requirements
 
@@ -71,7 +71,7 @@ The package splits into two targets so all logic is testable without a UI:
 - **`ContainedCore`** (library) — models, the `container` CLI wrapper (`--format json`), lenient decoders grounded against captured real CLI output, and command builders. No UI.
 - **`Contained`** (executable) — the SwiftUI app: design system, stores (`@Observable` + `@MainActor`), feature views, and the SwiftData history store.
 
-Integration is by **shelling out** to the `container` CLI and decoding its JSON, rather than linking a private framework — robust across CLI updates and easy to verify. Personalization (tint, icon, nickname, background) is stored **locally** (image-keyed defaults + per-container overrides) and never written back as container labels, keeping the CLI clean. Full design notes in the [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture) wiki page.
+Integration is by **shelling out** to the `container` CLI and decoding its JSON, rather than linking a private framework — robust across CLI updates and easy to verify. Personalization (tint, icon, nickname, background) is stored **locally** (image-keyed defaults + per-container overrides) and never written back as container labels, keeping the CLI clean. The command palette is the app-wide action index and should expose every global/container/image/resource function as it becomes available. Full design notes in the [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture), [Design System](https://github.com/tdeverx/contained-app/wiki/Design-System), and [Command Palette](https://github.com/tdeverx/contained-app/wiki/Command-Palette) wiki pages.
 
 ```
 Sources/

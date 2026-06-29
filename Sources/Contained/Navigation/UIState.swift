@@ -12,6 +12,7 @@ final class UIState {
         var entry: CreationEntry = .menu
         var prefillSpec: RunSpec?
         var editSnapshot: ContainerSnapshot?
+        var searchQuery = ""
         var requestToken = 0
     }
 
@@ -74,6 +75,11 @@ final class UIState {
     var creationEditSnapshot: ContainerSnapshot? {
         get { creation.editSnapshot }
         set { creation.editSnapshot = newValue }
+    }
+
+    var creationSearchQuery: String {
+        get { creation.searchQuery }
+        set { creation.searchQuery = newValue }
     }
 
     private(set) var creationRequestToken: Int {
@@ -159,10 +165,11 @@ final class UIState {
     }
 
     /// Open the creation flow in the toolbar add morph at a specific page.
-    func openCreationPanel(entry: CreationEntry = .menu, prefill spec: RunSpec? = nil) {
+    func openCreationPanel(entry: CreationEntry = .menu, prefill spec: RunSpec? = nil, searchQuery: String = "") {
         creationEntry = entry
         creationPrefillSpec = spec
         creationEditSnapshot = nil
+        creationSearchQuery = searchQuery
         creationRequestToken &+= 1
         activeMorph = .add
     }

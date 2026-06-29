@@ -526,6 +526,57 @@ final class AppModel {
         await checkAllImageUpdates(manual: true)
     }
 
+    @discardableResult
+    func pullAvailableImageUpdates(manual: Bool = false) async -> Int {
+        let references = uniqueImageReferences()
+            .filter { imageUpdateStatus(for: $0).state == .updateAvailable }
+        guard !references.isEmpty else {
+            if manual { flash("No image updates available") }
+            return 0
+        }
+        var updated = 0
+        for reference in references where await pullImageUpdate(reference) {
+            updated += 1
+        }
+        if manual {
+            flash("Updated \(updated) image\(updated == 1 ? "" : "s")")
+        }
+        return updated
+    }
+
+    func checkContainerImageUpdates(manual: Bool = true) async {
+        let references = uniqueContainerImageReferences()
+        guard !references.isEmpty else {
+            if manual { flash("No container images to check") }
+            return
+        }
+        for reference in references {
+            await checkImageUpdate(reference, notify: false)
+        }
+        if manual {
+            let available = references.filter { imageUpdateStatus(for: $0).state == .updateAvailable }.count
+            flash(available == 0 ? "Container images are up to date" : "\(available) container image update\(available == 1 ? "" : "s") available")
+        }
+    }
+
+    @discardableResult
+    func pullAvailableContainerImageUpdates(manual: Bool = true) async -> Int {
+        let references = uniqueContainerImageReferences()
+            .filter { imageUpdateStatus(for: $0).state == .updateAvailable }
+        guard !references.isEmpty else {
+            if manual { flash("No container image updates available") }
+            return 0
+        }
+        var updated = 0
+        for reference in references where await pullImageUpdate(reference) {
+            updated += 1
+        }
+        if manual {
+            flash("Updated \(updated) container image\(updated == 1 ? "" : "s")")
+        }
+        return updated
+    }
+
     func checkImageUpdate(_ reference: String, notify: Bool = true) async {
         let key = imageUpdateKey(reference)
         let localDigest = localDigest(for: key)
@@ -593,6 +644,12 @@ final class AppModel {
 
     private func uniqueImageReferences() -> [String] {
         Array(Set(images.map(\.reference))).sorted {
+            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+        }
+    }
+
+    private func uniqueContainerImageReferences() -> [String] {
+        Array(Set(containers.snapshots.map(\.image))).sorted {
             $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
         }
     }

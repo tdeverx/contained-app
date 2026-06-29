@@ -9,12 +9,14 @@ struct PaletteItem: Identifiable {
     var keywords: [String] = []
     var kind: PaletteItemKind = .action
     var accessory: PaletteItemAccessory = .run
+    var visual: PaletteItemVisual = .plain
     let icon: String
     let tint: Color
     let action: () -> Void
 
-    /// Every available command: toolbar-panel navigation, add actions, global actions, and
-    /// per-container lifecycle.
+    /// Every available command: toolbar-panel navigation, creation, global maintenance, settings,
+    /// and resource-specific lifecycle. Add newly exposed app functionality in the section matching
+    /// its scope so the command palette remains the human-readable action index.
     @MainActor
     static func all(app: AppModel, ui: UIState) -> [PaletteItem] {
         var items: [PaletteItem] = []
@@ -54,9 +56,45 @@ struct PaletteItem: Identifiable {
                                  kind: .search, icon: "magnifyingglass", tint: .accentColor) {
             ui.openCreationPanel(entry: .search)
         })
+        items.append(PaletteItem(title: "Search local images", subtitle: "inline results",
+                                 keywords: ["image", "tag", "local", "filter"],
+                                 kind: .search, icon: "square.stack.3d.up", tint: .accentColor) {
+            ui.toggleMorph(.updates)
+        })
         // Page / global actions.
         items.append(PaletteItem(title: "Refresh", subtitle: "action", kind: .action, icon: "arrow.clockwise", tint: .secondary) {
             app.coordinator.wake()
+        })
+        items.append(PaletteItem(title: "Check for app updates…", subtitle: "updates",
+                                 keywords: ["sparkle", "software", "release"],
+                                 kind: .action,
+                                 accessory: app.updater.canCheckForUpdates ? .run : .disabled("Unavailable"),
+                                 icon: "arrow.down.app", tint: .blue) {
+            if app.updater.canCheckForUpdates {
+                app.updater.checkForUpdates()
+            } else {
+                app.flash("App update checks are unavailable in this build")
+            }
+        })
+        items.append(PaletteItem(title: "Check all image updates", subtitle: app.imageUpdateIntervalDescription,
+                                 keywords: ["updates", "tags", "registry", "all images"],
+                                 kind: .image, icon: "arrow.triangle.2.circlepath", tint: .blue) {
+            Task { await app.runImageUpdateSweepNow() }
+        })
+        items.append(PaletteItem(title: "Update all images with available updates", subtitle: "pull newer tags",
+                                 keywords: ["pull", "updates", "tags", "all images"],
+                                 kind: .image, icon: "arrow.down.circle", tint: .orange) {
+            Task { await app.pullAvailableImageUpdates(manual: true) }
+        })
+        items.append(PaletteItem(title: "Check all container images for updates", subtitle: "\(app.containers.snapshots.count) containers",
+                                 keywords: ["container updates", "check all containers", "image updates"],
+                                 kind: .container, icon: "shippingbox.and.arrow.backward", tint: .blue) {
+            Task { await app.checkContainerImageUpdates() }
+        })
+        items.append(PaletteItem(title: "Pull available container image updates", subtitle: "does not recreate containers",
+                                 keywords: ["update all containers", "pull container images", "container image updates"],
+                                 kind: .container, icon: "arrow.down.circle", tint: .orange) {
+            Task { await app.pullAvailableContainerImageUpdates() }
         })
         let pageActions: [(String, String, PendingAction)] = [
             ("Load image tar…", "square.and.arrow.down", .loadImage),
@@ -77,22 +115,30 @@ struct PaletteItem: Identifiable {
             let name = app.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             items.append(PaletteItem(title: "Edit \(name)", subtitle: "container", keywords: [snapshot.id, snapshot.image],
-                                     kind: .container, icon: "slider.horizontal.3", tint: .secondary) {
+                                     kind: .container,
+                                     visual: .container(snapshot),
+                                     icon: "slider.horizontal.3", tint: .secondary) {
                 ui.openCreationPanel(editing: snapshot)
             })
             items.append(PaletteItem(title: "Update image for \(name)", subtitle: snapshot.image, keywords: [snapshot.id, snapshot.image],
-                                     kind: .container, icon: "arrow.down.circle", tint: .blue) {
-                Task { _ = await app.pullImageUpdate(snapshot.image) }
+                                     kind: .container,
+                                     visual: .container(snapshot),
+                                     icon: "arrow.down.circle", tint: .blue) {
+                Task {
+                    if await app.pullImageUpdate(snapshot.image) {
+                        ui.openCreationPanel(editing: snapshot)
+                    }
+                }
             })
             if snapshot.state == .running {
-                items.append(PaletteItem(title: "Stop \(name)", subtitle: "container", kind: .container, icon: "stop.fill", tint: .orange) {
+                items.append(PaletteItem(title: "Stop \(name)", subtitle: "container", kind: .container, visual: .container(snapshot), icon: "stop.fill", tint: .orange) {
                     Task { await app.containers.stop(snapshot.id) }
                 })
-                items.append(PaletteItem(title: "Restart \(name)", subtitle: "container", kind: .container, icon: "arrow.clockwise", tint: .blue) {
+                items.append(PaletteItem(title: "Restart \(name)", subtitle: "container", kind: .container, visual: .container(snapshot), icon: "arrow.clockwise", tint: .blue) {
                     Task { await app.containers.restart(snapshot.id) }
                 })
             } else {
-                items.append(PaletteItem(title: "Start \(name)", subtitle: "container", kind: .container, icon: "play.fill", tint: .green) {
+                items.append(PaletteItem(title: "Start \(name)", subtitle: "container", kind: .container, visual: .container(snapshot), icon: "play.fill", tint: .green) {
                     Task { await app.containers.start(snapshot.id) }
                 })
             }
@@ -157,6 +203,17 @@ struct PaletteItem: Identifiable {
                                  tint: .secondary) {
             app.settings.showInfoTips.toggle()
         })
+        for tint in AppTint.allCases {
+            items.append(PaletteItem(title: "Set app tint to \(tint.displayName)",
+                                     subtitle: "appearance",
+                                     keywords: ["accent", "color", "theme", tint.rawValue],
+                                     kind: .settings,
+                                     visual: .tint(tint),
+                                     icon: "paintpalette",
+                                     tint: tint.color) {
+                app.settings.accentTint = tint
+            })
+        }
         return items
     }
 
@@ -170,6 +227,7 @@ struct PaletteItem: Identifiable {
                                      subtitle: "local image",
                                      keywords: group.references,
                                      kind: .image,
+                                     visual: .imageGroup(group),
                                      icon: "play.fill",
                                      tint: .green) {
                 ui.runImage(group.primaryReference)
@@ -178,15 +236,28 @@ struct PaletteItem: Identifiable {
                                      subtitle: "image",
                                      keywords: group.references,
                                      kind: .image,
+                                     visual: .imageGroup(group),
                                      icon: "arrow.triangle.2.circlepath",
                                      tint: .blue) {
                 Task { await app.checkImageUpdate(group.primaryReference) }
             })
+            if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
+                items.append(PaletteItem(title: "Pull update for \(Format.shortImage(group.primaryReference))",
+                                         subtitle: "image",
+                                         keywords: group.references,
+                                         kind: .image,
+                                         visual: .imageGroup(group),
+                                         icon: "arrow.down.circle",
+                                         tint: .orange) {
+                    Task { await app.pullImageUpdate(group.primaryReference) }
+                })
+            }
             for reference in group.references where reference != group.primaryReference {
                 items.append(PaletteItem(title: "Run \(Format.shortImage(reference))",
                                          subtitle: "image tag",
                                          keywords: [group.primaryReference, reference],
                                          kind: .image,
+                                         visual: .imageTag(reference, groupID: group.id),
                                          icon: "tag",
                                          tint: .green) {
                     ui.runImage(reference)
@@ -204,6 +275,7 @@ struct PaletteItem: Identifiable {
                             subtitle: "volume",
                             keywords: ["storage", volume.name],
                             kind: .resource,
+                            visual: .volume(volume),
                             icon: "externaldrive",
                             tint: .secondary) {
                     var spec = RunSpec()
@@ -221,6 +293,7 @@ struct PaletteItem: Identifiable {
                             subtitle: network.isBuiltin ? "built-in network" : "network",
                             keywords: ["network", network.name],
                             kind: .resource,
+                            visual: .network(network),
                             icon: "network",
                             tint: .secondary) {
                     var spec = RunSpec()
@@ -267,6 +340,17 @@ enum PaletteItemKind: String {
 enum PaletteItemAccessory {
     case run
     case toggle(isOn: () -> Bool, set: (Bool) -> Void)
+    case disabled(String)
+}
+
+enum PaletteItemVisual {
+    case plain
+    case container(ContainerSnapshot)
+    case imageGroup(LocalImageTagGroup)
+    case imageTag(String, groupID: String)
+    case volume(VolumeResource)
+    case network(NetworkResource)
+    case tint(AppTint)
 }
 
 private extension SettingsStore {

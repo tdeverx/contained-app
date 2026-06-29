@@ -45,6 +45,7 @@ struct CreationFlow: View {
     }
     @State private var page: Page
     @State private var spec = RunSpec()
+    @State private var initialSearchQuery = ""
     @State private var localImageQuery = ""
     @State private var composeText = ""
     @State private var volumeName = ""
@@ -74,11 +75,13 @@ struct CreationFlow: View {
     init(start: Start, onClose: @escaping () -> Void,
          prefill: RunSpec? = nil,
          editSnapshot: ContainerSnapshot? = nil,
+         searchQuery: String = "",
          onSoftDismissChange: (((() -> Void)?) -> Void)? = nil) {
         self.start = start
         self.editSnapshot = editSnapshot
         self.onClose = onClose
         self.onSoftDismissChange = onSoftDismissChange
+        _initialSearchQuery = State(initialValue: searchQuery)
         if let prefill {
             _spec = State(initialValue: prefill)
         }
@@ -209,7 +212,7 @@ struct CreationFlow: View {
     private var searchPage: some View {
         pageScaffold(symbol: "magnifyingglass", title: "Search for an image", subtitle: "Pick one to configure and run",
                      leading: .back { go(.chooser) }) {
-            RegistryImageSearch { picked in
+            RegistryImageSearch(initialQuery: initialSearchQuery) { picked in
                 spec = picked
                 go(.configure)
             }

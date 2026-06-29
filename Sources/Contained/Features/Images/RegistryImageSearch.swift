@@ -10,9 +10,11 @@ import ContainedCore
 /// this Docker Hub lookup; Hub's own ranking handles typed queries here.
 struct RegistryImageSearch: View {
     /// Called with a prefilled spec when the user picks a starter, a popular image, or a search result.
+    var initialQuery = ""
     var onSelect: (RunSpec) -> Void
 
     @State private var query = ""
+    @State private var appliedInitialQuery = false
     @State private var results: [HubSearchResult] = []
     @State private var searching = false
     @State private var errorMessage: String?
@@ -29,6 +31,7 @@ struct RegistryImageSearch: View {
                 resultsList
             }
         }
+        .onAppear(perform: applyInitialQuery)
         .onChange(of: query) { _, _ in scheduleSearch() }
     }
 
@@ -178,6 +181,14 @@ struct RegistryImageSearch: View {
             guard !Task.isCancelled, current == query else { return }
             runSearch()
         }
+    }
+
+    private func applyInitialQuery() {
+        guard !appliedInitialQuery else { return }
+        appliedInitialQuery = true
+        let trimmed = initialQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        query = trimmed
     }
 
     private func runSearch() {

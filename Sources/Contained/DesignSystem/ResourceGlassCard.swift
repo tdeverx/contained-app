@@ -165,6 +165,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
 extension ResourceGlassCard where BodyContent == EmptyView, FooterLeading == EmptyView,
                                 FooterActions == EmptyView, Widget == EmptyView {
     init(size: ResourceCardSize = .small,
+         isSelected: Bool = false,
          fill: Color? = nil,
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
@@ -173,6 +174,7 @@ extension ResourceGlassCard where BodyContent == EmptyView, FooterLeading == Emp
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header) {
         self.init(size: size,
+                  isSelected: isSelected,
                   fill: fill,
                   fillOpacity: fillOpacity,
                   gradient: gradient,

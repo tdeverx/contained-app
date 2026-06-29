@@ -200,6 +200,7 @@ struct AppToolbar: View {
                              },
                              prefill: ui.creationPrefillSpec,
                              editSnapshot: ui.creationEditSnapshot,
+                             searchQuery: ui.creationSearchQuery,
                              onSoftDismissChange: { addSoftDismiss = $0 })
                     .id(ui.creationRequestToken)
             }

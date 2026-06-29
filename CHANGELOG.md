@@ -7,7 +7,10 @@
 #### Toolbar & Navigation Redesign
 - **Toolbar-first architecture**: Removed the sidebar entirely; the app now features a single Containers page with a floating custom toolbar
 - **Morphing panel system**: Toolbar buttons morph into resizing panels for Images, Templates, Activity, and System resources
-- **Unified command palette**: Integrated `⌘K` search and command palette into the toolbar's expandable search field
+- **Visual command palette**: Integrated `⌘K` search and command palette into the toolbar's expandable search field, with the search bar acting as the panel header
+- **Palette action index**: Added global commands for app update checks, all-image update checks, pulling available image updates, checking container-image updates, pulling available container-image updates, local image search, Docker Hub search, and app tint changes
+- **Inline palette results**: Container, image group, tag, volume, network, and tint matches render as compact design-system cards instead of generic rows
+- **Palette fuzzy search**: Field-aware scoring now handles exact keywords, word initials, separated partials, and small typo/transposition mistakes
 - **App-wide toolbar band**: Custom Liquid Glass toolbar proportions (52pt band height, 36pt controls) matching macOS 26 design standards
 - **Semantic toolbar sizing**: Button glyphs use Dynamic-Type-scalable `.headline + .imageScale(.large)` for accessibility
 - **Toolbar keyboard shortcuts**: `⌘N` (New), `⌘S` (Search), `⌘U` (Updates), `⌘I` (Activity)
