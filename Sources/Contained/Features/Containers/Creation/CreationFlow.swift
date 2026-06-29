@@ -181,39 +181,21 @@ struct CreationFlow: View {
     private var networkPage: some View {
         pageScaffold(symbol: "network", title: "New network", subtitle: nil,
                      leading: resourceLeading, contentAlignment: .top) {
-            VStack(spacing: Tokens.Space.l) {
-                PanelSection {
-                    PanelField(label: "Name") {
-                        TextField("", text: $networkName, prompt: Text("my-network")).textFieldStyle(.roundedBorder)
-                    }
-                    PanelField(label: "Subnet") {
-                        TextField("", text: $networkSubnet, prompt: Text("optional, e.g. 10.0.0.0/24")).textFieldStyle(.roundedBorder)
-                    }
-                    PanelToggleRow(title: "Host-only (internal)", isOn: $networkInternalOnly)
-                }
-                submitBar(canSubmit: !networkName.trimmingCharacters(in: .whitespaces).isEmpty) {
-                    createNetwork()
-                }
-            }
+            CreationNetworkFields(name: $networkName,
+                                  subnet: $networkSubnet,
+                                  internalOnly: $networkInternalOnly,
+                                  working: working,
+                                  onSubmit: createNetwork)
         }
     }
 
     private var volumePage: some View {
         pageScaffold(symbol: "externaldrive", title: "New volume", subtitle: nil,
                      leading: resourceLeading, contentAlignment: .top) {
-            VStack(spacing: Tokens.Space.l) {
-                PanelSection {
-                    PanelField(label: "Name") {
-                        TextField("", text: $volumeName, prompt: Text("my-volume")).textFieldStyle(.roundedBorder)
-                    }
-                    PanelField(label: "Size") {
-                        TextField("", text: $volumeSize, prompt: Text("optional, e.g. 10G")).textFieldStyle(.roundedBorder)
-                    }
-                }
-                submitBar(canSubmit: !volumeName.trimmingCharacters(in: .whitespaces).isEmpty) {
-                    createVolume()
-                }
-            }
+            CreationVolumeFields(name: $volumeName,
+                                 size: $volumeSize,
+                                 working: working,
+                                 onSubmit: createVolume)
         }
     }
 
@@ -237,44 +219,10 @@ struct CreationFlow: View {
     private var localImagesPage: some View {
         pageScaffold(symbol: "square.stack.3d.up", title: "Choose a local image", subtitle: "Use an image already pulled",
                      leading: .back { go(.chooser) }) {
-            VStack(spacing: Tokens.Space.m) {
-                HStack(spacing: Tokens.Space.s) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                    TextField("Filter local images", text: $localImageQuery)
-                        .textFieldStyle(.plain)
-                    if !localImageQuery.isEmpty {
-                        Button { localImageQuery = "" } label: { Image(systemName: "xmark.circle.fill") }
-                            .buttonStyle(.plain).foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.horizontal, Tokens.Space.m)
-                .padding(.vertical, Tokens.Space.s)
-                .glassSurface(.thin, cornerRadius: Tokens.Radius.control)
-
-                if filteredLocalImages.isEmpty {
-                    ContentUnavailableView {
-                        Label("No matching images", systemImage: "square.stack.3d.up")
-                    } description: {
-                        Text(localImageQuery.isEmpty ? "Pull or build an image first." : "Try a different filter.")
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: Tokens.Space.xs) {
-                            ForEach(filteredLocalImages) { image in
-                                Button {
-                                    spec = RecommendedImage.spec(for: image.reference)
-                                    go(.configure)
-                                } label: {
-                                    localImageRow(image)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
+            CreationLocalImagesContent(query: $localImageQuery) { picked in
+                spec = picked
+                go(.configure)
             }
-            .task { await app.refreshImagesIfStale(force: true) }
         }
     }
 
@@ -296,65 +244,23 @@ struct CreationFlow: View {
     private var pasteComposePage: some View {
         pageScaffold(symbol: "doc.plaintext", title: "Paste Compose", subtitle: "Services with images become prefilled containers",
                      leading: .back { go(.compose) }) {
-            VStack(alignment: .leading, spacing: Tokens.Space.m) {
-                TextEditor(text: $composeText)
-                    .font(.system(.callout, design: .monospaced))
-                    .scrollContentBackground(.hidden)
-                    .padding(Tokens.Space.s)
-                    .glassSurface(.thin, cornerRadius: Tokens.Radius.control)
-                    .frame(minHeight: 260)
-
-                HStack {
-                    Spacer()
-                    Button {
-                        importPastedCompose()
-                    } label: {
-                        Label("Import", systemImage: "arrow.down.doc")
-                    }
-                    .buttonStyle(.glassProminent)
-                    .disabled(composeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
+            CreationPastedComposeContent(text: $composeText, onImport: importPastedCompose)
         }
     }
 
     private var imageArchivePage: some View {
         pageScaffold(symbol: "archivebox", title: "Load Image Archive", subtitle: "Import an OCI image .tar into the local store",
                      leading: .back { go(.chooser) }) {
-            VStack(alignment: .leading, spacing: Tokens.Space.m) {
-                ContentUnavailableView {
-                    Label("Choose an image archive", systemImage: "archivebox")
-                } description: {
-                    Text("After loading, choose Local image to configure and run it.")
-                } actions: {
-                    Button {
-                        selectImageArchive()
-                    } label: {
-                        Label("Select File", systemImage: "folder")
-                    }
-                    .buttonStyle(.glassProminent)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+            CreationImageArchiveContent(onSelect: selectImageArchive)
         }
     }
 
     private var templatesPage: some View {
         pageScaffold(symbol: "bookmark.fill", title: "Use a saved template", subtitle: nil,
                      leading: .back { go(.chooser) }) {
-            ScrollView {
-                LazyVStack(spacing: Tokens.Space.s) {
-                    ForEach(saved) { template in
-                        Button {
-                            if let s = template.spec { spec = s; go(.configure) }
-                        } label: {
-                            choiceCard(symbol: "bookmark.fill",
-                                       title: template.name,
-                                       subtitle: Format.shortImage(template.spec?.image ?? "—"))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+            CreationTemplatesContent(templates: saved) { selected in
+                spec = selected
+                go(.configure)
             }
         }
     }
@@ -441,60 +347,6 @@ struct CreationFlow: View {
                         matchedID: matchedID,
                         matchedNamespace: matchedID == nil ? nil : tileNamespace,
                         action: action)
-    }
-
-    private func submitBar(canSubmit: Bool, action: @escaping () -> Void) -> some View {
-        HStack {
-            Spacer()
-            if working { ProgressView().controlSize(.small) }
-            Button {
-                action()
-            } label: {
-                Label("Create", systemImage: "checkmark")
-            }
-            .buttonStyle(.glassProminent)
-            .disabled(!canSubmit || working)
-        }
-        .padding(Tokens.Space.l)
-        .background(.clear)
-    }
-
-    private var filteredLocalImages: [ContainedCore.ImageResource] {
-        let images = app.images
-            .filter { $0.variants.contains(where: \.isRunnable) || $0.variants.isEmpty }
-            .sorted { $0.reference.localizedCaseInsensitiveCompare($1.reference) == .orderedAscending }
-        let q = localImageQuery.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return images }
-        return images.filter { $0.reference.localizedCaseInsensitiveContains(q) }
-    }
-
-    private func localImageRow(_ image: ContainedCore.ImageResource) -> some View {
-        let runnable = image.variants.filter(\.isRunnable)
-        let size = runnable.compactMap(\.size).max() ?? image.variants.compactMap(\.size).max()
-        let arches = runnable.map(\.platform.architecture).joined(separator: ", ")
-        let subtitle = [size.map { Format.bytes(UInt64($0)) }, arches.isEmpty ? nil : arches]
-            .compactMap { $0 }.joined(separator: "  ·  ")
-
-        return choiceCard(symbol: "square.stack.3d.up",
-                          title: Format.shortImage(image.reference),
-                          subtitle: subtitle)
-    }
-
-    private func choiceCard(symbol: String, title: String, subtitle: String?) -> some View {
-        ResourceGlassCard(size: .small, elevated: false) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: symbol, tint: .accentColor)
-            } content: {
-                VStack(alignment: .leading, spacing: 1) {
-                    ResourceCardTitleText(text: title)
-                    if let subtitle, !subtitle.isEmpty {
-                        ResourceCardMonospacedSubtitleText(text: subtitle)
-                    }
-                }
-            } trailing: {
-                GlassListRowChevron()
-            }
-        }
     }
 
     // MARK: Navigation + actions
