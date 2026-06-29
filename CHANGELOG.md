@@ -14,6 +14,16 @@
 - **App-wide toolbar band**: Custom Liquid Glass toolbar proportions (52pt band height, 36pt controls) matching macOS 26 design standards
 - **Semantic toolbar sizing**: Button glyphs use Dynamic-Type-scalable `.headline + .imageScale(.large)` for accessibility
 - **Toolbar keyboard shortcuts**: `⌘N` (New), `⌘S` (Search), `⌘U` (Updates), `⌘I` (Activity)
+- **Container view options**: Top-left toolbar control (icon + title/subtitle + down chevron) to group the Containers page by Network / Volume / Image / Flat, sort by Name / Status / Image, and toggle running-only
+- **Activity unread badge**: The toolbar Activity bell fills and gains an accent + red dot when there are unread events; the panel adds Mark-all-read and Clear controls and highlights unread rows; events mark read on dismiss
+- **Reusable activity/status asset** (`ActivityStatusView`): long-running operations (image pulls, etc.) now morph the bottom-left system-status capsule in place instead of a separate floating progress bar
+
+#### Palette search scopes & inline registry search
+- **Palette scopes**: Docker Hub and Local-images scope chips pin to the search field and search in-place within the palette (backspace/✕ removes the scope)
+- **Inline Docker Hub search**: live, debounced registry results rendered directly in the palette; selecting one opens the prefilled configure flow (pulls on create)
+- **Sectioned browse view**: with no query, palette entries are grouped under labelled headings (Navigate, Create & Search, Containers, Images, Volumes & Networks, Settings, Actions)
+- **Deduplicated entries**: removed overlapping commands (e.g. "Pull an image" / "Activity history") in favour of scopes and the navigation entries
+- **Color name aliases**: tint search matches everyday color names (e.g. "purple" → Indigo, "blue" → Azure, "grey" → Graphite)
 
 #### Creation & Resource Management
 - **Paged creation flow**: Multi-step flow for creating containers, networks, volumes, and building images
@@ -34,6 +44,7 @@
 - **ToolbarControls**: Centralized toolbar button and cluster components (ToolbarIconButton, ToolbarButtonCluster)
 
 #### Container Customization & Styling
+- **Image detail sub-pages**: Inspect, History, Add Tag, and Push grow the image detail morph into in-place sub-pages (back chevron returns to the card) instead of opening modal sheets
 - **Image update detection**: Display "Update Container" option when a newer image version is available
 - **Enhanced card styling**: Elevated cards with improved glass effects and optional shadows for nested layouts
 - **Multi-level personalization**:
@@ -59,6 +70,8 @@
 - **Palette expansion**: Taller header (48pt) and roomier padding when search palette expands
 - **ContainerCard refactor**: Extracted form logic into shared `ContainerConfigureView` (used by both sheet and paged flow)
 - **Container grid backdrop**: Replaced manual blur/dim with `globalBackdrop` system
+- **Palette links avoid sheets**: Registry login and System logs commands now open the Settings/System morph panels instead of modal sheets
+- **Activity progress relocated**: the floating activity/progress bar was removed in favour of the morphing bottom-left status capsule
 
 #### API & Architecture
 - **AppModel methods**: Added `containerStyle(for:)`, `imageStyle(for:)`, `imageGroupStyle(forID:)` for personalization lookup
@@ -69,6 +82,7 @@
 #### Settings & Personalization
 - **Personalization storage**: New methods for image group and volume styling
 - **Card size persistence**: Migration helper for legacy `compact` → `medium` mapping
+- **Activity read state**: `EventRecord` gains an `isRead` flag (lightweight SwiftData migration); events start unread and are marked read when the Activity panel is dismissed
 
 ### Fixed
 
@@ -82,10 +96,12 @@
 - **System/Registries/Runtime pages**: Moved into toolbar morphs and Settings tab
 - **Old Network creation**: Previously on a dedicated Networks page; now a creation flow option
 - **Legacy card sizes**: Removed `CardDensity.compact` (migrated to `.medium`)
+- **Image action sheets**: Removed `TagImageSheet`, `PushImageSheet`, and `ImageHistorySheet` (replaced by image-detail morph sub-pages)
 
 ### Technical
 
-- **New components**: `MorphingExpander`, `ResourceGlassCard`, `GlassOptionTile`, `CreationFlow`, `ContainerConfigureView`, `ToolbarControls`, `ExteriorShadow`
+- **New components**: `MorphingExpander`, `ResourceGlassCard`, `GlassOptionTile`, `CreationFlow`, `ContainerConfigureView`, `ToolbarControls`, `ExteriorShadow`, `ActivityStatusView`, `ToolbarViewOptions`, `InlineJSONView`
+- **New models/state**: `ContainerGrouping`, `ContainerSort`, `PaletteScope`, `EventRecord.isRead`
 - **Design tokens**: Added `Tokens.Toolbar` enum for all toolbar sizing and spacing
 - **Geometry helpers**: `MorphGeometry` utilities for panel sizing, clamping, and target rect calculation
 - **Optional matched geometry**: Helper for conditional `.matchedGeometryEffect()` in tiles
@@ -95,6 +111,7 @@
 - Saved card density preferences using `compact` will auto-migrate to `medium`
 - Sidebar toggle setting is obsolete (sidebar no longer exists)
 - Existing container and image styles are preserved
+- Activity events recorded before this version are treated as unread on first launch (the `isRead` column defaults to false); opening and dismissing the Activity panel clears the badge
 
 ## 1.0.0
 
