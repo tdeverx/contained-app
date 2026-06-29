@@ -31,6 +31,16 @@ enum RunSpecMemoryFormatter {
 }
 
 extension RunSpec {
+    var hasGeneralOptions: Bool {
+        !image.trimmingCharacters(in: .whitespaces).isEmpty ||
+        !platform.isEmpty ||
+        !name.isEmpty ||
+        !command.isEmpty ||
+        !entrypoint.isEmpty ||
+        !detach ||
+        removeOnExit
+    }
+
     var hasResourceOptions: Bool {
         !cpus.isEmpty || !memory.isEmpty
     }
@@ -51,9 +61,12 @@ extension RunSpec {
         !personalization.isDefault
     }
 
+    var hasAppManagedOptions: Bool {
+        restart != .no || healthCheck.isActive
+    }
+
     var hasAdvancedOptions: Bool {
         interactive || tty ||
-        !entrypoint.isEmpty ||
         !workingDir.isEmpty ||
         !user.isEmpty ||
         !uid.isEmpty ||

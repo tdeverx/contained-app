@@ -12,6 +12,8 @@ struct PanelSection<Content: View>: View {
     var footer: String? = nil
     var rowSpacing: CGFloat = Tokens.Space.m
     var collapsible: Bool = false
+    /// Subtle blue treatment for sections containing explicit non-default values.
+    var highlighted: Bool = false
     /// When provided, the header shows a switch; turning it off hides the body (and footer).
     var enabled: Binding<Bool>? = nil
     @ViewBuilder var content: () -> Content
@@ -35,6 +37,12 @@ struct PanelSection<Content: View>: View {
                 .padding(Tokens.Space.m)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
+                .overlay {
+                    if highlighted {
+                        RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+                            .stroke(Color.accentColor.opacity(0.38), lineWidth: 1)
+                    }
+                }
                 if let footer {
                     // Markdown-aware so footers can use **bold** / `code`, like the old Form footers.
                     Text(.init(footer)).font(.caption).foregroundStyle(.secondary)
@@ -56,7 +64,16 @@ struct PanelSection<Content: View>: View {
                     .rotationEffect(.degrees(collapsed ? 0 : 90))
             }
             if let header {
-                Text(header).font(.headline)
+                HStack(spacing: Tokens.Space.xs) {
+                    if highlighted {
+                        Circle()
+                            .fill(Color.accentColor)
+                            .frame(width: 6, height: 6)
+                    }
+                    Text(header)
+                        .font(.headline)
+                        .foregroundStyle(highlighted ? Color.accentColor : Color.primary)
+                }
             }
             Spacer(minLength: Tokens.Space.s)
             if let enabled {

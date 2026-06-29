@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import ContainedCore
 
 /// The shared container Create/Edit form body: progressive-disclosure sections mapping the `run`
@@ -7,6 +8,8 @@ import ContainedCore
 /// and measures/scrolls consistently. Field guidance is delivered through tappable `info.circle`
 /// popovers, not hover tooltips.
 struct RunSpecForm: View {
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
     @Binding var spec: RunSpec
     @State private var advancedExpanded: Bool
 
@@ -18,20 +21,24 @@ struct RunSpecForm: View {
 
     var body: some View {
         VStack(spacing: Tokens.Space.l) {
-            PanelSection(header: "Essentials") { generalSection }
-            PanelSection(header: "Resources") { resourcesSection }
-            PanelSection(header: "Networking") {
+            Text("Blue sections contain explicit values from an import, edit, template, or manual change.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            PanelSection(header: "Essentials", highlighted: spec.hasGeneralOptions) { generalSection }
+            PanelSection(header: "Resources", highlighted: spec.hasResourceOptions) { resourcesSection }
+            PanelSection(header: "Networking", highlighted: spec.hasNetworkingOptions) {
                 portsSection
                 networkSection
                 socketsSection
             }
-            PanelSection(header: "Storage") { volumesSection }
-            PanelSection(header: "Environment") { environmentSection }
-            PanelSection(header: "App Managed") {
+            PanelSection(header: "Storage", highlighted: spec.hasStorageOptions) { volumesSection }
+            PanelSection(header: "Environment", highlighted: spec.hasEnvironmentOptions) { environmentSection }
+            PanelSection(header: "App Managed", highlighted: spec.hasAppManagedOptions) {
                 restartSection
                 healthSection
             }
-            PanelSection(header: "Appearance") { personalizationSection }
+            PanelSection(header: "Appearance", highlighted: spec.hasPersonalizationOptions) { personalizationSection }
             advancedOptionsSection
         }
         .onChange(of: spec.hasAdvancedOptions) { _, hasValues in if hasValues { advancedExpanded = true } }
@@ -156,7 +163,8 @@ struct RunSpecForm: View {
             ForEach($spec.volumes) { $vol in
                 VStack(spacing: Tokens.Space.xs) {
                     HStack {
-                        TextField("Source (host path)", text: $vol.source).textFieldStyle(.roundedBorder)
+                        sourcePicker(source: $vol.source)
+                        TextField("Source (host path or volume)", text: $vol.source).textFieldStyle(.roundedBorder)
                         removeButton { spec.volumes.removeAll { $0.id == vol.id } }
                     }
                     HStack {
@@ -353,9 +361,33 @@ struct RunSpecForm: View {
 
     @ViewBuilder
     private var networkSection: some View {
-        PanelField(label: "Network", info: "Attach the container to a network (--network).") {
-            TextField("", text: $spec.network, prompt: Text("optional, e.g. default")).textFieldStyle(.roundedBorder)
+        PanelRow(title: "Network", info: "Attach the container to a network (--network).") {
+            Menu(networkMenuTitle) {
+                Button {
+                    spec.network = ""
+                } label: {
+                    Label("Default", systemImage: spec.network.isEmpty ? "checkmark" : "network")
+                }
+                if !app.networks.isEmpty { Divider() }
+                ForEach(app.networks) { network in
+                    Button {
+                        spec.network = network.name
+                    } label: {
+                        Label(network.name, systemImage: spec.network == network.name ? "checkmark" : "network")
+                    }
+                }
+                Divider()
+                Button {
+                    ui.dispatch(.createNetwork)
+                } label: {
+                    Label("Create New Network…", systemImage: "plus")
+                }
+            }
+            .fixedSize()
+            TextField("", text: $spec.network, prompt: Text("custom network")).textFieldStyle(.roundedBorder)
+                .frame(width: 180)
         }
+        .task { await app.refreshNetworks() }
     }
 
     @ViewBuilder
@@ -424,6 +456,7 @@ struct RunSpecForm: View {
         // automatically when advanced values are present).
         PanelSection(header: "Advanced Options",
                      footer: "Less-common run settings. Compose import and Edit reveal these automatically when advanced values are present.",
+                     highlighted: spec.hasAdvancedOptions,
                      enabled: $advancedExpanded) {
             runtimeSection
             securitySection
@@ -455,6 +488,10 @@ struct RunSpecForm: View {
                 set: { spec.maxConcurrentDownloads = String($0) })
     }
 
+    private var networkMenuTitle: String {
+        spec.network.trimmingCharacters(in: .whitespaces).isEmpty ? "Default" : spec.network
+    }
+
     /// A repeatable single-string list editor (capabilities, DNS servers, tmpfs, ulimits…).
     @ViewBuilder
     private func stringList(_ addTitle: String, _ list: Binding<[String]>, prompt: String, info: String) -> some View {
@@ -483,5 +520,46 @@ struct RunSpecForm: View {
         Button(action: action) { Image(systemName: "minus.circle.fill") }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
+    }
+
+    private func sourcePicker(source: Binding<String>) -> some View {
+        Menu {
+            Button {
+                pickHostSource(into: source)
+            } label: {
+                Label("Choose File or Folder…", systemImage: "folder")
+            }
+            if !app.volumes.isEmpty {
+                Divider()
+                ForEach(app.volumes) { volume in
+                    Button {
+                        source.wrappedValue = volume.name
+                    } label: {
+                        Label(volume.name, systemImage: source.wrappedValue == volume.name ? "checkmark" : "externaldrive")
+                    }
+                }
+            }
+            Divider()
+            Button {
+                ui.dispatch(.createVolume)
+            } label: {
+                Label("Create New Volume…", systemImage: "plus")
+            }
+        } label: {
+            Image(systemName: "folder.badge.gearshape")
+        }
+        .buttonStyle(.borderless)
+        .help("Choose a host path, existing volume, or create a new volume")
+        .task { await app.refreshVolumes() }
+    }
+
+    private func pickHostSource(into source: Binding<String>) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose a host file or folder"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        source.wrappedValue = url.path
     }
 }
