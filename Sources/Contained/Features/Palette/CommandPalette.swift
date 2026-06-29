@@ -216,10 +216,19 @@ struct PaletteItem: Identifiable {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         let items = all(app: app, ui: ui)
         guard !q.isEmpty else { return items }
-        return items.filter { item in
-            let haystack = ([item.title, item.subtitle ?? ""] + item.keywords).joined(separator: " ").lowercased()
-            return haystack.contains(q) || haystack.split(separator: " ").contains { $0.hasPrefix(q) }
-        }
+        return items
+            .compactMap { item -> (PaletteItem, Int)? in
+                PaletteSearch.score(query: q, in: item.searchFields).map { (item, $0) }
+            }
+            .sorted {
+                if $0.1 != $1.1 { return $0.1 > $1.1 }
+                return $0.0.title.localizedCaseInsensitiveCompare($1.0.title) == .orderedAscending
+            }
+            .map(\.0)
+    }
+
+    private var searchFields: [String] {
+        [title, subtitle ?? ""] + keywords
     }
 }
 
