@@ -42,6 +42,10 @@ struct RunSpecForm: View {
             advancedOptionsSection
         }
         .onChange(of: spec.hasAdvancedOptions) { _, hasValues in if hasValues { advancedExpanded = true } }
+        .task(id: spec.normalizedImageReference) {
+            guard !spec.image.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            await app.refreshImagesIfStale()
+        }
     }
 
     private var generalSection: some View {
@@ -50,6 +54,18 @@ struct RunSpecForm: View {
                        info: "The image to run, repo:tag. Pulled automatically if not present locally.",
                        error: spec.image.trimmingCharacters(in: .whitespaces).isEmpty ? "An image reference is required." : nil) {
                 TextField("", text: $spec.image, prompt: Text("e.g. nginx:latest")).textFieldStyle(.roundedBorder)
+            }
+            if imageDefaultConfig != nil {
+                PanelRow(title: "Image defaults",
+                         subtitle: "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config.",
+                         info: "The image already uses these defaults at runtime. Adopting them makes those values explicit and editable in this form.") {
+                    Button {
+                        adoptImageDefaults()
+                    } label: {
+                        Label("Adopt", systemImage: "wand.and.stars")
+                    }
+                    .buttonStyle(.glass)
+                }
             }
             PanelRow(title: "Platform", info: "Select an image platform when the image is multi-platform (--platform).") {
                 Picker("", selection: platformPresetBinding) {
@@ -131,6 +147,20 @@ struct RunSpecForm: View {
         let presets = Set(["", "linux/arm64", "linux/amd64", "linux/amd64/v2"])
         return Binding(get: { presets.contains(spec.platform) ? spec.platform : "custom" },
                        set: { if $0 != "custom" { spec.platform = $0 } })
+    }
+
+    private var imageDefaultConfig: VariantConfig.OCIConfig? {
+        spec.imageDefaults(in: app.images)
+    }
+
+    private func adoptImageDefaults() {
+        guard let imageDefaultConfig else { return }
+        let applied = spec.adoptImageDefaults(from: imageDefaultConfig)
+        if applied > 0 {
+            app.flash("Adopted \(applied) image default\(applied == 1 ? "" : "s")")
+        } else {
+            app.flash("Image defaults are already represented")
+        }
     }
 
     static func parseMemoryGB(_ spec: String) -> Double? {
