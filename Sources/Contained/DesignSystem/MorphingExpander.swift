@@ -159,11 +159,13 @@ struct MorphingExpander<Content: View>: View {
     let originFrame: CGRect
     var target: AppMorphTarget
     var backdropStyle: GlobalBackdropStyle = .dim
+    var showsBackdrop = true
     var showsPanelShadow = true
     var closeRequestToken = 0
     var sourceCornerRadius = Tokens.Toolbar.groupRadius
     var targetCornerRadius = Tokens.Radius.sheet
     var onBackdropTap: (() -> Void)?
+    var onExpansionChange: ((Bool) -> Void)?
     @ViewBuilder var content: () -> Content
 
     @State private var expanded = false
@@ -181,21 +183,25 @@ struct MorphingExpander<Content: View>: View {
          originFrame: CGRect,
          target: AppMorphTarget = .centered(size: CGSize(width: 460, height: 440)),
          backdropStyle: GlobalBackdropStyle = .dim,
+         showsBackdrop: Bool = true,
          showsPanelShadow: Bool = true,
          closeRequestToken: Int = 0,
          sourceCornerRadius: CGFloat = Tokens.Toolbar.groupRadius,
          targetCornerRadius: CGFloat = Tokens.Radius.sheet,
          onBackdropTap: (() -> Void)? = nil,
+         onExpansionChange: ((Bool) -> Void)? = nil,
          @ViewBuilder content: @escaping () -> Content) {
         self._isPresented = isPresented
         self.originFrame = originFrame
         self.target = target
         self.backdropStyle = backdropStyle
+        self.showsBackdrop = showsBackdrop
         self.showsPanelShadow = showsPanelShadow
         self.closeRequestToken = closeRequestToken
         self.sourceCornerRadius = sourceCornerRadius
         self.targetCornerRadius = targetCornerRadius
         self.onBackdropTap = onBackdropTap
+        self.onExpansionChange = onExpansionChange
         self.content = content
     }
 
@@ -205,12 +211,14 @@ struct MorphingExpander<Content: View>: View {
             let rect = expanded ? target : originFrame
             let cornerRadius = expanded ? targetCornerRadius : sourceCornerRadius
             ZStack {
-                Color.clear
-                    .globalBackdrop(style: backdropStyle,
-                                    progress: expanded ? 1 : 0,
-                                    dimOpacity: 0.28)
-                    .contentShape(Rectangle())
-                    .onTapGesture { onBackdropTap?() ?? close() }
+                if showsBackdrop {
+                    Color.clear
+                        .globalBackdrop(style: backdropStyle,
+                                        progress: expanded ? 1 : 0,
+                                        dimOpacity: 0.28)
+                        .contentShape(Rectangle())
+                        .onTapGesture { onBackdropTap?() ?? close() }
+                }
 
                 Button(action: close) { EmptyView() }
                     .keyboardShortcut(.cancelAction)
@@ -244,9 +252,16 @@ struct MorphingExpander<Content: View>: View {
             withAnimation(reduceMotion ? nil : spring) { livePlacement = placement }
         }
         .onAppear {
-            guard !reduceMotion else { expanded = true; return }
+            guard !reduceMotion else {
+                expanded = true
+                onExpansionChange?(true)
+                return
+            }
             // Grow on the next runloop so the panel has a real starting (origin) frame to animate from.
-            DispatchQueue.main.async { withAnimation(spring) { expanded = true } }
+            DispatchQueue.main.async {
+                onExpansionChange?(true)
+                withAnimation(spring) { expanded = true }
+            }
         }
         .onChange(of: closeRequestToken) { _, _ in close() }
         .onExitCommand(perform: close)
@@ -261,6 +276,7 @@ struct MorphingExpander<Content: View>: View {
     }
 
     private func close() {
+        onExpansionChange?(false)
         guard !reduceMotion else { isPresented = false; return }
         withAnimation(spring) { expanded = false } completion: { isPresented = false }
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedCore
 
 /// Cross-cutting UI state shared between toolbar panels, menu commands, and content views.
 @MainActor
@@ -9,12 +10,12 @@ final class UIState {
     var searchText = ""
     var runningOnly = false
     var showRunSheet = false
-    enum CreationEntry: Hashable { case chooser, search, configure, network, volume, build }
-    var creationEntry: CreationEntry = .chooser
+    enum CreationEntry: Hashable { case menu, chooser, search, configure, network, volume, build }
+    var creationEntry: CreationEntry = .menu
     var creationPrefillSpec: RunSpec?
-    /// The unified creation sheet. Distinct from `showRunSheet`, which presents the configure form
-    /// directly for compose queues and other direct-prefill paths.
-    var showCreationSheet = false
+    var creationEditSnapshot: ContainerSnapshot?
+    /// Bumped whenever a menu/shortcut opens the add morph at a specific creation page.
+    private(set) var creationRequestToken = 0
 
     /// Which toolbar button is currently morphed open into a centered panel (nil = none). The toolbar
     /// reads this to grow the matching panel from that button's slot.
@@ -56,20 +57,15 @@ final class UIState {
     func dispatch(_ action: PendingAction) {
         switch action {
         case .runContainer:
-            creationEntry = .chooser
-            showCreationSheet = true
+            openCreationPanel(entry: .chooser)
         case .pullImage:
-            creationEntry = .search
-            showCreationSheet = true
+            openCreationPanel(entry: .search)
         case .createVolume:
-            creationEntry = .volume   // volumes live in the System panel; creation is the `+` flow
-            showCreationSheet = true
+            openCreationPanel(entry: .volume)
         case .createNetwork:
-            creationEntry = .network  // networks fold into Containers
-            showCreationSheet = true
+            openCreationPanel(entry: .network)
         case .build:
-            creationEntry = .build    // build is a page in the creation flow now
-            showCreationSheet = true
+            openCreationPanel(entry: .build)
         case .activityHistory:
             activeMorph = .activity   // Activity is its own toolbar panel
         case .loadImage, .pruneImages, .registryLogin, .systemLogs:
@@ -77,18 +73,25 @@ final class UIState {
         }
     }
 
-    /// Open the creation sheet from scratch (the paged chooser). The flow handles its own steps and
-    /// hands off to compose/tar imports internally, so there's no post-dismiss outcome to resolve.
-    func openCreationSheet() {
-        creationEntry = .chooser
-        creationPrefillSpec = nil
-        showCreationSheet = true
+    /// Open the creation flow in the toolbar add morph at a specific page.
+    func openCreationPanel(entry: CreationEntry = .menu, prefill spec: RunSpec? = nil) {
+        creationEntry = entry
+        creationPrefillSpec = spec
+        creationEditSnapshot = nil
+        creationRequestToken &+= 1
+        activeMorph = .add
     }
 
-    func openCreationSheet(prefill spec: RunSpec) {
+    func openCreationPanel(prefill spec: RunSpec) {
+        openCreationPanel(entry: .configure, prefill: spec)
+    }
+
+    func openCreationPanel(editing snapshot: ContainerSnapshot) {
         creationEntry = .configure
-        creationPrefillSpec = spec
-        showCreationSheet = true
+        creationPrefillSpec = nil
+        creationEditSnapshot = snapshot
+        creationRequestToken &+= 1
+        activeMorph = .add
     }
 
     /// Bumped by ⌘S to focus the toolbar page-search field (without opening the command palette).
@@ -108,12 +111,12 @@ final class UIState {
         var spec = RunSpec()
         spec.image = reference
         prefillQueue = []
-        openCreationSheet(prefill: spec)
+        openCreationPanel(prefill: spec)
     }
 
     func useTemplate(_ spec: RunSpec) {
         prefillQueue = []
-        openCreationSheet(prefill: spec)
+        openCreationPanel(prefill: spec)
     }
 
     /// Open the New-Container window prefilled with `spec`.

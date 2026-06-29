@@ -43,6 +43,7 @@ struct RunSpecForm: View {
             advancedOptionsSection
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
         .scrollEdgeEffectStyle(.soft, for: .all)
         .onChange(of: spec.hasAdvancedOptions) { _, hasValues in if hasValues { advancedExpanded = true } }
     }

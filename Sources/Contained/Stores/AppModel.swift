@@ -69,20 +69,24 @@ final class AppModel {
         "Every \(settings.imageUpdateIntervalHours) hour\(settings.imageUpdateIntervalHours == 1 ? "" : "s")"
     }
 
+    var defaultImageStyle: Personalization {
+        settings.imageDefaultStyleEnabled ? personalization.defaultImageStyle : Personalization()
+    }
+
     func imageStyle(for reference: String) -> Personalization {
         let groupID = LocalImageTagGroup.groups(for: images).first { group in
             group.references.contains(reference)
         }?.id
-        return personalization.imageDefault(for: reference, groupID: groupID) ?? Personalization()
+        return personalization.imageDefault(for: reference, groupID: groupID) ?? defaultImageStyle
     }
 
     func imageGroupStyle(for group: LocalImageTagGroup) -> Personalization {
-        personalization.imageGroupDefault(for: group.id) ?? Personalization()
+        personalization.imageGroupDefault(for: group.id) ?? defaultImageStyle
     }
 
     /// The group's style by id (used where only the id is known, e.g. a tag resolving its parent).
     func imageGroupStyle(forID id: String) -> Personalization {
-        personalization.imageGroupDefault(for: id) ?? Personalization()
+        personalization.imageGroupDefault(for: id) ?? defaultImageStyle
     }
 
     func volumeStyle(for name: String) -> Personalization {
@@ -131,7 +135,10 @@ final class AppModel {
         let groupID = LocalImageTagGroup.groups(for: images).first { group in
             group.references.contains(snapshot.image)
         }?.id
-        return personalization.resolved(id: snapshot.id, image: snapshot.image, groupID: groupID)
+        return personalization.resolved(id: snapshot.id,
+                                        image: snapshot.image,
+                                        groupID: groupID,
+                                        fallback: defaultImageStyle)
     }
 
     /// One in-flight operation shown in the bottom progress bar.
@@ -379,8 +386,8 @@ final class AppModel {
         return newID
     }
 
-    /// Load images from an OCI `.tar` archive into the local store. Shared by app-wide drop, the menu
-    /// loader, and the creation sheet's image-archive path.
+    /// Load images from an OCI `.tar` archive into the local store. Shared by app-wide drop, menu
+    /// commands, and the add panel's image-archive path.
     func loadImageTar(at url: URL) {
         guard let client else { return }
         Task {

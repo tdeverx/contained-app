@@ -35,20 +35,20 @@ struct RegistryImageSearch: View {
     // MARK: Search field
 
     private var searchField: some View {
-        HStack(spacing: Tokens.Space.s) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search Docker Hub…", text: $query)
-                .textFieldStyle(.plain)
-                .onSubmit { runSearch() }
-            if searching { ProgressView().controlSize(.small) }
-            else if !query.isEmpty {
-                Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
+        GlassButton {
+            GlassButtonInputItem {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search Docker Hub…", text: $query)
+                    .textFieldStyle(.plain)
+                    .onSubmit { runSearch() }
+                if searching { ProgressView().controlSize(.small) }
+                else if !query.isEmpty {
+                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.plain).foregroundStyle(.secondary)
+                }
             }
         }
-        .padding(.horizontal, Tokens.Space.m)
-        .padding(.vertical, Tokens.Space.s)
-        .glassSurface(.thin, cornerRadius: Tokens.Radius.control)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: Idle — starters + popular
@@ -87,7 +87,9 @@ struct RegistryImageSearch: View {
     private func quickPick(symbol: String, title: String, subtitle: String,
                            action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            GlassListRow(symbol: symbol, title: title, subtitle: subtitle)
+            choiceCard(symbol: symbol, title: title, subtitle: subtitle) {
+                GlassListRowChevron()
+            }
         }
         .buttonStyle(.plain)
     }
@@ -129,10 +131,9 @@ struct RegistryImageSearch: View {
     }
 
     private func resultRow(_ result: HubSearchResult) -> some View {
-        GlassListRow(symbol: "shippingbox",
-                     title: result.repoName,
-                     subtitle: result.shortDescription?.isEmpty == false ? result.shortDescription : nil,
-                     monospacedSubtitle: false) {
+        choiceCard(symbol: "shippingbox",
+                   title: result.repoName,
+                   subtitle: result.shortDescription?.isEmpty == false ? result.shortDescription : nil) {
             HStack(spacing: Tokens.Space.s) {
                 if result.isOfficial {
                     Image(systemName: "checkmark.seal.fill").font(.caption2).foregroundStyle(.blue)
@@ -141,6 +142,26 @@ struct RegistryImageSearch: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .labelStyle(.titleAndIcon)
+            }
+        }
+    }
+
+    private func choiceCard<Accessory: View>(symbol: String,
+                                             title: String,
+                                             subtitle: String?,
+                                             @ViewBuilder accessory: @escaping () -> Accessory) -> some View {
+        ResourceGlassCard(size: .small, elevated: false) {
+            ResourceCardHeader {
+                ResourceCardIconChip(symbol: symbol, tint: .accentColor)
+            } content: {
+                VStack(alignment: .leading, spacing: 1) {
+                    ResourceCardTitleText(text: title)
+                    if let subtitle, !subtitle.isEmpty {
+                        ResourceCardSubtitleText(text: subtitle)
+                    }
+                }
+            } trailing: {
+                accessory()
             }
         }
     }

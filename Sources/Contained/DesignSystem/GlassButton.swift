@@ -48,9 +48,9 @@ struct GlassButtonItem<Label: View>: View {
             .contentShape(Rectangle())
             .background {
                 Capsule(style: .continuous)
-                    .fill(hoverEnabled && hovering ? AppMaterial.toolbarHoverFill : .clear)
+                    .fill(hoverEnabled && hovering && !isLabel ? AppMaterial.toolbarHoverFill : .clear)
             }
-            .onHover { hovering = $0 }
+            .onHover { hovering = isLabel ? false : $0 }
             .animation(.easeOut(duration: 0.15), value: hovering)
     }
 

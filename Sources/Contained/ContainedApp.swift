@@ -33,9 +33,9 @@ struct ContainedApp: App {
             }
             CommandGroup(after: .newItem) {
                 // The toolbar "＋" add-menu — Container / Network / Volume.
-                Button("New…") { ui.toggleMorph(.add) }
+                Button("New…") { ui.openCreationPanel() }
                     .keyboardShortcut("n", modifiers: .command)
-                Button("Run Container…") { ui.openCreationSheet() }
+                Button("Run Container…") { ui.openCreationPanel(entry: .chooser) }
                     .keyboardShortcut("r", modifiers: .command)
                 Divider()
                 Button("Pull Image…") { ui.dispatch(.pullImage) }

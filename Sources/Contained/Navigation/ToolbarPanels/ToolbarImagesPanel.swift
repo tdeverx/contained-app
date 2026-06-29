@@ -37,7 +37,7 @@ struct ToolbarUpdatesPanel: View {
                         }
                     }
                 }
-                .padding(Tokens.Space.m)
+                .padding(Tokens.Space.s)
             }
             .scrollEdgeEffectStyle(.soft, for: .all)
         }
@@ -49,8 +49,7 @@ struct ToolbarUpdatesPanel: View {
     private var header: some View {
         PanelHeader(symbol: "square.stack.3d.up",
                     title: "Images",
-                    subtitle: "\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")",
-                    padding: Tokens.Space.m) {
+                    subtitle: "\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")") {
             GlassButton {
                 GlassButtonItem(systemName: "square.and.arrow.down", help: "Load Image Tar") {
                     ui.dispatch(.loadImage)

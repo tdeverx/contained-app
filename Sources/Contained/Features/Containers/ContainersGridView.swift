@@ -11,7 +11,6 @@ struct ContainersGridView: View {
     @Environment(\.appSafeAreas) private var safeAreas
 
     @State private var detail: ContainerSnapshot?
-    @State private var editing: ContainerSnapshot?
     @State private var deleting: ContainerSnapshot?
     @State private var selecting = false
     @State private var selection: Set<String> = []
@@ -142,9 +141,6 @@ struct ContainersGridView: View {
         }
         .overlay {
             if store.snapshots.isEmpty && app.networks.isEmpty { emptyState }
-        }
-        .sheet(item: $editing) { snapshot in
-            ContainerEditSheet(mode: .edit(snapshot, onComplete: { editing = nil }))
         }
         .confirmationDialog(
             "Delete \(customizeName(deleting))?",
@@ -298,7 +294,7 @@ struct ContainersGridView: View {
             onStart: { Task { await store.start(snapshot.id) } },
             onStop: { Task { await store.stop(snapshot.id) } },
             onRestart: { Task { await store.restart(snapshot.id) } },
-            onEdit: { editing = snapshot },
+            onEdit: { ui.openCreationPanel(editing: snapshot) },
             onUpdate: { updateContainer(snapshot) },
             onDelete: { deleting = snapshot },
             onClose: closeDetail,
@@ -313,7 +309,7 @@ struct ContainersGridView: View {
     }
 
     private var cardDetailTarget: AppMorphTarget {
-        .topCentered(safeArea: cardDetailSafeAreaPolicy, margin: 0) { bounds in
+        .centered(safeArea: cardDetailSafeAreaPolicy, margin: 0) { bounds in
             panelSize(in: bounds.size)
         }
     }
@@ -329,7 +325,7 @@ struct ContainersGridView: View {
             margin: 0
         )
         let width = max(min(fitted.width, available.width), min(360, fitted.width))
-        let height = available.height
+        let height = fitted.height
         return CGSize(width: width, height: height)
     }
 
@@ -392,7 +388,7 @@ struct ContainersGridView: View {
     private func updateContainer(_ snapshot: ContainerSnapshot) {
         Task {
             if await app.pullImageUpdate(snapshot.image) {
-                editing = snapshot
+                ui.openCreationPanel(editing: snapshot)
             }
         }
     }
@@ -410,7 +406,7 @@ struct ContainersGridView: View {
         } description: {
             Text(ui.runningOnly ? "No running containers." : "Run a container to see it here.")
         } actions: {
-            Button("Run a container") { ui.openCreationSheet() }
+            Button("Run a container") { ui.openCreationPanel(entry: .chooser) }
         }
     }
 }

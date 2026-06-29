@@ -84,7 +84,7 @@ enum Tokens {
         static let leadingInset: CGFloat = 80   // band inset on the left, past the traffic lights
         static let trafficLightsWidth: CGFloat = 82 // close/min/zoom cluster width — the Settings slot min width
         static let groupPaddingH: CGFloat = 0   // horizontal glass margin inside a group
-        static let groupSpacing: CGFloat = 4    // spacing between buttons / groups
+        static let groupSpacing: CGFloat = 8    // spacing between buttons / groups
         static let searchMaxWidth: CGFloat = 380
         // Search field internals.
         static let searchInnerPadding: CGFloat = iconInnerPadding * 2 // matches glass button edge inset

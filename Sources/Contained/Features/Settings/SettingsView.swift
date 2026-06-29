@@ -46,6 +46,7 @@ struct SettingsContent: View {
                 // Drop the grouped-Form backing so the morph panel's glass material shows through —
                 // the sections read as inset cards floating on the panel instead of a solid sheet.
                 .scrollContentBackground(.hidden)
+                .clipped()
         }
     }
 
@@ -53,7 +54,7 @@ struct SettingsContent: View {
         PanelHeader(symbol: page.systemImage,
                     title: "Settings",
                     subtitle: page.rawValue,
-                    padding: Tokens.Space.m) {
+                    leadingReserve: Tokens.Toolbar.trafficLightsWidth) {
             GlassButton(singleItem: onClose == nil) {
                 pagePicker
                 if let onClose {
@@ -123,8 +124,71 @@ private struct AppearanceTab: View {
                 Text("Main background material controls the root content backing. Panel & sheet material controls floating detail panels, popovers, and sheets. Reduce translucency switches to solid system surfaces for legibility.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+
+            ImageDefaultStyleSection(settings: settings)
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct ImageDefaultStyleSection: View {
+    @Environment(AppModel.self) private var app
+    @Bindable var settings: SettingsStore
+
+    private var style: Personalization { app.personalization.defaultImageStyle }
+
+    var body: some View {
+        Section {
+            Toggle("Use default image card design", isOn: $settings.imageDefaultStyleEnabled)
+                .fieldInfo("When on, image groups, image rows, and containers without their own style inherit this design. Turn it off to fall back to the built-in card design.")
+            HStack(spacing: Tokens.Space.m) {
+                ResourceCardIconChip(symbol: style.symbol, tint: style.color)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(style.displayName(fallback: "Image cards"))
+                    Text("Inherited unless an image, group, tag, or container overrides it")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 2)
+            LabeledContent("Color") {
+                TintSelector(selection: styleBinding(\.tint))
+            }
+            Toggle("Custom icon", isOn: styleBinding(\.iconEnabled))
+            if style.iconEnabled {
+                TextField("Icon", text: styleBinding(\.icon), prompt: Text("SF Symbol, e.g. shippingbox.fill"))
+            }
+            Toggle("Color the card background", isOn: styleBinding(\.fillBackground))
+            if style.fillBackground {
+                LabeledContent("Opacity") {
+                    Slider(value: styleBinding(\.backgroundOpacity), in: 0.05...0.6)
+                    Text(Format.percent(style.backgroundOpacity))
+                        .monospacedDigit()
+                        .frame(width: Tokens.FormWidth.shortReadout)
+                }
+                Toggle("Gradient", isOn: styleBinding(\.gradient))
+                if style.gradient {
+                    GradientAngleControl(angle: styleBinding(\.gradientAngle))
+                }
+            }
+        } header: {
+            Text("Default image cards")
+        } footer: {
+            Text("Specific image, image-group, tag, and container styles remain local overrides above this default.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .opacity(settings.imageDefaultStyleEnabled ? 1 : 0.72)
+    }
+
+    private func styleBinding<Value>(_ keyPath: WritableKeyPath<Personalization, Value>) -> Binding<Value> {
+        Binding {
+            app.personalization.defaultImageStyle[keyPath: keyPath]
+        } set: { newValue in
+            var updated = app.personalization.defaultImageStyle
+            updated[keyPath: keyPath] = newValue
+            app.personalization.setDefaultImageStyle(updated)
+        }
     }
 }
 

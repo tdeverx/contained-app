@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 import ContainedCore
 
-/// The container create/edit form body — shared by `ContainerEditSheet` (a modal sheet) and the paged
-/// `CreationFlow` (hosted in the toolbar's morph panel). Owns the spec, validation, pre-flight
+/// The container create/edit form body — hosted by the paged `CreationFlow` and legacy direct-prefill
+/// sheets. Owns the spec, validation, pre-flight
 /// warnings, create/recreate, and save-as-template. The host supplies a leading control (cancel for a
 /// sheet, back for a page) and is told when to close via `onFinished` (success) — the form never
 /// dismisses itself.
@@ -69,46 +69,43 @@ struct ContainerConfigureView: View {
     }
 
     private var header: some View {
-        HStack(spacing: Tokens.Space.s) {
-            switch leading {
-            case .cancel(let action):
+        PanelHeader(symbol: isEdit ? "slider.horizontal.3" : "play.fill",
+                    title: isEdit ? "Edit container" : "Run a container",
+                    subtitle: isEdit ? "Replaces the existing container with your edits" : nil) {
+            HStack(spacing: Tokens.Space.s) {
                 GlassButton(singleItem: true) {
-                    GlassButtonItem(systemName: "xmark", help: "Cancel", isCancel: true, action: action)
+                    leadingButton
                 }
-            case .back(let action):
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(systemName: "chevron.left", help: "Back", action: action)
-                }
-            }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(isEdit ? "Edit container" : "Run a container").font(.headline)
-                if isEdit {
-                    Text("Replaces the existing container with your edits")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-            if working {
-                ProgressView().controlSize(.small)
-                    .frame(width: Tokens.IconSize.control, height: Tokens.IconSize.control)
-            } else {
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(systemName: "bookmark", help: "Save as template") {
-                        templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
-                        savingTemplate = true
+                GlassButton {
+                    if working {
+                        ProgressView().controlSize(.small)
+                            .frame(width: Tokens.Toolbar.buttonItemHeight, height: Tokens.Toolbar.buttonItemHeight)
+                    } else {
+                        GlassButtonItem(systemName: "bookmark", help: "Save as template") {
+                            guard spec.isRunnable else { return }
+                            templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
+                            savingTemplate = true
+                        }
+                        GlassButtonItem(systemName: isEdit ? "checkmark" : "play.fill",
+                                        help: isEdit ? "Save" : "Create") {
+                            guard spec.isRunnable else { return }
+                            if isEdit { confirming = true } else { create() }
+                        }
                     }
                 }
-                .disabled(!spec.isRunnable)
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(systemName: isEdit ? "checkmark" : "play.fill",
-                                    help: isEdit ? "Save" : "Create") {
-                        if isEdit { confirming = true } else { create() }
-                    }
-                }
-                .disabled(!spec.isRunnable)
+                .opacity(!working && !spec.isRunnable ? 0.55 : 1)
             }
         }
-        .padding(Tokens.Space.l)
+    }
+
+    @ViewBuilder
+    private var leadingButton: some View {
+        switch leading {
+        case .cancel(let action):
+            GlassButtonItem(systemName: "xmark", help: "Cancel", isCancel: true, action: action)
+        case .back(let action):
+            GlassButtonItem(systemName: "chevron.left", help: "Back", action: action)
+        }
     }
 
     @ViewBuilder

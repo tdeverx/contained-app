@@ -60,7 +60,7 @@ struct ToolbarTemplatesPanel: View {
                         ForEach(saved) { template in templateCard(template) }
                     }
                 }
-                .padding(Tokens.Space.m)
+                .padding(Tokens.Space.s)
             }
             .scrollEdgeEffectStyle(.soft, for: .all)
         }
@@ -71,8 +71,7 @@ struct ToolbarTemplatesPanel: View {
     private var header: some View {
         PanelHeader(symbol: "bookmark",
                     title: "Templates",
-                    subtitle: "\(saved.count) saved",
-                    padding: Tokens.Space.m) {
+                    subtitle: "\(saved.count) saved") {
             GlassButton(singleItem: true) {
                 GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
             }

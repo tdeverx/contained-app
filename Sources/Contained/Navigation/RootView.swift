@@ -23,9 +23,6 @@ struct RootView: View {
         @Bindable var settings = app.settings
         @Bindable var ui = ui
         detailShell(settings: settings)
-        .sheet(isPresented: $ui.showCreationSheet, onDismiss: { ui.creationPrefillSpec = nil }) {
-            CreationSheet(entry: ui.creationEntry, prefill: ui.creationPrefillSpec)
-        }
         .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil; ui.advancePrefillQueue() }) {
             ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
         }

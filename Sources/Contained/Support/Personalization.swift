@@ -272,19 +272,21 @@ enum GraphStyle: String, CaseIterable, Identifiable, Codable, Sendable {
 }
 
 /// Local-only personalization store. Resolution cascades **per-container override → image default →
-/// built-in default**. Persisted to UserDefaults today (migrated to SwiftData in WS7). The CLI and
-/// the containers themselves stay clean — no labels are ever written.
+/// app image default → built-in default**. Persisted to UserDefaults today (migrated to SwiftData in
+/// WS7). The CLI and the containers themselves stay clean — no labels are ever written.
 @MainActor
 @Observable
 final class PersonalizationStore {
     private var overrides: [String: Personalization]      // keyed by container id (== stable name)
     private var imageDefaults: [String: Personalization]   // keyed by image reference
     private var volumeStyles: [String: Personalization]    // keyed by volume name
+    private(set) var defaultImageStyle: Personalization
     private let defaults: UserDefaults
     private enum Keys {
         static let overrides = "personalizationOverrides"
         static let imageDefaults = "personalizationImageDefaults"
         static let volumeStyles = "personalizationVolumeStyles"
+        static let defaultImageStyle = "personalizationDefaultImageStyle"
         static let migrated = "personalizationLabelsMigrated"
     }
 
@@ -293,10 +295,14 @@ final class PersonalizationStore {
         overrides = Self.load(defaults, Keys.overrides)
         imageDefaults = Self.load(defaults, Keys.imageDefaults)
         volumeStyles = Self.load(defaults, Keys.volumeStyles)
+        defaultImageStyle = Self.loadStyle(defaults, Keys.defaultImageStyle) ?? Personalization()
     }
 
     func backupSnapshot() -> PersonalizationBackup {
-        PersonalizationBackup(overrides: overrides, imageDefaults: imageDefaults, volumeStyles: volumeStyles)
+        PersonalizationBackup(overrides: overrides,
+                              imageDefaults: imageDefaults,
+                              volumeStyles: volumeStyles,
+                              defaultImageStyle: defaultImageStyle)
     }
 
     func applyBackup(_ snapshot: PersonalizationBackup, replace: Bool) {
@@ -309,9 +315,11 @@ final class PersonalizationStore {
             imageDefaults.merge(snapshot.imageDefaults) { _, imported in imported }
             volumeStyles.merge(snapshot.volumeStyles) { _, imported in imported }
         }
+        defaultImageStyle = snapshot.defaultImageStyle
         persist(Keys.overrides, overrides)
         persist(Keys.imageDefaults, imageDefaults)
         persist(Keys.volumeStyles, volumeStyles)
+        Self.persist(defaults, Keys.defaultImageStyle, defaultImageStyle)
     }
 
     func purgeOrphans(liveContainerIDs: Set<String>, liveImageRefs: Set<String>) -> Int {
@@ -351,9 +359,12 @@ final class PersonalizationStore {
         return personalization.normalizedForPersistence()
     }
 
-    /// Resolve a container's effective style: per-container override → image default → built-in.
-    func resolved(id: String, image: String, groupID: String? = nil) -> Personalization {
-        Self.meaningful(overrides[id]) ?? imageDefault(for: image, groupID: groupID) ?? Personalization()
+    /// Resolve a container's effective style: per-container override → image default → fallback.
+    func resolved(id: String,
+                  image: String,
+                  groupID: String? = nil,
+                  fallback: Personalization = Personalization()) -> Personalization {
+        Self.meaningful(overrides[id]) ?? imageDefault(for: image, groupID: groupID) ?? fallback
     }
 
     // MARK: Per-container overrides
@@ -416,6 +427,13 @@ final class PersonalizationStore {
         "image-group:\(groupID)"
     }
 
+    // MARK: App-wide image default
+
+    func setDefaultImageStyle(_ personalization: Personalization) {
+        defaultImageStyle = personalization.normalizedForPersistence()
+        Self.persist(defaults, Keys.defaultImageStyle, defaultImageStyle)
+    }
+
     // MARK: Volume styles (direct, keyed by volume name)
 
     func volumeStyle(for name: String) -> Personalization? { Self.meaningful(volumeStyles[name]) }
@@ -454,6 +472,18 @@ final class PersonalizationStore {
         if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
     }
 
+    private static func loadStyle(_ defaults: UserDefaults, _ key: String) -> Personalization? {
+        guard let data = defaults.data(forKey: key),
+              let decoded = try? JSONDecoder().decode(Personalization.self, from: data) else { return nil }
+        let normalized = decoded.normalizedForPersistence()
+        if normalized != decoded { persist(defaults, key, normalized) }
+        return normalized
+    }
+
+    private static func persist(_ defaults: UserDefaults, _ key: String, _ value: Personalization) {
+        if let data = try? JSONEncoder().encode(value.normalizedForPersistence()) { defaults.set(data, forKey: key) }
+    }
+
     private func persist(_ key: String, _ value: [String: Personalization]) {
         if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
     }
@@ -463,4 +493,5 @@ struct PersonalizationBackup: Codable, Equatable {
     var overrides: [String: Personalization]
     var imageDefaults: [String: Personalization]
     var volumeStyles: [String: Personalization] = [:]
+    var defaultImageStyle: Personalization = Personalization()
 }

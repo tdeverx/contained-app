@@ -3,10 +3,9 @@ import SwiftData
 import AppKit
 import ContainedCore
 
-/// The unified, **paged** creation flow. The same content drives both the toolbar's `+` morph panel
-/// (where each page resizes the panel in place via `.morphPanelSize`) and the `CreationSheet` modal
-/// (fixed frame). It never opens a nested modal for the container path — selecting a box resizes and
-/// advances to the next section.
+/// The unified, **paged** creation flow hosted by the toolbar's `+` morph panel, where each page
+/// resizes the panel in place via `.morphPanelSize`. It never opens a nested modal for the container
+/// path — selecting a box resizes and advances to the next section.
 ///
 /// Pages: `menu` (Container / Network / Volume — toolbar only) → `chooser` (Search / Local image /
 /// Compose / Image archive / Templates / Skip) → `search` | `localImages` | `compose` |
@@ -19,6 +18,7 @@ struct CreationFlow: View {
 
         init(_ entry: UIState.CreationEntry) {
             switch entry {
+            case .menu: self = .menu
             case .chooser: self = .chooser
             case .search: self = .search
             case .configure: self = .configure
@@ -34,6 +34,7 @@ struct CreationFlow: View {
     @Query(sort: \Template.createdAt, order: .reverse) private var saved: [Template]
 
     let start: Start
+    let editSnapshot: ContainerSnapshot?
     /// Close the host (dismiss the sheet / collapse the morph panel).
     var onClose: () -> Void
     var onSoftDismissChange: (((() -> Void)?) -> Void)?
@@ -72,8 +73,10 @@ struct CreationFlow: View {
 
     init(start: Start, onClose: @escaping () -> Void,
          prefill: RunSpec? = nil,
+         editSnapshot: ContainerSnapshot? = nil,
          onSoftDismissChange: (((() -> Void)?) -> Void)? = nil) {
         self.start = start
+        self.editSnapshot = editSnapshot
         self.onClose = onClose
         self.onSoftDismissChange = onSoftDismissChange
         if let prefill {
@@ -116,8 +119,8 @@ struct CreationFlow: View {
         case .volume:    volumePage
         case .build:     buildPage
         case .configure:
-            ContainerConfigureView(mode: .new(prefill: spec),
-                                   leading: .back { go(.chooser) },
+            ContainerConfigureView(mode: configureMode,
+                                   leading: configureLeading,
                                    onFinished: onClose)
         }
     }
@@ -176,7 +179,8 @@ struct CreationFlow: View {
     }
 
     private var networkPage: some View {
-        pageScaffold(title: "New network", subtitle: nil, leading: resourceLeading) {
+        pageScaffold(symbol: "network", title: "New network", subtitle: nil,
+                     leading: resourceLeading, contentAlignment: .center) {
             Form {
                 TextField("Name", text: $networkName, prompt: Text("my-network"))
                 TextField("Subnet", text: $networkSubnet, prompt: Text("optional, e.g. 10.0.0.0/24"))
@@ -193,7 +197,8 @@ struct CreationFlow: View {
     }
 
     private var volumePage: some View {
-        pageScaffold(title: "New volume", subtitle: nil, leading: resourceLeading) {
+        pageScaffold(symbol: "externaldrive", title: "New volume", subtitle: nil,
+                     leading: resourceLeading, contentAlignment: .center) {
             Form {
                 TextField("Name", text: $volumeName, prompt: Text("my-volume"))
                 TextField("Size", text: $volumeSize, prompt: Text("optional, e.g. 10G"))
@@ -209,14 +214,14 @@ struct CreationFlow: View {
     }
 
     private var buildPage: some View {
-        pageScaffold(title: "Build an image", subtitle: "From a Dockerfile + build context",
+        pageScaffold(symbol: "hammer", title: "Build an image", subtitle: "From a Dockerfile + build context",
                      leading: resourceLeading) {
             BuildWorkspaceView()
         }
     }
 
     private var searchPage: some View {
-        pageScaffold(title: "Search for an image", subtitle: "Pick one to configure and run",
+        pageScaffold(symbol: "magnifyingglass", title: "Search for an image", subtitle: "Pick one to configure and run",
                      leading: .back { go(.chooser) }) {
             RegistryImageSearch { picked in
                 spec = picked
@@ -226,7 +231,7 @@ struct CreationFlow: View {
     }
 
     private var localImagesPage: some View {
-        pageScaffold(title: "Choose a local image", subtitle: "Use an image already pulled",
+        pageScaffold(symbol: "square.stack.3d.up", title: "Choose a local image", subtitle: "Use an image already pulled",
                      leading: .back { go(.chooser) }) {
             VStack(spacing: Tokens.Space.m) {
                 HStack(spacing: Tokens.Space.s) {
@@ -285,7 +290,7 @@ struct CreationFlow: View {
     }
 
     private var pasteComposePage: some View {
-        pageScaffold(title: "Paste Compose", subtitle: "Services with images become prefilled containers",
+        pageScaffold(symbol: "doc.plaintext", title: "Paste Compose", subtitle: "Services with images become prefilled containers",
                      leading: .back { go(.compose) }) {
             VStack(alignment: .leading, spacing: Tokens.Space.m) {
                 TextEditor(text: $composeText)
@@ -310,7 +315,7 @@ struct CreationFlow: View {
     }
 
     private var imageArchivePage: some View {
-        pageScaffold(title: "Load Image Archive", subtitle: "Import an OCI image .tar into the local store",
+        pageScaffold(symbol: "archivebox", title: "Load Image Archive", subtitle: "Import an OCI image .tar into the local store",
                      leading: .back { go(.chooser) }) {
             VStack(alignment: .leading, spacing: Tokens.Space.m) {
                 ContentUnavailableView {
@@ -331,16 +336,17 @@ struct CreationFlow: View {
     }
 
     private var templatesPage: some View {
-        pageScaffold(title: "Use a saved template", subtitle: nil, leading: .back { go(.chooser) }) {
+        pageScaffold(symbol: "bookmark.fill", title: "Use a saved template", subtitle: nil,
+                     leading: .back { go(.chooser) }) {
             ScrollView {
                 LazyVStack(spacing: Tokens.Space.s) {
                     ForEach(saved) { template in
                         Button {
                             if let s = template.spec { spec = s; go(.configure) }
                         } label: {
-                            GlassListRow(symbol: "bookmark.fill",
-                                         title: template.name,
-                                         subtitle: Format.shortImage(template.spec?.image ?? "—"))
+                            choiceCard(symbol: "bookmark.fill",
+                                       title: template.name,
+                                       subtitle: Format.shortImage(template.spec?.image ?? "—"))
                         }
                         .buttonStyle(.plain)
                     }
@@ -360,33 +366,44 @@ struct CreationFlow: View {
         start == .menu ? .back { go(.menu) } : .close
     }
 
-    private func pageScaffold<C: View>(title: String, subtitle: String?, leading: Leading,
+    private var configureMode: ContainerEditSheet.Mode {
+        if let editSnapshot {
+            return .edit(editSnapshot, onComplete: {})
+        }
+        return .new(prefill: spec)
+    }
+
+    private var configureLeading: ContainerConfigureView.Leading {
+        if editSnapshot != nil { return .back { onClose() } }
+        return .back { go(.chooser) }
+    }
+
+    private func pageScaffold<C: View>(symbol: String,
+                                       title: String,
+                                       subtitle: String?,
+                                       leading: Leading,
+                                       contentAlignment: Alignment = .topLeading,
                                        @ViewBuilder content: () -> C) -> some View {
         VStack(spacing: 0) {
-            HStack(spacing: Tokens.Space.s) {
-                switch leading {
-                case .close:
-                    GlassButton(singleItem: true) {
-                        GlassButtonItem(systemName: "xmark", help: "Cancel", isCancel: true) {
-                            onClose()
-                        }
-                    }
-                case .back(let action):
-                    GlassButton(singleItem: true) {
-                        GlassButtonItem(systemName: "chevron.left", help: "Back", action: action)
-                    }
+            PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
+                GlassButton(singleItem: true) {
+                    leadingControl(leading)
                 }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.headline)
-                    if let subtitle { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
-                }
-                Spacer()
             }
-            .padding(Tokens.Space.l)
             Divider()
             content()
-                .padding(Tokens.Space.l)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(Tokens.Space.s)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: contentAlignment)
+        }
+    }
+
+    @ViewBuilder
+    private func leadingControl(_ leading: Leading) -> some View {
+        switch leading {
+        case .close:
+            GlassButtonItem(systemName: "xmark", help: "Cancel", isCancel: true) { onClose() }
+        case .back(let action):
+            GlassButtonItem(systemName: "chevron.left", help: "Back", action: action)
         }
     }
 
@@ -448,9 +465,26 @@ struct CreationFlow: View {
         let subtitle = [size.map { Format.bytes(UInt64($0)) }, arches.isEmpty ? nil : arches]
             .compactMap { $0 }.joined(separator: "  ·  ")
 
-        return GlassListRow(symbol: "square.stack.3d.up",
-                            title: Format.shortImage(image.reference),
-                            subtitle: subtitle)
+        return choiceCard(symbol: "square.stack.3d.up",
+                          title: Format.shortImage(image.reference),
+                          subtitle: subtitle)
+    }
+
+    private func choiceCard(symbol: String, title: String, subtitle: String?) -> some View {
+        ResourceGlassCard(size: .small, elevated: false) {
+            ResourceCardHeader {
+                ResourceCardIconChip(symbol: symbol, tint: .accentColor)
+            } content: {
+                VStack(alignment: .leading, spacing: 1) {
+                    ResourceCardTitleText(text: title)
+                    if let subtitle, !subtitle.isEmpty {
+                        ResourceCardMonospacedSubtitleText(text: subtitle)
+                    }
+                }
+            } trailing: {
+                GlassListRowChevron()
+            }
+        }
     }
 
     // MARK: Navigation + actions

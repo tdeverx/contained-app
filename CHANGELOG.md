@@ -14,7 +14,7 @@
 
 #### Creation & Resource Management
 - **Paged creation flow**: Multi-step flow for creating containers, networks, volumes, and building images
-- **Unified creation entry point**: Single `CreationSheet` host used for all non-toolbar resource creation (File ▸ New, ⌘K, empty state)
+- **Unified creation entry point**: File/menu shortcuts, command palette actions, and empty states open the same toolbar add panel at the relevant creation page
 - **Compose import UI**: Paste YAML or select compose files; services with images auto-populate the prefill queue
 - **Image archive support**: Load OCI image `.tar` files directly into the local store
 - **Local image filtering**: Searchable local image list with architecture and size info
@@ -34,6 +34,7 @@
 - **Image update detection**: Display "Update Container" option when a newer image version is available
 - **Enhanced card styling**: Elevated cards with improved glass effects and optional shadows for nested layouts
 - **Multi-level personalization**:
+  - App-wide default image card design from Settings
   - Image group styling (local image collections)
   - Per-image-tag styling with group inheritance
   - Volume styling with disk read/write metrics

@@ -23,6 +23,7 @@ struct AppToolbar: View {
     @State private var toolbarImageSourceFrame: CGRect?
     @State private var toolbarImageDetailPresented = false
     @State private var toolbarImageCloseRequestToken = 0
+    @State private var morphBackdropExpanded = false
 
     static let space = "appToolbar"
     /// Title-bar band height. The toolbar lives in the detail column (no traffic lights there), so the
@@ -32,6 +33,8 @@ struct AppToolbar: View {
 
     var body: some View {
         ZStack(alignment: .top) {
+            morphBackdropLayer
+                .zIndex(40)
             VStack(spacing: 0) {
                 topToolbarRow
                     .frame(height: Tokens.Toolbar.controlHeight)
@@ -43,27 +46,40 @@ struct AppToolbar: View {
                     .padding(.bottom, bottomRowInset)
             }
             // Toolbar controls sit above the morph dim/blur backdrop so they stay crisp while a panel
-            // is open (each panel grows from its own — hidden — control, so it never occludes them).
+            // is open. The active panel itself is layered above the controls, so expanded content never
+            // tucks under the toolbar bands.
             .zIndex(100)
             addMorphLayer
-                .zIndex(ui.activeMorph == .add ? 30 : 0)
+                .zIndex(ui.activeMorph == .add ? 150 : 0)
             paletteMorphLayer
-                .zIndex(ui.activeMorph == .palette ? 30 : 0)
+                .zIndex(ui.activeMorph == .palette ? 150 : 0)
             updatesMorphLayer
-                .zIndex(ui.activeMorph == .updates ? 30 : 0)
+                .zIndex(ui.activeMorph == .updates ? 150 : 0)
             activityMorphLayer
-                .zIndex(ui.activeMorph == .activity ? 30 : 0)
+                .zIndex(ui.activeMorph == .activity ? 150 : 0)
             templatesMorphLayer
-                .zIndex(ui.activeMorph == .templates ? 30 : 0)
+                .zIndex(ui.activeMorph == .templates ? 150 : 0)
             systemMorphLayer
-                .zIndex(ui.activeMorph == .system ? 30 : 0)
+                .zIndex(ui.activeMorph == .system ? 150 : 0)
             settingsMorphLayer
-                .zIndex(ui.activeMorph == .settings ? 30 : 0)
+                .zIndex(ui.activeMorph == .settings ? 150 : 0)
             toolbarImageDetailLayer
-                .zIndex(toolbarImageDetail == nil ? 0 : 50)
+                .zIndex(toolbarImageDetail == nil ? 0 : 170)
         }
         .coordinateSpace(.named(Self.space))
         .onPreferenceChange(ToolbarSlotKey.self) { slots = $0 }
+        .onChange(of: ui.activeMorph) { _, morph in
+            if morph == nil { setMorphBackdropExpanded(false) }
+        }
+    }
+
+    private var morphBackdropLayer: some View {
+        return Color.clear
+            .globalBackdrop(style: .dim, progress: morphBackdropExpanded ? 1 : 0, dimOpacity: 0.28)
+            .contentShape(Rectangle())
+            .allowsHitTesting(ui.activeMorph != nil)
+            .onTapGesture { backdropTapped() }
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: morphBackdropExpanded)
     }
 
     // MARK: Top Row
@@ -112,7 +128,9 @@ struct AppToolbar: View {
             MorphingExpander(isPresented: paletteMorphBinding,
                              originFrame: slots[.palette] ?? .zero,
                              target: toolbarMorphTarget(for: .palette, size: Tokens.PanelSize.palette),
-                             closeRequestToken: ui.morphCloseRequestToken) {
+                             showsBackdrop: false,
+                             closeRequestToken: ui.morphCloseRequestToken,
+                             onExpansionChange: setMorphBackdropExpanded) {
                 ToolbarCommandPalette { ui.requestMorphClose(.palette) }
             }
         }
@@ -152,7 +170,7 @@ struct AppToolbar: View {
     private var bottomActionGroup: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             GlassButton {
-                GlassButtonItem(systemName: "plus", help: "Add") { ui.toggleMorph(.add) }
+                GlassButtonItem(systemName: "plus", help: "Add") { ui.openCreationPanel() }
                 GlassButtonItem(systemName: "shippingbox", help: "Images") { ui.toggleMorph(.updates) }
                 GlassButtonItem(systemName: "bookmark", help: "Templates") { ui.toggleMorph(.templates) }
                 GlassButtonItem(systemName: "bell", help: "Activity") { ui.toggleMorph(.activity) }
@@ -169,14 +187,21 @@ struct AppToolbar: View {
         if ui.activeMorph == .add {
             MorphingExpander(isPresented: addMorphBinding, originFrame: slots[.add] ?? .zero,
                              target: toolbarMorphTarget(for: .add, size: Tokens.PanelSize.add),
+                             showsBackdrop: false,
                              closeRequestToken: ui.morphCloseRequestToken,
-                             onBackdropTap: addSoftDismiss) {
-                CreationFlow(start: .menu,
+                             onBackdropTap: addSoftDismiss,
+                             onExpansionChange: setMorphBackdropExpanded) {
+                CreationFlow(start: CreationFlow.Start(ui.creationEntry),
                              onClose: {
                                  addSoftDismiss = nil
+                                 ui.creationPrefillSpec = nil
+                                 ui.creationEditSnapshot = nil
                                  ui.requestMorphClose(.add)
                              },
+                             prefill: ui.creationPrefillSpec,
+                             editSnapshot: ui.creationEditSnapshot,
                              onSoftDismissChange: { addSoftDismiss = $0 })
+                    .id(ui.creationRequestToken)
             }
         }
     }
@@ -187,7 +212,9 @@ struct AppToolbar: View {
             MorphingExpander(isPresented: morphBinding(.updates),
                              originFrame: slots[.updates] ?? .zero,
                              target: toolbarMorphTarget(for: .updates, size: Tokens.PanelSize.updatesOrigin),
-                             closeRequestToken: ui.morphCloseRequestToken) {
+                             showsBackdrop: false,
+                             closeRequestToken: ui.morphCloseRequestToken,
+                             onExpansionChange: setMorphBackdropExpanded) {
                 ToolbarUpdatesPanel(onOpenImage: openToolbarImageDetail) {
                     ui.requestMorphClose(.updates)
                 }
@@ -203,6 +230,7 @@ struct AppToolbar: View {
                              target: .anchored(size: toolbarImageDetailSize,
                                                safeArea: toolbarMorphSafeArea(for: .updates),
                                                margin: 0),
+                             showsBackdrop: false,
                              closeRequestToken: toolbarImageCloseRequestToken) {
                 ToolbarImageGroupCard(group: currentToolbarImageGroup(detail),
                                       isExpanded: true,
@@ -218,7 +246,9 @@ struct AppToolbar: View {
             MorphingExpander(isPresented: morphBinding(.activity),
                              originFrame: slots[.activity] ?? .zero,
                              target: toolbarMorphTarget(for: .activity, size: Tokens.PanelSize.activityOrigin),
-                             closeRequestToken: ui.morphCloseRequestToken) {
+                             showsBackdrop: false,
+                             closeRequestToken: ui.morphCloseRequestToken,
+                             onExpansionChange: setMorphBackdropExpanded) {
                 ToolbarActivityPanel {
                     ui.requestMorphClose(.activity)
                 }
@@ -232,7 +262,9 @@ struct AppToolbar: View {
             MorphingExpander(isPresented: morphBinding(.templates),
                              originFrame: slots[.templates] ?? .zero,
                              target: toolbarMorphTarget(for: .templates, size: Tokens.PanelSize.templatesOrigin),
-                             closeRequestToken: ui.morphCloseRequestToken) {
+                             showsBackdrop: false,
+                             closeRequestToken: ui.morphCloseRequestToken,
+                             onExpansionChange: setMorphBackdropExpanded) {
                 ToolbarTemplatesPanel {
                     ui.requestMorphClose(.templates)
                 }
@@ -246,7 +278,9 @@ struct AppToolbar: View {
             MorphingExpander(isPresented: morphBinding(.system),
                              originFrame: slots[.system] ?? .zero,
                              target: toolbarMorphTarget(for: .system, size: Tokens.PanelSize.system),
-                             closeRequestToken: ui.morphCloseRequestToken) {
+                             showsBackdrop: false,
+                             closeRequestToken: ui.morphCloseRequestToken,
+                             onExpansionChange: setMorphBackdropExpanded) {
                 ToolbarSystemPanel { ui.requestMorphClose(.system) }
             }
         }
@@ -258,7 +292,9 @@ struct AppToolbar: View {
             MorphingExpander(isPresented: morphBinding(.settings),
                              originFrame: slots[.settings] ?? .zero,
                              target: toolbarMorphTarget(for: .settings, size: Tokens.PanelSize.settings),
-                             closeRequestToken: ui.morphCloseRequestToken) {
+                             showsBackdrop: false,
+                             closeRequestToken: ui.morphCloseRequestToken,
+                             onExpansionChange: setMorphBackdropExpanded) {
                 ToolbarSettingsPanel { ui.requestMorphClose(.settings) }
             }
         }
@@ -283,6 +319,18 @@ struct AppToolbar: View {
                 ui.activeMorph = nil
             }
         })
+    }
+
+    private func backdropTapped() {
+        if ui.activeMorph == .add, let addSoftDismiss {
+            addSoftDismiss()
+        } else {
+            ui.requestMorphClose()
+        }
+    }
+
+    private func setMorphBackdropExpanded(_ isExpanded: Bool) {
+        morphBackdropExpanded = isExpanded
     }
 
     private var toolbarImageDetailBinding: Binding<Bool> {
