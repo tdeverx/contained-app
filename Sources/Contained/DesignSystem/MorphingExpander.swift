@@ -3,7 +3,6 @@ import SwiftUI
 enum MorphPanelPlacement: Equatable {
     case anchored
     case centered
-    case topCentered
 }
 
 struct AppMorphTarget {
@@ -34,15 +33,6 @@ struct AppMorphTarget {
                          margin: CGFloat = MorphGeometry.defaultMargin,
                          proposedSize: @escaping (CGRect) -> CGSize) -> AppMorphTarget {
         AppMorphTarget(placement: .centered,
-                       safeArea: safeArea,
-                       margin: margin,
-                       proposedSize: proposedSize)
-    }
-
-    static func topCentered(safeArea: AppSafeAreaPolicy = .content,
-                            margin: CGFloat = MorphGeometry.defaultMargin,
-                            proposedSize: @escaping (CGRect) -> CGSize) -> AppMorphTarget {
-        AppMorphTarget(placement: .topCentered,
                        safeArea: safeArea,
                        margin: margin,
                        proposedSize: proposedSize)
@@ -83,8 +73,8 @@ enum MorphGeometry {
                            margin: CGFloat = defaultMargin) -> CGSize {
         let maxWidth = max(1, bounds.width - margin * 2)
         let maxHeight = max(1, bounds.height - margin * 2)
-        return CGSize(width: min(max(1, proposed.width), maxWidth),
-                      height: min(max(1, proposed.height), maxHeight))
+        return CGSize(width: min(max(Tokens.PanelSize.minWidth, proposed.width), maxWidth),
+                      height: min(max(Tokens.PanelSize.minHeight, proposed.height), maxHeight))
     }
 
     static func targetRect(origin: CGRect, proposedSize: CGSize, container: CGSize,
@@ -105,11 +95,6 @@ enum MorphGeometry {
         case .centered:
             let x = bounds.minX + (bounds.width - size.width) / 2
             let y = bounds.minY + (bounds.height - size.height) / 2
-            return clamped(CGRect(origin: CGPoint(x: x, y: y), size: size),
-                           in: bounds, margin: margin)
-        case .topCentered:
-            let x = bounds.minX + (bounds.width - size.width) / 2
-            let y = bounds.minY + margin
             return clamped(CGRect(origin: CGPoint(x: x, y: y), size: size),
                            in: bounds, margin: margin)
         case .anchored:
@@ -238,7 +223,9 @@ struct MorphingExpander<Content: View>: View {
                     // Fade only foreground content. The panel surface and shadow are separate, always
                     // visible layers so elevation participates in the morph instead of popping in late.
                     .opacity(expanded ? 1 : 0)
-                    .frame(width: rect.width, height: rect.height)
+                    // Pin panel content to the top so headers/content hug the top edge as the panel
+                    // grows or shrinks (rather than floating in the vertical center).
+                    .frame(width: rect.width, height: rect.height, alignment: .top)
                     .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                     .position(x: rect.midX, y: rect.midY)
             }

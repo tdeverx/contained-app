@@ -7,9 +7,9 @@ struct ToolbarActivityPanel: View {
     var onClose: () -> Void
 
     var body: some View {
+        // Size + placement are reported by the MorphPanelScaffold inside ActivityContent (it hugs its
+        // content height), so no fixed morphPanelSize here.
         ActivityContent(showClose: true, elevated: false, onClose: onClose)
-            .morphPanelSize(Tokens.PanelSize.activity)
-            .morphPanelPlacement(.anchored)
     }
 }
 
@@ -20,9 +20,9 @@ struct ToolbarSystemPanel: View {
     var onClose: () -> Void
 
     var body: some View {
+        // Size + placement are reported by the MorphPanelScaffold inside SystemContent (it hugs its
+        // content height), so no fixed morphPanelSize here.
         SystemContent(elevated: false, onClose: onClose)
-            .morphPanelSize(Tokens.PanelSize.system)
-            .morphPanelPlacement(.anchored)
     }
 }
 
@@ -33,10 +33,9 @@ struct ToolbarSettingsPanel: View {
     var onClose: () -> Void
 
     var body: some View {
+        // Size + placement are reported by the MorphPanelScaffold inside SettingsContent (it hugs its
+        // content height and centers), so no fixed morphPanelSize here.
         SettingsContent(onClose: onClose)
-            .frame(Tokens.PanelSize.settings)
-            .morphPanelSize(Tokens.PanelSize.settings)
-            .morphPanelPlacement(.anchored)
     }
 }
 
@@ -49,23 +48,21 @@ struct ToolbarTemplatesPanel: View {
     var onClose: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-            Divider()
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
-                    if saved.isEmpty {
-                        emptyCard
-                    } else {
-                        ForEach(saved) { template in templateCard(template) }
-                    }
-                }
-                .padding(Tokens.Space.s)
+        MorphPanelScaffold(width: Tokens.PanelSize.templates.width) {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                Divider()
             }
-            .scrollEdgeEffectStyle(.soft, for: .all)
+        } content: {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
+                if saved.isEmpty {
+                    emptyCard
+                } else {
+                    ForEach(saved) { template in templateCard(template) }
+                }
+            }
+            .padding(Tokens.Space.s)
         }
-        .morphPanelSize(Tokens.PanelSize.templates)
-        .morphPanelPlacement(.anchored)
     }
 
     private var header: some View {

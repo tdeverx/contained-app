@@ -19,7 +19,10 @@ struct ContainedApp: App {
         .defaultSize(width: 1200, height: 800)
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button("About Contained") { showAboutPanel() }
+                Button("About Contained") {
+                    activateMainWindow()
+                    ui.openSettings(to: .about)
+                }
             }
             CommandGroup(after: .appInfo) {
                 Button("Check for Updates…") { app.updater.checkForUpdates() }
@@ -77,6 +80,8 @@ struct ContainedApp: App {
                     .keyboardShortcut("3", modifiers: .command)
                 Button("System") { ui.toggleMorph(.system) }
                     .keyboardShortcut("4", modifiers: .command)
+                Button("Activity") { ui.dispatch(.activityHistory) }
+                    .keyboardShortcut("5", modifiers: .command)
             }
             CommandGroup(replacing: .help) {
                 Button("Contained Help") { NSWorkspace.shared.open(Links.helpURL) }
@@ -125,9 +130,12 @@ struct ContainedApp: App {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
-    /// Show the standard macOS About panel (version pulled from the bundle).
-    private func showAboutPanel() {
+    /// Bring the main window to the front so panel morphs open in the right window.
+    private func activateMainWindow() {
         NSApplication.shared.activate(ignoringOtherApps: true)
-        NSApplication.shared.orderFrontStandardAboutPanel(options: [:])
+        for window in NSApplication.shared.windows where window.canBecomeMain {
+            window.makeKeyAndOrderFront(nil)
+            break
+        }
     }
 }

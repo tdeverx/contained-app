@@ -26,41 +26,51 @@ struct ActivityContent: View {
         return events.filter { $0.kind == filter }
     }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            PanelHeader(symbol: "bell",
-                        title: "Activity",
-                        subtitle: "\(filtered.count) events") {
-                if showClose {
-                    GlassButton(singleItem: true) {
-                        GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
-                    }
-                } else {
-                    EmptyView()
-                }
-            }
-            Picker("Filter", selection: $filter) {
-                Text("All").tag(EventKind?.none)
-                ForEach(EventKind.allCases, id: \.self) { kind in
-                    Text(kind.rawValue.capitalized).tag(EventKind?.some(kind))
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, Tokens.Space.l)
-            .padding(.bottom, Tokens.Space.s)
+    private var subtitle: String {
+        let base = "\(filtered.count) event\(filtered.count == 1 ? "" : "s")"
+        return filter == nil ? base : "\(base) · \(filter!.rawValue.capitalized)"
+    }
+
+    /// The event-kind filter as a grouped-glass-button menu in the header (replacing the segmented
+    /// tab-style picker).
+    private var filterMenu: some View {
+        Menu {
+            Button { filter = nil } label: { Label("All", systemImage: "tray.full") }
             Divider()
+            ForEach(EventKind.allCases, id: \.self) { kind in
+                Button { filter = kind } label: { Text(kind.rawValue.capitalized) }
+            }
+        } label: {
+            GlassButtonItem(systemName: "line.3.horizontal.decrease", help: "Filter", isLabel: true)
+        }
+        .buttonStyle(.plain)
+    }
+
+    var body: some View {
+        MorphPanelScaffold(width: Tokens.PanelSize.activity.width) {
+            VStack(spacing: 0) {
+                PanelHeader(symbol: "bell",
+                            title: "Activity",
+                            subtitle: subtitle) {
+                    GlassButton {
+                        filterMenu
+                        if showClose {
+                            GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                        }
+                    }
+                }
+                Divider()
+            }
+        } content: {
             if filtered.isEmpty {
                 ContentUnavailableView("No activity", systemImage: "bell",
                                        description: Text("Events from container lifecycle, the watchdog, and healthchecks land here."))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.vertical, Tokens.Space.xl)
             } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
-                        ForEach(filtered) { event in EventRow(event: event, elevated: elevated) }
-                    }
-                    .padding(Tokens.Space.l)
+                LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
+                    ForEach(filtered) { event in EventRow(event: event, elevated: elevated) }
                 }
-                .scrollEdgeEffectStyle(.soft, for: .all)
+                .padding(Tokens.Space.l)
             }
         }
     }

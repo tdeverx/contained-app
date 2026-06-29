@@ -23,6 +23,16 @@ final class UIState {
     var activeMorph: ToolbarMorph?
     private(set) var morphCloseRequestToken = 0
 
+    /// When set, `SettingsContent` will switch to this page as soon as it appears / becomes active.
+    /// Cleared by `SettingsContent` after it consumes the value.
+    var settingsPage: SettingsContent.SettingsPage? = nil
+
+    /// Open the Settings panel and navigate to a specific page in one call.
+    func openSettings(to page: SettingsContent.SettingsPage) {
+        settingsPage = page
+        if activeMorph != .settings { activeMorph = .settings }
+    }
+
     /// Toggle a toolbar morph panel (open it, or close it if already open).
     func toggleMorph(_ morph: ToolbarMorph) {
         if activeMorph == morph {

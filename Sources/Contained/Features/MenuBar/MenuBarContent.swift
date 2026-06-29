@@ -48,7 +48,19 @@ struct MenuBarContent: View {
         Divider()
 
         Button("Run a Container…") { activate(); ui.openCreationPanel(entry: .chooser) }
+        Button("Pull Image…") { activate(); ui.dispatch(.pullImage) }
+
+        Divider()
+
+        Button("Images") { activate(); ui.toggleMorph(.updates) }
+        Button("Templates") { activate(); ui.toggleMorph(.templates) }
+        Button("System") { activate(); ui.toggleMorph(.system) }
+        Button("Activity") { activate(); ui.dispatch(.activityHistory) }
+
+        Divider()
+
         Button("Open Contained") { activate() }
+        Button("Settings…") { activate(); ui.toggleMorph(.settings) }
         Divider()
         Button("Quit Contained") { NSApplication.shared.terminate(nil) }
     }

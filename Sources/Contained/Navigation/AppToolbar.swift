@@ -361,17 +361,14 @@ struct AppToolbar: View {
         }
     }
 
-    /// A panel only needs to clear the *opposite* toolbar: a bottom-row control grows upward, so the
-    /// top toolbar is the unsafe edge; a top-row control grows downward, so the bottom toolbar is. The
-    /// toolbar the control lives in is its own anchor, so it stays safe.
+    /// Safe area for a morph panel. Bottom-row panels clear the top toolbar; top-row panels (palette)
+    /// clear the bottom. Settings is special: it grows from the top-left slot (behind traffic lights)
+    /// and must clear *both* bands so the panel starts fully below the native titlebar chrome.
     private func toolbarMorphSafeArea(for morph: UIState.ToolbarMorph) -> AppSafeAreaPolicy {
-        AppSafeAreaPolicy(excluding: isTopRowMorph(morph) ? .bottom : .top, padding: .small)
-    }
-
-    private func isTopRowMorph(_ morph: UIState.ToolbarMorph) -> Bool {
         switch morph {
-        case .settings, .palette: true
-        case .add, .updates, .templates, .activity, .system: false
+        case .settings: AppSafeAreaPolicy(excluding: .both, padding: .small)
+        case .palette:  AppSafeAreaPolicy(excluding: .bottom, padding: .small)
+        default:        AppSafeAreaPolicy(excluding: .top, padding: .small)
         }
     }
 
@@ -384,8 +381,6 @@ struct AppToolbar: View {
             return .anchored(size: size, safeArea: safeArea, margin: 0)
         case .centered:
             return .centered(size: size, safeArea: safeArea, margin: 0)
-        case .topCentered:
-            return .topCentered(safeArea: safeArea, margin: 0) { _ in size }
         }
     }
 

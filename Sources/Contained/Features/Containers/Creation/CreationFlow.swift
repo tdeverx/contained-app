@@ -180,15 +180,17 @@ struct CreationFlow: View {
 
     private var networkPage: some View {
         pageScaffold(symbol: "network", title: "New network", subtitle: nil,
-                     leading: resourceLeading, contentAlignment: .center) {
-            Form {
-                TextField("Name", text: $networkName, prompt: Text("my-network"))
-                TextField("Subnet", text: $networkSubnet, prompt: Text("optional, e.g. 10.0.0.0/24"))
-                Toggle("Host-only (internal)", isOn: $networkInternalOnly)
-            }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-            .safeAreaInset(edge: .bottom) {
+                     leading: resourceLeading, contentAlignment: .top) {
+            VStack(spacing: Tokens.Space.l) {
+                PanelSection {
+                    PanelField(label: "Name") {
+                        TextField("", text: $networkName, prompt: Text("my-network")).textFieldStyle(.roundedBorder)
+                    }
+                    PanelField(label: "Subnet") {
+                        TextField("", text: $networkSubnet, prompt: Text("optional, e.g. 10.0.0.0/24")).textFieldStyle(.roundedBorder)
+                    }
+                    PanelToggleRow(title: "Host-only (internal)", isOn: $networkInternalOnly)
+                }
                 submitBar(canSubmit: !networkName.trimmingCharacters(in: .whitespaces).isEmpty) {
                     createNetwork()
                 }
@@ -198,14 +200,16 @@ struct CreationFlow: View {
 
     private var volumePage: some View {
         pageScaffold(symbol: "externaldrive", title: "New volume", subtitle: nil,
-                     leading: resourceLeading, contentAlignment: .center) {
-            Form {
-                TextField("Name", text: $volumeName, prompt: Text("my-volume"))
-                TextField("Size", text: $volumeSize, prompt: Text("optional, e.g. 10G"))
-            }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-            .safeAreaInset(edge: .bottom) {
+                     leading: resourceLeading, contentAlignment: .top) {
+            VStack(spacing: Tokens.Space.l) {
+                PanelSection {
+                    PanelField(label: "Name") {
+                        TextField("", text: $volumeName, prompt: Text("my-volume")).textFieldStyle(.roundedBorder)
+                    }
+                    PanelField(label: "Size") {
+                        TextField("", text: $volumeSize, prompt: Text("optional, e.g. 10G")).textFieldStyle(.roundedBorder)
+                    }
+                }
                 submitBar(canSubmit: !volumeName.trimmingCharacters(in: .whitespaces).isEmpty) {
                     createVolume()
                 }
@@ -383,14 +387,20 @@ struct CreationFlow: View {
                                        subtitle: String?,
                                        leading: Leading,
                                        contentAlignment: Alignment = .topLeading,
-                                       @ViewBuilder content: () -> C) -> some View {
-        VStack(spacing: 0) {
-            PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
-                GlassButton(singleItem: true) {
-                    leadingControl(leading)
+                                       @ViewBuilder content: @escaping () -> C) -> some View {
+        // These pages own their own scrolling (search results, build workspace, template lists), so the
+        // scaffold runs in non-scrolling mode — unified chrome without nesting scroll views. Size is set
+        // by `CreationFlow.body`'s `morphPanelSize(size(for:))`.
+        MorphPanelScaffold(width: 0, scrolls: false) {
+            VStack(spacing: 0) {
+                PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
+                    GlassButton(singleItem: true) {
+                        leadingControl(leading)
+                    }
                 }
+                Divider()
             }
-            Divider()
+        } content: {
             content()
                 .padding(Tokens.Space.s)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: contentAlignment)

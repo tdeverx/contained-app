@@ -79,7 +79,10 @@ struct RootView: View {
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: app.activity)
         .tint(settings.accentTint.color)
         .environment(\.modalMaterial, settings.modalMaterial)
+        .environment(\.buttonMaterial, settings.buttonMaterial)
         .preferredColorScheme(settings.appearance.colorScheme)
+        .onAppear { applyAppearance(settings.appearance) }
+        .onChange(of: settings.appearance) { _, mode in applyAppearance(mode) }
         .task {
             await app.bootstrapIfNeeded()
             app.coordinator.start(app: app)
@@ -92,8 +95,7 @@ struct RootView: View {
     private func detailShell(settings: SettingsStore) -> some View {
         GeometryReader { proxy in
             ZStack {
-                ContentBackgroundLayer(reduceTransparency: settings.reduceTranslucency,
-                                       material: settings.windowMaterial.nsMaterial)
+                ContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
                 content
                     .ignoresSafeArea(.container, edges: [.top, .bottom])
             }
@@ -142,10 +144,19 @@ struct RootView: View {
             ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
         } label: { Label("Card Size", systemImage: "square.grid.2x2") }
         Divider()
+        Button { ui.toggleMorph(.updates) } label: { Label("Images", systemImage: "square.stack.3d.up") }
+        Button { ui.toggleMorph(.templates) } label: { Label("Templates", systemImage: "bookmark") }
         Button { ui.toggleMorph(.system) } label: { Label("System", systemImage: "gearshape.2") }
         Button { ui.toggleMorph(.activity) } label: { Label("Activity", systemImage: "bell") }
         Divider()
         Button { ui.toggleMorph(.palette) } label: { Label("Command Palette…", systemImage: "command") }
+    }
+
+    /// Force (or release, for `.system`) the app-wide AppKit appearance. Setting `NSApplication.appearance`
+    /// directly — rather than relying only on `.preferredColorScheme` — makes "System" re-sync to the
+    /// live OS theme even after the app was pinned to Light/Dark.
+    private func applyAppearance(_ mode: AppearanceMode) {
+        NSApplication.shared.appearance = mode.nsAppearance
     }
 
     /// Pick an image `.tar` and load it into the local store.

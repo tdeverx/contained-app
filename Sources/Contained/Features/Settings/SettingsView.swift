@@ -2,15 +2,15 @@ import SwiftUI
 import AppKit
 import ContainedCore
 
-/// App preferences. Six sections, each built from the same grouped-`Form` + `Section` model so spacing,
+/// App preferences. Six sections, each built from the same `PanelSection` glass-card model so spacing,
 /// headers, and explanatory footers stay consistent: Appearance (theme + glass), General (behavior,
 /// data, CLI), Runtime, Registries, Updates, and About.
 ///
-/// Hosted in the toolbar Settings morph panel. Sections switch via a header menu rather than a
-/// `TabView` because `NSTabView`'s Auto Layout constraints crash when the morph grow proposes a tiny
-/// size. Pass `onClose` to show a close button in the header.
+/// Hosted in the toolbar Settings morph panel via the shared `MorphPanelScaffold`, so the panel hugs
+/// the active section's content height. Sections switch via a header menu rather than a `TabView`.
 struct SettingsContent: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
     @State private var page: SettingsPage = .appearance
     var onClose: (() -> Void)?
 
@@ -38,23 +38,26 @@ struct SettingsContent: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        VStack(spacing: 0) {
-            header
-            Divider()
+        MorphPanelScaffold(width: Tokens.PanelSize.settings.width, placement: .centered) {
+            VStack(spacing: 0) {
+                header
+                Divider()
+            }
+        } content: {
             sectionBody(settings: settings)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // Drop the grouped-Form backing so the morph panel's glass material shows through —
-                // the sections read as inset cards floating on the panel instead of a solid sheet.
-                .scrollContentBackground(.hidden)
-                .clipped()
+                .padding(Tokens.Space.l)
+        }
+        .onChange(of: ui.settingsPage) { _, requested in
+            guard let requested else { return }
+            page = requested
+            ui.settingsPage = nil
         }
     }
 
     private var header: some View {
         PanelHeader(symbol: page.systemImage,
                     title: "Settings",
-                    subtitle: page.rawValue,
-                    leadingReserve: Tokens.Toolbar.trafficLightsWidth) {
+                    subtitle: page.rawValue) {
             GlassButton(singleItem: onClose == nil) {
                 pagePicker
                 if let onClose {
@@ -94,40 +97,48 @@ private struct AppearanceTab: View {
     @Bindable var settings: SettingsStore
 
     var body: some View {
-        Form {
-            Section("Theme") {
-                Picker("Appearance", selection: $settings.appearance) {
-                    ForEach(AppearanceMode.allCases) { Text($0.displayName).tag($0) }
+        VStack(spacing: Tokens.Space.l) {
+            PanelSection(header: "Theme") {
+                PanelRow(title: "Appearance") {
+                    Picker("", selection: $settings.appearance) {
+                        ForEach(AppearanceMode.allCases) { Text($0.displayName).tag($0) }
+                    }
+                    .pickerStyle(.segmented).labelsHidden().fixedSize()
                 }
-                .pickerStyle(.segmented)
-                LabeledContent("Accent tint") {
+                PanelRow(title: "Accent tint") {
                     TintSelector(selection: $settings.accentTint)
                 }
             }
 
-            Section {
-                Picker("Card size", selection: $settings.density) {
-                    ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
+            PanelSection(header: "Layout & glass",
+                         footer: "Main background material controls the root content backing. Panel & sheet material controls floating detail panels, popovers, and sheets. Button material controls the toolbar control surfaces. “Glass (Clear)” and “Glass (Regular)” use Liquid Glass; the rest are system vibrancy materials.") {
+                PanelRow(title: "Card size") {
+                    Picker("", selection: $settings.density) {
+                        ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
+                    }
+                    .pickerStyle(.segmented).labelsHidden().fixedSize()
                 }
-                .pickerStyle(.segmented)
-                Picker("Main background material", selection: $settings.windowMaterial) {
-                    ForEach(WindowMaterial.allCases) { Text($0.displayName).tag($0) }
+                PanelRow(title: "Main background material") {
+                    materialMenu($settings.windowMaterial)
                 }
-                Picker("Panel & sheet material", selection: $settings.modalMaterial) {
-                    ForEach(WindowMaterial.allCases) { Text($0.displayName).tag($0) }
+                PanelRow(title: "Panel & sheet material") {
+                    materialMenu($settings.modalMaterial)
                 }
-                Toggle("Reduce translucency", isOn: $settings.reduceTranslucency)
-                Toggle("Show info tips", isOn: $settings.showInfoTips)
-            } header: {
-                Text("Layout & glass")
-            } footer: {
-                Text("Main background material controls the root content backing. Panel & sheet material controls floating detail panels, popovers, and sheets. Reduce translucency switches to solid system surfaces for legibility.")
-                    .font(.caption).foregroundStyle(.secondary)
+                PanelRow(title: "Button material") {
+                    materialMenu($settings.buttonMaterial)
+                }
+                PanelToggleRow(title: "Show info tips", isOn: $settings.showInfoTips)
             }
 
             ImageDefaultStyleSection(settings: settings)
         }
-        .formStyle(.grouped)
+    }
+
+    private func materialMenu(_ binding: Binding<WindowMaterial>) -> some View {
+        Picker("", selection: binding) {
+            ForEach(WindowMaterial.allCases) { Text($0.displayName).tag($0) }
+        }
+        .labelsHidden().fixedSize()
     }
 }
 
@@ -138,9 +149,9 @@ private struct ImageDefaultStyleSection: View {
     private var style: Personalization { app.personalization.defaultImageStyle }
 
     var body: some View {
-        Section {
-            Toggle("Use default image card design", isOn: $settings.imageDefaultStyleEnabled)
-                .fieldInfo("When on, image groups, image rows, and containers without their own style inherit this design. Turn it off to fall back to the built-in card design.")
+        PanelSection(header: "Default image cards",
+                     footer: "When on, image groups, image rows, and containers without their own style inherit this design. Specific image, image-group, tag, and container styles remain local overrides above this default.",
+                     enabled: $settings.imageDefaultStyleEnabled) {
             HStack(spacing: Tokens.Space.m) {
                 ResourceCardIconChip(symbol: style.symbol, tint: style.color)
                 VStack(alignment: .leading, spacing: 1) {
@@ -151,34 +162,33 @@ private struct ImageDefaultStyleSection: View {
                 }
                 Spacer()
             }
-            .padding(.vertical, 2)
-            LabeledContent("Color") {
+            PanelRow(title: "Color") {
                 TintSelector(selection: styleBinding(\.tint))
             }
-            Toggle("Custom icon", isOn: styleBinding(\.iconEnabled))
+            PanelToggleRow(title: "Custom icon", isOn: styleBinding(\.iconEnabled))
             if style.iconEnabled {
-                TextField("Icon", text: styleBinding(\.icon), prompt: Text("SF Symbol, e.g. shippingbox.fill"))
-            }
-            Toggle("Color the card background", isOn: styleBinding(\.fillBackground))
-            if style.fillBackground {
-                LabeledContent("Opacity") {
-                    Slider(value: styleBinding(\.backgroundOpacity), in: 0.05...0.6)
-                    Text(Format.percent(style.backgroundOpacity))
-                        .monospacedDigit()
-                        .frame(width: Tokens.FormWidth.shortReadout)
+                PanelRow(title: "Icon") {
+                    TextField("", text: styleBinding(\.icon), prompt: Text("SF Symbol, e.g. shippingbox.fill"))
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 220)
                 }
-                Toggle("Gradient", isOn: styleBinding(\.gradient))
+            }
+            PanelToggleRow(title: "Color the card background", isOn: styleBinding(\.fillBackground))
+            if style.fillBackground {
+                PanelRow(title: "Opacity") {
+                    HStack(spacing: Tokens.Space.s) {
+                        Slider(value: styleBinding(\.backgroundOpacity), in: 0.05...0.6).frame(width: 140)
+                        Text(Format.percent(style.backgroundOpacity))
+                            .monospacedDigit()
+                            .frame(width: Tokens.FormWidth.shortReadout)
+                    }
+                }
+                PanelToggleRow(title: "Gradient", isOn: styleBinding(\.gradient))
                 if style.gradient {
                     GradientAngleControl(angle: styleBinding(\.gradientAngle))
                 }
             }
-        } header: {
-            Text("Default image cards")
-        } footer: {
-            Text("Specific image, image-group, tag, and container styles remain local overrides above this default.")
-                .font(.caption).foregroundStyle(.secondary)
         }
-        .opacity(settings.imageDefaultStyleEnabled ? 1 : 0.72)
     }
 
     private func styleBinding<Value>(_ keyPath: WritableKeyPath<Personalization, Value>) -> Binding<Value> {
@@ -200,47 +210,49 @@ private struct GeneralTab: View {
     @State private var confirmingClear = false
 
     var body: some View {
-        Form {
-            Section("Startup") {
-                Toggle("Launch at login", isOn: $settings.launchAtLogin)
-                Toggle("Keep running in the menu bar", isOn: $settings.keepInMenuBar)
+        VStack(spacing: Tokens.Space.l) {
+            PanelSection(header: "Startup") {
+                PanelToggleRow(title: "Launch at login", isOn: $settings.launchAtLogin)
+                PanelToggleRow(title: "Keep running in the menu bar", isOn: $settings.keepInMenuBar)
             }
 
-            Section("Activity & alerts") {
-                Toggle("System alert on container crash / restart", isOn: $settings.notifyOnCrash)
-                Toggle("Show “Reveal CLI” on actions", isOn: $settings.revealCLI)
-                    .fieldInfo("Adds a copyable command and a “Copy as CLI” menu item to destructive or privileged actions, so you can see exactly what runs.")
+            PanelSection(header: "Activity & alerts") {
+                PanelToggleRow(title: "System alert on container crash / restart", isOn: $settings.notifyOnCrash)
+                PanelToggleRow(title: "Show “Reveal CLI” on actions",
+                               info: "Adds a copyable command and a “Copy as CLI” menu item to destructive or privileged actions, so you can see exactly what runs.",
+                               isOn: $settings.revealCLI)
             }
 
-            Section {
-                LabeledContent("Refresh interval") {
-                    HStack {
-                        Slider(value: $settings.refreshInterval, in: 1...10, step: 1)
+            PanelSection(header: "Data",
+                         footer: "How often running containers are polled, and how long persistent metrics & events are kept before pruning.") {
+                PanelRow(title: "Refresh interval") {
+                    HStack(spacing: Tokens.Space.s) {
+                        Slider(value: $settings.refreshInterval, in: 1...10, step: 1).frame(width: 140)
                         Text("\(Int(settings.refreshInterval))s").monospacedDigit().frame(width: 32, alignment: .trailing)
                     }
                 }
-                Picker("Keep history for", selection: retentionBinding) {
-                    Text("1 day").tag(1)
-                    Text("7 days").tag(7)
-                    Text("14 days").tag(14)
-                    Text("30 days").tag(30)
+                PanelRow(title: "Keep history for") {
+                    Picker("", selection: retentionBinding) {
+                        Text("1 day").tag(1)
+                        Text("7 days").tag(7)
+                        Text("14 days").tag(14)
+                        Text("30 days").tag(30)
+                    }
+                    .labelsHidden().fixedSize()
                 }
                 Button("Clear History…", role: .destructive) { confirmingClear = true }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 ConfigTransferControls()
-            } header: {
-                Text("Data")
-            } footer: {
-                Text("Backups use a versioned JSON envelope, so settings and local data can be exported before rollback or restored after upgrade.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("Advanced") {
-                TextField("Container CLI path", text: $settings.cliPathOverride,
-                          prompt: Text("/usr/local/bin/container"))
-                    .fieldInfo("Override the auto-detected `container` binary location.")
+            PanelSection(header: "Advanced") {
+                PanelField(label: "Container CLI path",
+                           info: "Override the auto-detected `container` binary location.") {
+                    TextField("", text: $settings.cliPathOverride, prompt: Text("/usr/local/bin/container"))
+                        .textFieldStyle(.roundedBorder)
+                }
             }
         }
-        .formStyle(.grouped)
         .confirmationDialog("Clear all history?", isPresented: $confirmingClear) {
             Button("Clear History", role: .destructive) { app.clearHistory() }
         } message: {
@@ -268,22 +280,21 @@ private struct RuntimeTab: View {
     @State private var deletingDomain: String?
 
     var body: some View {
-        Form {
-            Section {
-                LabeledContent("Recommended kernel") {
+        VStack(spacing: Tokens.Space.l) {
+            PanelSection(header: "Kernel",
+                         footer: "Downloads and sets the recommended kernel as the default. May prompt for your administrator password — handled by the container CLI; Contained never sees it.") {
+                PanelRow(title: "Recommended kernel") {
                     Button("Install…") { confirmingKernel = true }
                 }
                 revealCLIHint("container system kernel set --recommended")
-            } header: {
-                Text("Kernel")
-            } footer: {
-                Text("Downloads and sets the recommended kernel as the default. May prompt for your administrator password — handled by the container CLI; Contained never sees it.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section {
+            PanelSection(header: "Local DNS domains",
+                         footer: "Creating or deleting a domain may prompt for your administrator password — handled by the container CLI.") {
                 if dnsDomains.isEmpty {
-                    Text("No local DNS domains.").foregroundStyle(.secondary)
+                    Text("No local DNS domains.")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     ForEach(dnsDomains, id: \.self) { domain in
                         HStack {
@@ -297,33 +308,24 @@ private struct RuntimeTab: View {
                     }
                 }
                 Button("Add Domain…") { newDomain = ""; addingDNS = true }
-            } header: {
-                Text("Local DNS domains")
-            } footer: {
-                Text("Creating or deleting a domain may prompt for your administrator password — handled by the container CLI.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             if let props = app.properties {
-                Section {
+                PanelSection(header: "Defaults",
+                             footer: "Read-only — the container runtime provides no command to change these. They apply when a container or build doesn’t specify its own resources.") {
                     if let d = props.container {
-                        if let c = d.cpus { LabeledContent("Default CPUs", value: "\(c)") }
-                        if let m = d.memory { LabeledContent("Default memory", value: m) }
+                        if let c = d.cpus { PanelRow(title: "Default CPUs") { Text("\(c)").foregroundStyle(.secondary) } }
+                        if let m = d.memory { PanelRow(title: "Default memory") { Text(m).foregroundStyle(.secondary) } }
                     }
                     if let b = props.build {
-                        if let img = b.image { LabeledContent("Builder image", value: img) }
-                        if let r = b.rosetta { LabeledContent("Builder Rosetta", value: r ? "On" : "Off") }
+                        if let img = b.image { PanelRow(title: "Builder image") { Text(img).foregroundStyle(.secondary) } }
+                        if let r = b.rosetta { PanelRow(title: "Builder Rosetta") { Text(r ? "On" : "Off").foregroundStyle(.secondary) } }
                     }
-                    if let k = props.kernel, let path = k.binaryPath { LabeledContent("Kernel", value: path) }
-                } header: {
-                    Text("Defaults")
-                } footer: {
-                    Text("Read-only — the container runtime provides no command to change these. They apply when a container or build doesn’t specify its own resources.")
-                        .font(.caption).foregroundStyle(.secondary)
+                    if let k = props.kernel, let path = k.binaryPath { PanelRow(title: "Kernel") { Text(path).foregroundStyle(.secondary) } }
                 }
             }
         }
-        .formStyle(.grouped)
         .task { await app.loadPropertiesIfNeeded(); await loadDNS() }
         .confirmationDialog("Install the recommended kernel?", isPresented: $confirmingKernel) {
             Button("Download & install") { Task { await installKernel() } }
@@ -397,11 +399,13 @@ private struct RegistriesTab: View {
     @State private var loggingOut: RegistryLogin?
 
     var body: some View {
-        Form {
-            Section {
+        VStack(spacing: Tokens.Space.l) {
+            PanelSection(header: "Signed-in registries",
+                         footer: "Credentials are typed by you and piped to the CLI via stdin, so the password never lands in the process list. Contained doesn’t store it.") {
                 if app.registries.isEmpty {
                     Text("Not signed in to any registries.")
                         .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     ForEach(app.registries) { login in
                         HStack {
@@ -416,18 +420,13 @@ private struct RegistriesTab: View {
                         }
                     }
                 }
-            } header: {
-                Text("Signed-in registries")
-            } footer: {
-                Text("Credentials are typed by you and piped to the CLI via stdin, so the password never lands in the process list. Contained doesn’t store it.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section {
+            PanelSection {
                 Button("Log In to Registry…") { loggingIn = true }
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .formStyle(.grouped)
         .task { await app.refreshRegistries() }
         .sheet(isPresented: $loggingIn) { RegistryLoginSheet() }
         .confirmationDialog("Log out of \(loggingOut?.host ?? "")?",
@@ -457,9 +456,10 @@ private struct UpdatesTab: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        Form {
-            Section {
-                LabeledContent("Update channel") {
+        VStack(spacing: Tokens.Space.l) {
+            PanelSection(header: "Updates",
+                         footer: "\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.") {
+                PanelRow(title: "Update channel") {
                     Menu(app.settings.updateChannel.displayName) {
                         ForEach(UpdateChannel.allCases) { channel in
                             Button {
@@ -476,37 +476,33 @@ private struct UpdatesTab: View {
                     }
                     .fixedSize()
                 }
-                Toggle("Automatically check for updates",
-                       isOn: Binding(get: { app.updater.automaticallyChecks },
-                                     set: { app.updater.automaticallyChecks = $0 }))
+                PanelToggleRow(title: "Automatically check for updates",
+                               isOn: Binding(get: { app.updater.automaticallyChecks },
+                                             set: { app.updater.automaticallyChecks = $0 }))
                 Button("Check for Updates…") { app.updater.checkForUpdates() }
                     .disabled(!app.updater.canCheckForUpdates)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Button("What’s New in This Build") { showingCurrentNotes = true }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Button("What’s New in Available Update") { showingAvailableNotes = true }
                     .disabled(app.updater.availableReleaseNotesHTML == nil)
-            } header: {
-                Text("Updates")
-            } footer: {
-                Text("\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Section {
-                Picker("Check images", selection: $settings.imageUpdateIntervalHours) {
-                    Text("Every hour").tag(1)
-                    Text("Every 3 hours").tag(3)
-                    Text("Every 6 hours").tag(6)
-                    Text("Every 12 hours").tag(12)
-                    Text("Every day").tag(24)
+            PanelSection(header: "Image updates",
+                         footer: "Controls the background registry digest check cadence. Manual checks are always available from Images, System, and the toolbar.") {
+                PanelRow(title: "Check images") {
+                    Picker("", selection: $settings.imageUpdateIntervalHours) {
+                        Text("Every hour").tag(1)
+                        Text("Every 3 hours").tag(3)
+                        Text("Every 6 hours").tag(6)
+                        Text("Every 12 hours").tag(12)
+                        Text("Every day").tag(24)
+                    }
+                    .labelsHidden().fixedSize()
                 }
-            } header: {
-                Text("Image updates")
-            } footer: {
-                Text("Controls the background registry digest check cadence. Manual checks are always available from Images, System, and the toolbar.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
         }
-        .formStyle(.grouped)
         .task { app.updater.refreshChannelAvailability() }
         .sheet(isPresented: $showingCurrentNotes) {
             ReleaseNotesView(title: "What’s New", html: app.updater.currentReleaseNotesHTML)
@@ -529,8 +525,8 @@ private struct AboutTab: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        Form {
-            Section {
+        VStack(spacing: Tokens.Space.l) {
+            PanelSection {
                 HStack(spacing: Tokens.Space.m) {
                     Image(nsImage: NSApp.applicationIconImage)
                         .resizable().frame(width: 56, height: 56)
@@ -542,19 +538,17 @@ private struct AboutTab: View {
                     }
                     Spacer()
                 }
-                .padding(.vertical, Tokens.Space.xs)
             }
 
-            Section("Runtime") {
-                LabeledContent("Container CLI", value: app.cliVersion ?? "—")
-                LabeledContent("API server", value: app.systemStatus?.apiServerVersion ?? "—")
+            PanelSection(header: "Runtime") {
+                PanelRow(title: "Container CLI") { Text(app.cliVersion ?? "—").foregroundStyle(.secondary) }
+                PanelRow(title: "API server") { Text(app.systemStatus?.apiServerVersion ?? "—").foregroundStyle(.secondary) }
             }
 
-            Section {
-                LabeledContent("Copyright", value: "© 2026 Contained")
+            PanelSection {
+                PanelRow(title: "Copyright") { Text("© 2026 Contained").foregroundStyle(.secondary) }
             }
         }
-        .formStyle(.grouped)
     }
 
     private var appVersion: String {

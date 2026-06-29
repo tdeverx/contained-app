@@ -13,11 +13,12 @@ final class SettingsStore {
     var windowMaterial: WindowMaterial { didSet { defaults.set(windowMaterial.rawValue, forKey: Keys.windowMaterial) } }
     /// Material behind modal sheets.
     var modalMaterial: WindowMaterial { didSet { defaults.set(modalMaterial.rawValue, forKey: Keys.modalMaterial) } }
+    /// Material for toolbar control surfaces (glass buttons / search field).
+    var buttonMaterial: WindowMaterial { didSet { defaults.set(buttonMaterial.rawValue, forKey: Keys.buttonMaterial) } }
     /// Show the info.circle help popovers throughout the app.
     var showInfoTips: Bool { didSet { defaults.set(showInfoTips, forKey: Keys.showInfoTips) } }
     /// Let images without their own style inherit the default card design edited in Settings.
     var imageDefaultStyleEnabled: Bool { didSet { defaults.set(imageDefaultStyleEnabled, forKey: Keys.imageDefaultStyleEnabled) } }
-    var reduceTranslucency: Bool { didSet { defaults.set(reduceTranslucency, forKey: Keys.reduceTranslucency) } }
     var keepInMenuBar: Bool { didSet { defaults.set(keepInMenuBar, forKey: Keys.keepInMenuBar) } }
     var cliPathOverride: String { didSet { defaults.set(cliPathOverride, forKey: Keys.cliPath) } }
     var refreshInterval: Double { didSet { defaults.set(refreshInterval, forKey: Keys.refresh) } }
@@ -52,9 +53,9 @@ final class SettingsStore {
         density = CardDensity(stored: defaults.string(forKey: Keys.density))
         windowMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.windowMaterial) ?? "") ?? .fullScreenUI
         modalMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.modalMaterial) ?? "") ?? .sheet
+        buttonMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.buttonMaterial) ?? "") ?? .glassClear
         showInfoTips = defaults.object(forKey: Keys.showInfoTips) as? Bool ?? true
         imageDefaultStyleEnabled = defaults.object(forKey: Keys.imageDefaultStyleEnabled) as? Bool ?? true
-        reduceTranslucency = defaults.bool(forKey: Keys.reduceTranslucency)
         keepInMenuBar = defaults.object(forKey: Keys.keepInMenuBar) as? Bool ?? true
         cliPathOverride = defaults.string(forKey: Keys.cliPath) ?? ""
         refreshInterval = defaults.object(forKey: Keys.refresh) as? Double ?? 2.0
@@ -110,9 +111,9 @@ final class SettingsStore {
         static let density = "density"
         static let windowMaterial = "windowMaterial"
         static let modalMaterial = "modalMaterial"
+        static let buttonMaterial = "buttonMaterial"
         static let showInfoTips = "showInfoTips"
         static let imageDefaultStyleEnabled = "imageDefaultStyleEnabled"
-        static let reduceTranslucency = "reduceTranslucency"
         static let keepInMenuBar = "keepInMenuBar"
         static let cliPath = "cliPathOverride"
         static let refresh = "refreshInterval"

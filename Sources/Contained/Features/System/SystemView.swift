@@ -36,20 +36,20 @@ struct SystemContent: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: Tokens.Space.l) {
-                    serviceCard
-                    backgroundTasksSection
-                    volumesSection
-                    if let usage = app.diskUsage { diskSection(usage) }
-                    pruneSection
-                }
-                .padding(Tokens.Space.l)
+        MorphPanelScaffold(width: Tokens.PanelSize.system.width) {
+            VStack(spacing: 0) {
+                header
+                Divider()
             }
-            .scrollEdgeEffectStyle(.soft, for: .all)
+        } content: {
+            VStack(alignment: .leading, spacing: Tokens.Space.l) {
+                serviceCard
+                backgroundTasksSection
+                volumesSection
+                if let usage = app.diskUsage { diskSection(usage) }
+                pruneSection
+            }
+            .padding(Tokens.Space.l)
         }
         .task { await app.refreshSystemResources() }
         .sheet(isPresented: $showLogs) { SystemLogsSheet() }
@@ -67,7 +67,8 @@ struct SystemContent: View {
         PanelHeader(symbol: "gearshape.2",
                     title: "System",
                     subtitle: "\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")") {
-            GlassButton(singleItem: true) {
+            GlassButton {
+                GlassButtonItem(systemName: "text.alignleft", help: "System Logs") { showLogs = true }
                 GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
             }
         }

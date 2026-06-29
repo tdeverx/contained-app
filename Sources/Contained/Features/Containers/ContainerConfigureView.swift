@@ -42,16 +42,21 @@ struct ContainerConfigureView: View {
     private var isEdit: Bool { if case .edit = mode { return true }; return false }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            validationSummary
+        MorphPanelScaffold(width: Tokens.SheetSize.form.width) {
+            VStack(spacing: 0) {
+                header
+                Divider()
+                validationSummary
+            }
+        } content: {
             RunSpecForm(spec: $spec)
+                .padding(Tokens.Space.l)
+        } footer: {
             if app.settings.revealCLI {
                 CommandPreviewBar(command: spec.arguments())
                     .padding(Tokens.Space.l)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear(perform: load)
         .confirmationDialog("Replace \(spec.name.isEmpty ? editID : spec.name)?",
                             isPresented: $confirming) {

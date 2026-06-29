@@ -35,6 +35,12 @@ enum Tokens {
     }
     /// Morph-panel dimensions shared by toolbar origins and panel content.
     enum PanelSize {
+        // Global floor applied in MorphGeometry.fittedSize — panels never shrink below these or exceed
+        // the available window area (handled separately via margin clamping). The height floor is tiny
+        // so content-hugging panels can collapse close to their header when there's little to show.
+        static let minWidth: CGFloat = 300
+        static let minHeight: CGFloat = 50
+
         static let add = CGSize(width: 440, height: 300)
         static let palette = CGSize(width: 560, height: 480)
         static let updatesOrigin = CGSize(width: 440, height: 300)
@@ -161,6 +167,17 @@ enum AppearanceMode: String, CaseIterable, Identifiable, Codable, Sendable {
         case .dark: return .dark
         }
     }
+
+    /// The AppKit appearance to force on the app. `nil` for `.system` releases the override so the app
+    /// tracks the live OS appearance — `.preferredColorScheme(nil)` alone doesn't reliably re-sync a
+    /// window that was previously pinned, so we set `NSApplication.appearance` directly.
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .system: return nil
+        case .light: return NSAppearance(named: .aqua)
+        case .dark: return NSAppearance(named: .darkAqua)
+        }
+    }
 }
 
 enum CardDensity: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -187,6 +204,9 @@ enum CardDensity: String, CaseIterable, Identifiable, Codable, Sendable {
 /// The behind-window vibrancy material used for the main content area. A curated, ordered subset of
 /// `NSVisualEffectView.Material` (lightest → most opaque) so the picker reads sensibly.
 enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
+    // Liquid Glass options (rendered with `.glassEffect`, not an `NSVisualEffectView`).
+    case glassClear, glassRegular
+    // System vibrancy materials.
     case fullScreenUI, underWindowBackground, underPageBackground,
          windowBackground, contentBackground, sidebar, headerView, titlebar,
          sheet, popover, menu, selection, hudWindow, toolTip
@@ -195,6 +215,8 @@ enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var displayName: String {
         switch self {
+        case .glassClear:          return "Glass (Clear)"
+        case .glassRegular:        return "Glass (Regular)"
         case .fullScreenUI:        return "Full-screen UI (default)"
         case .underWindowBackground: return "Under Window"
         case .underPageBackground: return "Under Page"
@@ -212,8 +234,23 @@ enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
+    /// True for the Liquid Glass options, which render via `.glassEffect` rather than vibrancy.
+    var isGlass: Bool { self == .glassClear || self == .glassRegular }
+
+    /// The Liquid Glass variant for the glass cases (nil for vibrancy materials).
+    var glass: Glass? {
+        switch self {
+        case .glassClear:   return .clear
+        case .glassRegular: return .regular
+        default:            return nil
+        }
+    }
+
+    /// The vibrancy material. Glass cases fall back to a sensible default for the rare place that
+    /// needs a behind-window material (e.g. the root content backing, which can't be glass).
     var nsMaterial: NSVisualEffectView.Material {
         switch self {
+        case .glassClear, .glassRegular: return .fullScreenUI
         case .fullScreenUI:          return .fullScreenUI
         case .underWindowBackground: return .underWindowBackground
         case .underPageBackground:   return .underPageBackground
@@ -235,6 +272,8 @@ enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
 extension EnvironmentValues {
     /// The user-chosen modal material, seeded at the app root and inherited by presented sheets.
     @Entry var modalMaterial: WindowMaterial = .sheet
+    /// The user-chosen toolbar-control (button) material, seeded at the app root.
+    @Entry var buttonMaterial: WindowMaterial = .glassClear
 }
 
 private struct SheetMaterial: ViewModifier {
@@ -242,8 +281,12 @@ private struct SheetMaterial: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background {
-                VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
-                    .ignoresSafeArea()
+                if let glass = material.glass {
+                    Color.clear.glassEffect(glass, in: Rectangle()).ignoresSafeArea()
+                } else {
+                    VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                        .ignoresSafeArea()
+                }
             }
             .presentationBackground(.clear)
     }
@@ -280,8 +323,12 @@ private struct FloatingPanelMaterial: ViewModifier {
                 }
             }
             .background {
-                VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
-                    .clipShape(shape)
+                if let glass = material.glass {
+                    Color.clear.glassEffect(glass, in: shape)
+                } else {
+                    VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                        .clipShape(shape)
+                }
             }
             .clipShape(shape)
             .overlay {
@@ -292,9 +339,18 @@ private struct FloatingPanelMaterial: ViewModifier {
 
 private struct ToolbarControlMaterial<S: Shape>: ViewModifier {
     let shape: S
+    @Environment(\.buttonMaterial) private var buttonMaterial
 
     func body(content: Content) -> some View {
-        content.glassEffect(.clear.interactive(), in: shape)
+        if let glass = buttonMaterial.glass {
+            content.glassEffect(glass.interactive(), in: shape)
+        } else {
+            // A vibrancy material chosen for buttons — back the capsule with it and clip.
+            content.background {
+                VisualEffectBackground(material: buttonMaterial.nsMaterial, blendingMode: .withinWindow)
+                    .clipShape(shape)
+            }
+        }
     }
 }
 

@@ -24,25 +24,23 @@ struct ToolbarUpdatesPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-            Divider()
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
-                    if imageGroups.isEmpty {
-                        emptyCard
-                    } else {
-                        ForEach(imageGroups) { group in
-                            imageRow(group)
-                        }
+        MorphPanelScaffold(width: Tokens.PanelSize.images.width) {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                Divider()
+            }
+        } content: {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
+                if imageGroups.isEmpty {
+                    emptyCard
+                } else {
+                    ForEach(imageGroups) { group in
+                        imageRow(group)
                     }
                 }
-                .padding(Tokens.Space.s)
             }
-            .scrollEdgeEffectStyle(.soft, for: .all)
+            .padding(Tokens.Space.s)
         }
-        .morphPanelSize(Tokens.PanelSize.images)
-        .morphPanelPlacement(.anchored)
         .task { await app.refreshImagesIfStale(force: true) }
     }
 
