@@ -70,13 +70,6 @@ struct ToolbarCommandPalette: View {
     var body: some View {
         MorphPanelScaffold(width: Tokens.PanelSize.palette.width, scrolls: false) {
             VStack(spacing: 0) {
-                PanelHeader(symbol: "command",
-                            title: "Command Palette",
-                            subtitle: "\(items.count) match\(items.count == 1 ? "" : "es")") {
-                    GlassButton(singleItem: true) {
-                        GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: close)
-                    }
-                }
                 fieldRow
                     .frame(height: Tokens.Toolbar.searchOpenHeaderHeight)
                 Divider().opacity(0.5)
@@ -90,8 +83,8 @@ struct ToolbarCommandPalette: View {
         .morphPanelPlacement(.anchored)
         .onAppear {
             ui.paletteIndex = 0
-            focused = true
         }
+        .task(id: isOpen) { await focusSearchField() }
         .onChange(of: ui.searchText) { _, _ in ui.paletteIndex = 0 }
         .onChange(of: items.count) { _, _ in clampSelection() }
     }
@@ -215,6 +208,18 @@ struct ToolbarCommandPalette: View {
 
     private func close() {
         onClose()
+    }
+
+    @MainActor
+    private func focusSearchField() async {
+        guard isOpen else { return }
+        focused = true
+        await Task.yield()
+        focused = true
+        try? await Task.sleep(nanoseconds: 120_000_000)
+        if isOpen {
+            focused = true
+        }
     }
 }
 
