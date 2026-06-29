@@ -28,6 +28,16 @@ final class SettingsStore {
     var revealCLI: Bool { didSet { defaults.set(revealCLI, forKey: Keys.revealCLI) } }
     /// How many days of metrics/events the on-disk history keeps before pruning.
     var historyRetentionDays: Int { didSet { defaults.set(historyRetentionDays, forKey: Keys.historyRetention) } }
+    /// App event logging verbosity.
+    var loggingLevel: AppLogLevel { didSet { defaults.set(loggingLevel.rawValue, forKey: Keys.loggingLevel) } }
+    /// Logging outputs. Activity history keeps events in-app; Console writes to macOS unified logging.
+    var enabledLogDestinations: Set<AppLogDestination> {
+        didSet { defaults.set(enabledLogDestinations.map(\.rawValue).sorted(), forKey: Keys.logDestinations) }
+    }
+    /// Event categories the user wants recorded.
+    var enabledLogCategories: Set<AppLogCategory> {
+        didSet { defaults.set(enabledLogCategories.map(\.rawValue).sorted(), forKey: Keys.logCategories) }
+    }
     /// Which Sparkle update channel the user opts into (stable / beta / nightly).
     var updateChannel: UpdateChannel { didSet { defaults.set(updateChannel.rawValue, forKey: Keys.updateChannel) } }
     /// Register/unregister the app as a login item via `SMAppService`. Backed by the live service
@@ -63,6 +73,15 @@ final class SettingsStore {
         notifyOnCrash = defaults.object(forKey: Keys.notifyOnCrash) as? Bool ?? true
         revealCLI = defaults.object(forKey: Keys.revealCLI) as? Bool ?? true
         historyRetentionDays = defaults.object(forKey: Keys.historyRetention) as? Int ?? 7
+        loggingLevel = AppLogLevel(rawValue: defaults.string(forKey: Keys.loggingLevel) ?? "") ?? .important
+        enabledLogDestinations = Self.loadSet(AppLogDestination.self,
+                                              key: Keys.logDestinations,
+                                              defaults: defaults,
+                                              fallback: [.activity])
+        enabledLogCategories = Self.loadSet(AppLogCategory.self,
+                                            key: Keys.logCategories,
+                                            defaults: defaults,
+                                            fallback: Set(AppLogCategory.allCases))
         // Default to Nightly while the app is pre-1.0 — that's where the only builds ship, so a fresh
         // install actually receives updates. Users can switch to Beta/Stable in Settings → Updates.
         updateChannel = UpdateChannel(rawValue: defaults.string(forKey: Keys.updateChannel) ?? "") ?? .nightly
@@ -75,16 +94,20 @@ final class SettingsStore {
                        density: density,
                        windowMaterial: windowMaterial,
                        modalMaterial: modalMaterial,
+                       buttonMaterial: buttonMaterial,
                        showInfoTips: showInfoTips,
-                       reduceTranslucency: reduceTranslucency,
+                       imageDefaultStyleEnabled: imageDefaultStyleEnabled,
                        keepInMenuBar: keepInMenuBar,
                        cliPathOverride: cliPathOverride,
                        refreshInterval: refreshInterval,
+                       imageUpdateIntervalHours: imageUpdateIntervalHours,
                        notifyOnCrash: notifyOnCrash,
                        revealCLI: revealCLI,
                        historyRetentionDays: historyRetentionDays,
-                       updateChannel: updateChannel,
-                       lastSection: lastSection)
+                       loggingLevel: loggingLevel,
+                       enabledLogDestinations: enabledLogDestinations,
+                       enabledLogCategories: enabledLogCategories,
+                       updateChannel: updateChannel)
     }
 
     func applyBackup(_ snapshot: SettingsBackup) {
@@ -93,16 +116,28 @@ final class SettingsStore {
         density = snapshot.density
         windowMaterial = snapshot.windowMaterial
         modalMaterial = snapshot.modalMaterial
+        buttonMaterial = snapshot.buttonMaterial
         showInfoTips = snapshot.showInfoTips
-        reduceTranslucency = snapshot.reduceTranslucency
+        imageDefaultStyleEnabled = snapshot.imageDefaultStyleEnabled
         keepInMenuBar = snapshot.keepInMenuBar
         cliPathOverride = snapshot.cliPathOverride
         refreshInterval = snapshot.refreshInterval
+        imageUpdateIntervalHours = snapshot.imageUpdateIntervalHours
         notifyOnCrash = snapshot.notifyOnCrash
         revealCLI = snapshot.revealCLI
         historyRetentionDays = snapshot.historyRetentionDays
+        loggingLevel = snapshot.loggingLevel
+        enabledLogDestinations = snapshot.enabledLogDestinations
+        enabledLogCategories = snapshot.enabledLogCategories
         updateChannel = snapshot.updateChannel
-        lastSection = snapshot.lastSection
+    }
+
+    private static func loadSet<T: RawRepresentable & Hashable>(_ type: T.Type,
+                                                                key: String,
+                                                                defaults: UserDefaults,
+                                                                fallback: Set<T>) -> Set<T> where T.RawValue == String {
+        guard let raw = defaults.stringArray(forKey: key) else { return fallback }
+        return Set(raw.compactMap { T(rawValue: $0) })
     }
 
     private enum Keys {
@@ -121,6 +156,9 @@ final class SettingsStore {
         static let notifyOnCrash = "notifyOnCrash"
         static let revealCLI = "revealCLI"
         static let historyRetention = "historyRetentionDays"
+        static let loggingLevel = "loggingLevel"
+        static let logDestinations = "logDestinations"
+        static let logCategories = "logCategories"
         static let updateChannel = "updateChannel"
     }
 }
@@ -131,14 +169,18 @@ struct SettingsBackup: Codable, Equatable {
     var density: CardDensity
     var windowMaterial: WindowMaterial
     var modalMaterial: WindowMaterial
+    var buttonMaterial: WindowMaterial
     var showInfoTips: Bool
-    var reduceTranslucency: Bool
+    var imageDefaultStyleEnabled: Bool
     var keepInMenuBar: Bool
     var cliPathOverride: String
     var refreshInterval: Double
+    var imageUpdateIntervalHours: Int
     var notifyOnCrash: Bool
     var revealCLI: Bool
     var historyRetentionDays: Int
+    var loggingLevel: AppLogLevel
+    var enabledLogDestinations: Set<AppLogDestination>
+    var enabledLogCategories: Set<AppLogCategory>
     var updateChannel: UpdateChannel
-    var lastSection: String
 }

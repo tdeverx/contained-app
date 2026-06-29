@@ -4,6 +4,11 @@ import SwiftData
 /// Categories of events recorded to the persistent history/timeline.
 enum EventKind: String, Codable, CaseIterable, Sendable {
     case lifecycle      // start / stop / remove
+    case image          // image load / update / maintenance
+    case compose        // compose import / translation
+    case system         // runtime service / volumes / networks
+    case registry       // registry login state
+    case ui             // user-facing app messages
     case pull           // image pull
     case build          // image build
     case watchdog       // app-managed restart / unexpected exit
@@ -13,6 +18,11 @@ enum EventKind: String, Codable, CaseIterable, Sendable {
     var symbol: String {
         switch self {
         case .lifecycle: return "play.circle"
+        case .image: return "square.stack.3d.up"
+        case .compose: return "shippingbox.and.arrow.backward"
+        case .system: return "gearshape.2"
+        case .registry: return "key"
+        case .ui: return "bubble"
         case .pull: return "arrow.down.circle"
         case .build: return "hammer"
         case .watchdog: return "arrow.clockwise.circle"

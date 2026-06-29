@@ -245,6 +245,38 @@ private struct GeneralTab: View {
                 ConfigTransferControls()
             }
 
+            PanelSection(header: "Logging",
+                         footer: settings.loggingLevel.footnote) {
+                PanelRow(title: "Level") {
+                    Picker("", selection: $settings.loggingLevel) {
+                        ForEach(AppLogLevel.allCases) { level in
+                            Text(level.displayName).tag(level)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                    Text("Write to").font(.caption).foregroundStyle(.secondary)
+                    ForEach(AppLogDestination.allCases) { destination in
+                        Toggle(destination.displayName, isOn: setBinding(destination, in: \.enabledLogDestinations))
+                            .toggleStyle(.checkbox)
+                    }
+                }
+                VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                    Text("Categories").font(.caption).foregroundStyle(.secondary)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), alignment: .leading)],
+                              alignment: .leading,
+                              spacing: Tokens.Space.s) {
+                        ForEach(AppLogCategory.allCases) { category in
+                            Toggle(category.displayName, isOn: setBinding(category, in: \.enabledLogCategories))
+                                .toggleStyle(.checkbox)
+                        }
+                    }
+                }
+            }
+
             PanelSection(header: "Advanced") {
                 PanelField(label: "Container CLI path",
                            info: "Override the auto-detected `container` binary location.") {
@@ -263,6 +295,17 @@ private struct GeneralTab: View {
     private var retentionBinding: Binding<Int> {
         Binding(get: { settings.historyRetentionDays },
                 set: { app.applyHistoryRetention($0) })
+    }
+
+    private func setBinding<T>(_ value: T, in keyPath: ReferenceWritableKeyPath<SettingsStore, Set<T>>) -> Binding<Bool> where T: Hashable {
+        Binding {
+            settings[keyPath: keyPath].contains(value)
+        } set: { isEnabled in
+            var values = settings[keyPath: keyPath]
+            if isEnabled { values.insert(value) }
+            else { values.remove(value) }
+            settings[keyPath: keyPath] = values
+        }
     }
 }
 

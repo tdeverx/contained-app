@@ -46,16 +46,29 @@ enum ComposeImport {
             }
             guard !specs.isEmpty else {
                 app.flash("No services with an image to import.")
+                app.logger.record("Compose import \(parsed.name) had no services with images",
+                                  category: .compose,
+                                  severity: .warning)
                 return
             }
             if !parsed.warnings.isEmpty {
                 app.flash("Some compose keys weren't translated — review each container before creating.")
+                app.logger.record("Compose import \(parsed.name) produced \(parsed.warnings.count) warning\(parsed.warnings.count == 1 ? "" : "s")",
+                                  category: .compose,
+                                  severity: .warning)
             }
+            app.logger.record("Imported compose project \(parsed.name) with \(specs.count) service\(specs.count == 1 ? "" : "s")",
+                              category: .compose)
             ui.beginPrefillQueue(specs, using: app)
         } catch let error as ComposeError {
-            app.flash({ if case .invalid(let message) = error { return message }; return "Invalid compose file." }())
+            let message = { if case .invalid(let message) = error { return message }; return "Invalid compose file." }()
+            app.flash(message)
+            app.logger.record("Compose import failed: \(message)", category: .compose, severity: .error)
         } catch {
             app.flash(error.localizedDescription)
+            app.logger.record("Compose import failed: \(error.localizedDescription)",
+                              category: .compose,
+                              severity: .error)
         }
     }
 

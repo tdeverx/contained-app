@@ -26,6 +26,7 @@ final class AppModel {
     let historyStore = HistoryStore()
     let updater = UpdaterController()
     let migrator = StateMigrator()
+    let logger: AppLogger
     private let manifestClient = RegistryManifestClient()
 
     private(set) var bootstrap: Bootstrap = .checking
@@ -150,6 +151,7 @@ final class AppModel {
 
     init(settings: SettingsStore = SettingsStore()) {
         self.settings = settings
+        self.logger = AppLogger(settings: settings, history: historyStore)
         imageUpdates = Self.loadImageUpdates()
         lastImageUpdateSweep = Self.loadLastImageUpdateSweep()
         historyStore.retentionDays = settings.historyRetentionDays
@@ -162,14 +164,20 @@ final class AppModel {
             let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             self.flash("Restarted \(name) (attempt \(attempt))")
-            self.historyStore.record(.watchdog, containerID: snapshot.id, message: "Restarted \(name) (attempt \(attempt))")
+            self.logger.record("Restarted \(name) (attempt \(attempt))",
+                               category: .health,
+                               severity: .warning,
+                               containerID: snapshot.id)
             self.notifier.containerRestarted(name: name, attempt: attempt, enabled: settings.notifyOnCrash)
         }
         watchdog.onUnexpectedExit = { [weak self] snapshot in
             guard let self else { return }
             let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
-            self.historyStore.record(.watchdog, containerID: snapshot.id, message: "\(name) exited unexpectedly")
+            self.logger.record("\(name) exited unexpectedly",
+                               category: .health,
+                               severity: .warning,
+                               containerID: snapshot.id)
             self.notifier.containerExited(name: name, enabled: settings.notifyOnCrash)
         }
         health.onUnhealthy = { [weak self] snapshot in
@@ -177,7 +185,10 @@ final class AppModel {
             let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             self.flash("\(name) is unhealthy")
-            self.historyStore.record(.healthcheck, containerID: snapshot.id, message: "\(name) failed its healthcheck")
+            self.logger.record("\(name) failed its healthcheck",
+                               category: .health,
+                               severity: .warning,
+                               containerID: snapshot.id)
             self.notifier.containerUnhealthy(name: name, enabled: settings.notifyOnCrash)
             // Hand off to the restart policy (once per unhealthy transition, so it can't spin).
             let policy = RestartPolicy(label: snapshot.configuration.labels["contained.restart"])
@@ -186,8 +197,10 @@ final class AppModel {
     }
 
     func bootstrapIfNeeded() async {
+        logger.record("Checking container CLI", category: .system, severity: .debug)
         guard let url = CLILocator.locate(override: settings.cliPathOverride) else {
             bootstrap = .cliMissing
+            logger.record("Container CLI missing", category: .system, severity: .error)
             return
         }
         let runner = CommandRunner(executableURL: url)
@@ -202,6 +215,7 @@ final class AppModel {
             cliVersion = CLILocator.parseVersion(raw)
             if let v = cliVersion, !CLILocator.isSupported(v) {
                 bootstrap = .unsupported(version: v)
+                logger.record("Unsupported container CLI version \(v)", category: .system, severity: .error)
                 return
             }
         }
@@ -234,6 +248,7 @@ final class AppModel {
             systemStatus = status
             if status.isRunning {
                 bootstrap = .ready
+                logger.record("Container service is running", category: .system, severity: .debug)
                 await refreshDiskUsage()        // throttled; the System panel can force a fresh read
                 await containers.refresh()
                 // One-time: import legacy contained.* card styles into the local store, now that we
@@ -241,10 +256,14 @@ final class AppModel {
                 personalization.migrateLegacyLabelsIfNeeded(containers.snapshots)
             } else {
                 bootstrap = .serviceStopped
+                logger.record("Container service is stopped", category: .system, severity: .warning)
             }
         } catch {
             // `system status` exits non-zero when the service isn't running/registered.
             bootstrap = .serviceStopped
+            logger.record("Couldn't read container service status: \(error.localizedDescription)",
+                          category: .system,
+                          severity: .error)
         }
     }
 
@@ -356,7 +375,7 @@ final class AppModel {
         if let newID {
             if !spec.personalization.isDefault { personalization.setOverride(spec.personalization, for: newID) }
             healthChecks.setCheck(spec.healthCheck, for: newID)
-            historyStore.record(.lifecycle, containerID: newID, message: "Created \(newID)")
+            logger.record("Created \(newID)", category: .lifecycle, containerID: newID)
             flash("Created \(newID)")
         }
         return newID
@@ -382,7 +401,7 @@ final class AppModel {
             personalization.setOverride(spec.personalization, for: newID)
         }
         healthChecks.setCheck(spec.healthCheck, for: newID)
-        historyStore.record(.lifecycle, containerID: newID, message: "Recreated \(newID)")
+        logger.record("Recreated \(newID)", category: .lifecycle, containerID: newID)
         return newID
     }
 
@@ -393,9 +412,13 @@ final class AppModel {
         Task {
             if let error = await captured({ _ = try await client.loadImages(from: url.path) }) {
                 flash(error)
+                logger.record("Failed loading image archive \(url.lastPathComponent): \(error)",
+                              category: .image,
+                              severity: .error)
             } else {
                 await refreshImagesIfStale(force: true)
                 flash("Loaded \(url.lastPathComponent)")
+                logger.record("Loaded image archive \(url.lastPathComponent)", category: .image)
             }
         }
     }
@@ -409,9 +432,11 @@ final class AppModel {
         }
         if let error {
             flash(error)
+            logger.record("Failed creating volume \(name): \(error)", category: .system, severity: .error)
             return false
         }
         flash("Created volume \(name)")
+        logger.record("Created volume \(name)", category: .system)
         return true
     }
 
@@ -424,9 +449,11 @@ final class AppModel {
         }
         if let error {
             flash(error)
+            logger.record("Failed creating network \(name): \(error)", category: .system, severity: .error)
             return false
         }
         flash("Created network \(name)")
+        logger.record("Created network \(name)", category: .system)
         return true
     }
 
@@ -452,10 +479,21 @@ final class AppModel {
                 if !trimmed.isEmpty { activity?.detail = trimmed }
             }
             await refreshImagesIfStale(force: true)
-            historyStore.record(.pull, message: "Pulled \(Format.shortImage(reference))")
+            logger.record("Pulled \(Format.shortImage(reference))", category: .image)
             return true
-        } catch let error as CommandError { flash(error.userMessage); return false }
-        catch { flash(error.localizedDescription); return false }
+        } catch let error as CommandError {
+            flash(error.userMessage)
+            logger.record("Failed pulling \(Format.shortImage(reference)): \(error.userMessage)",
+                          category: .image,
+                          severity: .error)
+            return false
+        } catch {
+            flash(error.localizedDescription)
+            logger.record("Failed pulling \(Format.shortImage(reference)): \(error.localizedDescription)",
+                          category: .image,
+                          severity: .error)
+            return false
+        }
     }
 
     // MARK: Image updates
@@ -505,7 +543,9 @@ final class AppModel {
                 switch status.state {
                 case .updateAvailable:
                     flash("Update available for \(Format.shortImage(reference))")
-                    historyStore.record(.alert, message: "Update available for \(Format.shortImage(reference))")
+                    logger.record("Update available for \(Format.shortImage(reference))",
+                                  category: .image,
+                                  severity: .warning)
                 case .current:
                     flash("\(Format.shortImage(reference)) is up to date")
                 default:
@@ -516,6 +556,9 @@ final class AppModel {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             imageUpdates[key] = .failed(localDigest: localDigest, message: message)
             if notify { flash(message) }
+            logger.record("Failed checking image update for \(Format.shortImage(reference)): \(message)",
+                          category: .image,
+                          severity: .error)
         }
     }
 
@@ -525,7 +568,7 @@ final class AppModel {
         if ok {
             await checkImageUpdate(reference, notify: false)
             flash("Updated \(Format.shortImage(reference))")
-            historyStore.record(.pull, message: "Updated \(Format.shortImage(reference))")
+            logger.record("Updated \(Format.shortImage(reference))", category: .image)
         }
         return ok
     }
@@ -611,6 +654,7 @@ final class AppModel {
     /// Show a transient banner for ~4s.
     func flash(_ message: String) {
         banner = message
+        logger.record(message, category: .ui, severity: .warning)
         bannerClear?.cancel()
         bannerClear = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Self.bannerDuration))
@@ -629,6 +673,7 @@ final class AppModel {
     func clearHistory() {
         historyStore.clearAll()
         flash("History cleared")
+        logger.record("History cleared", category: .system, severity: .warning)
     }
 
     func exportConfiguration(to url: URL, sections: Set<AppStateSection> = Set(AppStateSection.allCases)) throws {
@@ -710,6 +755,7 @@ final class AppModel {
         bootstrap = .checking
         _ = try? await client.runner.run(["system", "start"])
         await refreshSystem()
+        logger.record("Started container service", category: .system)
     }
 
     func stopService() async {
@@ -718,6 +764,7 @@ final class AppModel {
         watchdog.reset()
         _ = try? await client.runner.run(["system", "stop"])
         await refreshSystem()
+        logger.record("Stopped container service", category: .system, severity: .warning)
     }
 
     func restartService() async {
@@ -727,6 +774,7 @@ final class AppModel {
         _ = try? await client.runner.run(["system", "stop"])
         _ = try? await client.runner.run(["system", "start"])
         await refreshSystem()
+        logger.record("Restarted container service", category: .system, severity: .warning)
     }
 
     /// Short health label for the toolbar indicator.

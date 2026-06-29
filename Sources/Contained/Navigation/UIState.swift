@@ -5,27 +5,118 @@ import ContainedCore
 @MainActor
 @Observable
 final class UIState {
-    /// Filter text applied by the section list views. The in-window search affordance is being
-    /// reworked; until it returns this stays empty (so every filter is a no-op pass-through).
-    var searchText = ""
-    var runningOnly = false
-    var showRunSheet = false
     enum CreationEntry: Hashable { case menu, chooser, search, configure, network, volume, build }
-    var creationEntry: CreationEntry = .menu
-    var creationPrefillSpec: RunSpec?
-    var creationEditSnapshot: ContainerSnapshot?
-    /// Bumped whenever a menu/shortcut opens the add morph at a specific creation page.
-    private(set) var creationRequestToken = 0
-
-    /// Which toolbar button is currently morphed open into a centered panel (nil = none). The toolbar
-    /// reads this to grow the matching panel from that button's slot.
     enum ToolbarMorph: Hashable { case add, palette, updates, activity, templates, system, settings }
-    var activeMorph: ToolbarMorph?
-    private(set) var morphCloseRequestToken = 0
+
+    struct CreationPresentation {
+        var entry: CreationEntry = .menu
+        var prefillSpec: RunSpec?
+        var editSnapshot: ContainerSnapshot?
+        var requestToken = 0
+    }
+
+    struct ToolbarPresentation {
+        var activeMorph: ToolbarMorph?
+        var closeRequestToken = 0
+    }
+
+    struct SearchPresentation {
+        /// Filter text applied by the section list views. The in-window search affordance is being
+        /// reworked; until it returns this stays empty (so every filter is a no-op pass-through).
+        var text = ""
+        var pageResultCount: Int?
+        var paletteIndex = 0
+        var focusToken = 0
+    }
+
+    struct PrefillPresentation {
+        var showRunSheet = false
+        var currentSpec: RunSpec?
+        var queue: [RunSpec] = []
+    }
+
+    var creation = CreationPresentation()
+    var toolbar = ToolbarPresentation()
+    var search = SearchPresentation()
+    var prefill = PrefillPresentation()
+    var runningOnly = false
 
     /// When set, `SettingsContent` will switch to this page as soon as it appears / becomes active.
     /// Cleared by `SettingsContent` after it consumes the value.
     var settingsPage: SettingsContent.SettingsPage? = nil
+
+    /// A one-shot action requested by menus or the command palette. `RootView` consumes global
+    /// actions, while toolbar panels and the Containers page handle their local operations directly.
+    var pendingAction: PendingAction?
+
+    // MARK: Compatibility accessors
+
+    var searchText: String {
+        get { search.text }
+        set { search.text = newValue }
+    }
+
+    var showRunSheet: Bool {
+        get { prefill.showRunSheet }
+        set { prefill.showRunSheet = newValue }
+    }
+
+    var creationEntry: CreationEntry {
+        get { creation.entry }
+        set { creation.entry = newValue }
+    }
+
+    var creationPrefillSpec: RunSpec? {
+        get { creation.prefillSpec }
+        set { creation.prefillSpec = newValue }
+    }
+
+    var creationEditSnapshot: ContainerSnapshot? {
+        get { creation.editSnapshot }
+        set { creation.editSnapshot = newValue }
+    }
+
+    private(set) var creationRequestToken: Int {
+        get { creation.requestToken }
+        set { creation.requestToken = newValue }
+    }
+
+    var activeMorph: ToolbarMorph? {
+        get { toolbar.activeMorph }
+        set { toolbar.activeMorph = newValue }
+    }
+
+    private(set) var morphCloseRequestToken: Int {
+        get { toolbar.closeRequestToken }
+        set { toolbar.closeRequestToken = newValue }
+    }
+
+    var pageResultCount: Int? {
+        get { search.pageResultCount }
+        set { search.pageResultCount = newValue }
+    }
+
+    var paletteIndex: Int {
+        get { search.paletteIndex }
+        set { search.paletteIndex = newValue }
+    }
+
+    var prefillSpec: RunSpec? {
+        get { prefill.currentSpec }
+        set { prefill.currentSpec = newValue }
+    }
+
+    var prefillQueue: [RunSpec] {
+        get { prefill.queue }
+        set { prefill.queue = newValue }
+    }
+
+    private(set) var searchFocusToken: Int {
+        get { search.focusToken }
+        set { search.focusToken = newValue }
+    }
+
+    // MARK: Actions
 
     /// Open the Settings panel and navigate to a specific page in one call.
     func openSettings(to page: SettingsContent.SettingsPage) {
@@ -47,22 +138,6 @@ final class UIState {
         morphCloseRequestToken &+= 1
     }
 
-    /// The number of results the current page is showing for `searchText` (nil = page doesn't report
-    /// a count, so no auto-escalation). The toolbar uses this to morph the page search into the full
-    /// command palette when an in-page search comes up empty.
-    var pageResultCount: Int?
-    /// Highlighted row in the global command palette.
-    var paletteIndex = 0
-    /// A spec to prefill the next Create/Run sheet — from "Run" on an image or "Use" on a template.
-    var prefillSpec: RunSpec?
-    /// Remaining specs to step through as prefilled New-Container windows. Compose import enqueues one
-    /// per service; each opens after the previous window closes (Create or Cancel both advance).
-    var prefillQueue: [RunSpec] = []
-
-    /// A one-shot action requested by menus or the command palette. `RootView` consumes global
-    /// actions, while toolbar panels and the Containers page handle their local operations directly.
-    var pendingAction: PendingAction?
-
     /// Run an action by opening the right creation page, morph panel, or global sheet.
     func dispatch(_ action: PendingAction) {
         switch action {
@@ -77,9 +152,9 @@ final class UIState {
         case .build:
             openCreationPanel(entry: .build)
         case .activityHistory:
-            activeMorph = .activity   // Activity is its own toolbar panel
+            activeMorph = .activity
         case .loadImage, .pruneImages, .registryLogin, .systemLogs:
-            pendingAction = action    // handled globally in RootView
+            pendingAction = action
         }
     }
 
@@ -104,8 +179,7 @@ final class UIState {
         activeMorph = .add
     }
 
-    /// Bumped by ⌘S to focus the toolbar page-search field (without opening the command palette).
-    private(set) var searchFocusToken = 0
+    /// Bumped by Cmd-S to focus the toolbar page-search field (without opening the command palette).
     func focusSearch() {
         if activeMorph != nil {
             requestMorphClose()
