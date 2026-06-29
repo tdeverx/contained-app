@@ -120,18 +120,64 @@ struct ToolbarImageGroupCard: View {
     var onTap: () -> Void
     var onClose: () -> Void
 
-    @State private var inspecting: ContainedCore.ImageResource?
-    @State private var historyFor: ContainedCore.ImageResource?
-    @State private var tagging: ContainedCore.ImageResource?
-    @State private var pushing: ContainedCore.ImageResource?
     @State private var deletingReference: String?
     @State private var pruning = false
+    /// Detailed image operations (inspect / history / tag / push) now grow the image-detail morph into
+    /// a sub-page in place — matching the creation flow — instead of opening modal sheets.
+    @State private var page: ImageDetailPage = .root
+    @State private var tagTarget = ""
+    @State private var tagBusy = false
+
+    enum ImageDetailPage: Equatable {
+        case root
+        case inspect(String)
+        case history(String)
+        case tag(String)
+        case push(String)
+    }
+
+    private var spring: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
 
     var body: some View {
+        Group {
+            if isExpanded {
+                expandedContent
+                    .morphPanelSize(size(for: page))
+                    .morphPanelPlacement(.anchored)
+                    .animation(spring, value: page)
+            } else {
+                rootCard
+            }
+        }
+        .confirmationDialog("Delete \(Format.shortImage(deletingReference ?? ""))?",
+                            isPresented: deletingBinding,
+                            presenting: deletingReference) { reference in
+            Button("Delete", role: .destructive) { Task { await delete(reference) } }
+        } message: { _ in Text("This removes the selected local image reference.") }
+        .confirmationDialog("Prune images?", isPresented: $pruning) {
+            Button("Remove unused", role: .destructive) { Task { await prune(all: false) } }
+            Button("Remove all unreferenced", role: .destructive) { Task { await prune(all: true) } }
+        } message: {
+            Text("Unused images aren't referenced by any container. “All” also removes dangling layers.")
+        }
+    }
+
+    @ViewBuilder
+    private var expandedContent: some View {
+        switch page {
+        case .root:               rootCard
+        case .inspect(let ref):   inspectPage(ref)
+        case .history(let ref):   historyPage(ref)
+        case .tag(let source):    tagPage(source)
+        case .push(let ref):      pushPage(ref)
+        }
+    }
+
+    private var rootCard: some View {
         let image = primaryImage(group)
         let status = app.imageUpdateStatus(for: group.primaryReference)
         let resolved = app.imageGroupStyle(for: group)
-        ResourceGlassCard(size: .medium,
+        return ResourceGlassCard(size: .medium,
                           isExpanded: isExpanded,
                           fill: resolved.fillBackground ? resolved.color : nil,
                           fillOpacity: resolved.backgroundOpacity,
@@ -151,20 +197,137 @@ struct ToolbarImageGroupCard: View {
             imageFooterActions(group)
         }
         .contextMenu { cardMenu(group) }
-        .sheet(item: $inspecting) { JSONInspectorSheet(title: $0.reference, value: $0) }
-        .sheet(item: $historyFor) { ImageHistorySheet(image: $0) }
-        .sheet(item: $tagging) { TagImageSheet(source: $0.reference) }
-        .sheet(item: $pushing) { PushImageSheet(reference: $0.reference) }
-        .confirmationDialog("Delete \(Format.shortImage(deletingReference ?? ""))?",
-                            isPresented: deletingBinding,
-                            presenting: deletingReference) { reference in
-            Button("Delete", role: .destructive) { Task { await delete(reference) } }
-        } message: { _ in Text("This removes the selected local image reference.") }
-        .confirmationDialog("Prune images?", isPresented: $pruning) {
-            Button("Remove unused", role: .destructive) { Task { await prune(all: false) } }
-            Button("Remove all unreferenced", role: .destructive) { Task { await prune(all: true) } }
-        } message: {
-            Text("Unused images aren't referenced by any container. “All” also removes dangling layers.")
+    }
+
+    // MARK: Detail sub-pages
+
+    private func size(for page: ImageDetailPage) -> CGSize {
+        switch page {
+        case .root:    return Tokens.PanelSize.imageDetail
+        case .inspect, .history: return Tokens.SheetSize.inspector
+        case .tag:     return CGSize(width: 560, height: 360)
+        case .push:    return Tokens.SheetSize.console
+        }
+    }
+
+    private func subPageScaffold<C: View>(symbol: String, title: String, subtitle: String?,
+                                          @ViewBuilder content: @escaping () -> C) -> some View {
+        MorphPanelScaffold(width: 0, scrolls: false) {
+            VStack(spacing: 0) {
+                PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
+                    GlassButton(singleItem: true) {
+                        GlassButtonItem(systemName: "chevron.left", help: "Back") {
+                            withAnimation(spring) { page = .root }
+                        }
+                    }
+                }
+                Divider()
+            }
+        } content: {
+            content()
+                .padding(Tokens.Space.s)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    private func inspectPage(_ reference: String) -> some View {
+        let image = group.images.first { $0.reference == reference } ?? primaryImage(group)
+        return subPageScaffold(symbol: "doc.text.magnifyingglass", title: "Inspect",
+                               subtitle: Format.shortImage(reference)) {
+            if let image {
+                InlineJSONView(json: prettyJSON(image))
+            } else {
+                ContentUnavailableView("Unavailable", systemImage: "doc.text.magnifyingglass")
+            }
+        }
+    }
+
+    private func historyPage(_ reference: String) -> some View {
+        let image = group.images.first { $0.reference == reference } ?? primaryImage(group)
+        let variant = image?.variants.first(where: \.isRunnable) ?? image?.variants.first
+        let history = variant?.config?.history ?? []
+        return subPageScaffold(symbol: "clock.arrow.circlepath", title: "History",
+                               subtitle: Format.shortImage(reference)) {
+            if history.isEmpty {
+                ContentUnavailableView("No history", systemImage: "clock",
+                                       description: Text("This image records no layer history."))
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
+                        ForEach(Array(history.enumerated()), id: \.offset) { _, entry in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.createdBy ?? entry.comment ?? "—")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                if let created = entry.created {
+                                    Text(created.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(Tokens.Space.m)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: Tokens.Radius.control))
+                        }
+                    }
+                    .padding(Tokens.Space.s)
+                }
+                .scrollEdgeEffectStyle(.soft, for: .all)
+            }
+        }
+    }
+
+    private func tagPage(_ source: String) -> some View {
+        subPageScaffold(symbol: "tag", title: "Add tag", subtitle: Format.shortImage(source)) {
+            VStack(alignment: .leading, spacing: Tokens.Space.l) {
+                PanelSection {
+                    PanelField(label: "Source") {
+                        Text(Format.shortImage(source)).foregroundStyle(.secondary)
+                    }
+                    PanelField(label: "New reference") {
+                        TextField("", text: $tagTarget, prompt: Text("e.g. myrepo/app:v1"))
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit { submitTag(source: source) }
+                    }
+                }
+                HStack {
+                    Spacer()
+                    if tagBusy { ProgressView().controlSize(.small) }
+                    Button { submitTag(source: source) } label: { Label("Add Tag", systemImage: "checkmark") }
+                        .buttonStyle(.glassProminent)
+                        .disabled(tagTarget.trimmingCharacters(in: .whitespaces).isEmpty || tagBusy)
+                }
+            }
+        }
+    }
+
+    private func pushPage(_ reference: String) -> some View {
+        subPageScaffold(symbol: "arrow.up.circle", title: "Push image",
+                        subtitle: Format.shortImage(reference)) {
+            if let client = app.client {
+                StreamConsole(stream: { client.streamPush(reference) })
+            } else {
+                ContentUnavailableView("Runtime unavailable", systemImage: "exclamationmark.triangle")
+            }
+        }
+    }
+
+    private func submitTag(source: String) {
+        guard let client = app.client else { return }
+        let target = tagTarget.trimmingCharacters(in: .whitespaces)
+        guard !target.isEmpty else { return }
+        tagBusy = true
+        Task {
+            do {
+                _ = try await client.tagImage(source: source, target: target)
+                await app.refreshImagesIfStale(force: true)
+                tagBusy = false
+                tagTarget = ""
+                withAnimation(spring) { page = .root }
+            } catch let error as CommandError {
+                app.flash(error.userMessage); tagBusy = false
+            } catch {
+                app.flash(error.localizedDescription); tagBusy = false
+            }
         }
     }
 
@@ -229,8 +392,10 @@ struct ToolbarImageGroupCard: View {
             }
         }
         if let image = primaryImage(group) {
-            footerAction("tag", help: "Add Tag") { tagging = image }
-            footerAction("arrow.up.circle", help: "Push") { pushing = image }
+            if isExpanded {
+                footerAction("tag", help: "Add Tag") { withAnimation(spring) { page = .tag(image.reference) } }
+                footerAction("arrow.up.circle", help: "Push") { withAnimation(spring) { page = .push(image.reference) } }
+            }
             footerAction("arrow.up.doc", help: "Save") { save(image) }
         }
         footerAction("trash", help: "Prune", tint: .red) { pruning = true }
@@ -303,10 +468,16 @@ struct ToolbarImageGroupCard: View {
     private func cardMenu(_ group: LocalImageTagGroup) -> some View {
         Button { ui.runImage(group.primaryReference) } label: { Label("Run…", systemImage: "play") }
         if let image = primaryImage(group) {
-            Button { tagging = image } label: { Label("Add Tag…", systemImage: "tag") }
-            Button { pushing = image } label: { Label("Push…", systemImage: "arrow.up.circle") }
-            Button { inspecting = image } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
-            Button { historyFor = image } label: { Label("History", systemImage: "clock.arrow.circlepath") }
+            // Inspect / History / Tag / Push grow the detail morph into a sub-page, so they're offered
+            // only from the expanded detail (a collapsed card opens the detail first).
+            if isExpanded {
+                Button { withAnimation(spring) { page = .tag(image.reference) } } label: { Label("Add Tag…", systemImage: "tag") }
+                Button { withAnimation(spring) { page = .push(image.reference) } } label: { Label("Push…", systemImage: "arrow.up.circle") }
+                Button { withAnimation(spring) { page = .inspect(image.reference) } } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
+                Button { withAnimation(spring) { page = .history(image.reference) } } label: { Label("History", systemImage: "clock.arrow.circlepath") }
+            } else {
+                Button(action: onTap) { Label("Show Details…", systemImage: "rectangle.expand.vertical") }
+            }
             Button { save(image) } label: { Label("Save to tar…", systemImage: "arrow.up.doc") }
         }
         Divider()
@@ -388,7 +559,7 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func inspect(_ reference: String, in group: LocalImageTagGroup) {
-        inspecting = group.images.first { $0.reference == reference }
+        withAnimation(spring) { page = .inspect(reference) }
     }
 
     private func delete(_ reference: String) async {
