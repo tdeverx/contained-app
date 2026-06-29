@@ -117,9 +117,7 @@ struct RunSpecForm: View {
         memoryReadout(spec.memory, fallbackGB: 2)
     }
     private func memoryReadout(_ spec: String, fallbackGB: Double) -> String {
-        let gb = Self.parseMemoryGB(spec) ?? fallbackGB
-        if gb < 1 { return "\(Int(gb * 1024)) MB" }
-        return gb.rounded() == gb ? "\(Int(gb)) GB" : String(format: "%.1f GB", gb)
+        RunSpecMemoryFormatter.readout(spec, fallbackGB: fallbackGB)
     }
 
     private var platformPresetBinding: Binding<String> {
@@ -128,25 +126,12 @@ struct RunSpecForm: View {
                        set: { if $0 != "custom" { spec.platform = $0 } })
     }
 
-    /// Parse a `--memory` spec ("512M", "1G", "2g", bare bytes) into gigabytes.
     static func parseMemoryGB(_ spec: String) -> Double? {
-        let t = spec.trimmingCharacters(in: .whitespaces)
-        guard let last = t.last else { return nil }
-        if last.isLetter {
-            guard let n = Double(t.dropLast()) else { return nil }
-            switch last.uppercased() {
-            case "G": return n
-            case "M": return n / 1024
-            case "K": return n / (1024 * 1024)
-            case "T": return n * 1024
-            default: return nil
-            }
-        }
-        return Double(t).map { $0 / 1_073_741_824 }   // bare number = bytes
+        RunSpecMemoryFormatter.parseGB(spec)
     }
-    /// Format gigabytes as a `--memory` spec, using `M` for fractional values.
+
     static func memorySpec(gb: Double) -> String {
-        gb.rounded() == gb ? "\(Int(gb))G" : "\(Int(gb * 1024))M"
+        RunSpecMemoryFormatter.spec(gb: gb)
     }
 
     private var portsSection: some View {
@@ -498,60 +483,5 @@ struct RunSpecForm: View {
         Button(action: action) { Image(systemName: "minus.circle.fill") }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-    }
-}
-
-private extension RunSpec {
-    var hasResourceOptions: Bool {
-        !cpus.isEmpty || !memory.isEmpty
-    }
-
-    var hasNetworkingOptions: Bool {
-        !ports.isEmpty || !network.isEmpty || !sockets.isEmpty
-    }
-
-    var hasStorageOptions: Bool {
-        !volumes.isEmpty || !mounts.isEmpty
-    }
-
-    var hasEnvironmentOptions: Bool {
-        !env.isEmpty || !envFiles.isEmpty
-    }
-
-    var hasPersonalizationOptions: Bool {
-        !personalization.isDefault
-    }
-
-    var hasAdvancedOptions: Bool {
-        interactive || tty ||
-        !entrypoint.isEmpty ||
-        !workingDir.isEmpty ||
-        !user.isEmpty ||
-        !uid.isEmpty ||
-        !gid.isEmpty ||
-        !shmSize.isEmpty ||
-        !capAdd.isEmpty ||
-        !capDrop.isEmpty ||
-        !cidFile.isEmpty ||
-        !initImage.isEmpty ||
-        !kernel.isEmpty ||
-        noDNS ||
-        !dns.isEmpty ||
-        !dnsDomain.isEmpty ||
-        !dnsSearch.isEmpty ||
-        !dnsOption.isEmpty ||
-        !tmpfs.isEmpty ||
-        !ulimits.isEmpty ||
-        !runtime.isEmpty ||
-        !scheme.isEmpty ||
-        !progress.isEmpty ||
-        !maxConcurrentDownloads.isEmpty ||
-        !mounts.isEmpty ||
-        !labels.isEmpty ||
-        readOnly ||
-        useInit ||
-        rosetta ||
-        ssh ||
-        virtualization
     }
 }
