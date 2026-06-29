@@ -57,6 +57,18 @@ struct CreationFlow: View {
     private var springAnim: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
     private var optionPageHeight: CGFloat { GlassOptionTile.defaultHeight + (Tokens.Space.m * 2) }
     private var twoRowOptionPageHeight: CGFloat { optionPageHeight + GlassOptionTile.defaultHeight + Tokens.Space.s }
+    private var menuSize: CGSize { CGSize(width: 760, height: optionPageHeight) }
+    private var chooserSize: CGSize { CGSize(width: 640, height: twoRowOptionPageHeight) }
+
+    private enum PanelSize {
+        static let search = CGSize(width: 560, height: 540)
+        static let localImages = CGSize(width: 560, height: 520)
+        static let composeWidth: CGFloat = 440
+        static let pasteCompose = CGSize(width: 560, height: 520)
+        static let imageArchive = CGSize(width: 500, height: 360)
+        static let templates = CGSize(width: 520, height: 470)
+        static let build = CGSize(width: 640, height: 680)
+    }
 
     init(start: Start, onClose: @escaping () -> Void,
          prefill: RunSpec? = nil,
@@ -471,17 +483,17 @@ struct CreationFlow: View {
 
     private func size(for page: Page) -> CGSize {
         switch page {
-        case .menu:      return CGSize(width: 760, height: optionPageHeight)
-        case .chooser:   return CGSize(width: 640, height: twoRowOptionPageHeight)
-        case .search:    return CGSize(width: 560, height: 540)
-        case .localImages: return CGSize(width: 560, height: 520)
-        case .compose:   return CGSize(width: 440, height: optionPageHeight)
-        case .pasteCompose: return CGSize(width: 560, height: 520)
-        case .imageArchive: return CGSize(width: 500, height: 360)
-        case .templates: return CGSize(width: 520, height: 470)
+        case .menu:      return menuSize
+        case .chooser:   return chooserSize
+        case .search:    return PanelSize.search
+        case .localImages: return PanelSize.localImages
+        case .compose:   return CGSize(width: PanelSize.composeWidth, height: optionPageHeight)
+        case .pasteCompose: return PanelSize.pasteCompose
+        case .imageArchive: return PanelSize.imageArchive
+        case .templates: return PanelSize.templates
         case .network:   return Tokens.SheetSize.small
         case .volume:    return Tokens.SheetSize.small
-        case .build:     return CGSize(width: 640, height: 680)
+        case .build:     return PanelSize.build
         case .configure: return Tokens.SheetSize.form
         }
     }

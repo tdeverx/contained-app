@@ -33,12 +33,34 @@ enum Tokens {
         static let inspector = CGSize(width: 600, height: 560) // JSON inspector, history
         static let wide = CGSize(width: 720, height: 560)     // build workspace
     }
+    /// Morph-panel dimensions shared by toolbar origins and panel content.
+    enum PanelSize {
+        static let add = CGSize(width: 440, height: 300)
+        static let palette = CGSize(width: 560, height: 480)
+        static let updatesOrigin = CGSize(width: 440, height: 300)
+        static let images = CGSize(width: 520, height: 520)
+        static let imageDetail = CGSize(width: 560, height: 520)
+        static let activityOrigin = CGSize(width: 460, height: 360)
+        static let activity = CGSize(width: 560, height: 520)
+        static let templatesOrigin = CGSize(width: 440, height: 300)
+        static let templates = CGSize(width: 460, height: 480)
+        static let system = CGSize(width: 580, height: 600)
+        static let settings = CGSize(width: 560, height: 560)
+    }
     /// Icon-button / chip dimensions used across menus and headers.
     enum IconSize {
         static let rowMenu: CGFloat = 22   // ellipsis row menus
         static let control: CGFloat = 28   // sheet-header circle buttons
         static let chip: CGFloat = 30      // small status chips
         static let headerChip: CGFloat = 34 // detail-header chips
+    }
+    /// Fixed widths for compact form controls where stable alignment matters more than fluid sizing.
+    enum FormWidth {
+        static let shortReadout: CGFloat = 44
+        static let memoryReadout: CGFloat = 64
+        static let port: CGFloat = 70
+        static let containerPort: CGFloat = 80
+        static let userID: CGFloat = 90
     }
 
     /// The app toolbar band — custom (non-native) controls sized to macOS 26 Liquid Glass toolbar

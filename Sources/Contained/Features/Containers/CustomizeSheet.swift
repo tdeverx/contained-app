@@ -178,7 +178,9 @@ struct CustomizeSheet: View {
                     if style.fillBackground {
                         LabeledContent("Opacity") {
                             Slider(value: $style.backgroundOpacity, in: 0.05...0.6)
-                            Text(Format.percent(style.backgroundOpacity)).monospacedDigit().frame(width: 44)
+                            Text(Format.percent(style.backgroundOpacity))
+                                .monospacedDigit()
+                                .frame(width: Tokens.FormWidth.shortReadout)
                         }
                         Toggle("Gradient", isOn: $style.gradient)
                         if style.gradient { GradientAngleControl(angle: $style.gradientAngle) }

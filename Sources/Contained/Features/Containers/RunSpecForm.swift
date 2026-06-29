@@ -87,7 +87,7 @@ struct RunSpecForm: View {
             if !spec.memory.isEmpty {
                 LabeledContent("Memory") {
                     Slider(value: memoryGBBinding, in: 0.5...max(0.5, maxMemoryGB), step: 0.5)
-                    Text(memoryReadout).monospacedDigit().frame(width: 64)
+                    Text(memoryReadout).monospacedDigit().frame(width: Tokens.FormWidth.memoryReadout)
                 }
             }
         }
@@ -152,11 +152,11 @@ struct RunSpecForm: View {
         Group {
             ForEach($spec.ports) { $port in
                 HStack {
-                    TextField("Host", text: $port.hostPort).frame(width: 70)
+                    TextField("Host", text: $port.hostPort).frame(width: Tokens.FormWidth.port)
                     Image(systemName: "arrow.right").foregroundStyle(.secondary)
-                    TextField("Container", text: $port.containerPort).frame(width: 80)
+                    TextField("Container", text: $port.containerPort).frame(width: Tokens.FormWidth.containerPort)
                     Picker("", selection: $port.proto) { Text("tcp").tag("tcp"); Text("udp").tag("udp") }
-                        .labelsHidden().frame(width: 70)
+                        .labelsHidden().frame(width: Tokens.FormWidth.port)
                     Spacer()
                     removeButton { spec.ports.removeAll { $0.id == port.id } }
                 }
@@ -243,7 +243,9 @@ struct RunSpecForm: View {
             if spec.personalization.fillBackground {
                 LabeledContent("Opacity") {
                     Slider(value: $spec.personalization.backgroundOpacity, in: 0.05...0.6)
-                    Text(Format.percent(spec.personalization.backgroundOpacity)).monospacedDigit().frame(width: 44)
+                    Text(Format.percent(spec.personalization.backgroundOpacity))
+                        .monospacedDigit()
+                        .frame(width: Tokens.FormWidth.shortReadout)
                 }
                 Toggle("Gradient", isOn: $spec.personalization.gradient)
                     .fieldInfo("Fade the background color for a softer look.")
@@ -305,8 +307,8 @@ struct RunSpecForm: View {
             TextField("User", text: $spec.user, prompt: Text("name | uid[:gid]"))
                 .fieldInfo("Run the process as this user (-u). Or set UID/GID below.")
             HStack {
-                TextField("UID", text: $spec.uid).frame(width: 90)
-                TextField("GID", text: $spec.gid).frame(width: 90)
+                TextField("UID", text: $spec.uid).frame(width: Tokens.FormWidth.userID)
+                TextField("GID", text: $spec.gid).frame(width: Tokens.FormWidth.userID)
                 Spacer()
             }
             .fieldInfo("Numeric user / group IDs (--uid / --gid).")
@@ -315,7 +317,9 @@ struct RunSpecForm: View {
             if !spec.shmSize.isEmpty {
                 LabeledContent("Shared memory") {
                     Slider(value: shmGBBinding, in: 0.0625...max(0.0625, maxMemoryGB), step: 0.0625)
-                    Text(memoryReadout(spec.shmSize, fallbackGB: 0.0625)).monospacedDigit().frame(width: 64)
+                    Text(memoryReadout(spec.shmSize, fallbackGB: 0.0625))
+                        .monospacedDigit()
+                        .frame(width: Tokens.FormWidth.memoryReadout)
                 }
             }
 
