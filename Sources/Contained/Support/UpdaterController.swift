@@ -112,7 +112,7 @@ final class UpdaterController {
     }
 
     private static func changelogHTML(for version: String) -> String? {
-        guard let url = Bundle.main.url(forResource: "CHANGELOG", withExtension: "md"),
+        guard let url = Bundle.module.url(forResource: "CHANGELOG", withExtension: "md"),
               let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         let section = ChangelogSection.extract(version: version, from: text)
         return section.map { ChangelogSection.html(from: $0) }
