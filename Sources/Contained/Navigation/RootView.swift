@@ -23,7 +23,6 @@ struct RootView: View {
         @Bindable var settings = app.settings
         @Bindable var ui = ui
         rootShell(settings: settings)
-        .background(WindowChromeConfigurator())
         .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil; ui.advancePrefillQueue() }) {
             ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
         }
@@ -114,11 +113,11 @@ struct RootView: View {
             ZStack {
                 ContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
                 toolbarContent
-                    .ignoresSafeArea(.container, edges: [.top, .bottom])
+                    .ignoresSafeArea(.container, edges: .vertical)
             }
             // The app-wide toolbar draws up into the title-bar band; its morph panels center within the
             // content area.
-            .overlay { AppToolbar().ignoresSafeArea(.container, edges: .top) }
+            .overlay { AppToolbar().ignoresSafeArea(.container, edges: .vertical) }
             // Bypass AppKit's titlebar safe-area math for app content; our custom toolbar bands are the
             // source of truth so top and bottom spacing stay symmetrical. Applied here (outside the
             // overlay) so AppToolbar's morph panels also see the real band heights.
@@ -140,7 +139,7 @@ struct RootView: View {
         ZStack {
             ContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
             content
-                .ignoresSafeArea(.container, edges: .top)
+                .ignoresSafeArea(.container, edges: .vertical)
         }
         .environment(\.appSafeAreas, AppSafeAreaManager(system: EdgeInsets()))
         .contextMenu { backgroundMenu() }
@@ -258,28 +257,4 @@ struct RootView: View {
         }
     }
 
-}
-
-/// Keeps a transparent unified toolbar attached so AppKit lays out the traffic lights correctly.
-/// The toolbar itself stays empty; the app draws its own chrome over the top.
-private struct WindowChromeConfigurator: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { configure(view.window) }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async { configure(nsView.window) }
-    }
-
-    private func configure(_ window: NSWindow?) {
-        guard let window else { return }
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.toolbarStyle = .unified
-        if window.toolbar == nil {
-            window.toolbar = NSToolbar(identifier: "ContainedTitlebar")
-        }
-    }
 }

@@ -21,8 +21,9 @@ struct ClassicShell: View {
         } detail: {
             ClassicSectionPage(section: ui.selectedSection)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .ignoresSafeArea(.container, edges: .top)
+                .ignoresSafeArea(.container, edges: .vertical)
         }
+        .toolbar(removing: .sidebarToggle)
         .navigationSplitViewStyle(.balanced)
         .onAppear { columnVisibility = sidebarNavigationEnabled ? .all : .detailOnly }
         .onChange(of: sidebarNavigationEnabled) { _, enabled in

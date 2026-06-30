@@ -35,66 +35,108 @@ struct ContainedApp: App {
             // opens that instead of the standard Settings scene.
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") { openSettings() }
-                    .keyboardShortcut(",", modifiers: .command)
+                    .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                               ",",
+                                               modifiers: .command)
             }
-            CommandGroup(after: .newItem) {
-                // The toolbar "＋" add-menu — Container / Network / Volume.
-                Button("New…") { route(.runContainer) }
-                    .keyboardShortcut("n", modifiers: .command)
-                Button("Run Container…") { route(.runContainer) }
-                    .keyboardShortcut("r", modifiers: .command)
-                Divider()
-                if app.settings.hubSearchEnabled {
+            CommandMenu("File") {
+                Menu("Create") {
+                    Button("Run Container…") { route(.runContainer) }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "n",
+                                                   modifiers: .command)
                     Button("Pull Image…") { route(.pullImage) }
-                }
-                if app.settings.imageBuildEnabled {
+                        .disabled(!app.settings.hubSearchEnabled)
                     Button("Build Image…") { route(.build) }
+                        .disabled(!app.settings.imageBuildEnabled)
+                    Divider()
+                    Button("New Volume…") { route(.createVolume) }
+                    Button("New Network…") { route(.createNetwork) }
+                    Button("Import Compose…") { ComposeImport.pickAndImport(app: app, ui: ui) }
+                        .disabled(!app.settings.composeImportEnabled)
+                }
+                Menu("Service") {
+                    Button(app.serviceLabel) { }
+                        .disabled(true)
+                    Divider()
+                    if app.serviceHealthy {
+                        Button("Stop Service") { Task { await app.stopService() } }
+                    } else {
+                        Button("Start Service") { Task { await app.startService() } }
+                    }
+                    Button("Restart Service") { Task { await app.restartService() } }
                 }
                 Divider()
-                Button("New Volume…") { route(.createVolume) }
-                Button("New Network…") { route(.createNetwork) }
-                if app.settings.composeImportEnabled {
-                    Divider()
-                    Button("Import Compose…") { ComposeImport.pickAndImport(app: app, ui: ui) }
+                Button("Open Contained") { activateMainWindow() }
+                Button("Settings…") { openSettings() }
+                    .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                               ",",
+                                               modifiers: .command)
+                Divider()
+                Button("Check for Updates…") { app.updater.checkForUpdates() }
+                    .disabled(!app.updater.canCheckForUpdates)
+            }
+            CommandMenu("Edit") {
+                Menu("Search") {
+                    Button("Search This Page") { ui.focusSearch() }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "s",
+                                                   modifiers: .command)
+                    if app.settings.commandPaletteEnabled {
+                        Button("Command Palette…") { routePalette() }
+                            .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                       "k",
+                                                       modifiers: .command)
+                    }
+                }
+                Menu("Activity") {
+                    Button("Run Image Update Check") { Task { await app.runImageUpdateSweepNow() } }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "u",
+                                                   modifiers: .command)
+                    Button("Activity") { route(.activityHistory) }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "i",
+                                                   modifiers: .command)
                 }
             }
-            // (Find / ⌘F intentionally omitted — in-window search is being reworked and will return
-            // with the new search affordance.)
-            CommandGroup(after: .sidebar) {
-                Divider()
-                Button("Reload") { app.coordinator.wake() }
-                    .keyboardShortcut("r", modifiers: [.command, .shift])
+            CommandMenu("View") {
+                Toggle("Show Sidebar", isOn: sidebarNavigationBinding)
+                Toggle("Show Running Only", isOn: runningOnlyBinding)
                 Picker("Card Size", selection: cardSizeBinding) {
                     ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
                 }
-                Toggle("Show Running Only", isOn: runningOnlyBinding)
-            }
-            CommandGroup(after: .toolbar) {
-                if app.settings.commandPaletteEnabled {
-                    Button("Command Palette…") { routePalette() }
-                        .keyboardShortcut("k", modifiers: .command)
-                }
-                Button("Search This Page") { ui.focusSearch() }
-                    .keyboardShortcut("s", modifiers: .command)
                 Divider()
-                Button("Run Image Update Check") { Task { await app.runImageUpdateSweepNow() } }
-                    .keyboardShortcut("u", modifiers: .command)
-                Button("Activity") { route(.activityHistory) }
-                    .keyboardShortcut("i", modifiers: .command)
-            }
-            CommandMenu("Go") {
-                Button("Containers") { ui.navigate(to: .containers) }
-                    .keyboardShortcut("1", modifiers: .command)
-                Button("Images") { openSectionOrMorph(.images, morph: .updates) }
-                    .keyboardShortcut("2", modifiers: .command)
-                Button("Templates") { openSectionOrMorph(.templates, morph: .templates) }
-                    .keyboardShortcut("3", modifiers: .command)
-                Button("System") { openSectionOrMorph(.system, morph: .system) }
-                    .keyboardShortcut("4", modifiers: .command)
-                Button("Activity") { openSectionOrMorph(.activity, morph: .activity) }
-                    .keyboardShortcut("5", modifiers: .command)
-                Button("Settings") { openSettings() }
-                    .keyboardShortcut("6", modifiers: .command)
+                Button("Reload") { app.coordinator.wake() }
+                    .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                               "r",
+                                               modifiers: [.command, .shift])
+                Menu("Navigate") {
+                    Button("Containers") { ui.navigate(to: .containers) }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "1",
+                                                   modifiers: .command)
+                    Button("Images") { openSectionOrMorph(.images, morph: .updates) }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "2",
+                                                   modifiers: .command)
+                    Button("Templates") { openSectionOrMorph(.templates, morph: .templates) }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "3",
+                                                   modifiers: .command)
+                    Button("System") { openSectionOrMorph(.system, morph: .system) }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "4",
+                                                   modifiers: .command)
+                    Button("Activity") { openSectionOrMorph(.activity, morph: .activity) }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "5",
+                                                   modifiers: .command)
+                    Button("Settings") { openSettings() }
+                        .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                                   "6",
+                                                   modifiers: .command)
+                }
             }
             CommandGroup(replacing: .help) {
                 Button("Contained Help") { NSWorkspace.shared.open(Links.helpURL) }
@@ -119,9 +161,13 @@ struct ContainedApp: App {
                 .environment(app)
                 .environment(ui)
         } label: {
-            Label("\(app.containers.running.count)", systemImage: "shippingbox.fill")
+            Label {
+                Text("\(app.containers.running.count)")
+            } icon: {
+                Image(systemName: app.serviceHealthy ? "shippingbox.fill" : "shippingbox")
+            }
         }
-        .menuBarExtraStyle(.menu)
+        .menuBarExtraStyle(.window)
     }
 
     /// Binding into the persisted setting so toggling it inserts/removes the menu-bar item live.
@@ -135,6 +181,11 @@ struct ContainedApp: App {
 
     private var runningOnlyBinding: Binding<Bool> {
         Binding(get: { ui.runningOnly }, set: { ui.runningOnly = $0 })
+    }
+
+    private var sidebarNavigationBinding: Binding<Bool> {
+        Binding(get: { app.settings.sidebarNavigationEnabled },
+                set: { app.settings.sidebarNavigationEnabled = $0 })
     }
 
     private func route(_ action: PendingAction) {
@@ -182,6 +233,19 @@ struct ContainedApp: App {
         for window in NSApplication.shared.windows where window.canBecomeMain {
             window.makeKeyAndOrderFront(nil)
             break
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func keyboardShortcutIfEnabled(_ enabled: Bool,
+                                   _ keyEquivalent: KeyEquivalent,
+                                   modifiers: EventModifiers = []) -> some View {
+        if enabled {
+            keyboardShortcut(keyEquivalent, modifiers: modifiers)
+        } else {
+            self
         }
     }
 }

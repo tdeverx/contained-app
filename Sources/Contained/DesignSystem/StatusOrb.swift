@@ -43,23 +43,16 @@ struct StatusOrb: View {
     let presentation: StatusPresentation
     var size: CGFloat = 10
 
-    @State private var pulse = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     var body: some View {
         Circle()
             .fill(presentation.color)
             .frame(width: size, height: size)
             .overlay {
-                Circle()
-                    .stroke(presentation.color.opacity(0.30), lineWidth: size * 0.45)
-                    .scaleEffect(pulse ? 1.9 : 1.0)
-                    .opacity(pulse ? 0 : 0.8)
-            }
-            .onAppear {
-                guard presentation.isPulsing, !reduceMotion else { return }
-                withAnimation(.easeOut(duration: 1.1).repeatForever(autoreverses: false)) {
-                    pulse = true
+                if presentation.isPulsing {
+                    Circle()
+                        .stroke(presentation.color.opacity(0.30), lineWidth: size * 0.45)
+                        .frame(width: size * 1.85, height: size * 1.85)
+                        .opacity(0.8)
                 }
             }
             .accessibilityLabel(presentation.label)

@@ -92,6 +92,11 @@ final class HistoryStore {
         try? context.save()
     }
 
+    func unreadEventCount() -> Int {
+        (try? context.fetchCount(FetchDescriptor<EventRecord>(
+            predicate: #Predicate { !$0.isRead }))) ?? 0
+    }
+
     func templatesSnapshot() -> [TemplateSnapshot] {
         ((try? context.fetch(FetchDescriptor<Template>())) ?? []).compactMap(TemplateSnapshot.init)
     }

@@ -61,6 +61,8 @@ final class SettingsStore {
     var composeImportEnabled: Bool { didSet { defaults.set(composeImportEnabled, forKey: Keys.composeImportEnabled) } }
     /// The Dockerfile image-build workspace.
     var imageBuildEnabled: Bool { didSet { defaults.set(imageBuildEnabled, forKey: Keys.imageBuildEnabled) } }
+    /// Menu keyboard shortcuts and command shortcuts. Disabled by default.
+    var keyboardShortcutsEnabled: Bool { didSet { defaults.set(keyboardShortcutsEnabled, forKey: Keys.keyboardShortcutsEnabled) } }
     /// Toolbar-first morph UI. Off by default so the sidebar shell is the stable fresh-install path.
     var experimentalToolbarUI: Bool { didSet { defaults.set(experimentalToolbarUI, forKey: Keys.experimentalToolbarUI) } }
     /// Classic-shell sidebar visibility. Separate from the toolbar toggle so users can keep the
@@ -121,6 +123,7 @@ final class SettingsStore {
         hubSearchEnabled = defaults.object(forKey: Keys.hubSearchEnabled) as? Bool ?? false
         composeImportEnabled = defaults.object(forKey: Keys.composeImportEnabled) as? Bool ?? false
         imageBuildEnabled = defaults.object(forKey: Keys.imageBuildEnabled) as? Bool ?? false
+        keyboardShortcutsEnabled = defaults.object(forKey: Keys.keyboardShortcutsEnabled) as? Bool ?? false
         experimentalToolbarUI = defaults.object(forKey: Keys.experimentalToolbarUI) as? Bool ?? false
         sidebarNavigationEnabled = defaults.object(forKey: Keys.sidebarNavigationEnabled) as? Bool ?? true
         launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -154,6 +157,7 @@ final class SettingsStore {
                        hubSearchEnabled: hubSearchEnabled,
                        composeImportEnabled: composeImportEnabled,
                        imageBuildEnabled: imageBuildEnabled,
+                       keyboardShortcutsEnabled: keyboardShortcutsEnabled,
                        experimentalToolbarUI: experimentalToolbarUI,
                        sidebarNavigationEnabled: sidebarNavigationEnabled)
     }
@@ -186,6 +190,7 @@ final class SettingsStore {
         hubSearchEnabled = snapshot.hubSearchEnabled
         composeImportEnabled = snapshot.composeImportEnabled
         imageBuildEnabled = snapshot.imageBuildEnabled
+        keyboardShortcutsEnabled = snapshot.keyboardShortcutsEnabled
         experimentalToolbarUI = snapshot.experimentalToolbarUI
         sidebarNavigationEnabled = snapshot.sidebarNavigationEnabled
     }
@@ -226,6 +231,7 @@ final class SettingsStore {
         static let hubSearchEnabled = "experimental.hubSearch"
         static let composeImportEnabled = "experimental.composeImport"
         static let imageBuildEnabled = "experimental.imageBuild"
+        static let keyboardShortcutsEnabled = "experimental.keyboardShortcuts"
         static let experimentalToolbarUI = "experimental.toolbarUI"
         static let sidebarNavigationEnabled = "experimental.sidebarNavigation"
     }
@@ -259,6 +265,7 @@ struct SettingsBackup: Codable, Equatable {
     var hubSearchEnabled: Bool
     var composeImportEnabled: Bool
     var imageBuildEnabled: Bool
+    var keyboardShortcutsEnabled: Bool
     var experimentalToolbarUI: Bool
     var sidebarNavigationEnabled: Bool
 
@@ -268,7 +275,7 @@ struct SettingsBackup: Codable, Equatable {
         case imageUpdateIntervalHours, imageUpdateChecksEnabled, appUpdateChecksEnabled, autoRestartEnabled
         case notifyOnCrash, revealCLI, historyRetentionDays, loggingLevel, enabledLogDestinations
         case enabledLogCategories, updateChannel, commandPaletteEnabled, hubSearchEnabled
-        case composeImportEnabled, imageBuildEnabled, experimentalToolbarUI, sidebarNavigationEnabled
+        case composeImportEnabled, imageBuildEnabled, keyboardShortcutsEnabled, experimentalToolbarUI, sidebarNavigationEnabled
     }
 
     init(accentTint: AppTint,
@@ -298,6 +305,7 @@ struct SettingsBackup: Codable, Equatable {
          hubSearchEnabled: Bool,
          composeImportEnabled: Bool,
          imageBuildEnabled: Bool,
+         keyboardShortcutsEnabled: Bool = false,
          experimentalToolbarUI: Bool,
          sidebarNavigationEnabled: Bool = true) {
         self.accentTint = accentTint
@@ -327,6 +335,7 @@ struct SettingsBackup: Codable, Equatable {
         self.hubSearchEnabled = hubSearchEnabled
         self.composeImportEnabled = composeImportEnabled
         self.imageBuildEnabled = imageBuildEnabled
+        self.keyboardShortcutsEnabled = keyboardShortcutsEnabled
         self.experimentalToolbarUI = experimentalToolbarUI
         self.sidebarNavigationEnabled = sidebarNavigationEnabled
     }
@@ -363,6 +372,7 @@ struct SettingsBackup: Codable, Equatable {
         hubSearchEnabled = try container.decodeIfPresent(Bool.self, forKey: .hubSearchEnabled) ?? false
         composeImportEnabled = try container.decodeIfPresent(Bool.self, forKey: .composeImportEnabled) ?? false
         imageBuildEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageBuildEnabled) ?? false
+        keyboardShortcutsEnabled = try container.decodeIfPresent(Bool.self, forKey: .keyboardShortcutsEnabled) ?? false
         experimentalToolbarUI = try container.decodeIfPresent(Bool.self, forKey: .experimentalToolbarUI) ?? false
         sidebarNavigationEnabled = try container.decodeIfPresent(Bool.self, forKey: .sidebarNavigationEnabled) ?? true
     }
@@ -396,6 +406,7 @@ struct SettingsBackup: Codable, Equatable {
         try container.encode(hubSearchEnabled, forKey: .hubSearchEnabled)
         try container.encode(composeImportEnabled, forKey: .composeImportEnabled)
         try container.encode(imageBuildEnabled, forKey: .imageBuildEnabled)
+        try container.encode(keyboardShortcutsEnabled, forKey: .keyboardShortcutsEnabled)
         try container.encode(experimentalToolbarUI, forKey: .experimentalToolbarUI)
         try container.encode(sidebarNavigationEnabled, forKey: .sidebarNavigationEnabled)
     }

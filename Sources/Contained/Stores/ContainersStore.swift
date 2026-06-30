@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 import ContainedCore
 
 /// Owns the container list and derived live stats. Lifecycle actions run through the client and
@@ -13,6 +14,7 @@ final class ContainersStore {
     var historyByID: [String: [GraphMetric: SampleBuffer]] = [:]
     var errorMessage: String?
     var busyIDs: Set<String> = []
+    @ObservationIgnored var logger: AppLogger?
 
     var client: ContainerClient?
 
@@ -26,6 +28,7 @@ final class ContainersStore {
     /// of redundant `list` + `stats` runs when a container is busy starting up.
     private var refreshTask: Task<Void, Never>?
     private var refreshRequested = false
+    private let diagnosticLogger = Logger(subsystem: "app.contained.Contained", category: "diagnostic")
 
     var running: [ContainerSnapshot] { snapshots.filter { $0.state == .running } }
 
@@ -39,6 +42,12 @@ final class ContainersStore {
     /// caller awaits that combined pass.
     func refresh() async {
         refreshRequested = true
+        if refreshTask != nil {
+            logger?.record("Refresh already in flight; coalescing another pass",
+                           category: .system,
+                           severity: .debug)
+            diagnosticLogger.debug("Refresh already in flight; coalescing another pass")
+        }
         await refreshTaskOrStart().value
     }
 
@@ -52,11 +61,23 @@ final class ContainersStore {
     }
 
     private func drainRefreshRequests() async {
+        let started = Date()
+        var passes = 0
         repeat {
+            passes += 1
             refreshRequested = false
             await performRefresh()
         } while refreshRequested
         refreshTask = nil
+        let elapsed = Date().timeIntervalSince(started)
+        if elapsed >= 0.75 || passes > 1 {
+            let suffix = passes == 1 ? "" : "es"
+            logger?.record("Refresh finished in \(elapsed.formatted(.number.precision(.fractionLength(2))))s across \(passes) pass\(passes == 1 ? "" : "es")",
+                           category: .system,
+                           severity: elapsed >= 1.5 ? .warning : .info)
+            diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
+                                 "Refresh finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s across \(passes, privacy: .public) pass\(suffix, privacy: .public)")
+        }
     }
 
     private func performRefresh() async {
@@ -111,17 +132,17 @@ final class ContainersStore {
 
     // MARK: Lifecycle
 
-    func start(_ id: String) async { await act(id) { try await $0.start([id]) } }
+    func start(_ id: String) async { await act(id, verb: "Start") { try await $0.start([id]) } }
     func stop(_ id: String) async {
         intentionalStops.insert(id)
-        await act(id) { try await $0.stop([id]) }
+        await act(id, verb: "Stop") { try await $0.stop([id]) }
     }
     func restart(_ id: String) async {
-        await act(id) { _ = try await $0.stop([id]); _ = try await $0.start([id]) }
+        await act(id, verb: "Restart") { _ = try await $0.stop([id]); _ = try await $0.start([id]) }
     }
     func remove(_ id: String, force: Bool) async {
         intentionalStops.insert(id)
-        await act(id) { try await $0.deleteContainers([id], force: force) }
+        await act(id, verb: "Remove") { try await $0.deleteContainers([id], force: force) }
     }
 
     /// Create + run a container from the Create/Edit form. Returns the new container's id on success
@@ -130,10 +151,21 @@ final class ContainersStore {
     @discardableResult
     func run(_ spec: RunSpec) async -> String? {
         guard let client else { return nil }
+        let started = Date()
+        logger?.record("Running container from creation flow",
+                       category: .lifecycle,
+                       severity: .info)
+        diagnosticLogger.notice("Run started from creation flow")
         do {
             let output = try await client.runner.run(spec.arguments())
             performHaptic()
             await refresh()
+            let elapsed = Date().timeIntervalSince(started)
+            logger?.record("Run finished in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
+                           category: .lifecycle,
+                           severity: elapsed >= 1.5 ? .warning : .info)
+            diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
+                                 "Run finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
             if !spec.name.isEmpty { return spec.name }
             let printed = String(decoding: output, as: UTF8.self)
                 .components(separatedBy: .newlines)
@@ -142,9 +174,19 @@ final class ContainersStore {
             return printed
         } catch let error as CommandError {
             errorMessage = error.userMessage
+            let elapsed = Date().timeIntervalSince(started)
+            logger?.record("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage)",
+                           category: .lifecycle,
+                           severity: .warning)
+            diagnosticLogger.error("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage, privacy: .public)")
             return nil
         } catch {
             errorMessage = error.localizedDescription
+            let elapsed = Date().timeIntervalSince(started)
+            logger?.record("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription)",
+                           category: .lifecycle,
+                           severity: .warning)
+            diagnosticLogger.error("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }
@@ -158,36 +200,80 @@ final class ContainersStore {
         busyIDs.insert(originalID)
         intentionalStops.insert(originalID)   // don't let the watchdog fight the teardown
         defer { busyIDs.remove(originalID) }
+        let started = Date()
+        logger?.record("Recreating \(originalID)", category: .lifecycle, containerID: originalID)
+        diagnosticLogger.notice("Recreate started for \(originalID, privacy: .public)")
         do {
             _ = try? await client.stop([originalID])          // best-effort; may already be stopped
             _ = try await client.deleteContainers([originalID], force: true)
             _ = try await client.runner.run(spec.arguments())
             performHaptic()
             await refresh()
+            let elapsed = Date().timeIntervalSince(started)
+            logger?.record("Recreated \(originalID) in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
+                           category: .lifecycle,
+                           severity: elapsed >= 1.5 ? .warning : .info,
+                           containerID: originalID)
+            diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
+                                 "Recreated \(originalID, privacy: .public) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
             return true
         } catch let error as CommandError {
             errorMessage = error.userMessage
+            let elapsed = Date().timeIntervalSince(started)
+            logger?.record("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage)",
+                           category: .lifecycle,
+                           severity: .warning,
+                           containerID: originalID)
+            diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage, privacy: .public)")
             await refresh()
             return false
         } catch {
             errorMessage = error.localizedDescription
+            let elapsed = Date().timeIntervalSince(started)
+            logger?.record("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription)",
+                           category: .lifecycle,
+                           severity: .warning,
+                           containerID: originalID)
+            diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription, privacy: .public)")
             await refresh()
             return false
         }
     }
 
-    private func act(_ id: String, _ body: @escaping (ContainerClient) async throws -> Void) async {
+    private func act(_ id: String, verb: String, _ body: @escaping (ContainerClient) async throws -> Void) async {
         guard let client else { return }
         busyIDs.insert(id)
         defer { busyIDs.remove(id) }
+        let started = Date()
+        logger?.record("\(verb) \(id)", category: .lifecycle, containerID: id)
+        diagnosticLogger.notice("\(verb) started for \(id, privacy: .public)")
         do {
             try await body(client)
             performHaptic()
             await refresh()
+            let elapsed = Date().timeIntervalSince(started)
+            logger?.record("\(verb) finished in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
+                           category: .lifecycle,
+                           severity: elapsed >= 1.5 ? .warning : .info,
+                           containerID: id)
+            diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
+                                 "\(verb) finished for \(id, privacy: .public) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
         } catch let error as CommandError {
             errorMessage = error.userMessage
+            let elapsed = Date().timeIntervalSince(started)
+            logger?.record("\(verb) failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage)",
+                           category: .lifecycle,
+                           severity: .warning,
+                           containerID: id)
+            diagnosticLogger.error("\(verb) failed for \(id, privacy: .public) after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage, privacy: .public)")
         } catch {
             errorMessage = error.localizedDescription
+            let elapsed = Date().timeIntervalSince(started)
+            logger?.record("\(verb) failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription)",
+                           category: .lifecycle,
+                           severity: .warning,
+                           containerID: id)
+            diagnosticLogger.error("\(verb) failed for \(id, privacy: .public) after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

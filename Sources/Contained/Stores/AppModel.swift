@@ -156,6 +156,7 @@ final class AppModel {
     init(settings: SettingsStore = SettingsStore()) {
         self.settings = settings
         self.logger = AppLogger(settings: settings, history: historyStore)
+        self.containers.logger = logger
         imageUpdates = Self.loadImageUpdates()
         lastImageUpdateSweep = Self.loadLastImageUpdateSweep()
         historyStore.retentionDays = settings.historyRetentionDays

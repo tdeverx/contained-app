@@ -87,6 +87,7 @@ struct AppToolbar: View {
     private var topToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             settingsZone
+            sidebarToggleButton
             ToolbarViewOptions()
             Spacer(minLength: Tokens.Space.m)
             searchZone
@@ -95,6 +96,16 @@ struct AppToolbar: View {
         .padding(.leading, Tokens.Toolbar.outerPadding)
         .padding(.trailing, Tokens.Toolbar.outerPadding)
         .frame(maxWidth: .infinity)
+    }
+
+    private var sidebarToggleButton: some View {
+        GlassButton(singleItem: true) {
+            GlassButtonItem(systemName: app.settings.sidebarNavigationEnabled ? "sidebar.left" : "sidebar.left.slash",
+                            help: app.settings.sidebarNavigationEnabled ? "Hide sidebar" : "Show sidebar") {
+                app.settings.sidebarNavigationEnabled.toggle()
+            }
+        }
+        .help(app.settings.sidebarNavigationEnabled ? "Hide sidebar" : "Show sidebar")
     }
 
     /// Top-left empty glass container mirroring the traffic-light cluster width. It has no controls —

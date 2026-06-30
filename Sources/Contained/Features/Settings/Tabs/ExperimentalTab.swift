@@ -31,6 +31,9 @@ struct ExperimentalTab: View {
                 PanelToggleRow(title: "Image build workspace",
                                info: "Build an image from a Dockerfile + build context, streaming the BuildKit log.",
                                isOn: $settings.imageBuildEnabled)
+                PanelToggleRow(title: "Keyboard shortcuts",
+                               info: "Enable menu and command keyboard shortcuts. Off by default so the experimental surface stays opt-in.",
+                               isOn: $settings.keyboardShortcutsEnabled)
             }
         }
     }
