@@ -15,7 +15,26 @@ final class Template {
         self.specData = (try? JSONEncoder().encode(spec)) ?? Data()
     }
 
+    init(snapshot: TemplateSnapshot) {
+        self.name = snapshot.name
+        self.createdAt = snapshot.createdAt
+        self.specData = (try? JSONEncoder().encode(snapshot.spec)) ?? Data()
+    }
+
     var spec: RunSpec? { try? JSONDecoder().decode(RunSpec.self, from: specData) }
+}
+
+struct TemplateSnapshot: Codable {
+    var name: String
+    var createdAt: Date
+    var spec: RunSpec
+
+    init?(_ template: Template) {
+        guard let spec = template.spec else { return nil }
+        self.name = template.name
+        self.createdAt = template.createdAt
+        self.spec = spec
+    }
 }
 
 /// A few ready-to-run starters offered alongside the user's saved templates.

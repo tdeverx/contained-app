@@ -34,7 +34,7 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "Sources/Contained",
-            resources: [.process("Resources/Localizable.xcstrings")]
+            resources: [.process("Resources")]
         ),
         .testTarget(
             name: "ContainedCoreTests",

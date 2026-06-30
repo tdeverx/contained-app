@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import ContainedCore
 
 /// Root app state: locates the CLI, owns the typed client and the feature stores, and tracks the
@@ -24,6 +25,7 @@ final class AppModel {
     let health = HealthMonitor()
     let historyStore = HistoryStore()
     let updater = UpdaterController()
+    let migrator = StateMigrator()
 
     private(set) var bootstrap: Bootstrap = .checking
     private(set) var client: ContainerClient?
@@ -45,6 +47,7 @@ final class AppModel {
     /// A long-running operation surfaced as a floating progress bar (e.g. pulling an image before a
     /// run). `nil` when idle.
     var activity: ActivityState?
+    var downgradeSchemaVersion: Int?
 
     /// One in-flight operation shown in the bottom progress bar.
     struct ActivityState: Equatable {
@@ -57,6 +60,9 @@ final class AppModel {
         self.settings = settings
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
+        if case .newerOnDisk(let version) = migrator.reconcile() {
+            downgradeSchemaVersion = version
+        }
         watchdog.onRestart = { [weak self] snapshot, attempt in
             guard let self else { return }
             let name = self.personalization.resolved(id: snapshot.id, image: snapshot.image)
@@ -325,6 +331,79 @@ final class AppModel {
     func clearHistory() {
         historyStore.clearAll()
         flash("History cleared")
+    }
+
+    func exportConfiguration(to url: URL, sections: Set<AppStateSection> = Set(AppStateSection.allCases)) throws {
+        let envelope = try AppStateEnvelope.make(from: self, sections: sections)
+        let data = try JSONEncoder.containedBackup().encode(envelope)
+        try data.write(to: url, options: .atomic)
+    }
+
+    func importConfiguration(from url: URL,
+                             sections selected: Set<AppStateSection> = Set(AppStateSection.allCases),
+                             replace: Bool) throws {
+        let data = try Data(contentsOf: url)
+        let imported = try JSONDecoder.containedBackup().decode(AppStateEnvelope.self, from: data)
+        let envelope = try migrator.migrateToCurrent(imported)
+        try apply(envelope: envelope, selected: selected, replace: replace)
+        UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
+    }
+
+    func resolveDowngradeByKeepingReadableData() {
+        UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
+        downgradeSchemaVersion = nil
+        flash("Kept readable local data")
+    }
+
+    func exportForDowngradeAndReset() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.containedBackup, .json]
+        panel.nameFieldStringValue = "Contained Downgrade Backup.containedbackup"
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try exportConfiguration(to: url)
+            resetIncompatibleLocalState()
+            downgradeSchemaVersion = nil
+            flash("Exported backup and reset local state")
+        } catch {
+            flash(error.localizedDescription)
+        }
+    }
+
+    func resetIncompatibleLocalState() {
+        historyStore.clearAll()
+        UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
+    }
+
+    func purgeDeadRows() {
+        let liveContainerIDs = Set(containers.snapshots.map(\.id))
+        let liveImageRefs = Set(images.map(\.reference))
+        let personalizations = personalization.purgeOrphans(liveContainerIDs: liveContainerIDs,
+                                                            liveImageRefs: liveImageRefs)
+        let checks = healthChecks.purgeOrphans(liveContainerIDs: liveContainerIDs)
+        let history = historyStore.purgeOrphans(liveContainerIDs: liveContainerIDs)
+        flash("Cleaned \(personalizations + checks + history.events + history.metrics) stale row(s)")
+    }
+
+    private func apply(envelope: AppStateEnvelope, selected: Set<AppStateSection>, replace: Bool) throws {
+        if selected.contains(.settings), let value = envelope.sections[.settings] {
+            settings.applyBackup(try value.decode(SettingsBackup.self))
+            historyStore.retentionDays = settings.historyRetentionDays
+            updater.channel = settings.updateChannel
+        }
+        if selected.contains(.personalization), let value = envelope.sections[.personalization] {
+            personalization.applyBackup(try value.decode(PersonalizationBackup.self), replace: replace)
+        }
+        if selected.contains(.healthChecks), let value = envelope.sections[.healthChecks] {
+            healthChecks.applyBackup(try value.decode([String: HealthCheck].self), replace: replace)
+        }
+        if selected.contains(.templates), let value = envelope.sections[.templates] {
+            historyStore.applyTemplates(try value.decode([TemplateSnapshot].self), replace: replace)
+        }
+        if selected.contains(.history), let value = envelope.sections[.history] {
+            historyStore.applyHistory(try value.decode(HistoryBackup.self), replace: replace)
+        }
     }
 
     /// Start the container system service, then re-bootstrap.

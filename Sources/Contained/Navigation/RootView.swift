@@ -25,6 +25,17 @@ struct RootView: View {
             ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
         }
         .sheet(isPresented: $ui.showPalette) { CommandPalette() }
+        .sheet(isPresented: downgradeBinding) {
+            DowngradeDecisionView(schemaVersion: app.downgradeSchemaVersion ?? StateMigrator.currentSchemaVersion,
+                                  onExportAndReset: { app.exportForDowngradeAndReset() },
+                                  onKeep: { app.resolveDowngradeByKeepingReadableData() },
+                                  onQuit: { NSApplication.shared.terminate(nil) })
+        }
+        .sheet(isPresented: whatsNewBinding) {
+            ReleaseNotesView(title: "What’s New",
+                             html: app.updater.currentReleaseNotesHTML,
+                             onClose: { app.updater.markWhatsNewSeen() })
+        }
         .overlay(alignment: .bottom) {
             VStack(spacing: Tokens.Space.s) {
                 activityBar
@@ -70,6 +81,16 @@ struct RootView: View {
         // NOTE: double-click-to-zoom is NOT here — on the shell it would sit above the cards, delay
         // their taps, and fire when double-clicking a card. Pages attach it to a background layer
         // behind their content via `.zoomWindowOnBackgroundDoubleClick()` instead.
+    }
+
+    private var downgradeBinding: Binding<Bool> {
+        Binding(get: { app.downgradeSchemaVersion != nil },
+                set: { if !$0 { app.downgradeSchemaVersion = nil } })
+    }
+
+    private var whatsNewBinding: Binding<Bool> {
+        Binding(get: { app.updater.showWhatsNew },
+                set: { if !$0 { app.updater.markWhatsNewSeen() } })
     }
 
     /// The page-overflow menu (formerly the toolbar's ⋯), shown by right-clicking the background.

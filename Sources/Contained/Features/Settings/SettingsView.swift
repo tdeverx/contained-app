@@ -101,10 +101,11 @@ private struct GeneralTab: View {
                     Text("30 days").tag(30)
                 }
                 Button("Clear History…", role: .destructive) { confirmingClear = true }
+                ConfigTransferControls()
             } header: {
                 Text("Data")
             } footer: {
-                Text("How often running containers are polled, and how long persistent metrics & events are kept before pruning.")
+                Text("Backups use a versioned JSON envelope, so settings and local data can be exported before rollback or restored after upgrade.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -193,6 +194,8 @@ private struct RegistriesTab: View {
 
 private struct UpdatesTab: View {
     @Environment(AppModel.self) private var app
+    @State private var showingAvailableNotes = false
+    @State private var showingCurrentNotes = false
 
     var body: some View {
         @Bindable var settings = app.settings
@@ -220,6 +223,9 @@ private struct UpdatesTab: View {
                                      set: { app.updater.automaticallyChecks = $0 }))
                 Button("Check for Updates…") { app.updater.checkForUpdates() }
                     .disabled(!app.updater.canCheckForUpdates)
+                Button("What’s New in This Build") { showingCurrentNotes = true }
+                Button("What’s New in Available Update") { showingAvailableNotes = true }
+                    .disabled(app.updater.availableReleaseNotesHTML == nil)
             } header: {
                 Text("Updates")
             } footer: {
@@ -229,6 +235,13 @@ private struct UpdatesTab: View {
         }
         .formStyle(.grouped)
         .task { app.updater.refreshChannelAvailability() }
+        .sheet(isPresented: $showingCurrentNotes) {
+            ReleaseNotesView(title: "What’s New", html: app.updater.currentReleaseNotesHTML)
+        }
+        .sheet(isPresented: $showingAvailableNotes) {
+            ReleaseNotesView(title: "Available Update",
+                             html: app.updater.availableReleaseNotesHTML ?? "<p>No release notes are available.</p>")
+        }
     }
 
     private var channelBinding: Binding<UpdateChannel> {
