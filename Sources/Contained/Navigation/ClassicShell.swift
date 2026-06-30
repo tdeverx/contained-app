@@ -7,27 +7,38 @@ struct ClassicShell: View {
     @Environment(UIState.self) private var ui
     let sidebarNavigationEnabled: Bool
 
-    @State private var columnVisibility: NavigationSplitViewVisibility
-
     init(sidebarNavigationEnabled: Bool = true) {
         self.sidebarNavigationEnabled = sidebarNavigationEnabled
-        _columnVisibility = State(initialValue: sidebarNavigationEnabled ? .all : .detailOnly)
     }
 
     var body: some View {
         @Bindable var ui = ui
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        NavigationSplitView(columnVisibility: sidebarColumnVisibility) {
             AppSidebar(selection: $ui.selectedSection)
+                .toolbar(removing: .sidebarToggle)
         } detail: {
             ClassicSectionPage(section: ui.selectedSection)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea(.container, edges: .vertical)
         }
-        .toolbar(removing: .sidebarToggle)
         .navigationSplitViewStyle(.balanced)
-        .onAppear { columnVisibility = sidebarNavigationEnabled ? .all : .detailOnly }
+        .onAppear {
+            if !sidebarNavigationEnabled { ui.sidebarVisible = false }
+        }
         .onChange(of: sidebarNavigationEnabled) { _, enabled in
-            columnVisibility = enabled ? .all : .detailOnly
+            withAnimation(.easeInOut(duration: 0.24)) {
+                ui.sidebarVisible = enabled
+            }
+        }
+    }
+
+    private var sidebarColumnVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding {
+            sidebarNavigationEnabled && ui.sidebarVisible ? .automatic : .detailOnly
+        } set: { visibility in
+            if visibility == .detailOnly {
+                ui.sidebarVisible = false
+            }
         }
     }
 }
@@ -60,6 +71,7 @@ private struct AppSidebar: View {
             }
         }
         .listStyle(.sidebar)
+        .tint(app.settings.accentTint.color)
         .navigationTitle("Contained")
     }
 

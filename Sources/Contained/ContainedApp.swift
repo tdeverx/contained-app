@@ -7,6 +7,10 @@ struct ContainedApp: App {
     @State private var app = AppModel()
     @State private var ui = UIState()
 
+    init() {
+        NSWindow.allowsAutomaticWindowTabbing = false
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -15,7 +19,11 @@ struct ContainedApp: App {
                 .modelContainer(app.historyStore.container)
                 .frame(minWidth: 720, minHeight: 480)
                 .toolbar {
-                    ToolbarItem(placement: .automatic) { EmptyView() }
+                    ToolbarItem(placement: .automatic) {
+                        Color.clear
+                            .frame(width: 0, height: 0)
+                            .accessibilityHidden(true)
+                    }
                 }
         }
         .windowStyle(.hiddenTitleBar)
@@ -39,7 +47,7 @@ struct ContainedApp: App {
                                                ",",
                                                modifiers: .command)
             }
-            CommandMenu("File") {
+            CommandGroup(replacing: .newItem) {
                 Menu("Create") {
                     Button("Run Container…") { route(.runContainer) }
                         .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
@@ -55,6 +63,8 @@ struct ContainedApp: App {
                     Button("Import Compose…") { ComposeImport.pickAndImport(app: app, ui: ui) }
                         .disabled(!app.settings.composeImportEnabled)
                 }
+            }
+            CommandGroup(after: .importExport) {
                 Menu("Service") {
                     Button(app.serviceLabel) { }
                         .disabled(true)
@@ -68,19 +78,14 @@ struct ContainedApp: App {
                 }
                 Divider()
                 Button("Open Contained") { activateMainWindow() }
-                Button("Settings…") { openSettings() }
-                    .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
-                                               ",",
-                                               modifiers: .command)
-                Divider()
                 Button("Check for Updates…") { app.updater.checkForUpdates() }
                     .disabled(!app.updater.canCheckForUpdates)
             }
-            CommandMenu("Edit") {
+            CommandGroup(after: .textEditing) {
                 Menu("Search") {
                     Button("Search This Page") { ui.focusSearch() }
                         .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
-                                                   "s",
+                                                   "f",
                                                    modifiers: .command)
                     if app.settings.commandPaletteEnabled {
                         Button("Command Palette…") { routePalette() }
@@ -100,8 +105,14 @@ struct ContainedApp: App {
                                                    modifiers: .command)
                 }
             }
-            CommandMenu("View") {
-                Toggle("Show Sidebar", isOn: sidebarNavigationBinding)
+            CommandGroup(replacing: .sidebar) {
+                Toggle("Show Sidebar", isOn: sidebarVisibilityBinding)
+                    .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
+                                               "s",
+                                               modifiers: .command)
+                    .disabled(!app.settings.sidebarNavigationEnabled)
+            }
+            CommandGroup(replacing: .toolbar) {
                 Toggle("Show Running Only", isOn: runningOnlyBinding)
                 Picker("Card Size", selection: cardSizeBinding) {
                     ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
@@ -183,9 +194,9 @@ struct ContainedApp: App {
         Binding(get: { ui.runningOnly }, set: { ui.runningOnly = $0 })
     }
 
-    private var sidebarNavigationBinding: Binding<Bool> {
-        Binding(get: { app.settings.sidebarNavigationEnabled },
-                set: { app.settings.sidebarNavigationEnabled = $0 })
+    private var sidebarVisibilityBinding: Binding<Bool> {
+        Binding(get: { app.settings.sidebarNavigationEnabled && ui.sidebarVisible },
+                set: { ui.setSidebarVisible($0) })
     }
 
     private func route(_ action: PendingAction) {

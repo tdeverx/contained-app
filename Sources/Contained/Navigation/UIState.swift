@@ -45,6 +45,7 @@ final class UIState {
     var prefill = PrefillPresentation()
     var runningOnly = false
     var selectedSection: AppSection = .containers
+    var sidebarVisible = true
     var toolbarUIEnabled = false
     /// How the Containers page groups its cards (Network / Volume / Image / Flat) and orders them —
     /// driven by the top-left toolbar view-options control.
@@ -153,6 +154,12 @@ final class UIState {
         if activeMorph != nil { requestMorphClose() }
     }
 
+    func setSidebarVisible(_ visible: Bool) {
+        withAnimation(.easeInOut(duration: 0.24)) {
+            sidebarVisible = visible
+        }
+    }
+
     func navigateForClassicFallback(_ action: PendingAction) {
         switch action {
         case .runContainer:
@@ -255,7 +262,7 @@ final class UIState {
         activeMorph = .add
     }
 
-    /// Bumped by Cmd-S to focus the toolbar page-search field (without opening the command palette).
+    /// Bumped by Cmd-F to focus the toolbar page-search field (without opening the command palette).
     func focusSearch() {
         if activeMorph != nil {
             requestMorphClose()

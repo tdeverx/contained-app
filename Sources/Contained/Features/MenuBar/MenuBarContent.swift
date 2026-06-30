@@ -101,6 +101,11 @@ struct MenuBarContent: View {
 
             Menu("Shortcuts") {
                 if app.settings.keyboardShortcutsEnabled {
+                    Button(ui.sidebarVisible ? "Hide Sidebar" : "Show Sidebar") { activate(); ui.setSidebarVisible(!ui.sidebarVisible) }
+                        .keyboardShortcut("s", modifiers: .command)
+                        .disabled(!app.settings.sidebarNavigationEnabled)
+                    Button("Search This Page") { activate(); ui.focusSearch() }
+                        .keyboardShortcut("f", modifiers: .command)
                     Button("Settings") { activate(); openSettings(to: .appearance) }
                         .keyboardShortcut(";", modifiers: .command)
                     Button("Run Container") { activate(); route(.runContainer) }

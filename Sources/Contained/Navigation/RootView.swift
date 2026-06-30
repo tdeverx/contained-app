@@ -250,11 +250,7 @@ struct RootView: View {
 
     @ViewBuilder
     private var toolbarContent: some View {
-        if app.settings.sidebarNavigationEnabled {
-            ClassicShell(sidebarNavigationEnabled: true)
-        } else {
-            ContainersGridView()
-        }
+        ClassicShell(sidebarNavigationEnabled: app.settings.sidebarNavigationEnabled)
     }
 
 }

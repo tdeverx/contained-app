@@ -208,7 +208,6 @@ struct ContainerCard: View {
                 Image(systemName: statusSymbol)
                     .font(.caption2)
                     .foregroundStyle(statusColor)
-                    .symbolEffect(.pulse, options: .repeating, value: statusState == .online)
             }
         } text: {
             if styleForDisplay.showStatusText {

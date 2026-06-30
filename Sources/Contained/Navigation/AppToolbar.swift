@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import AppKit
 import ContainedCore
 
 /// The app-wide, custom (non-native) toolbar that lives in the title-bar band of the hidden-title-bar
@@ -87,25 +86,13 @@ struct AppToolbar: View {
     private var topToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             settingsZone
-            sidebarToggleButton
             ToolbarViewOptions()
             Spacer(minLength: Tokens.Space.m)
             searchZone
         }
-        // No leading inset here — the Settings button sits at the window edge, behind the traffic lights.
         .padding(.leading, Tokens.Toolbar.outerPadding)
         .padding(.trailing, Tokens.Toolbar.outerPadding)
         .frame(maxWidth: .infinity)
-    }
-
-    private var sidebarToggleButton: some View {
-        GlassButton(singleItem: true) {
-            GlassButtonItem(systemName: app.settings.sidebarNavigationEnabled ? "sidebar.left" : "sidebar.left.slash",
-                            help: app.settings.sidebarNavigationEnabled ? "Hide sidebar" : "Show sidebar") {
-                app.settings.sidebarNavigationEnabled.toggle()
-            }
-        }
-        .help(app.settings.sidebarNavigationEnabled ? "Hide sidebar" : "Show sidebar")
     }
 
     /// Top-left empty glass container mirroring the traffic-light cluster width. It has no controls —
@@ -479,6 +466,7 @@ struct AppToolbar: View {
 /// The Activity bell in the bottom toolbar cluster. Filled + accent-tinted when there are unread
 /// events; plain otherwise. Owns its own `@Query` so the badge updates live as events land.
 private struct ActivityToolbarButton: View {
+    @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @Query(filter: #Predicate<EventRecord> { !$0.isRead }) private var unread: [EventRecord]
 
@@ -489,7 +477,7 @@ private struct ActivityToolbarButton: View {
                                isIcon: true,
                                action: { ui.toggleMorph(.activity) }) {
             Image(systemName: hasUnread ? "bell.fill" : "bell")
-                .foregroundStyle(hasUnread ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.white))
+                .foregroundStyle(app.settings.accentTint.color)
         }
     }
 }
