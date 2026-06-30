@@ -41,7 +41,7 @@ struct UpdatesTab: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button("What’s New in This Build") { showingCurrentNotes = true }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Button("What’s New in Available Update") { showingAvailableNotes = true }
+                Button(availableUpdateNotesLabel) { showingAvailableNotes = true }
                     .disabled(app.updater.availableReleaseNotesHTML == nil)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -62,12 +62,29 @@ struct UpdatesTab: View {
         }
         .task { app.updater.refreshChannelAvailability() }
         .sheet(isPresented: $showingCurrentNotes) {
-            ReleaseNotesView(title: "What’s New", html: app.updater.currentReleaseNotesHTML)
+            ReleaseNotesView(title: "What’s New",
+                             html: app.updater.currentReleaseNotesHTML,
+                             onClose: { showingCurrentNotes = false })
         }
         .sheet(isPresented: $showingAvailableNotes) {
-            ReleaseNotesView(title: "Available Update",
-                             html: app.updater.availableReleaseNotesHTML ?? "<p>No release notes are available.</p>")
+            ReleaseNotesView(title: availableUpdateNotesTitle,
+                             html: app.updater.availableReleaseNotesHTML ?? "<p>No release notes are available.</p>",
+                             onClose: { showingAvailableNotes = false })
         }
+    }
+
+    private var availableUpdateNotesLabel: String {
+        if let version = app.updater.availableUpdateDisplayVersion {
+            return "What’s New in \(version)"
+        }
+        return "What’s New in Available Update"
+    }
+
+    private var availableUpdateNotesTitle: String {
+        if let version = app.updater.availableUpdateDisplayVersion {
+            return "What’s New in \(version)"
+        }
+        return "Available Update"
     }
 
     private var channelBinding: Binding<UpdateChannel> {

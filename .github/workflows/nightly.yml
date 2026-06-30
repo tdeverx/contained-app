@@ -11,10 +11,13 @@ name: Nightly
 on:
   push:
     branches: [nightly]
-    # Docs/meta-only changes don't need a build. For anything else (e.g. a
-    # cleanup under a build path), put [skip ci] in the commit message.
+    # Docs/meta-only changes don't need a build. Changelog changes do, because the changelog is
+    # bundled into the app and drives GitHub/Sparkle release notes.
     paths-ignore:
-      - '**/*.md'
+      - 'docs/**'
+      - 'README.md'
+      - 'CODE_OF_CONDUCT.md'
+      - '.github/CONTRIBUTING.md'
       - '.github/assets/**'
       - 'LICENSE'
       - 'NOTICE'
@@ -44,6 +47,7 @@ jobs:
 
       - name: Build & test
         run: |
+          ./scripts/sync-changelog-resource.sh
           swift build -c release
           swift test
 

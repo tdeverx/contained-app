@@ -19,6 +19,8 @@ VERSION="${VERSION:-1.0.0-beta.1}"
 # increases; fall back to 1 outside a git checkout.
 BUILD="${BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
 
+./scripts/sync-changelog-resource.sh
+
 echo "▸ Building ($CONFIG)…"
 swift build -c "$CONFIG"
 

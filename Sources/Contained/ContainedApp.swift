@@ -156,7 +156,7 @@ struct ContainedApp: App {
                 Button("Keyboard Shortcuts") { NSWorkspace.shared.open(Links.shortcutsURL) }
                 Button("Troubleshooting") { NSWorkspace.shared.open(Links.troubleshootingURL) }
                 Divider()
-                Button("Release Notes") { NSWorkspace.shared.open(Links.releasesURL) }
+                Button("Release Notes") { showReleaseNotes() }
                 Button("Architecture") { NSWorkspace.shared.open(Links.architectureURL) }
                 Button("Contributing") { NSWorkspace.shared.open(Links.contributingURL) }
                 Divider()
@@ -230,6 +230,11 @@ struct ContainedApp: App {
         } else {
             ui.navigate(to: page == .registries ? .registries : .settings)
         }
+    }
+
+    private func showReleaseNotes() {
+        activateMainWindow()
+        app.updater.presentCurrentReleaseNotes()
     }
 
     /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).
