@@ -11,7 +11,6 @@ final class ContainersStore {
     var statsByID: [String: StatsDelta] = [:]
     /// Per-container, per-metric sparkline history.
     var historyByID: [String: [GraphMetric: SampleBuffer]] = [:]
-    var isLoading = false
     var errorMessage: String?
     var busyIDs: Set<String> = []
 
@@ -22,6 +21,13 @@ final class ContainersStore {
     /// IDs the user (not a crash) just stopped/removed, so the RestartWatchdog won't fight them.
     private var intentionalStops: Set<String> = []
 
+    /// The currently-running refresh, if any. Refreshes are serialized through this so a user action
+    /// and the background polling tick can't run `list`+`stats` concurrently — overlapping runs used
+    /// to decode JSON on the main actor in parallel and stomp the shared stats dictionaries, which is
+    /// what made start/stop feel like it hung the UI. Each caller awaits a pass that begins strictly
+    /// after every previously-enqueued one, so an action always observes its own post-CLI state.
+    private var refreshChain: Task<Void, Never>?
+
     var running: [ContainerSnapshot] { snapshots.filter { $0.state == .running } }
 
     /// True (consuming the flag) if the given container's last stop was user-initiated.
@@ -29,13 +35,28 @@ final class ContainersStore {
         intentionalStops.remove(id) != nil
     }
 
+    /// Re-list containers and resample stats. Serialized: if a refresh is already running, this one is
+    /// chained to begin once it finishes (never concurrently), and the caller awaits that later pass.
     func refresh() async {
+        let previous = refreshChain
+        let task = Task { @MainActor [weak self] in
+            await previous?.value
+            await self?.performRefresh()
+        }
+        refreshChain = task
+        await task.value
+        // Clear the chain once the tail pass finishes, so it doesn't pin an ever-growing task list.
+        if refreshChain == task { refreshChain = nil }
+    }
+
+    private func performRefresh() async {
         guard let client else { return }
-        isLoading = true
-        defer { isLoading = false }
         do {
-            snapshots = try await client.listContainers(all: true)
+            let listed = try await client.listContainers(all: true)
                 .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+            // Only publish when the list actually changed: reassigning an identical array would
+            // needlessly invalidate the whole grid (and every card's sparkline) on each idle tick.
+            if listed != snapshots { snapshots = listed }
             // Drop intentional-stop flags for containers that no longer exist, so the set can't grow
             // unbounded as containers are recreated/removed over a long session.
             intentionalStops.formIntersection(Set(snapshots.map(\.id)))
