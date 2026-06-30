@@ -14,6 +14,9 @@ struct ContainedApp: App {
                 .environment(ui)
                 .modelContainer(app.historyStore.container)
                 .frame(minWidth: 720, minHeight: 480)
+                .toolbar {
+                    ToolbarItem(placement: .automatic) { EmptyView() }
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1200, height: 800)

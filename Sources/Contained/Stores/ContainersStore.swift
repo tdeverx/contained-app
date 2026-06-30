@@ -21,12 +21,11 @@ final class ContainersStore {
     /// IDs the user (not a crash) just stopped/removed, so the RestartWatchdog won't fight them.
     private var intentionalStops: Set<String> = []
 
-    /// The currently-running refresh, if any. Refreshes are serialized through this so a user action
-    /// and the background polling tick can't run `list`+`stats` concurrently — overlapping runs used
-    /// to decode JSON on the main actor in parallel and stomp the shared stats dictionaries, which is
-    /// what made start/stop feel like it hung the UI. Each caller awaits a pass that begins strictly
-    /// after every previously-enqueued one, so an action always observes its own post-CLI state.
-    private var refreshChain: Task<Void, Never>?
+    /// The currently-running refresh, if any. Refresh requests are coalesced so a burst of user
+    /// actions plus the polling loop only keeps one trailing pass alive instead of stacking a queue
+    /// of redundant `list` + `stats` runs when a container is busy starting up.
+    private var refreshTask: Task<Void, Never>?
+    private var refreshRequested = false
 
     var running: [ContainerSnapshot] { snapshots.filter { $0.state == .running } }
 
@@ -36,17 +35,28 @@ final class ContainersStore {
     }
 
     /// Re-list containers and resample stats. Serialized: if a refresh is already running, this one is
-    /// chained to begin once it finishes (never concurrently), and the caller awaits that later pass.
+    /// coalesced into the trailing pass once the current one finishes (never concurrently), and the
+    /// caller awaits that combined pass.
     func refresh() async {
-        let previous = refreshChain
+        refreshRequested = true
+        await refreshTaskOrStart().value
+    }
+
+    private func refreshTaskOrStart() -> Task<Void, Never> {
+        if let refreshTask { return refreshTask }
         let task = Task { @MainActor [weak self] in
-            await previous?.value
-            await self?.performRefresh()
+            _ = await self?.drainRefreshRequests()
         }
-        refreshChain = task
-        await task.value
-        // Clear the chain once the tail pass finishes, so it doesn't pin an ever-growing task list.
-        if refreshChain == task { refreshChain = nil }
+        refreshTask = task
+        return task
+    }
+
+    private func drainRefreshRequests() async {
+        repeat {
+            refreshRequested = false
+            await performRefresh()
+        } while refreshRequested
+        refreshTask = nil
     }
 
     private func performRefresh() async {

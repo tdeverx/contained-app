@@ -63,6 +63,9 @@ final class SettingsStore {
     var imageBuildEnabled: Bool { didSet { defaults.set(imageBuildEnabled, forKey: Keys.imageBuildEnabled) } }
     /// Toolbar-first morph UI. Off by default so the sidebar shell is the stable fresh-install path.
     var experimentalToolbarUI: Bool { didSet { defaults.set(experimentalToolbarUI, forKey: Keys.experimentalToolbarUI) } }
+    /// Classic-shell sidebar visibility. Separate from the toolbar toggle so users can keep the
+    /// stable content shell but reclaim width when they want a page-only layout.
+    var sidebarNavigationEnabled: Bool { didSet { defaults.set(sidebarNavigationEnabled, forKey: Keys.sidebarNavigationEnabled) } }
 
     /// Register/unregister the app as a login item via `SMAppService`. Backed by the live service
     /// status; failures (e.g. unsigned dev build) leave the stored value and the status governs.
@@ -119,6 +122,7 @@ final class SettingsStore {
         composeImportEnabled = defaults.object(forKey: Keys.composeImportEnabled) as? Bool ?? false
         imageBuildEnabled = defaults.object(forKey: Keys.imageBuildEnabled) as? Bool ?? false
         experimentalToolbarUI = defaults.object(forKey: Keys.experimentalToolbarUI) as? Bool ?? false
+        sidebarNavigationEnabled = defaults.object(forKey: Keys.sidebarNavigationEnabled) as? Bool ?? true
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
@@ -150,7 +154,8 @@ final class SettingsStore {
                        hubSearchEnabled: hubSearchEnabled,
                        composeImportEnabled: composeImportEnabled,
                        imageBuildEnabled: imageBuildEnabled,
-                       experimentalToolbarUI: experimentalToolbarUI)
+                       experimentalToolbarUI: experimentalToolbarUI,
+                       sidebarNavigationEnabled: sidebarNavigationEnabled)
     }
 
     func applyBackup(_ snapshot: SettingsBackup) {
@@ -182,6 +187,7 @@ final class SettingsStore {
         composeImportEnabled = snapshot.composeImportEnabled
         imageBuildEnabled = snapshot.imageBuildEnabled
         experimentalToolbarUI = snapshot.experimentalToolbarUI
+        sidebarNavigationEnabled = snapshot.sidebarNavigationEnabled
     }
 
     private static func loadSet<T: RawRepresentable & Hashable>(_ type: T.Type,
@@ -221,6 +227,7 @@ final class SettingsStore {
         static let composeImportEnabled = "experimental.composeImport"
         static let imageBuildEnabled = "experimental.imageBuild"
         static let experimentalToolbarUI = "experimental.toolbarUI"
+        static let sidebarNavigationEnabled = "experimental.sidebarNavigation"
     }
 }
 
@@ -253,6 +260,7 @@ struct SettingsBackup: Codable, Equatable {
     var composeImportEnabled: Bool
     var imageBuildEnabled: Bool
     var experimentalToolbarUI: Bool
+    var sidebarNavigationEnabled: Bool
 
     private enum CodingKeys: String, CodingKey {
         case accentTint, appearance, density, windowMaterial, modalMaterial, buttonMaterial, cardMaterial
@@ -260,7 +268,7 @@ struct SettingsBackup: Codable, Equatable {
         case imageUpdateIntervalHours, imageUpdateChecksEnabled, appUpdateChecksEnabled, autoRestartEnabled
         case notifyOnCrash, revealCLI, historyRetentionDays, loggingLevel, enabledLogDestinations
         case enabledLogCategories, updateChannel, commandPaletteEnabled, hubSearchEnabled
-        case composeImportEnabled, imageBuildEnabled, experimentalToolbarUI
+        case composeImportEnabled, imageBuildEnabled, experimentalToolbarUI, sidebarNavigationEnabled
     }
 
     init(accentTint: AppTint,
@@ -290,7 +298,8 @@ struct SettingsBackup: Codable, Equatable {
          hubSearchEnabled: Bool,
          composeImportEnabled: Bool,
          imageBuildEnabled: Bool,
-         experimentalToolbarUI: Bool) {
+         experimentalToolbarUI: Bool,
+         sidebarNavigationEnabled: Bool = true) {
         self.accentTint = accentTint
         self.appearance = appearance
         self.density = density
@@ -319,6 +328,7 @@ struct SettingsBackup: Codable, Equatable {
         self.composeImportEnabled = composeImportEnabled
         self.imageBuildEnabled = imageBuildEnabled
         self.experimentalToolbarUI = experimentalToolbarUI
+        self.sidebarNavigationEnabled = sidebarNavigationEnabled
     }
 
     init(from decoder: Decoder) throws {
@@ -354,6 +364,7 @@ struct SettingsBackup: Codable, Equatable {
         composeImportEnabled = try container.decodeIfPresent(Bool.self, forKey: .composeImportEnabled) ?? false
         imageBuildEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageBuildEnabled) ?? false
         experimentalToolbarUI = try container.decodeIfPresent(Bool.self, forKey: .experimentalToolbarUI) ?? false
+        sidebarNavigationEnabled = try container.decodeIfPresent(Bool.self, forKey: .sidebarNavigationEnabled) ?? true
     }
 
     func encode(to encoder: Encoder) throws {
@@ -386,5 +397,6 @@ struct SettingsBackup: Codable, Equatable {
         try container.encode(composeImportEnabled, forKey: .composeImportEnabled)
         try container.encode(imageBuildEnabled, forKey: .imageBuildEnabled)
         try container.encode(experimentalToolbarUI, forKey: .experimentalToolbarUI)
+        try container.encode(sidebarNavigationEnabled, forKey: .sidebarNavigationEnabled)
     }
 }

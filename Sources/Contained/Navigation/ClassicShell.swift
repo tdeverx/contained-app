@@ -5,10 +5,18 @@ import ContainedCore
 struct ClassicShell: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
+    let sidebarNavigationEnabled: Bool
+
+    @State private var columnVisibility: NavigationSplitViewVisibility
+
+    init(sidebarNavigationEnabled: Bool = true) {
+        self.sidebarNavigationEnabled = sidebarNavigationEnabled
+        _columnVisibility = State(initialValue: sidebarNavigationEnabled ? .all : .detailOnly)
+    }
 
     var body: some View {
         @Bindable var ui = ui
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             AppSidebar(selection: $ui.selectedSection)
         } detail: {
             ClassicSectionPage(section: ui.selectedSection)
@@ -16,6 +24,10 @@ struct ClassicShell: View {
                 .ignoresSafeArea(.container, edges: .top)
         }
         .navigationSplitViewStyle(.balanced)
+        .onAppear { columnVisibility = sidebarNavigationEnabled ? .all : .detailOnly }
+        .onChange(of: sidebarNavigationEnabled) { _, enabled in
+            columnVisibility = enabled ? .all : .detailOnly
+        }
     }
 }
 

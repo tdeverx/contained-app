@@ -16,6 +16,9 @@ struct ExperimentalTab: View {
                 PanelToggleRow(title: "Toolbar-first UI",
                                info: "Use the floating morph toolbar instead of the default sidebar and menu navigation.",
                                isOn: $settings.experimentalToolbarUI)
+                PanelToggleRow(title: "Sidebar navigation",
+                               info: "Keep the sidebar visible in either shell. Turn this off for a page-only layout.",
+                               isOn: $settings.sidebarNavigationEnabled)
                 PanelToggleRow(title: "Command palette (⌘K)",
                                info: "The ⌘K command index: fuzzy search across every app, container, image, and resource action. Page search and menu commands work regardless of this setting.",
                                isOn: $settings.commandPaletteEnabled)
