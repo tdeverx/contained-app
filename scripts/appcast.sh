@@ -28,7 +28,8 @@ KEY_ARGS=()
 [ -n "${ED_KEY_FILE:-}" ] && KEY_ARGS=(--ed-key-file "$ED_KEY_FILE")
 
 echo "▸ Generating appcast for $UPDATES_DIR (download prefix: $DOWNLOAD_PREFIX)…"
-"$SPARKLE_BIN/generate_appcast" "${KEY_ARGS[@]}" --download-url-prefix "$DOWNLOAD_PREFIX" "$UPDATES_DIR"
+./scripts/release-notes.sh "$UPDATES_DIR"
+"$SPARKLE_BIN/generate_appcast" "${KEY_ARGS[@]}" --embed-release-notes --download-url-prefix "$DOWNLOAD_PREFIX" "$UPDATES_DIR"
 
 # This branch's feed lives at the repo root; CI commits it back to the same branch.
 cp "$UPDATES_DIR/appcast.xml" appcast.xml

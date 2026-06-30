@@ -32,6 +32,21 @@ final class HealthCheckStore {
         persist()
     }
 
+    func backupSnapshot() -> [String: HealthCheck] { checks }
+
+    func applyBackup(_ snapshot: [String: HealthCheck], replace: Bool) {
+        if replace { checks = snapshot }
+        else { checks.merge(snapshot) { _, imported in imported } }
+        persist()
+    }
+
+    func purgeOrphans(liveContainerIDs: Set<String>) -> Int {
+        let before = checks.count
+        checks = checks.filter { liveContainerIDs.contains($0.key) }
+        persist()
+        return before - checks.count
+    }
+
     private func persist() {
         if let data = try? JSONEncoder().encode(checks) { defaults.set(data, forKey: key) }
     }

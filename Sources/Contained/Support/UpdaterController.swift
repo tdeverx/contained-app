@@ -13,9 +13,19 @@ import Sparkle
 final class UpdaterController {
     @ObservationIgnored private var controller: SPUStandardUpdaterController?
     @ObservationIgnored private let channelDelegate = ChannelDelegate()
+    @ObservationIgnored private let defaults: UserDefaults
 
-    init(channel: UpdateChannel = .stable) {
+    private static let lastSeenVersionKey = "updates.lastSeenVersion"
+
+    var availableReleaseNotesHTML: String?
+    var showWhatsNew = false
+
+    init(channel: UpdateChannel = .stable, defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         channelDelegate.channel = channel
+        channelDelegate.onUpdateFound = { [weak self] item in
+            self?.availableReleaseNotesHTML = item.itemDescription
+        }
         // Seed the current channel as available so the picker shows a valid selection immediately;
         // the probe fills in (or removes) the rest.
         availableChannels = [channel]
@@ -25,6 +35,7 @@ final class UpdaterController {
         controller = SPUStandardUpdaterController(startingUpdater: true,
                                                   updaterDelegate: channelDelegate, userDriverDelegate: nil)
         #endif
+        showWhatsNewIfNeeded()
     }
 
     func checkForUpdates() { controller?.checkForUpdates(nil) }
@@ -77,12 +88,83 @@ final class UpdaterController {
         return (resp as? HTTPURLResponse)?.statusCode == 200
     }
 
+    var currentReleaseNotesHTML: String {
+        Self.changelogHTML(for: Self.runningDisplayVersion()) ?? "<p>No release notes are bundled for this build.</p>"
+    }
+
+    func markWhatsNewSeen() {
+        defaults.set(Self.runningDisplayVersion(), forKey: Self.lastSeenVersionKey)
+        showWhatsNew = false
+    }
+
+    private func showWhatsNewIfNeeded() {
+        let version = Self.runningDisplayVersion()
+        guard defaults.string(forKey: Self.lastSeenVersionKey) != version else { return }
+        defaults.set(version, forKey: Self.lastSeenVersionKey)
+        showWhatsNew = Self.changelogHTML(for: version) != nil
+    }
+
+    private static func runningDisplayVersion() -> String {
+        let info = Bundle.main.infoDictionary
+        return (info?["CFBundleShortVersionString"] as? String)
+            ?? (info?["CFBundleVersion"] as? String)
+            ?? "1.0"
+    }
+
+    private static func changelogHTML(for version: String) -> String? {
+        guard let url = Bundle.main.url(forResource: "CHANGELOG", withExtension: "md"),
+              let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        let section = ChangelogSection.extract(version: version, from: text)
+        return section.map { ChangelogSection.html(from: $0) }
+    }
+
     /// Sparkle's delegate must be an `NSObject`. It points the updater at the selected channel's feed
     /// (overriding `SUFeedURL`) and reports the allowed channel set (empty — feed selection *is* the
     /// channel with per-branch feeds).
     private final class ChannelDelegate: NSObject, SPUUpdaterDelegate {
         var channel: UpdateChannel = .stable
+        var onUpdateFound: ((SUAppcastItem) -> Void)?
         func feedURLString(for updater: SPUUpdater) -> String? { channel.feedURL }
         func allowedChannels(for updater: SPUUpdater) -> Set<String> { channel.allowedChannels }
+        func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+            onUpdateFound?(item)
+        }
+    }
+}
+
+private enum ChangelogSection {
+    static func extract(version: String, from changelog: String) -> String? {
+        let lines = changelog.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        guard let start = lines.firstIndex(where: { line in
+            line.hasPrefix("## ") && (line.contains(version) || line.contains("[\(version)]"))
+        }) else { return nil }
+        let end = lines[(start + 1)...].firstIndex { $0.hasPrefix("## ") } ?? lines.endIndex
+        return lines[(start + 1)..<end].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func html(from markdown: String) -> String {
+        let escaped = markdown
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+        let lines = escaped.split(separator: "\n", omittingEmptySubsequences: false)
+        var html = ""
+        var inList = false
+        for line in lines {
+            if line.hasPrefix("### ") {
+                if inList { html += "</ul>"; inList = false }
+                html += "<h3>\(line.dropFirst(4))</h3>"
+            } else if line.hasPrefix("- ") {
+                if !inList { html += "<ul>"; inList = true }
+                html += "<li>\(line.dropFirst(2))</li>"
+            } else if line.trimmingCharacters(in: .whitespaces).isEmpty {
+                if inList { html += "</ul>"; inList = false }
+            } else {
+                if inList { html += "</ul>"; inList = false }
+                html += "<p>\(line)</p>"
+            }
+        }
+        if inList { html += "</ul>" }
+        return html
     }
 }

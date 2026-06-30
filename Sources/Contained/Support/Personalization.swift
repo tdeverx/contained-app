@@ -81,6 +81,31 @@ final class PersonalizationStore {
         imageDefaults = Self.load(defaults, Keys.imageDefaults)
     }
 
+    func backupSnapshot() -> PersonalizationBackup {
+        PersonalizationBackup(overrides: overrides, imageDefaults: imageDefaults)
+    }
+
+    func applyBackup(_ snapshot: PersonalizationBackup, replace: Bool) {
+        if replace {
+            overrides = snapshot.overrides
+            imageDefaults = snapshot.imageDefaults
+        } else {
+            overrides.merge(snapshot.overrides) { _, imported in imported }
+            imageDefaults.merge(snapshot.imageDefaults) { _, imported in imported }
+        }
+        persist(Keys.overrides, overrides)
+        persist(Keys.imageDefaults, imageDefaults)
+    }
+
+    func purgeOrphans(liveContainerIDs: Set<String>, liveImageRefs: Set<String>) -> Int {
+        let before = overrides.count + imageDefaults.count
+        overrides = overrides.filter { liveContainerIDs.contains($0.key) }
+        imageDefaults = imageDefaults.filter { liveImageRefs.contains($0.key) }
+        persist(Keys.overrides, overrides)
+        persist(Keys.imageDefaults, imageDefaults)
+        return before - (overrides.count + imageDefaults.count)
+    }
+
     private static func load(_ defaults: UserDefaults, _ key: String) -> [String: Personalization] {
         guard let data = defaults.data(forKey: key),
               let decoded = try? JSONDecoder().decode([String: Personalization].self, from: data) else { return [:] }
@@ -139,4 +164,9 @@ final class PersonalizationStore {
     private func persist(_ key: String, _ value: [String: Personalization]) {
         if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
     }
+}
+
+struct PersonalizationBackup: Codable, Equatable {
+    var overrides: [String: Personalization]
+    var imageDefaults: [String: Personalization]
 }

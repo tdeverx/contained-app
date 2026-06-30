@@ -37,7 +37,28 @@ final class EventRecord {
         self.message = message
     }
 
+    init(snapshot: EventRecordSnapshot) {
+        self.timestamp = snapshot.timestamp
+        self.containerID = snapshot.containerID
+        self.kindRaw = snapshot.kindRaw
+        self.message = snapshot.message
+    }
+
     var kind: EventKind { EventKind(rawValue: kindRaw) ?? .alert }
+}
+
+struct EventRecordSnapshot: Codable, Equatable {
+    var timestamp: Date
+    var containerID: String?
+    var kindRaw: String
+    var message: String
+
+    init(_ record: EventRecord) {
+        timestamp = record.timestamp
+        containerID = record.containerID
+        kindRaw = record.kindRaw
+        message = record.message
+    }
 }
 
 /// A persisted point-in-time resource sample for a container — the basis of the long-term graphs
@@ -64,5 +85,38 @@ final class MetricSample {
         self.netTxBytesPerSec = netTxBytesPerSec
         self.diskReadBytesPerSec = diskReadBytesPerSec
         self.diskWriteBytesPerSec = diskWriteBytesPerSec
+    }
+
+    init(snapshot: MetricSampleSnapshot) {
+        self.timestamp = snapshot.timestamp
+        self.containerID = snapshot.containerID
+        self.cpuFraction = snapshot.cpuFraction
+        self.memoryBytes = snapshot.memoryBytes
+        self.netRxBytesPerSec = snapshot.netRxBytesPerSec
+        self.netTxBytesPerSec = snapshot.netTxBytesPerSec
+        self.diskReadBytesPerSec = snapshot.diskReadBytesPerSec
+        self.diskWriteBytesPerSec = snapshot.diskWriteBytesPerSec
+    }
+}
+
+struct MetricSampleSnapshot: Codable, Equatable {
+    var timestamp: Date
+    var containerID: String
+    var cpuFraction: Double
+    var memoryBytes: Double
+    var netRxBytesPerSec: Double
+    var netTxBytesPerSec: Double
+    var diskReadBytesPerSec: Double
+    var diskWriteBytesPerSec: Double
+
+    init(_ sample: MetricSample) {
+        timestamp = sample.timestamp
+        containerID = sample.containerID
+        cpuFraction = sample.cpuFraction
+        memoryBytes = sample.memoryBytes
+        netRxBytesPerSec = sample.netRxBytesPerSec
+        netTxBytesPerSec = sample.netTxBytesPerSec
+        diskReadBytesPerSec = sample.diskReadBytesPerSec
+        diskWriteBytesPerSec = sample.diskWriteBytesPerSec
     }
 }

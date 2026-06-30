@@ -67,6 +67,42 @@ final class SettingsStore {
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
+    func backupSnapshot() -> SettingsBackup {
+        SettingsBackup(accentTint: accentTint,
+                       appearance: appearance,
+                       density: density,
+                       windowMaterial: windowMaterial,
+                       modalMaterial: modalMaterial,
+                       showInfoTips: showInfoTips,
+                       reduceTranslucency: reduceTranslucency,
+                       keepInMenuBar: keepInMenuBar,
+                       cliPathOverride: cliPathOverride,
+                       refreshInterval: refreshInterval,
+                       notifyOnCrash: notifyOnCrash,
+                       revealCLI: revealCLI,
+                       historyRetentionDays: historyRetentionDays,
+                       updateChannel: updateChannel,
+                       lastSection: lastSection)
+    }
+
+    func applyBackup(_ snapshot: SettingsBackup) {
+        accentTint = snapshot.accentTint
+        appearance = snapshot.appearance
+        density = snapshot.density
+        windowMaterial = snapshot.windowMaterial
+        modalMaterial = snapshot.modalMaterial
+        showInfoTips = snapshot.showInfoTips
+        reduceTranslucency = snapshot.reduceTranslucency
+        keepInMenuBar = snapshot.keepInMenuBar
+        cliPathOverride = snapshot.cliPathOverride
+        refreshInterval = snapshot.refreshInterval
+        notifyOnCrash = snapshot.notifyOnCrash
+        revealCLI = snapshot.revealCLI
+        historyRetentionDays = snapshot.historyRetentionDays
+        updateChannel = snapshot.updateChannel
+        lastSection = snapshot.lastSection
+    }
+
     private enum Keys {
         static let tint = "accentTint"
         static let appearance = "appearance"
@@ -84,4 +120,22 @@ final class SettingsStore {
         static let updateChannel = "updateChannel"
         static let lastSection = "lastSection"
     }
+}
+
+struct SettingsBackup: Codable, Equatable {
+    var accentTint: AppTint
+    var appearance: AppearanceMode
+    var density: CardDensity
+    var windowMaterial: WindowMaterial
+    var modalMaterial: WindowMaterial
+    var showInfoTips: Bool
+    var reduceTranslucency: Bool
+    var keepInMenuBar: Bool
+    var cliPathOverride: String
+    var refreshInterval: Double
+    var notifyOnCrash: Bool
+    var revealCLI: Bool
+    var historyRetentionDays: Int
+    var updateChannel: UpdateChannel
+    var lastSection: String
 }

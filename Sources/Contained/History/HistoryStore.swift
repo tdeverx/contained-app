@@ -19,13 +19,16 @@ final class HistoryStore {
     private let metricInterval: TimeInterval = 60
 
     init() {
-        let schema = Schema([EventRecord.self, MetricSample.self, Template.self])
+        let schema = Schema(HistorySchemaV1.models)
         do {
-            container = try ModelContainer(for: schema)
+            container = try ModelContainer(for: schema,
+                                           migrationPlan: HistoryMigrationPlan.self)
         } catch {
             // Fall back to an in-memory store so the app still runs if the on-disk store can't open.
             let config = ModelConfiguration(isStoredInMemoryOnly: true)
-            container = try! ModelContainer(for: schema, configurations: config)
+            container = try! ModelContainer(for: schema,
+                                            migrationPlan: HistoryMigrationPlan.self,
+                                            configurations: config)
         }
         pruneOld()
     }
@@ -66,4 +69,62 @@ final class HistoryStore {
         try? context.delete(model: EventRecord.self)
         try? context.save()
     }
+
+    func templatesSnapshot() -> [TemplateSnapshot] {
+        ((try? context.fetch(FetchDescriptor<Template>())) ?? []).compactMap(TemplateSnapshot.init)
+    }
+
+    func historySnapshot() -> HistoryBackup {
+        let events = ((try? context.fetch(FetchDescriptor<EventRecord>())) ?? []).map(EventRecordSnapshot.init)
+        let metrics = ((try? context.fetch(FetchDescriptor<MetricSample>())) ?? []).map(MetricSampleSnapshot.init)
+        return HistoryBackup(events: events, metrics: metrics)
+    }
+
+    func applyTemplates(_ snapshots: [TemplateSnapshot], replace: Bool) {
+        if replace {
+            try? context.delete(model: Template.self)
+        }
+        for snapshot in snapshots {
+            context.insert(Template(snapshot: snapshot))
+        }
+        try? context.save()
+    }
+
+    func applyHistory(_ snapshot: HistoryBackup, replace: Bool) {
+        if replace {
+            try? context.delete(model: EventRecord.self)
+            try? context.delete(model: MetricSample.self)
+        }
+        for event in snapshot.events { context.insert(EventRecord(snapshot: event)) }
+        for metric in snapshot.metrics { context.insert(MetricSample(snapshot: metric)) }
+        try? context.save()
+    }
+
+    func purgeOrphans(liveContainerIDs: Set<String>) -> (events: Int, metrics: Int) {
+        let events = ((try? context.fetch(FetchDescriptor<EventRecord>())) ?? [])
+            .filter { $0.containerID.map { !liveContainerIDs.contains($0) } ?? false }
+        let metrics = ((try? context.fetch(FetchDescriptor<MetricSample>())) ?? [])
+            .filter { !liveContainerIDs.contains($0.containerID) }
+        for event in events { context.delete(event) }
+        for metric in metrics { context.delete(metric) }
+        try? context.save()
+        return (events.count, metrics.count)
+    }
+}
+
+struct HistoryBackup: Codable, Equatable {
+    var events: [EventRecordSnapshot]
+    var metrics: [MetricSampleSnapshot]
+}
+
+enum HistorySchemaV1: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(1, 0, 0) }
+    static var models: [any PersistentModel.Type] {
+        [EventRecord.self, MetricSample.self, Template.self]
+    }
+}
+
+enum HistoryMigrationPlan: SchemaMigrationPlan {
+    static var schemas: [any VersionedSchema.Type] { [HistorySchemaV1.self] }
+    static var stages: [MigrationStage] { [] }
 }
