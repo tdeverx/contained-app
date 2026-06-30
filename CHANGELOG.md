@@ -89,6 +89,10 @@
 - **Container card animations**: Fixed grow/shrink spring timing for smoother detail panel transitions
 - **Safe area calculation**: Proper top inset accounting for both native and custom toolbar heights
 - **Search palette sizing**: Correct max-width constraints and dynamic field scaling
+- **Start/stop UI hang**: Container refreshes are now serialized so a user action and the background
+  polling tick no longer run `list`+`stats` concurrently (decoding JSON on the main actor and
+  stomping the shared stats dictionaries). The grid also only re-renders when the container list
+  actually changes, eliminating the per-tick re-render storm during a `.stopping` transition
 
 ### Removed
 
@@ -105,6 +109,10 @@
 - **Design tokens**: Added `Tokens.Toolbar` enum for all toolbar sizing and spacing
 - **Geometry helpers**: `MorphGeometry` utilities for panel sizing, clamping, and target rect calculation
 - **Optional matched geometry**: Helper for conditional `.matchedGeometryEffect()` in tiles
+- **Polish pass**: Extracted the image-update subsystem into `AppModel+ImageUpdates.swift` (core
+  `AppModel` 774 → 586 lines) and collapsed the four sweep/pull methods into two shared helpers; split
+  the 771-line `ToolbarSearchPalette.swift` into `ToolbarSearchSource`, `ToolbarCommandPalette`, and
+  `PaletteResultCard`; combined the three service-lifecycle methods; removed the unused `isLoading` flag
 
 ### Migration Notes
 

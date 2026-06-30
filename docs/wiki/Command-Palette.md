@@ -47,8 +47,12 @@ When adding a feature, check whether it needs one or more palette entries:
 - `Sources/Contained/Features/Palette/CommandPalette.swift` owns the indexed
   actions and search fields.
 - `Sources/Contained/Features/Palette/PaletteSearch.swift` owns scoring.
-- `Sources/Contained/Navigation/ToolbarPanels/ToolbarSearchPalette.swift` owns
-  the visual panel, keyboard handling, and result rendering.
+- `Sources/Contained/Navigation/ToolbarPanels/ToolbarSearchSource.swift` owns the
+  toolbar search field (and the empty-query escalation into the palette).
+- `Sources/Contained/Navigation/ToolbarPanels/ToolbarCommandPalette.swift` owns
+  the visual panel and keyboard handling.
+- `Sources/Contained/Navigation/ToolbarPanels/PaletteResultCard.swift` owns
+  per-result card rendering.
 - `Tests/ContainedAppTests/PaletteSearchTests.swift` locks in fuzzy matching and
   ranking expectations.
 
