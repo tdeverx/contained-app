@@ -45,6 +45,7 @@ struct ToolbarTemplatesPanel: View {
     @Environment(UIState.self) private var ui
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Template.createdAt, order: .reverse) private var saved: [Template]
+    var showClose = true
     var onClose: () -> Void
 
     var body: some View {
@@ -69,8 +70,10 @@ struct ToolbarTemplatesPanel: View {
         PanelHeader(symbol: "bookmark",
                     title: "Templates",
                     subtitle: "\(saved.count) saved") {
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+            if showClose {
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                }
             }
         }
     }

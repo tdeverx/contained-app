@@ -13,6 +13,9 @@ struct ExperimentalTab: View {
         VStack(spacing: Tokens.Space.l) {
             PanelSection(header: "Experimental",
                          footer: "These features are still being refined. They're off by default; enable any you want to try. You can turn them back off at any time.") {
+                PanelToggleRow(title: "Toolbar-first UI",
+                               info: "Use the floating morph toolbar instead of the default sidebar and menu navigation.",
+                               isOn: $settings.experimentalToolbarUI)
                 PanelToggleRow(title: "Command palette (⌘K)",
                                info: "The ⌘K command index: fuzzy search across every app, container, image, and resource action. Page search and menu commands work regardless of this setting.",
                                isOn: $settings.commandPaletteEnabled)

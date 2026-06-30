@@ -1,12 +1,36 @@
 # Changelog
 
+## [1.0.0] - Update Infrastructure and Sidebar Fallback
+
+### Added
+
+- Versioned `.containedbackup` export/import for settings, personalization, health checks, templates, and activity history, with per-category selection and merge/replace import behavior.
+- Rollback guard for data created by newer app schemas, including an export-before-reset path and a best-effort keep-readable-data option.
+- Sparkle release notes from `CHANGELOG.md`, with appcast-embedded HTML and in-app “What’s New” views for current and available builds.
+- Classic sidebar navigation as the default shell, covering Containers, Images, Volumes, Networks, System, Registries, Templates, Activity, and Settings.
+- `Toolbar-first UI` experimental flag, off by default, to restore the floating morph toolbar shell when enabled.
+- Menu and menu-bar navigation fallback that routes plus/menu actions directly to the relevant full page instead of opening creation-flow sheets.
+
+### Changed
+
+- Fresh installs default to the Nightly update channel and automatically check for app updates.
+- Each release workflow now publishes GitHub release notes and Sparkle appcast notes from the same changelog section.
+- Pre-release build versions such as `1.0.0-nightly.N+sha` resolve release notes from the matching base `1.0.0` changelog section.
+
+### Technical
+
+- Added `AppStateEnvelope`, `JSONValue`, `MigrationStep`, and `StateMigrator` as the baseline for forward migration and downgrade handling from schema version 1 onward.
+- Added SwiftData history schema/migration scaffolding and purge-dead-row cleanup hooks for history, personalization, health checks, and image update records.
+- Added `AppSection`, `ClassicShell`, and `PageScaffold` so sidebar pages and toolbar panels can share content without duplicating layouts.
+
 ## [Unreleased] - Creation Workflow 10
 
 ### Added
 
 #### Toolbar & Navigation Redesign
-- **Toolbar-first architecture**: Removed the sidebar entirely; the app now features a single Containers page with a floating custom toolbar
-- **Morphing panel system**: Toolbar buttons morph into resizing panels for Images, Templates, Activity, and System resources
+- **Classic sidebar fallback**: The default app shell is a native sidebar with full-page destinations for Containers, Images, Volumes, Networks, System, Registries, Templates, Activity, and Settings.
+- **Toolbar-first architecture**: The floating custom toolbar is now an experimental UI, off by default, while still available from Settings → Experimental.
+- **Morphing panel system**: When the toolbar UI is enabled, toolbar buttons morph into resizing panels for Images, Templates, Activity, and System resources.
 - **Visual command palette**: Integrated `⌘K` search and command palette into the toolbar's expandable search field, with the search bar acting as the panel header
 - **Palette action index**: Added global commands for app update checks, all-image update checks, pulling available image updates, checking container-image updates, pulling available container-image updates, local image search, Docker Hub search, and app tint changes
 - **Inline palette results**: Container, image group, tag, volume, network, and tint matches render as compact design-system cards instead of generic rows
@@ -27,6 +51,7 @@
 
 #### Experimental features (Settings → Experimental, all off by default)
 - **Opt-in gating**: A new Settings → Experimental section gates surfaces that are still being refined. Each defaults **off**; enabling one reveals its menu commands, toolbar affordances, and creation options app-wide
+- **Toolbar-first UI**: Gated behind `experimentalToolbarUI` (off by default). When disabled, the app uses the sidebar shell and menu actions navigate directly to full pages.
 - **Command palette (⌘K)**: Gated behind `commandPaletteEnabled` (off by default). A render-level backstop in `AppToolbar` keeps it fully hidden regardless of activation path; page search and menu commands are unaffected
 - **Docker Hub search**: Gated behind `hubSearchEnabled` — the creation "Search" path, the "Pull Image…" menu commands, and the palette's Hub scope
 - **Compose import**: Gated behind `composeImportEnabled` — paste, file pick, drag-and-drop, menu command, and palette entry
@@ -63,7 +88,7 @@
 
 #### Settings & System Management
 - **Runtime settings tab**: View/edit Kernel and DNS settings; read-only Defaults display
-- **System resource panel**: Moved System info into a toolbar morph panel (header-less, no sidebar)
+- **System resource surfaces**: System info is shared by the sidebar System/Volumes pages and the toolbar morph panel when the experimental toolbar UI is enabled.
 - **Registries management**: Credential management consolidated in Settings; global command for registry login
 - **Streamlined activity history**: Activity view accessible via toolbar morph and `⌘I`
 
@@ -103,8 +128,8 @@
 
 ### Removed
 
-- **Sidebar**: Complete removal of the old navigation sidebar
-- **System/Registries/Runtime pages**: Moved into toolbar morphs and Settings tab
+- **Old sidebar implementation**: Replaced with the new `ClassicShell`/`AppSection` sidebar fallback.
+- **Old System/Registries/Runtime pages**: Rebuilt as shared page/panel content for the sidebar shell, Settings tabs, and toolbar morphs.
 - **Old Network creation**: Previously on a dedicated Networks page; now a creation flow option
 - **Legacy card sizes**: Removed `CardDensity.compact` (migrated to `.medium`)
 - **Image action sheets**: Removed `TagImageSheet`, `PushImageSheet`, and `ImageHistorySheet` (replaced by image-detail morph sub-pages)
@@ -124,14 +149,6 @@
 ### Migration Notes
 
 - Saved card density preferences using `compact` will auto-migrate to `medium`
-- Sidebar toggle setting is obsolete (sidebar no longer exists)
+- The legacy sidebar toggle setting is obsolete; sidebar is now the default shell and the toolbar UI has its own experimental flag.
 - Existing container and image styles are preserved
 - Activity events recorded before this version are treated as unread on first launch (the `isRead` column defaults to false); opening and dismissing the Activity panel clears the badge
-
-## 1.0.0
-
-### Added
-
-- Versioned `.containedbackup` export and import for settings, local personalization, health checks, templates, and activity history.
-- Rollback guard for data created by newer app schemas, with an export-before-reset path.
-- Sparkle release notes in appcasts and an in-app “What’s New” view.

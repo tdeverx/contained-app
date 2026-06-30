@@ -22,7 +22,7 @@ struct RootView: View {
     var body: some View {
         @Bindable var settings = app.settings
         @Bindable var ui = ui
-        detailShell(settings: settings)
+        rootShell(settings: settings)
         .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil; ui.advancePrefillQueue() }) {
             ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
         }
@@ -84,7 +84,12 @@ struct RootView: View {
         .environment(\.cardMaterial, settings.cardMaterial)
         .preferredColorScheme(settings.appearance.colorScheme)
         .onAppear { applyAppearance(settings.appearance) }
+        .onAppear { ui.toolbarUIEnabled = settings.experimentalToolbarUI }
         .onChange(of: settings.appearance) { _, mode in applyAppearance(mode) }
+        .onChange(of: settings.experimentalToolbarUI) { _, enabled in
+            ui.toolbarUIEnabled = enabled
+            if !enabled { ui.activeMorph = nil }
+        }
         .task {
             await app.bootstrapIfNeeded()
             app.coordinator.start(app: app)
@@ -94,7 +99,16 @@ struct RootView: View {
         }
     }
 
-    private func detailShell(settings: SettingsStore) -> some View {
+    @ViewBuilder
+    private func rootShell(settings: SettingsStore) -> some View {
+        if settings.experimentalToolbarUI {
+            toolbarShell(settings: settings)
+        } else {
+            classicShell(settings: settings)
+        }
+    }
+
+    private func toolbarShell(settings: SettingsStore) -> some View {
         GeometryReader { proxy in
             ZStack {
                 ContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
@@ -112,9 +126,6 @@ struct RootView: View {
                                             topToolbarHeight: AppToolbar.bandHeight,
                                             bottomToolbarHeight: AppToolbar.bandHeight))
         }
-        // Attach a real (empty, transparent) unified window toolbar so AppKit sizes and vertically
-        // centers the traffic lights in the titlebar band — our custom glass controls float over it.
-        .background(WindowChromeConfigurator())
         // Right-click the empty background for the page's overflow actions (cards/rows keep their own
         // context menus, which take precedence). Double-click it to zoom the window — the gesture the
         // title bar used to provide.
@@ -122,6 +133,16 @@ struct RootView: View {
         // NOTE: double-click-to-zoom is NOT here — on the shell it would sit above the cards, delay
         // their taps, and fire when double-clicking a card. Pages attach it to a background layer
         // behind their content via `.zoomWindowOnBackgroundDoubleClick()` instead.
+    }
+
+    private func classicShell(settings: SettingsStore) -> some View {
+        ZStack {
+            ContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
+            content
+                .ignoresSafeArea(.container, edges: .top)
+        }
+        .environment(\.appSafeAreas, AppSafeAreaManager(system: EdgeInsets()))
+        .contextMenu { backgroundMenu() }
     }
 
     private var downgradeBinding: Binding<Bool> {
@@ -146,13 +167,29 @@ struct RootView: View {
             ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
         } label: { Label("Card Size", systemImage: "square.grid.2x2") }
         Divider()
-        Button { ui.toggleMorph(.updates) } label: { Label("Images", systemImage: "square.stack.3d.up") }
-        Button { ui.toggleMorph(.templates) } label: { Label("Templates", systemImage: "bookmark") }
-        Button { ui.toggleMorph(.system) } label: { Label("System", systemImage: "gearshape.2") }
-        Button { ui.toggleMorph(.activity) } label: { Label("Activity", systemImage: "bell") }
+        Button { openSectionOrMorph(.images, morph: .updates) } label: { Label("Images", systemImage: "square.stack.3d.up") }
+        Button { openSectionOrMorph(.templates, morph: .templates) } label: { Label("Templates", systemImage: "bookmark") }
+        Button { openSectionOrMorph(.system, morph: .system) } label: { Label("System", systemImage: "gearshape.2") }
+        Button { openSectionOrMorph(.activity, morph: .activity) } label: { Label("Activity", systemImage: "bell") }
         if settings.commandPaletteEnabled {
             Divider()
-            Button { ui.toggleMorph(.palette) } label: { Label("Command Palette…", systemImage: "command") }
+            Button { openPaletteOrContainers() } label: { Label("Command Palette…", systemImage: "command") }
+        }
+    }
+
+    private func openPaletteOrContainers() {
+        if app.settings.experimentalToolbarUI {
+            ui.toggleMorph(.palette)
+        } else {
+            ui.navigate(to: .containers)
+        }
+    }
+
+    private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
+        if app.settings.experimentalToolbarUI {
+            ui.toggleMorph(morph)
+        } else {
+            ui.navigate(to: section)
         }
     }
 
@@ -201,35 +238,14 @@ struct RootView: View {
     @ViewBuilder
     private var content: some View {
         switch app.bootstrap {
-        case .ready: ContainersGridView()   // the only standing page; everything else is a toolbar panel
+        case .ready:
+            if app.settings.experimentalToolbarUI {
+                ContainersGridView()
+            } else {
+                ClassicShell()
+            }
         default: BootstrapView()
         }
     }
 
-}
-
-/// Attaches an empty, transparent **unified** `NSToolbar` to the hosting window. With no native title
-/// bar and no toolbar, AppKit pins the traffic lights tight against the top; a unified toolbar gives
-/// the titlebar its proper band height so the close/min/zoom buttons are sized and vertically centered
-/// correctly. The toolbar carries no items — our custom glass controls (`AppToolbar`) float over it.
-private struct WindowChromeConfigurator: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { configure(view.window) }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async { configure(nsView.window) }
-    }
-
-    private func configure(_ window: NSWindow?) {
-        guard let window else { return }
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        if window.toolbar == nil {
-            window.toolbar = NSToolbar(identifier: "ContainedTitlebar")
-        }
-        window.toolbarStyle = .unified
-    }
 }

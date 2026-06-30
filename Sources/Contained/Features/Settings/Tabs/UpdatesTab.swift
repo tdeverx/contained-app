@@ -31,8 +31,11 @@ struct UpdatesTab: View {
                     .fixedSize()
                 }
                 PanelToggleRow(title: "Automatically check for updates",
-                               isOn: Binding(get: { app.updater.automaticallyChecks },
-                                             set: { app.updater.automaticallyChecks = $0 }))
+                               isOn: Binding(get: { settings.appUpdateChecksEnabled },
+                                             set: {
+                                                 settings.appUpdateChecksEnabled = $0
+                                                 app.updater.automaticallyChecks = $0
+                                             }))
                 Button("Check for Updates…") { app.updater.checkForUpdates() }
                     .disabled(!app.updater.canCheckForUpdates)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -56,6 +56,14 @@ jobs:
           mkdir -p updates
           brew install create-dmg
           ./scripts/make-dmg.sh nightly Contained.app "updates/Contained-${VERSION}.dmg"
+          VERSION_VALUE="${VERSION}" ./scripts/release-body.sh > updates/release-notes.md
+          {
+            echo "Automated build of \`nightly\` @ ${SHA}."
+            echo
+            cat updates/release-notes.md
+            echo
+            echo "⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
+          } > updates/github-release-notes.md
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
@@ -64,9 +72,7 @@ jobs:
           gh release delete nightly-latest --yes --cleanup-tag || true
           gh release create nightly-latest updates/*.dmg \
             --prerelease --title "Nightly (${VERSION})" \
-            --notes "Automated build of \`nightly\` @ ${SHA}.
-
-          ⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
+            --notes-file updates/github-release-notes.md
 
       - name: Update Sparkle feed (nightly branch appcast.xml)
         if: env.SPARKLE_ED_PRIVATE_KEY != ''

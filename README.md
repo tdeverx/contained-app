@@ -30,9 +30,9 @@ Download the latest `.dmg` from [Releases](https://github.com/tdeverx/contained-
 
 - **Stable** — finished releases.
 - **Beta** — pre-release builds, ahead of stable.
-- **Nightly** — the latest build from every commit (CI), bleeding edge.
+- **Nightly** — the latest build from every commit (CI), bleeding edge, and the default for fresh installs during pre-1.0 development.
 
-Channels are cumulative (Nightly still receives Beta and Stable). See the [Release runbook](https://github.com/tdeverx/contained-app/wiki/Release) for the maintainer signing/notarization flow.
+Each channel has its own branch-backed Sparkle feed; switching channels changes which branch appcast the app reads. See the [Release runbook](https://github.com/tdeverx/contained-app/wiki/Release) for the maintainer signing/notarization flow.
 
 ## Documentation
 
@@ -84,7 +84,7 @@ scripts/
   bundle.sh        Build + assemble Contained.app
   release.sh       Sign + notarize + DMG (maintainers)
   appcast.sh       Generate this branch's Sparkle appcast
-appcast.xml        Per-branch Sparkle feed (nightly/beta/main each own one; human docs live in the wiki)
+appcast.xml        Per-branch Sparkle feed (nightly/beta/stable each own one; human docs live in the wiki)
 ```
 
 ## 1.0 Polish Checklist

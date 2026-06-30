@@ -1,0 +1,41 @@
+import SwiftUI
+
+struct PageScaffold<Actions: View, Content: View>: View {
+    let symbol: String
+    let title: String
+    let subtitle: String
+    var scrolls = true
+    @ViewBuilder var actions: () -> Actions
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
+                actions()
+            }
+            Divider()
+            if scrolls {
+                ScrollView {
+                    content()
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(Tokens.Space.l)
+                }
+                .scrollEdgeEffectStyle(.soft, for: .all)
+            } else {
+                content()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+        }
+    }
+}
+
+extension PageScaffold where Actions == EmptyView {
+    init(symbol: String,
+         title: String,
+         subtitle: String,
+         scrolls: Bool = true,
+         @ViewBuilder content: @escaping () -> Content) {
+        self.init(symbol: symbol, title: title, subtitle: subtitle, scrolls: scrolls,
+                  actions: { EmptyView() }, content: content)
+    }
+}

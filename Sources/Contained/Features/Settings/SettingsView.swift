@@ -11,7 +11,7 @@ import ContainedCore
 struct SettingsContent: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @State private var page: SettingsPage = .appearance
+    @State private var page: SettingsPage
     var onClose: (() -> Void)?
 
     enum SettingsPage: String, CaseIterable, Identifiable {
@@ -38,6 +38,11 @@ struct SettingsContent: View {
         }
     }
 
+    init(initialPage: SettingsPage = .appearance, onClose: (() -> Void)? = nil) {
+        self.onClose = onClose
+        _page = State(initialValue: initialPage)
+    }
+
     var body: some View {
         @Bindable var settings = app.settings
         MorphPanelScaffold(width: Tokens.PanelSize.settings.width, placement: .centered) {
@@ -49,11 +54,17 @@ struct SettingsContent: View {
             sectionBody(settings: settings)
                 .padding(Tokens.Space.s)
         }
+        .onAppear { consumeRequestedPage() }
         .onChange(of: ui.settingsPage) { _, requested in
             guard let requested else { return }
-            page = requested
-            ui.settingsPage = nil
+            consumeRequestedPage(requested)
         }
+    }
+
+    private func consumeRequestedPage(_ requested: SettingsPage? = nil) {
+        guard let requested = requested ?? ui.settingsPage else { return }
+        page = requested
+        ui.settingsPage = nil
     }
 
     private var header: some View {

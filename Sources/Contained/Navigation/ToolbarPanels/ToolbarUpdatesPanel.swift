@@ -6,6 +6,7 @@ import ContainedCore
 struct ToolbarUpdatesPanel: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
+    var showClose = true
     var onOpenImage: (LocalImageTagGroup, CGRect) -> Void
     var onClose: () -> Void
     @State private var imageFrames: [LocalImageTagGroup.ID: CGRect] = [:]
@@ -60,7 +61,9 @@ struct ToolbarUpdatesPanel: View {
                     ui.dispatch(.pruneImages)
                     onClose()
                 }
-                GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                if showClose {
+                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                }
             }
         }
     }
@@ -111,4 +114,3 @@ struct ToolbarUpdatesPanel: View {
     }
 
 }
-

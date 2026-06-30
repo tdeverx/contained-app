@@ -44,6 +44,8 @@ final class UIState {
     var search = SearchPresentation()
     var prefill = PrefillPresentation()
     var runningOnly = false
+    var selectedSection: AppSection = .containers
+    var toolbarUIEnabled = false
     /// How the Containers page groups its cards (Network / Volume / Image / Flat) and orders them —
     /// driven by the top-left toolbar view-options control.
     var grouping: ContainerGrouping = .network
@@ -139,7 +141,35 @@ final class UIState {
     /// Open the Settings panel and navigate to a specific page in one call.
     func openSettings(to page: SettingsContent.SettingsPage) {
         settingsPage = page
+        guard toolbarUIEnabled else {
+            navigate(to: page == .registries ? .registries : .settings)
+            return
+        }
         if activeMorph != .settings { activeMorph = .settings }
+    }
+
+    func navigate(to section: AppSection) {
+        selectedSection = section
+        if activeMorph != nil { requestMorphClose() }
+    }
+
+    func navigateForClassicFallback(_ action: PendingAction) {
+        switch action {
+        case .runContainer:
+            navigate(to: .containers)
+        case .pullImage, .loadImage, .pruneImages, .build:
+            navigate(to: .images)
+        case .createVolume:
+            navigate(to: .volumes)
+        case .createNetwork:
+            navigate(to: .networks)
+        case .registryLogin:
+            navigate(to: .registries)
+        case .activityHistory:
+            navigate(to: .activity)
+        case .systemLogs:
+            navigate(to: .system)
+        }
     }
 
     /// Toggle a toolbar morph panel (open it, or close it if already open).
@@ -158,6 +188,16 @@ final class UIState {
 
     /// Run an action by opening the right creation page, morph panel, or global sheet.
     func dispatch(_ action: PendingAction) {
+        if !toolbarUIEnabled {
+            switch action {
+            case .runContainer, .pullImage, .createVolume, .createNetwork, .build, .activityHistory:
+                navigateForClassicFallback(action)
+                return
+            case .loadImage, .pruneImages, .registryLogin, .systemLogs:
+                pendingAction = action
+                return
+            }
+        }
         switch action {
         case .runContainer:
             openCreationPanel(entry: .chooser)
@@ -178,6 +218,19 @@ final class UIState {
 
     /// Open the creation flow in the toolbar add morph at a specific page.
     func openCreationPanel(entry: CreationEntry = .menu, prefill spec: RunSpec? = nil, searchQuery: String = "") {
+        guard toolbarUIEnabled else {
+            switch entry {
+            case .network:
+                navigate(to: .networks)
+            case .volume:
+                navigate(to: .volumes)
+            case .search, .build:
+                navigate(to: .images)
+            default:
+                navigate(to: .containers)
+            }
+            return
+        }
         creationEntry = entry
         creationPrefillSpec = spec
         creationEditSnapshot = nil
@@ -191,6 +244,10 @@ final class UIState {
     }
 
     func openCreationPanel(editing snapshot: ContainerSnapshot) {
+        guard toolbarUIEnabled else {
+            navigate(to: .containers)
+            return
+        }
         creationEntry = .configure
         creationPrefillSpec = nil
         creationEditSnapshot = snapshot
@@ -211,6 +268,10 @@ final class UIState {
     }
 
     func runImage(_ reference: String) {
+        guard toolbarUIEnabled else {
+            navigate(to: .images)
+            return
+        }
         var spec = RunSpec()
         spec.image = reference
         prefillQueue = []
@@ -218,6 +279,10 @@ final class UIState {
     }
 
     func useTemplate(_ spec: RunSpec) {
+        guard toolbarUIEnabled else {
+            navigate(to: .templates)
+            return
+        }
         prefillQueue = []
         openCreationPanel(prefill: spec)
     }

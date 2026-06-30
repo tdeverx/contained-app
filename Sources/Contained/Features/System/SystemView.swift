@@ -8,6 +8,7 @@ struct SystemContent: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     /// Flat cards (no shadow) when hosted in the toolbar morph panel; elevated if shown standalone.
+    var showClose: Bool
     var elevated = true
     var onClose: () -> Void = {}
 
@@ -16,9 +17,9 @@ struct SystemContent: View {
     @State private var reclaimingAll = false
     @State private var inspectingVolume: VolumeResource?
     @State private var deletingVolume: VolumeResource?
-    @State private var page: SystemPage = .engine
+    @State private var page: SystemPage
 
-    private enum SystemPage: String, CaseIterable, Identifiable {
+    enum SystemPage: String, CaseIterable, Identifiable {
         case engine = "Engine"
         case automation = "Automation"
         case volumes = "Volumes"
@@ -39,6 +40,16 @@ struct SystemContent: View {
             case .volumes: return "Named, temp, and path mounts"
             }
         }
+    }
+
+    init(initialPage: SystemPage = .engine,
+         showClose: Bool = true,
+         elevated: Bool = true,
+         onClose: @escaping () -> Void = {}) {
+        self.showClose = showClose
+        self.elevated = elevated
+        self.onClose = onClose
+        _page = State(initialValue: initialPage)
     }
 
     private enum VolumeKind: String {
@@ -129,7 +140,9 @@ struct SystemContent: View {
                 GlassButton {
                     pageButtons
                     storageMenu
-                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                    if showClose {
+                        GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                    }
                 }
             }
         }

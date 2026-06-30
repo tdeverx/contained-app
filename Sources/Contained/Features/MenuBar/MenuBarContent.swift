@@ -47,17 +47,17 @@ struct MenuBarContent: View {
 
         Divider()
 
-        Button("Run a Container…") { activate(); ui.openCreationPanel(entry: .chooser) }
+        Button("Run a Container…") { activate(); route(.runContainer) }
         if app.settings.hubSearchEnabled {
-            Button("Pull Image…") { activate(); ui.dispatch(.pullImage) }
+            Button("Pull Image…") { activate(); route(.pullImage) }
         }
 
         Divider()
 
-        Button("Images") { activate(); ui.toggleMorph(.updates) }
-        Button("Templates") { activate(); ui.toggleMorph(.templates) }
-        Button("System") { activate(); ui.toggleMorph(.system) }
-        Button("Activity") { activate(); ui.dispatch(.activityHistory) }
+        Button("Images") { activate(); openSectionOrMorph(.images, morph: .updates) }
+        Button("Templates") { activate(); openSectionOrMorph(.templates, morph: .templates) }
+        Button("System") { activate(); openSectionOrMorph(.system, morph: .system) }
+        Button("Activity") { activate(); openSectionOrMorph(.activity, morph: .activity) }
 
         Divider()
 
@@ -65,10 +65,10 @@ struct MenuBarContent: View {
         // Deep-link straight to a Settings page via the panel jump system (`openSettings(to:)`).
         Menu("Settings…") {
             ForEach(SettingsContent.SettingsPage.allCases) { page in
-                Button(page.rawValue) { activate(); ui.openSettings(to: page) }
+                Button(page.rawValue) { activate(); openSettings(to: page) }
             }
         }
-        Button("About Contained") { activate(); ui.openSettings(to: .about) }
+        Button("About Contained") { activate(); openSettings(to: .about) }
         Divider()
         Button("Quit Contained") { NSApplication.shared.terminate(nil) }
     }
@@ -79,6 +79,31 @@ struct MenuBarContent: View {
         for window in NSApplication.shared.windows where window.canBecomeMain {
             window.makeKeyAndOrderFront(nil)
             break
+        }
+    }
+
+    private func route(_ action: PendingAction) {
+        if app.settings.experimentalToolbarUI {
+            ui.dispatch(action)
+        } else {
+            ui.navigateForClassicFallback(action)
+        }
+    }
+
+    private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
+        if app.settings.experimentalToolbarUI {
+            ui.toggleMorph(morph)
+        } else {
+            ui.navigate(to: section)
+        }
+    }
+
+    private func openSettings(to page: SettingsContent.SettingsPage) {
+        ui.settingsPage = page
+        if app.settings.experimentalToolbarUI {
+            ui.openSettings(to: page)
+        } else {
+            ui.navigate(to: page == .registries ? .registries : .settings)
         }
     }
 }

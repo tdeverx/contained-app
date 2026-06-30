@@ -66,6 +66,14 @@ jobs:
           mkdir -p updates
           brew install create-dmg
           ./scripts/make-dmg.sh beta Contained.app "updates/Contained-${VERSION}.dmg"
+          VERSION_VALUE="${VERSION}" ./scripts/release-body.sh > updates/release-notes.md
+          {
+            echo "Automated beta build @ ${SHA}."
+            echo
+            cat updates/release-notes.md
+            echo
+            echo "⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
+          } > updates/github-release-notes.md
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
@@ -74,9 +82,7 @@ jobs:
         run: |
           gh release create "v${VERSION}" updates/*.dmg \
             --prerelease --title "Beta (${VERSION})" \
-            --notes "Automated beta build @ ${SHA}.
-
-          ⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
+            --notes-file updates/github-release-notes.md
 
       - name: Update Sparkle feed (beta branch appcast.xml)
         if: steps.guard.outputs.build == 'true' && env.SPARKLE_ED_PRIVATE_KEY != ''

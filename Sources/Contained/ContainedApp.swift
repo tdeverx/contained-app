@@ -21,7 +21,7 @@ struct ContainedApp: App {
             CommandGroup(replacing: .appInfo) {
                 Button("About Contained") {
                     activateMainWindow()
-                    ui.openSettings(to: .about)
+                    openSettings(to: .about)
                 }
             }
             CommandGroup(after: .appInfo) {
@@ -31,25 +31,25 @@ struct ContainedApp: App {
             // Settings now lives in the toolbar morph panel (no separate Settings window), so ⌘,
             // opens that instead of the standard Settings scene.
             CommandGroup(replacing: .appSettings) {
-                Button("Settings…") { ui.toggleMorph(.settings) }
+                Button("Settings…") { openSettings() }
                     .keyboardShortcut(",", modifiers: .command)
             }
             CommandGroup(after: .newItem) {
                 // The toolbar "＋" add-menu — Container / Network / Volume.
-                Button("New…") { ui.openCreationPanel() }
+                Button("New…") { route(.runContainer) }
                     .keyboardShortcut("n", modifiers: .command)
-                Button("Run Container…") { ui.openCreationPanel(entry: .chooser) }
+                Button("Run Container…") { route(.runContainer) }
                     .keyboardShortcut("r", modifiers: .command)
                 Divider()
                 if app.settings.hubSearchEnabled {
-                    Button("Pull Image…") { ui.dispatch(.pullImage) }
+                    Button("Pull Image…") { route(.pullImage) }
                 }
                 if app.settings.imageBuildEnabled {
-                    Button("Build Image…") { ui.dispatch(.build) }
+                    Button("Build Image…") { route(.build) }
                 }
                 Divider()
-                Button("New Volume…") { ui.dispatch(.createVolume) }
-                Button("New Network…") { ui.dispatch(.createNetwork) }
+                Button("New Volume…") { route(.createVolume) }
+                Button("New Network…") { route(.createNetwork) }
                 if app.settings.composeImportEnabled {
                     Divider()
                     Button("Import Compose…") { ComposeImport.pickAndImport(app: app, ui: ui) }
@@ -68,7 +68,7 @@ struct ContainedApp: App {
             }
             CommandGroup(after: .toolbar) {
                 if app.settings.commandPaletteEnabled {
-                    Button("Command Palette…") { ui.toggleMorph(.palette) }
+                    Button("Command Palette…") { routePalette() }
                         .keyboardShortcut("k", modifiers: .command)
                 }
                 Button("Search This Page") { ui.focusSearch() }
@@ -76,20 +76,22 @@ struct ContainedApp: App {
                 Divider()
                 Button("Run Image Update Check") { Task { await app.runImageUpdateSweepNow() } }
                     .keyboardShortcut("u", modifiers: .command)
-                Button("Activity") { ui.dispatch(.activityHistory) }
+                Button("Activity") { route(.activityHistory) }
                     .keyboardShortcut("i", modifiers: .command)
             }
             CommandMenu("Go") {
-                Button("Containers") { ui.activeMorph = nil }
+                Button("Containers") { ui.navigate(to: .containers) }
                     .keyboardShortcut("1", modifiers: .command)
-                Button("Images") { ui.toggleMorph(.updates) }
+                Button("Images") { openSectionOrMorph(.images, morph: .updates) }
                     .keyboardShortcut("2", modifiers: .command)
-                Button("Templates") { ui.toggleMorph(.templates) }
+                Button("Templates") { openSectionOrMorph(.templates, morph: .templates) }
                     .keyboardShortcut("3", modifiers: .command)
-                Button("System") { ui.toggleMorph(.system) }
+                Button("System") { openSectionOrMorph(.system, morph: .system) }
                     .keyboardShortcut("4", modifiers: .command)
-                Button("Activity") { ui.dispatch(.activityHistory) }
+                Button("Activity") { openSectionOrMorph(.activity, morph: .activity) }
                     .keyboardShortcut("5", modifiers: .command)
+                Button("Settings") { openSettings() }
+                    .keyboardShortcut("6", modifiers: .command)
             }
             CommandGroup(replacing: .help) {
                 Button("Contained Help") { NSWorkspace.shared.open(Links.helpURL) }
@@ -130,6 +132,39 @@ struct ContainedApp: App {
 
     private var runningOnlyBinding: Binding<Bool> {
         Binding(get: { ui.runningOnly }, set: { ui.runningOnly = $0 })
+    }
+
+    private func route(_ action: PendingAction) {
+        if app.settings.experimentalToolbarUI {
+            ui.dispatch(action)
+        } else {
+            ui.navigateForClassicFallback(action)
+        }
+    }
+
+    private func routePalette() {
+        if app.settings.experimentalToolbarUI {
+            ui.toggleMorph(.palette)
+        } else {
+            ui.navigate(to: .containers)
+        }
+    }
+
+    private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
+        if app.settings.experimentalToolbarUI {
+            ui.toggleMorph(morph)
+        } else {
+            ui.navigate(to: section)
+        }
+    }
+
+    private func openSettings(to page: SettingsContent.SettingsPage = .appearance) {
+        ui.settingsPage = page
+        if app.settings.experimentalToolbarUI {
+            ui.openSettings(to: page)
+        } else {
+            ui.navigate(to: page == .registries ? .registries : .settings)
+        }
     }
 
     /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).

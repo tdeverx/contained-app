@@ -20,7 +20,7 @@ final class UpdaterController {
     var availableReleaseNotesHTML: String?
     var showWhatsNew = false
 
-    init(channel: UpdateChannel = .stable, defaults: UserDefaults = .standard) {
+    init(channel: UpdateChannel = .nightly, defaults: UserDefaults = .standard) {
         self.defaults = defaults
         channelDelegate.channel = channel
         channelDelegate.onUpdateFound = { [weak self] item in
@@ -42,12 +42,12 @@ final class UpdaterController {
     var canCheckForUpdates: Bool { controller?.updater.canCheckForUpdates ?? false }
 
     var automaticallyChecks: Bool {
-        get { controller?.updater.automaticallyChecksForUpdates ?? false }
+        get { controller?.updater.automaticallyChecksForUpdates ?? true }
         set { controller?.updater.automaticallyChecksForUpdates = newValue }
     }
 
     /// Switch the channel; a background information check re-queries the new feed immediately.
-    var channel: UpdateChannel = .stable {
+    var channel: UpdateChannel = .nightly {
         didSet {
             channelDelegate.channel = channel
             controller?.updater.checkForUpdateInformation()
@@ -112,7 +112,7 @@ final class UpdaterController {
     }
 
     private static func changelogHTML(for version: String) -> String? {
-        guard let url = Bundle.main.url(forResource: "CHANGELOG", withExtension: "md"),
+        guard let url = Bundle.module.url(forResource: "CHANGELOG", withExtension: "md"),
               let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         let section = ChangelogSection.extract(version: version, from: text)
         return section.map { ChangelogSection.html(from: $0) }
@@ -122,7 +122,7 @@ final class UpdaterController {
     /// (overriding `SUFeedURL`) and reports the allowed channel set (empty — feed selection *is* the
     /// channel with per-branch feeds).
     private final class ChannelDelegate: NSObject, SPUUpdaterDelegate {
-        var channel: UpdateChannel = .stable
+        var channel: UpdateChannel = .nightly
         var onUpdateFound: ((SUAppcastItem) -> Void)?
         func feedURLString(for updater: SPUUpdater) -> String? { channel.feedURL }
         func allowedChannels(for updater: SPUUpdater) -> Set<String> { channel.allowedChannels }
@@ -134,10 +134,16 @@ final class UpdaterController {
 
 private enum ChangelogSection {
     static func extract(version: String, from changelog: String) -> String? {
+        let base = version.split(separator: "+", maxSplits: 1).first
+            .flatMap { $0.split(separator: "-", maxSplits: 1).first }
+            .map(String.init) ?? version
         let lines = changelog.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        guard let start = lines.firstIndex(where: { line in
-            line.hasPrefix("## ") && (line.contains(version) || line.contains("[\(version)]"))
-        }) else { return nil }
+        let start = [version, base, "Unreleased"].compactMap { candidate in
+            lines.firstIndex(where: { line in
+                line.hasPrefix("## ") && (line.contains(candidate) || line.contains("[\(candidate)]"))
+            })
+        }.first
+        guard let start else { return nil }
         let end = lines[(start + 1)...].firstIndex { $0.hasPrefix("## ") } ?? lines.endIndex
         return lines[(start + 1)..<end].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
