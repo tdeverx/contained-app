@@ -126,19 +126,27 @@ final class SettingsStore {
                        windowMaterial: windowMaterial,
                        modalMaterial: modalMaterial,
                        buttonMaterial: buttonMaterial,
+                       cardMaterial: cardMaterial,
                        showInfoTips: showInfoTips,
                        imageDefaultStyleEnabled: imageDefaultStyleEnabled,
                        keepInMenuBar: keepInMenuBar,
                        cliPathOverride: cliPathOverride,
                        refreshInterval: refreshInterval,
                        imageUpdateIntervalHours: imageUpdateIntervalHours,
+                       imageUpdateChecksEnabled: imageUpdateChecksEnabled,
+                       appUpdateChecksEnabled: appUpdateChecksEnabled,
+                       autoRestartEnabled: autoRestartEnabled,
                        notifyOnCrash: notifyOnCrash,
                        revealCLI: revealCLI,
                        historyRetentionDays: historyRetentionDays,
                        loggingLevel: loggingLevel,
                        enabledLogDestinations: enabledLogDestinations,
                        enabledLogCategories: enabledLogCategories,
-                       updateChannel: updateChannel)
+                       updateChannel: updateChannel,
+                       commandPaletteEnabled: commandPaletteEnabled,
+                       hubSearchEnabled: hubSearchEnabled,
+                       composeImportEnabled: composeImportEnabled,
+                       imageBuildEnabled: imageBuildEnabled)
     }
 
     func applyBackup(_ snapshot: SettingsBackup) {
@@ -148,12 +156,16 @@ final class SettingsStore {
         windowMaterial = snapshot.windowMaterial
         modalMaterial = snapshot.modalMaterial
         buttonMaterial = snapshot.buttonMaterial
+        cardMaterial = snapshot.cardMaterial
         showInfoTips = snapshot.showInfoTips
         imageDefaultStyleEnabled = snapshot.imageDefaultStyleEnabled
         keepInMenuBar = snapshot.keepInMenuBar
         cliPathOverride = snapshot.cliPathOverride
         refreshInterval = snapshot.refreshInterval
         imageUpdateIntervalHours = snapshot.imageUpdateIntervalHours
+        imageUpdateChecksEnabled = snapshot.imageUpdateChecksEnabled
+        appUpdateChecksEnabled = snapshot.appUpdateChecksEnabled
+        autoRestartEnabled = snapshot.autoRestartEnabled
         notifyOnCrash = snapshot.notifyOnCrash
         revealCLI = snapshot.revealCLI
         historyRetentionDays = snapshot.historyRetentionDays
@@ -161,6 +173,10 @@ final class SettingsStore {
         enabledLogDestinations = snapshot.enabledLogDestinations
         enabledLogCategories = snapshot.enabledLogCategories
         updateChannel = snapshot.updateChannel
+        commandPaletteEnabled = snapshot.commandPaletteEnabled
+        hubSearchEnabled = snapshot.hubSearchEnabled
+        composeImportEnabled = snapshot.composeImportEnabled
+        imageBuildEnabled = snapshot.imageBuildEnabled
     }
 
     private static func loadSet<T: RawRepresentable & Hashable>(_ type: T.Type,
@@ -209,12 +225,16 @@ struct SettingsBackup: Codable, Equatable {
     var windowMaterial: WindowMaterial
     var modalMaterial: WindowMaterial
     var buttonMaterial: WindowMaterial
+    var cardMaterial: WindowMaterial
     var showInfoTips: Bool
     var imageDefaultStyleEnabled: Bool
     var keepInMenuBar: Bool
     var cliPathOverride: String
     var refreshInterval: Double
     var imageUpdateIntervalHours: Int
+    var imageUpdateChecksEnabled: Bool
+    var appUpdateChecksEnabled: Bool
+    var autoRestartEnabled: Bool
     var notifyOnCrash: Bool
     var revealCLI: Bool
     var historyRetentionDays: Int
@@ -222,4 +242,138 @@ struct SettingsBackup: Codable, Equatable {
     var enabledLogDestinations: Set<AppLogDestination>
     var enabledLogCategories: Set<AppLogCategory>
     var updateChannel: UpdateChannel
+    var commandPaletteEnabled: Bool
+    var hubSearchEnabled: Bool
+    var composeImportEnabled: Bool
+    var imageBuildEnabled: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case accentTint, appearance, density, windowMaterial, modalMaterial, buttonMaterial, cardMaterial
+        case showInfoTips, imageDefaultStyleEnabled, keepInMenuBar, cliPathOverride, refreshInterval
+        case imageUpdateIntervalHours, imageUpdateChecksEnabled, appUpdateChecksEnabled, autoRestartEnabled
+        case notifyOnCrash, revealCLI, historyRetentionDays, loggingLevel, enabledLogDestinations
+        case enabledLogCategories, updateChannel, commandPaletteEnabled, hubSearchEnabled
+        case composeImportEnabled, imageBuildEnabled
+    }
+
+    init(accentTint: AppTint,
+         appearance: AppearanceMode,
+         density: CardDensity,
+         windowMaterial: WindowMaterial,
+         modalMaterial: WindowMaterial,
+         buttonMaterial: WindowMaterial,
+         cardMaterial: WindowMaterial,
+         showInfoTips: Bool,
+         imageDefaultStyleEnabled: Bool,
+         keepInMenuBar: Bool,
+         cliPathOverride: String,
+         refreshInterval: Double,
+         imageUpdateIntervalHours: Int,
+         imageUpdateChecksEnabled: Bool,
+         appUpdateChecksEnabled: Bool,
+         autoRestartEnabled: Bool,
+         notifyOnCrash: Bool,
+         revealCLI: Bool,
+         historyRetentionDays: Int,
+         loggingLevel: AppLogLevel,
+         enabledLogDestinations: Set<AppLogDestination>,
+         enabledLogCategories: Set<AppLogCategory>,
+         updateChannel: UpdateChannel,
+         commandPaletteEnabled: Bool,
+         hubSearchEnabled: Bool,
+         composeImportEnabled: Bool,
+         imageBuildEnabled: Bool) {
+        self.accentTint = accentTint
+        self.appearance = appearance
+        self.density = density
+        self.windowMaterial = windowMaterial
+        self.modalMaterial = modalMaterial
+        self.buttonMaterial = buttonMaterial
+        self.cardMaterial = cardMaterial
+        self.showInfoTips = showInfoTips
+        self.imageDefaultStyleEnabled = imageDefaultStyleEnabled
+        self.keepInMenuBar = keepInMenuBar
+        self.cliPathOverride = cliPathOverride
+        self.refreshInterval = refreshInterval
+        self.imageUpdateIntervalHours = imageUpdateIntervalHours
+        self.imageUpdateChecksEnabled = imageUpdateChecksEnabled
+        self.appUpdateChecksEnabled = appUpdateChecksEnabled
+        self.autoRestartEnabled = autoRestartEnabled
+        self.notifyOnCrash = notifyOnCrash
+        self.revealCLI = revealCLI
+        self.historyRetentionDays = historyRetentionDays
+        self.loggingLevel = loggingLevel
+        self.enabledLogDestinations = enabledLogDestinations
+        self.enabledLogCategories = enabledLogCategories
+        self.updateChannel = updateChannel
+        self.commandPaletteEnabled = commandPaletteEnabled
+        self.hubSearchEnabled = hubSearchEnabled
+        self.composeImportEnabled = composeImportEnabled
+        self.imageBuildEnabled = imageBuildEnabled
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        accentTint = try container.decode(AppTint.self, forKey: .accentTint)
+        appearance = try container.decode(AppearanceMode.self, forKey: .appearance)
+        density = try container.decode(CardDensity.self, forKey: .density)
+        windowMaterial = try container.decode(WindowMaterial.self, forKey: .windowMaterial)
+        modalMaterial = try container.decode(WindowMaterial.self, forKey: .modalMaterial)
+        buttonMaterial = try container.decodeIfPresent(WindowMaterial.self, forKey: .buttonMaterial) ?? .glassClear
+        cardMaterial = try container.decodeIfPresent(WindowMaterial.self, forKey: .cardMaterial) ?? .glassRegular
+        showInfoTips = try container.decodeIfPresent(Bool.self, forKey: .showInfoTips) ?? true
+        imageDefaultStyleEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageDefaultStyleEnabled) ?? true
+        keepInMenuBar = try container.decodeIfPresent(Bool.self, forKey: .keepInMenuBar) ?? true
+        cliPathOverride = try container.decodeIfPresent(String.self, forKey: .cliPathOverride) ?? ""
+        refreshInterval = try container.decodeIfPresent(Double.self, forKey: .refreshInterval) ?? 2
+        imageUpdateIntervalHours = try container.decodeIfPresent(Int.self, forKey: .imageUpdateIntervalHours) ?? 6
+        imageUpdateChecksEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageUpdateChecksEnabled) ?? true
+        appUpdateChecksEnabled = try container.decodeIfPresent(Bool.self, forKey: .appUpdateChecksEnabled) ?? true
+        autoRestartEnabled = try container.decodeIfPresent(Bool.self, forKey: .autoRestartEnabled) ?? true
+        notifyOnCrash = try container.decodeIfPresent(Bool.self, forKey: .notifyOnCrash) ?? true
+        revealCLI = try container.decodeIfPresent(Bool.self, forKey: .revealCLI) ?? true
+        historyRetentionDays = try container.decodeIfPresent(Int.self, forKey: .historyRetentionDays) ?? 7
+        loggingLevel = AppLogLevel(rawValue: try container.decodeIfPresent(String.self, forKey: .loggingLevel) ?? "")
+            ?? .important
+        enabledLogDestinations = Set((try container.decodeIfPresent([String].self, forKey: .enabledLogDestinations) ?? [AppLogDestination.activity.rawValue])
+            .compactMap(AppLogDestination.init(rawValue:)))
+        enabledLogCategories = Set((try container.decodeIfPresent([String].self, forKey: .enabledLogCategories) ?? AppLogCategory.allCases.map(\.rawValue))
+            .compactMap(AppLogCategory.init(rawValue:)))
+        updateChannel = try container.decodeIfPresent(UpdateChannel.self, forKey: .updateChannel) ?? .nightly
+        commandPaletteEnabled = try container.decodeIfPresent(Bool.self, forKey: .commandPaletteEnabled) ?? false
+        hubSearchEnabled = try container.decodeIfPresent(Bool.self, forKey: .hubSearchEnabled) ?? false
+        composeImportEnabled = try container.decodeIfPresent(Bool.self, forKey: .composeImportEnabled) ?? false
+        imageBuildEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageBuildEnabled) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(accentTint, forKey: .accentTint)
+        try container.encode(appearance, forKey: .appearance)
+        try container.encode(density, forKey: .density)
+        try container.encode(windowMaterial, forKey: .windowMaterial)
+        try container.encode(modalMaterial, forKey: .modalMaterial)
+        try container.encode(buttonMaterial, forKey: .buttonMaterial)
+        try container.encode(cardMaterial, forKey: .cardMaterial)
+        try container.encode(showInfoTips, forKey: .showInfoTips)
+        try container.encode(imageDefaultStyleEnabled, forKey: .imageDefaultStyleEnabled)
+        try container.encode(keepInMenuBar, forKey: .keepInMenuBar)
+        try container.encode(cliPathOverride, forKey: .cliPathOverride)
+        try container.encode(refreshInterval, forKey: .refreshInterval)
+        try container.encode(imageUpdateIntervalHours, forKey: .imageUpdateIntervalHours)
+        try container.encode(imageUpdateChecksEnabled, forKey: .imageUpdateChecksEnabled)
+        try container.encode(appUpdateChecksEnabled, forKey: .appUpdateChecksEnabled)
+        try container.encode(autoRestartEnabled, forKey: .autoRestartEnabled)
+        try container.encode(notifyOnCrash, forKey: .notifyOnCrash)
+        try container.encode(revealCLI, forKey: .revealCLI)
+        try container.encode(historyRetentionDays, forKey: .historyRetentionDays)
+        try container.encode(loggingLevel.rawValue, forKey: .loggingLevel)
+        try container.encode(enabledLogDestinations.map(\.rawValue).sorted(), forKey: .enabledLogDestinations)
+        try container.encode(enabledLogCategories.map(\.rawValue).sorted(), forKey: .enabledLogCategories)
+        try container.encode(updateChannel, forKey: .updateChannel)
+        try container.encode(commandPaletteEnabled, forKey: .commandPaletteEnabled)
+        try container.encode(hubSearchEnabled, forKey: .hubSearchEnabled)
+        try container.encode(composeImportEnabled, forKey: .composeImportEnabled)
+        try container.encode(imageBuildEnabled, forKey: .imageBuildEnabled)
+    }
 }
