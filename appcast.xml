@@ -3,13 +3,20 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.51+632e47c</title>
-            <pubDate>Sat, 27 Jun 2026 13:33:03 +0000</pubDate>
-            <sparkle:version>51</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.51+632e47c</sparkle:shortVersionString>
+            <title>1.0.0-nightly.56+905ec05</title>
+            <pubDate>Tue, 30 Jun 2026 23:41:49 +0000</pubDate>
+            <sparkle:version>56</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.56+905ec05</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.51+632e47c.dmg" length="6512719" type="application/octet-stream" sparkle:edSignature="rXO5nad5O+kGnpbOtXsa3OAbDLC3k2TzslzQL5asRLSvv79eQJNo0GfXc2c1KnwqpI2bjhavSzmJOj8pNAYaBw=="/>
+            <description><![CDATA[<h3>Added</h3>
+<ul>
+<li>Versioned `.containedbackup` export and import for settings, local personalization, health checks, templates, and activity history.</li>
+<li>Rollback guard for data created by newer app schemas, with an export-before-reset path.</li>
+<li>Sparkle release notes in appcasts and an in-app “What’s New” view.</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.56+905ec05.dmg" length="6635602" type="application/octet-stream" sparkle:edSignature="rxS/W2/xbyrDeyCYad1rI1XlMUSVFoMwgl9Em1Zr2KSccVXcpEiVv6b5ieAj9+t5a8WV0KAXJ2HNKzYfXFkSBQ=="/>
         </item>
     </channel>
 </rss>
