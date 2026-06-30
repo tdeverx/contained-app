@@ -224,7 +224,7 @@ private struct UpdatesTab: View {
                 Button("Check for Updates…") { app.updater.checkForUpdates() }
                     .disabled(!app.updater.canCheckForUpdates)
                 Button("What’s New in This Build") { showingCurrentNotes = true }
-                Button("What’s New in Available Update") { showingAvailableNotes = true }
+                Button(availableUpdateNotesLabel) { showingAvailableNotes = true }
                     .disabled(app.updater.availableReleaseNotesHTML == nil)
             } header: {
                 Text("Updates")
@@ -236,12 +236,29 @@ private struct UpdatesTab: View {
         .formStyle(.grouped)
         .task { app.updater.refreshChannelAvailability() }
         .sheet(isPresented: $showingCurrentNotes) {
-            ReleaseNotesView(title: "What’s New", html: app.updater.currentReleaseNotesHTML)
+            ReleaseNotesView(title: "What’s New",
+                             html: app.updater.currentReleaseNotesHTML,
+                             onClose: { showingCurrentNotes = false })
         }
         .sheet(isPresented: $showingAvailableNotes) {
-            ReleaseNotesView(title: "Available Update",
-                             html: app.updater.availableReleaseNotesHTML ?? "<p>No release notes are available.</p>")
+            ReleaseNotesView(title: availableUpdateNotesTitle,
+                             html: app.updater.availableReleaseNotesHTML ?? "<p>No release notes are available.</p>",
+                             onClose: { showingAvailableNotes = false })
         }
+    }
+
+    private var availableUpdateNotesLabel: String {
+        if let version = app.updater.availableUpdateDisplayVersion {
+            return "What’s New in \(version)"
+        }
+        return "What’s New in Available Update"
+    }
+
+    private var availableUpdateNotesTitle: String {
+        if let version = app.updater.availableUpdateDisplayVersion {
+            return "What’s New in \(version)"
+        }
+        return "Available Update"
     }
 
     private var channelBinding: Binding<UpdateChannel> {

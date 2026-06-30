@@ -18,13 +18,18 @@ final class UpdaterController {
     private static let lastSeenVersionKey = "updates.lastSeenVersion"
 
     var availableReleaseNotesHTML: String?
+    var availableUpdateDisplayVersion: String?
     var showWhatsNew = false
 
     init(channel: UpdateChannel = .stable, defaults: UserDefaults = .standard) {
         self.defaults = defaults
         channelDelegate.channel = channel
         channelDelegate.onUpdateFound = { [weak self] item in
-            self?.availableReleaseNotesHTML = item.itemDescription
+            self?.recordAvailableUpdate(itemDescription: item.itemDescription,
+                                        displayVersion: item.displayVersionString)
+        }
+        channelDelegate.onNoUpdateFound = { [weak self] in
+            self?.clearAvailableUpdate()
         }
         // Seed the current channel as available so the picker shows a valid selection immediately;
         // the probe fills in (or removes) the rest.
@@ -40,6 +45,23 @@ final class UpdaterController {
 
     func checkForUpdates() { controller?.checkForUpdates(nil) }
     var canCheckForUpdates: Bool { controller?.updater.canCheckForUpdates ?? false }
+
+    func presentCurrentReleaseNotes() {
+        showWhatsNew = true
+    }
+
+    func recordAvailableUpdate(itemDescription: String?, displayVersion: String) {
+        let trimmed = itemDescription?.trimmingCharacters(in: .whitespacesAndNewlines)
+        availableReleaseNotesHTML = trimmed?.isEmpty == false
+            ? trimmed
+            : "<p>No release notes are available for \(displayVersion).</p>"
+        availableUpdateDisplayVersion = displayVersion
+    }
+
+    func clearAvailableUpdate() {
+        availableReleaseNotesHTML = nil
+        availableUpdateDisplayVersion = nil
+    }
 
     var automaticallyChecks: Bool {
         get { controller?.updater.automaticallyChecksForUpdates ?? false }
@@ -100,7 +122,6 @@ final class UpdaterController {
     private func showWhatsNewIfNeeded() {
         let version = Self.runningDisplayVersion()
         guard defaults.string(forKey: Self.lastSeenVersionKey) != version else { return }
-        defaults.set(version, forKey: Self.lastSeenVersionKey)
         showWhatsNew = Self.changelogHTML(for: version) != nil
     }
 
@@ -112,10 +133,21 @@ final class UpdaterController {
     }
 
     private static func changelogHTML(for version: String) -> String? {
-        guard let url = Bundle.main.url(forResource: "CHANGELOG", withExtension: "md"),
+        guard let url = changelogResourceURL(),
               let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         let section = ChangelogSection.extract(version: version, from: text)
         return section.map { ChangelogSection.html(from: $0) }
+    }
+
+    static func changelogResourceURL(bundle: Bundle = .main) -> URL? {
+        if bundle.bundleURL.pathExtension == "app" {
+            return bundle.bundleURL
+                .appendingPathComponent("Contents")
+                .appendingPathComponent("Resources")
+                .appendingPathComponent("Contained_Contained.bundle")
+                .appendingPathComponent("CHANGELOG.md")
+        }
+        return Bundle.module.url(forResource: "CHANGELOG", withExtension: "md")
     }
 
     /// Sparkle's delegate must be an `NSObject`. It points the updater at the selected channel's feed
@@ -124,20 +156,34 @@ final class UpdaterController {
     private final class ChannelDelegate: NSObject, SPUUpdaterDelegate {
         var channel: UpdateChannel = .stable
         var onUpdateFound: ((SUAppcastItem) -> Void)?
+        var onNoUpdateFound: (() -> Void)?
         func feedURLString(for updater: SPUUpdater) -> String? { channel.feedURL }
         func allowedChannels(for updater: SPUUpdater) -> Set<String> { channel.allowedChannels }
         func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
             onUpdateFound?(item)
         }
+        func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+            onNoUpdateFound?()
+        }
+        func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
+            onNoUpdateFound?()
+        }
     }
 }
 
-private enum ChangelogSection {
+enum ChangelogSection {
     static func extract(version: String, from changelog: String) -> String? {
+        let base = version.split(separator: "+", maxSplits: 1).first
+            .flatMap { $0.split(separator: "-", maxSplits: 1).first }
+            .map(String.init) ?? version
         let lines = changelog.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        guard let start = lines.firstIndex(where: { line in
-            line.hasPrefix("## ") && (line.contains(version) || line.contains("[\(version)]"))
-        }) else { return nil }
+        let candidates = [version, base, "Unreleased"]
+        let start = candidates.compactMap { candidate in
+            lines.firstIndex(where: { line in
+                line.hasPrefix("## ") && (line.contains(candidate) || line.contains("[\(candidate)]"))
+            })
+        }.first
+        guard let start else { return nil }
         let end = lines[(start + 1)...].firstIndex { $0.hasPrefix("## ") } ?? lines.endIndex
         return lines[(start + 1)..<end].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }

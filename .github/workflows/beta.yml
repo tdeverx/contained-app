@@ -11,10 +11,13 @@ name: Beta
 on:
   push:
     branches: [beta]
-    # Docs/meta-only changes don't need a build. For anything else (e.g. a
-    # cleanup under a build path), put [skip ci] in the commit message.
+    # Docs/meta-only changes don't need a build. Changelog changes do, because the changelog is
+    # bundled into the app and drives GitHub/Sparkle release notes.
     paths-ignore:
-      - '**/*.md'
+      - 'docs/**'
+      - 'README.md'
+      - 'CODE_OF_CONDUCT.md'
+      - '.github/CONTRIBUTING.md'
       - '.github/assets/**'
       - 'LICENSE'
       - 'NOTICE'
@@ -52,6 +55,7 @@ jobs:
       - name: Build & test
         if: steps.guard.outputs.build == 'true'
         run: |
+          ./scripts/sync-changelog-resource.sh
           swift build -c release
           swift test
 
@@ -66,6 +70,14 @@ jobs:
           mkdir -p updates
           brew install create-dmg
           ./scripts/make-dmg.sh beta Contained.app "updates/Contained-${VERSION}.dmg"
+          VERSION_VALUE="${VERSION}" ./scripts/release-body.sh > updates/release-notes.md
+          {
+            echo "Automated beta build @ ${SHA}."
+            echo
+            cat updates/release-notes.md
+            echo
+            echo "⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
+          } > updates/github-release-notes.md
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
@@ -74,9 +86,7 @@ jobs:
         run: |
           gh release create "v${VERSION}" updates/*.dmg \
             --prerelease --title "Beta (${VERSION})" \
-            --notes "Automated beta build @ ${SHA}.
-
-          ⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
+            --notes-file updates/github-release-notes.md
 
       - name: Update Sparkle feed (beta branch appcast.xml)
         if: steps.guard.outputs.build == 'true' && env.SPARKLE_ED_PRIVATE_KEY != ''

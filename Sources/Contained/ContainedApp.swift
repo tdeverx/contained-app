@@ -67,7 +67,7 @@ struct ContainedApp: App {
                 Button("Keyboard Shortcuts") { NSWorkspace.shared.open(Links.shortcutsURL) }
                 Button("Troubleshooting") { NSWorkspace.shared.open(Links.troubleshootingURL) }
                 Divider()
-                Button("Release Notes") { NSWorkspace.shared.open(Links.releasesURL) }
+                Button("Release Notes") { showReleaseNotes() }
                 Button("Architecture") { NSWorkspace.shared.open(Links.architectureURL) }
                 Button("Contributing") { NSWorkspace.shared.open(Links.contributingURL) }
                 Divider()
@@ -104,6 +104,11 @@ struct ContainedApp: App {
 
     private var runningOnlyBinding: Binding<Bool> {
         Binding(get: { ui.runningOnly }, set: { ui.runningOnly = $0 })
+    }
+
+    private func showReleaseNotes() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        app.updater.presentCurrentReleaseNotes()
     }
 
     /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).

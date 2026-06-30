@@ -6,7 +6,10 @@ on:
   pull_request:
     branches: [main, nightly, beta, stable]
     paths-ignore:
-      - '**/*.md'
+      - 'docs/**'
+      - 'README.md'
+      - 'CODE_OF_CONDUCT.md'
+      - '.github/CONTRIBUTING.md'
       - '.github/assets/**'
       - 'LICENSE'
       - 'NOTICE'
@@ -29,5 +32,6 @@ jobs:
 
       - name: Build & test
         run: |
+          ./scripts/sync-changelog-resource.sh
           swift build -c release
           swift test

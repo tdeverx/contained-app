@@ -5,22 +5,13 @@ cd "$(dirname "$0")/.."
 
 UPDATES_DIR="${1:-updates}"
 CHANGELOG="${CHANGELOG:-CHANGELOG.md}"
-VERSION_VALUE="${VERSION_VALUE:-$(cat VERSION 2>/dev/null || true)}"
+VERSION_VALUE="${VERSION_VALUE:-${VERSION:-$(cat VERSION 2>/dev/null || true)}}"
 
 [ -d "$UPDATES_DIR" ] || { echo "✗ Updates dir '$UPDATES_DIR' not found"; exit 1; }
 [ -f "$CHANGELOG" ] || { echo "✗ $CHANGELOG not found"; exit 1; }
 [ -n "$VERSION_VALUE" ] || { echo "✗ VERSION is empty"; exit 1; }
 
-fragment="$(awk -v version="$VERSION_VALUE" '
-  BEGIN { in_section=0 }
-  /^## / {
-    if (in_section) exit
-    if (index($0, version) > 0 || index($0, "[" version "]") > 0) { in_section=1; next }
-  }
-  in_section { print }
-' "$CHANGELOG")"
-
-[ -n "$fragment" ] || fragment="No release notes were found for $VERSION_VALUE."
+fragment="$(VERSION_VALUE="$VERSION_VALUE" CHANGELOG="$CHANGELOG" ./scripts/release-body.sh)"
 
 html="$(printf '%s\n' "$fragment" | awk '
   BEGIN { in_list=0 }
