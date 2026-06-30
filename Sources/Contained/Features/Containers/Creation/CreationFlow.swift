@@ -137,9 +137,11 @@ struct CreationFlow: View {
                     box(symbol: "shippingbox", title: "Container",
                         subtitle: "Configure and run an image",
                         matchedID: "creation-option-0") { go(.chooser) }
-                    box(symbol: "hammer", title: "Build",
-                        subtitle: "Build an image from a Dockerfile",
-                        matchedID: "creation-option-1") { go(.build) }
+                    if app.settings.imageBuildEnabled {
+                        box(symbol: "hammer", title: "Build",
+                            subtitle: "Build an image from a Dockerfile",
+                            matchedID: "creation-option-1") { go(.build) }
+                    }
                     box(symbol: "network", title: "Network",
                         subtitle: "Create a container network",
                         matchedID: "creation-option-2") { go(.network) }
@@ -155,9 +157,11 @@ struct CreationFlow: View {
         gridScaffold {
             optionStack {
                 optionRow {
-                    box(symbol: "magnifyingglass", title: "Search",
-                        subtitle: "Find an image on Docker Hub",
-                        matchedID: "creation-option-0") { go(.search) }
+                    if app.settings.hubSearchEnabled {
+                        box(symbol: "magnifyingglass", title: "Search",
+                            subtitle: "Find an image on Docker Hub",
+                            matchedID: "creation-option-0") { go(.search) }
+                    }
                     box(symbol: "square.stack.3d.up", title: "Local image",
                         subtitle: app.images.isEmpty ? "Choose from pulled images" : "Use an image already pulled",
                         matchedID: "creation-option-1") {
@@ -168,9 +172,11 @@ struct CreationFlow: View {
                         matchedID: "creation-option-2") { spec = RunSpec(); go(.configure) }
                 }
                 optionRow {
-                    box(symbol: "shippingbox.and.arrow.backward", title: "Compose",
-                        subtitle: "Paste YAML or choose a file",
-                        matchedID: "compose-option-0") { go(.compose) }
+                    if app.settings.composeImportEnabled {
+                        box(symbol: "shippingbox.and.arrow.backward", title: "Compose",
+                            subtitle: "Paste YAML or choose a file",
+                            matchedID: "compose-option-0") { go(.compose) }
+                    }
                     box(symbol: "archivebox", title: "Image archive",
                         subtitle: "Load an image .tar") { go(.imageArchive) }
                     box(symbol: "bookmark.fill", title: "Templates",

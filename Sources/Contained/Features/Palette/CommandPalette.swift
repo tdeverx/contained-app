@@ -79,9 +79,11 @@ struct PaletteItem: Identifiable {
                 ui.dispatch(action)
             })
         }
-        items.append(PaletteItem(title: "Import compose…", subtitle: "create", kind: .create, icon: "square.on.square", tint: .accentColor) {
-            ComposeImport.pickAndImport(app: app, ui: ui)
-        })
+        if app.settings.composeImportEnabled {
+            items.append(PaletteItem(title: "Import compose…", subtitle: "create", kind: .create, icon: "square.on.square", tint: .accentColor) {
+                ComposeImport.pickAndImport(app: app, ui: ui)
+            })
+        }
         // Registry credentials live on the Settings → Registries morph page (not a modal sheet).
         items.append(PaletteItem(title: "Registry login", subtitle: "create",
                                  keywords: ["registry", "credentials", "docker login", "sign in"],
@@ -90,12 +92,14 @@ struct PaletteItem: Identifiable {
         })
         // Search scopes: these pin a chip to the search field and search in-place (they keep the
         // palette open) instead of opening another panel.
-        items.append(PaletteItem(title: "Search Docker Hub", subtitle: "scope",
-                                 keywords: ["registry", "pull", "dockerhub", "image"],
-                                 kind: .search, keepsPaletteOpen: true,
-                                 icon: "globe", tint: .accentColor) {
-            ui.paletteScope = .dockerHub
-        })
+        if app.settings.hubSearchEnabled {
+            items.append(PaletteItem(title: "Search Docker Hub", subtitle: "scope",
+                                     keywords: ["registry", "pull", "dockerhub", "image"],
+                                     kind: .search, keepsPaletteOpen: true,
+                                     icon: "globe", tint: .accentColor) {
+                ui.paletteScope = .dockerHub
+            })
+        }
         items.append(PaletteItem(title: "Search local images", subtitle: "scope",
                                  keywords: ["image", "tag", "local", "filter"],
                                  kind: .search, keepsPaletteOpen: true,

@@ -25,6 +25,13 @@
 - **Deduplicated entries**: removed overlapping commands (e.g. "Pull an image" / "Activity history") in favour of scopes and the navigation entries
 - **Color name aliases**: tint search matches everyday color names (e.g. "purple" → Indigo, "blue" → Azure, "grey" → Graphite)
 
+#### Experimental features (Settings → Experimental, all off by default)
+- **Opt-in gating**: A new Settings → Experimental section gates surfaces that are still being refined. Each defaults **off**; enabling one reveals its menu commands, toolbar affordances, and creation options app-wide
+- **Command palette (⌘K)**: Gated behind `commandPaletteEnabled` (off by default). A render-level backstop in `AppToolbar` keeps it fully hidden regardless of activation path; page search and menu commands are unaffected
+- **Docker Hub search**: Gated behind `hubSearchEnabled` — the creation "Search" path, the "Pull Image…" menu commands, and the palette's Hub scope
+- **Compose import**: Gated behind `composeImportEnabled` — paste, file pick, drag-and-drop, menu command, and palette entry
+- **Image build workspace**: Gated behind `imageBuildEnabled` — the Dockerfile build flow and its menu command
+
 #### Creation & Resource Management
 - **Paged creation flow**: Multi-step flow for creating containers, networks, volumes, and building images
 - **Unified creation entry point**: File/menu shortcuts, command palette actions, and empty states open the same toolbar add panel at the relevant creation page

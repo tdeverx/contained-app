@@ -41,13 +41,19 @@ struct ContainedApp: App {
                 Button("Run Container…") { ui.openCreationPanel(entry: .chooser) }
                     .keyboardShortcut("r", modifiers: .command)
                 Divider()
-                Button("Pull Image…") { ui.dispatch(.pullImage) }
-                Button("Build Image…") { ui.dispatch(.build) }
+                if app.settings.hubSearchEnabled {
+                    Button("Pull Image…") { ui.dispatch(.pullImage) }
+                }
+                if app.settings.imageBuildEnabled {
+                    Button("Build Image…") { ui.dispatch(.build) }
+                }
                 Divider()
                 Button("New Volume…") { ui.dispatch(.createVolume) }
                 Button("New Network…") { ui.dispatch(.createNetwork) }
-                Divider()
-                Button("Import Compose…") { ComposeImport.pickAndImport(app: app, ui: ui) }
+                if app.settings.composeImportEnabled {
+                    Divider()
+                    Button("Import Compose…") { ComposeImport.pickAndImport(app: app, ui: ui) }
+                }
             }
             // (Find / ⌘F intentionally omitted — in-window search is being reworked and will return
             // with the new search affordance.)
@@ -61,8 +67,10 @@ struct ContainedApp: App {
                 Toggle("Show Running Only", isOn: runningOnlyBinding)
             }
             CommandGroup(after: .toolbar) {
-                Button("Command Palette…") { ui.toggleMorph(.palette) }
-                    .keyboardShortcut("k", modifiers: .command)
+                if app.settings.commandPaletteEnabled {
+                    Button("Command Palette…") { ui.toggleMorph(.palette) }
+                        .keyboardShortcut("k", modifiers: .command)
+                }
                 Button("Search This Page") { ui.focusSearch() }
                     .keyboardShortcut("s", modifiers: .command)
                 Divider()

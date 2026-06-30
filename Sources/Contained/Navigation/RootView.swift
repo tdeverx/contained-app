@@ -61,7 +61,9 @@ struct RootView: View {
         .dropDestination(for: URL.self) { urls, _ in
             for url in urls {
                 switch url.pathExtension.lowercased() {
-                case "yaml", "yml": ComposeImport.importFile(at: url, app: app, ui: ui); return true
+                case "yaml", "yml":
+                    guard app.settings.composeImportEnabled else { continue }
+                    ComposeImport.importFile(at: url, app: app, ui: ui); return true
                 case "tar":         app.loadImageTar(at: url); return true
                 default:            continue
                 }
@@ -148,8 +150,10 @@ struct RootView: View {
         Button { ui.toggleMorph(.templates) } label: { Label("Templates", systemImage: "bookmark") }
         Button { ui.toggleMorph(.system) } label: { Label("System", systemImage: "gearshape.2") }
         Button { ui.toggleMorph(.activity) } label: { Label("Activity", systemImage: "bell") }
-        Divider()
-        Button { ui.toggleMorph(.palette) } label: { Label("Command Palette…", systemImage: "command") }
+        if settings.commandPaletteEnabled {
+            Divider()
+            Button { ui.toggleMorph(.palette) } label: { Label("Command Palette…", systemImage: "command") }
+        }
     }
 
     /// Force (or release, for `.system`) the app-wide AppKit appearance. Setting `NSApplication.appearance`

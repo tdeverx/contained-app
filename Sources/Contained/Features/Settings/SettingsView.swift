@@ -19,6 +19,7 @@ struct SettingsContent: View {
         case general = "General"
         case runtime = "Runtime"
         case registries = "Registries"
+        case experimental = "Experimental"
         case updates = "Updates"
         case about = "About"
 
@@ -30,6 +31,7 @@ struct SettingsContent: View {
             case .general: "gearshape"
             case .runtime: "cpu"
             case .registries: "key"
+            case .experimental: "flask"
             case .updates: "arrow.down.app"
             case .about: "info.circle"
             }
@@ -80,6 +82,7 @@ struct SettingsContent: View {
         case .general: GeneralTab(settings: settings)
         case .runtime: RuntimeTab()
         case .registries: RegistriesTab()
+        case .experimental: ExperimentalTab(settings: settings)
         case .updates: UpdatesTab()
         case .about: AboutTab()
         }

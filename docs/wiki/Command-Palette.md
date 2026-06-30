@@ -1,5 +1,12 @@
 # Command Palette
 
+> **Experimental (off by default).** The palette is gated behind Settings →
+> Experimental → "Command palette (⌘K)". While disabled, the toolbar search field
+> stays a plain page filter (no ⌘K hint, no escalation), the menu commands are
+> hidden, and `AppToolbar` refuses to render the palette morph even if some path
+> sets `activeMorph = .palette`. The Docker Hub search scope has its own
+> experimental flag (`hubSearchEnabled`).
+
 The command palette is the app-wide action index. If a user can do something
 from a toolbar panel, menu command, container card, image card, settings page, or
 resource panel, it should be discoverable from `CommandPalette.swift`.

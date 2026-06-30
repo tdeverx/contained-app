@@ -48,7 +48,9 @@ struct MenuBarContent: View {
         Divider()
 
         Button("Run a Container…") { activate(); ui.openCreationPanel(entry: .chooser) }
-        Button("Pull Image…") { activate(); ui.dispatch(.pullImage) }
+        if app.settings.hubSearchEnabled {
+            Button("Pull Image…") { activate(); ui.dispatch(.pullImage) }
+        }
 
         Divider()
 

@@ -125,7 +125,9 @@ struct AppToolbar: View {
 
     @ViewBuilder
     private var paletteMorphLayer: some View {
-        if ui.activeMorph == .palette {
+        // Render-level backstop: with the experimental palette disabled, never present it even if some
+        // activation path slips through. Keeps the gate airtight from a single place.
+        if ui.activeMorph == .palette, app.settings.commandPaletteEnabled {
             MorphingExpander(isPresented: paletteMorphBinding,
                              originFrame: slots[.palette] ?? .zero,
                              target: toolbarMorphTarget(for: .palette, size: Tokens.PanelSize.palette),

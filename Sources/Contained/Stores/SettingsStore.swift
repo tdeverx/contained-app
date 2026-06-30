@@ -46,6 +46,22 @@ final class SettingsStore {
     }
     /// Which Sparkle update channel the user opts into (stable / beta / nightly).
     var updateChannel: UpdateChannel { didSet { defaults.set(updateChannel.rawValue, forKey: Keys.updateChannel) } }
+    // MARK: Experimental features
+    //
+    // Opt-in gates for surfaces that aren't fully baked yet. All default **off** so a fresh install
+    // ships the stable core; users enable them in Settings → Experimental. The command palette also
+    // has a render-level backstop in `AppToolbar` so flipping it off fully hides the surface
+    // regardless of any activation path.
+
+    /// The `⌘K` command palette (toolbar search escalation + menu command + morph).
+    var commandPaletteEnabled: Bool { didSet { defaults.set(commandPaletteEnabled, forKey: Keys.commandPaletteEnabled) } }
+    /// Inline Docker Hub / registry image search (the creation "Search" path + palette Hub scope).
+    var hubSearchEnabled: Bool { didSet { defaults.set(hubSearchEnabled, forKey: Keys.hubSearchEnabled) } }
+    /// Compose (YAML) import — paste, file pick, and drag-and-drop.
+    var composeImportEnabled: Bool { didSet { defaults.set(composeImportEnabled, forKey: Keys.composeImportEnabled) } }
+    /// The Dockerfile image-build workspace.
+    var imageBuildEnabled: Bool { didSet { defaults.set(imageBuildEnabled, forKey: Keys.imageBuildEnabled) } }
+
     /// Register/unregister the app as a login item via `SMAppService`. Backed by the live service
     /// status; failures (e.g. unsigned dev build) leave the stored value and the status governs.
     var launchAtLogin: Bool {
@@ -95,6 +111,11 @@ final class SettingsStore {
         // Default to Nightly while the app is pre-1.0 — that's where the only builds ship, so a fresh
         // install actually receives updates. Users can switch to Beta/Stable in Settings → Updates.
         updateChannel = UpdateChannel(rawValue: defaults.string(forKey: Keys.updateChannel) ?? "") ?? .nightly
+        // Experimental features default off (opt-in).
+        commandPaletteEnabled = defaults.object(forKey: Keys.commandPaletteEnabled) as? Bool ?? false
+        hubSearchEnabled = defaults.object(forKey: Keys.hubSearchEnabled) as? Bool ?? false
+        composeImportEnabled = defaults.object(forKey: Keys.composeImportEnabled) as? Bool ?? false
+        imageBuildEnabled = defaults.object(forKey: Keys.imageBuildEnabled) as? Bool ?? false
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
@@ -174,6 +195,10 @@ final class SettingsStore {
         static let logDestinations = "logDestinations"
         static let logCategories = "logCategories"
         static let updateChannel = "updateChannel"
+        static let commandPaletteEnabled = "experimental.commandPalette"
+        static let hubSearchEnabled = "experimental.hubSearch"
+        static let composeImportEnabled = "experimental.composeImport"
+        static let imageBuildEnabled = "experimental.imageBuild"
     }
 }
 
