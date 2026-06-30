@@ -156,6 +156,7 @@ final class AppModel {
         lastImageUpdateSweep = Self.loadLastImageUpdateSweep()
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
+        updater.automaticallyChecks = settings.appUpdateChecksEnabled
         if case .newerOnDisk(let version) = migrator.reconcile() {
             downgradeSchemaVersion = version
         }
@@ -304,7 +305,9 @@ final class AppModel {
     func tick() async {
         await refreshSystem()
         guard bootstrap == .ready, let client else { return }
-        await watchdog.evaluate(snapshots: containers.snapshots, store: containers, client: client)
+        if settings.autoRestartEnabled {
+            await watchdog.evaluate(snapshots: containers.snapshots, store: containers, client: client)
+        }
         await health.evaluate(snapshots: containers.snapshots, store: healthChecks, client: client)
         historyStore.recordMetrics(containers.statsByID)
         await refreshNetworks()
@@ -625,6 +628,7 @@ final class AppModel {
     }
 
     private func checkImageUpdatesIfNeeded(now: Date = Date()) async {
+        guard settings.imageUpdateChecksEnabled else { return }
         if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < imageUpdateInterval { return }
         if images.isEmpty, let client {
             do {

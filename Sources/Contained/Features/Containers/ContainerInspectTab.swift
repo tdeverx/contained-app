@@ -5,14 +5,12 @@ import ContainedCore
 struct ContainerInspectTab: View {
     let snapshot: ContainerSnapshot
     var body: some View {
-        ScrollView([.horizontal, .vertical]) {
+        ContainerTabScaffold(axes: [.horizontal, .vertical]) {
             Text(json)
                 .font(.system(.caption, design: .monospaced))
                 .textSelection(.enabled)
-                .padding(Tokens.Space.l)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .scrollEdgeEffectStyle(.soft, for: .all)
     }
     private var json: String {
         let encoder = JSONEncoder()

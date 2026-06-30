@@ -79,6 +79,7 @@ struct RootView: View {
         .tint(settings.accentTint.color)
         .environment(\.modalMaterial, settings.modalMaterial)
         .environment(\.buttonMaterial, settings.buttonMaterial)
+        .environment(\.cardMaterial, settings.cardMaterial)
         .preferredColorScheme(settings.appearance.colorScheme)
         .onAppear { applyAppearance(settings.appearance) }
         .onChange(of: settings.appearance) { _, mode in applyAppearance(mode) }

@@ -21,12 +21,12 @@ struct SystemLogsSheet: View {
                     }
                 }
             }
-            .padding(Tokens.Space.l)
+            .padding(Tokens.Space.s)
             if let client = app.client {
                 StreamConsole(stream: { client.streamSystemLogs(follow: follow, last: 500) })
                     .id(session)
-                    .padding(.horizontal, Tokens.Space.l)
-                    .padding(.bottom, Tokens.Space.l)
+                    .padding(.horizontal, Tokens.Space.s)
+                    .padding(.bottom, Tokens.Space.s)
             }
         }
         .frame(Tokens.SheetSize.wide)

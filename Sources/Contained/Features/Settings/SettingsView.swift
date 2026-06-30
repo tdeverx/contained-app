@@ -45,7 +45,7 @@ struct SettingsContent: View {
             }
         } content: {
             sectionBody(settings: settings)
-                .padding(Tokens.Space.l)
+                .padding(Tokens.Space.s)
         }
         .onChange(of: ui.settingsPage) { _, requested in
             guard let requested else { return }
@@ -58,24 +58,19 @@ struct SettingsContent: View {
         PanelHeader(symbol: page.systemImage,
                     title: "Settings",
                     subtitle: page.rawValue) {
-            GlassButton(singleItem: onClose == nil) {
-                pagePicker
+            GlassButton {
+                ForEach(SettingsPage.allCases) { item in
+                    GlassButtonItem(help: item.rawValue, isIcon: true, action: { page = item }) {
+                        Image(systemName: item.systemImage)
+                            .foregroundStyle(Color.white)
+                            .opacity(page == item ? 1 : 0.62)
+                    }
+                }
                 if let onClose {
                     GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
                 }
             }
         }
-    }
-
-    private var pagePicker: some View {
-        Menu {
-            ForEach(SettingsPage.allCases) { item in
-                Button { page = item } label: { Label(item.rawValue, systemImage: item.systemImage) }
-            }
-        } label: {
-            GlassButtonItem(systemName: "list.bullet", help: "Section", isLabel: true)
-        }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -111,20 +106,27 @@ private struct AppearanceTab: View {
             }
 
             PanelSection(header: "Layout & glass",
-                         footer: "Main background material controls the root content backing. Panel & sheet material controls floating detail panels, popovers, and sheets. Button material controls the toolbar control surfaces. “Glass (Clear)” and “Glass (Regular)” use Liquid Glass; the rest are system vibrancy materials.") {
+                         footer: "Main background controls the window backing. Card material applies to compact and expanded resource cards. Panel & sheet material controls floating panels and sheets. Button material controls toolbar controls. Glass options use Liquid Glass; the rest use macOS vibrancy.") {
                 PanelRow(title: "Card size") {
                     Picker("", selection: $settings.density) {
                         ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
                     }
                     .pickerStyle(.segmented).labelsHidden().fixedSize()
                 }
-                PanelRow(title: "Main background material") {
+                PanelRow(title: "Main background material",
+                         info: "Changes the material behind the main container grid.") {
                     materialMenu($settings.windowMaterial)
                 }
-                PanelRow(title: "Panel & sheet material") {
+                PanelRow(title: "Panel & sheet material",
+                         info: "Changes floating panels, popovers, and sheets such as Settings and create/edit flows.") {
                     materialMenu($settings.modalMaterial)
                 }
-                PanelRow(title: "Button material") {
+                PanelRow(title: "Card material",
+                         info: "Changes all resource cards, including compact cards and expanded detail cards.") {
+                    materialMenu($settings.cardMaterial)
+                }
+                PanelRow(title: "Button material",
+                         info: "Changes toolbar glass buttons and grouped icon controls.") {
                     materialMenu($settings.buttonMaterial)
                 }
                 PanelToggleRow(title: "Show info tips", isOn: $settings.showInfoTips)
@@ -219,7 +221,7 @@ private struct GeneralTab: View {
             PanelSection(header: "Activity & alerts") {
                 PanelToggleRow(title: "System alert on container crash / restart", isOn: $settings.notifyOnCrash)
                 PanelToggleRow(title: "Show “Reveal CLI” on actions",
-                               info: "Adds a copyable command and a “Copy as CLI” menu item to destructive or privileged actions, so you can see exactly what runs.",
+                               info: "Shows the exact `container ...` command for important actions. Useful when you are learning the CLI or want to verify what will run.",
                                isOn: $settings.revealCLI)
             }
 
@@ -460,6 +462,11 @@ private struct RegistriesTab: View {
                             }
                             Spacer()
                             Button("Log Out", role: .destructive) { loggingOut = login }
+                        }
+                        .contextMenu {
+                            Button { copyToPasteboard(login.host) } label: { Label("Copy Server", systemImage: "doc.on.doc") }
+                            Divider()
+                            Button(role: .destructive) { loggingOut = login } label: { Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right") }
                         }
                     }
                 }

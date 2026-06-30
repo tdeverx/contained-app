@@ -60,7 +60,13 @@ struct MenuBarContent: View {
         Divider()
 
         Button("Open Contained") { activate() }
-        Button("Settings…") { activate(); ui.toggleMorph(.settings) }
+        // Deep-link straight to a Settings page via the panel jump system (`openSettings(to:)`).
+        Menu("Settings…") {
+            ForEach(SettingsContent.SettingsPage.allCases) { page in
+                Button(page.rawValue) { activate(); ui.openSettings(to: page) }
+            }
+        }
+        Button("About Contained") { activate(); ui.openSettings(to: .about) }
         Divider()
         Button("Quit Contained") { NSApplication.shared.terminate(nil) }
     }

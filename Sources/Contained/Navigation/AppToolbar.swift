@@ -218,7 +218,7 @@ struct AppToolbar: View {
         if ui.activeMorph == .updates {
             MorphingExpander(isPresented: morphBinding(.updates),
                              originFrame: slots[.updates] ?? .zero,
-                             target: toolbarMorphTarget(for: .updates, size: Tokens.PanelSize.updatesOrigin),
+                             target: toolbarMorphTarget(for: .updates, size: Tokens.PanelSize.images),
                              showsBackdrop: false,
                              closeRequestToken: ui.morphCloseRequestToken,
                              onExpansionChange: setMorphBackdropExpanded) {
@@ -236,9 +236,11 @@ struct AppToolbar: View {
                              originFrame: usableToolbarImageSource ?? .zero,
                              target: .anchored(size: toolbarImageDetailSize,
                                                safeArea: toolbarMorphSafeArea(for: .updates),
-                                               margin: 0),
-                             showsBackdrop: false,
-                             closeRequestToken: toolbarImageCloseRequestToken) {
+                                               margin: 16),
+                             backdropStyle: .blurAndDim,
+                             showsBackdrop: true,
+                             closeRequestToken: toolbarImageCloseRequestToken,
+                             onBackdropTap: closeToolbarImageDetail) {
                 ToolbarImageGroupCard(group: currentToolbarImageGroup(detail),
                                       isExpanded: true,
                                       onTap: {},
@@ -252,7 +254,7 @@ struct AppToolbar: View {
         if ui.activeMorph == .activity {
             MorphingExpander(isPresented: morphBinding(.activity),
                              originFrame: slots[.activity] ?? .zero,
-                             target: toolbarMorphTarget(for: .activity, size: Tokens.PanelSize.activityOrigin),
+                             target: toolbarMorphTarget(for: .activity, size: Tokens.PanelSize.activity),
                              showsBackdrop: false,
                              closeRequestToken: ui.morphCloseRequestToken,
                              onExpansionChange: setMorphBackdropExpanded) {
@@ -268,7 +270,7 @@ struct AppToolbar: View {
         if ui.activeMorph == .templates {
             MorphingExpander(isPresented: morphBinding(.templates),
                              originFrame: slots[.templates] ?? .zero,
-                             target: toolbarMorphTarget(for: .templates, size: Tokens.PanelSize.templatesOrigin),
+                             target: toolbarMorphTarget(for: .templates, size: Tokens.PanelSize.templates),
                              showsBackdrop: false,
                              closeRequestToken: ui.morphCloseRequestToken,
                              onExpansionChange: setMorphBackdropExpanded) {
@@ -461,8 +463,8 @@ struct AppToolbar: View {
     }
 }
 
-/// The Activity bell in the bottom toolbar cluster. Filled + accent-tinted with a red dot when there
-/// are unread events; plain otherwise. Owns its own `@Query` so the badge updates live as events land.
+/// The Activity bell in the bottom toolbar cluster. Filled + accent-tinted when there are unread
+/// events; plain otherwise. Owns its own `@Query` so the badge updates live as events land.
 private struct ActivityToolbarButton: View {
     @Environment(UIState.self) private var ui
     @Query(filter: #Predicate<EventRecord> { !$0.isRead }) private var unread: [EventRecord]
@@ -473,16 +475,8 @@ private struct ActivityToolbarButton: View {
         return GlassButtonItem(help: hasUnread ? "Activity — \(count) unread" : "Activity",
                                isIcon: true,
                                action: { ui.toggleMorph(.activity) }) {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: hasUnread ? "bell.fill" : "bell")
-                    .foregroundStyle(hasUnread ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.primary))
-                if hasUnread {
-                    Circle()
-                        .fill(.red)
-                        .frame(width: 7, height: 7)
-                        .offset(x: 4, y: -3)
-                }
-            }
+            Image(systemName: hasUnread ? "bell.fill" : "bell")
+                .foregroundStyle(hasUnread ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.white))
         }
     }
 }

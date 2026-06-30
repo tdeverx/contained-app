@@ -15,6 +15,8 @@ final class SettingsStore {
     var modalMaterial: WindowMaterial { didSet { defaults.set(modalMaterial.rawValue, forKey: Keys.modalMaterial) } }
     /// Material for toolbar control surfaces (glass buttons / search field).
     var buttonMaterial: WindowMaterial { didSet { defaults.set(buttonMaterial.rawValue, forKey: Keys.buttonMaterial) } }
+    /// Material for resource cards, both compact and expanded.
+    var cardMaterial: WindowMaterial { didSet { defaults.set(cardMaterial.rawValue, forKey: Keys.cardMaterial) } }
     /// Show the info.circle help popovers throughout the app.
     var showInfoTips: Bool { didSet { defaults.set(showInfoTips, forKey: Keys.showInfoTips) } }
     /// Let images without their own style inherit the default card design edited in Settings.
@@ -23,6 +25,10 @@ final class SettingsStore {
     var cliPathOverride: String { didSet { defaults.set(cliPathOverride, forKey: Keys.cliPath) } }
     var refreshInterval: Double { didSet { defaults.set(refreshInterval, forKey: Keys.refresh) } }
     var imageUpdateIntervalHours: Int { didSet { defaults.set(imageUpdateIntervalHours, forKey: Keys.imageUpdateIntervalHours) } }
+    /// Automation toggles (surfaced in System → Automation). Each gates a background task.
+    var imageUpdateChecksEnabled: Bool { didSet { defaults.set(imageUpdateChecksEnabled, forKey: Keys.imageUpdateChecksEnabled) } }
+    var appUpdateChecksEnabled: Bool { didSet { defaults.set(appUpdateChecksEnabled, forKey: Keys.appUpdateChecksEnabled) } }
+    var autoRestartEnabled: Bool { didSet { defaults.set(autoRestartEnabled, forKey: Keys.autoRestartEnabled) } }
     var notifyOnCrash: Bool { didSet { defaults.set(notifyOnCrash, forKey: Keys.notifyOnCrash) } }
     /// Show "Reveal CLI" affordances on destructive/privileged actions (global gate).
     var revealCLI: Bool { didSet { defaults.set(revealCLI, forKey: Keys.revealCLI) } }
@@ -64,12 +70,16 @@ final class SettingsStore {
         windowMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.windowMaterial) ?? "") ?? .fullScreenUI
         modalMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.modalMaterial) ?? "") ?? .sheet
         buttonMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.buttonMaterial) ?? "") ?? .glassClear
+        cardMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.cardMaterial) ?? "") ?? .glassRegular
         showInfoTips = defaults.object(forKey: Keys.showInfoTips) as? Bool ?? true
         imageDefaultStyleEnabled = defaults.object(forKey: Keys.imageDefaultStyleEnabled) as? Bool ?? true
         keepInMenuBar = defaults.object(forKey: Keys.keepInMenuBar) as? Bool ?? true
         cliPathOverride = defaults.string(forKey: Keys.cliPath) ?? ""
         refreshInterval = defaults.object(forKey: Keys.refresh) as? Double ?? 2.0
         imageUpdateIntervalHours = defaults.object(forKey: Keys.imageUpdateIntervalHours) as? Int ?? 6
+        imageUpdateChecksEnabled = defaults.object(forKey: Keys.imageUpdateChecksEnabled) as? Bool ?? true
+        appUpdateChecksEnabled = defaults.object(forKey: Keys.appUpdateChecksEnabled) as? Bool ?? true
+        autoRestartEnabled = defaults.object(forKey: Keys.autoRestartEnabled) as? Bool ?? true
         notifyOnCrash = defaults.object(forKey: Keys.notifyOnCrash) as? Bool ?? true
         revealCLI = defaults.object(forKey: Keys.revealCLI) as? Bool ?? true
         historyRetentionDays = defaults.object(forKey: Keys.historyRetention) as? Int ?? 7
@@ -147,12 +157,16 @@ final class SettingsStore {
         static let windowMaterial = "windowMaterial"
         static let modalMaterial = "modalMaterial"
         static let buttonMaterial = "buttonMaterial"
+        static let cardMaterial = "cardMaterial"
         static let showInfoTips = "showInfoTips"
         static let imageDefaultStyleEnabled = "imageDefaultStyleEnabled"
         static let keepInMenuBar = "keepInMenuBar"
         static let cliPath = "cliPathOverride"
         static let refresh = "refreshInterval"
         static let imageUpdateIntervalHours = "imageUpdateIntervalHours"
+        static let imageUpdateChecksEnabled = "imageUpdateChecksEnabled"
+        static let appUpdateChecksEnabled = "appUpdateChecksEnabled"
+        static let autoRestartEnabled = "autoRestartEnabled"
         static let notifyOnCrash = "notifyOnCrash"
         static let revealCLI = "revealCLI"
         static let historyRetention = "historyRetentionDays"

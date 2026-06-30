@@ -184,7 +184,7 @@ private struct CreationSubmitBar: View {
             .buttonStyle(.glassProminent)
             .disabled(!canSubmit || working)
         }
-        .padding(Tokens.Space.l)
+        .padding(Tokens.Space.s)
         .background(.clear)
     }
 }

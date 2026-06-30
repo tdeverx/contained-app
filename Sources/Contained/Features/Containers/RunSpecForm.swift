@@ -51,14 +51,14 @@ struct RunSpecForm: View {
     private var generalSection: some View {
         Group {
             PanelField(label: "Image",
-                       info: "The image to run, repo:tag. Pulled automatically if not present locally.",
+                       info: "The container image to start, such as `nginx:latest`. If it is not on this Mac yet, Contained pulls it before running.",
                        error: spec.image.trimmingCharacters(in: .whitespaces).isEmpty ? "An image reference is required." : nil) {
                 TextField("", text: $spec.image, prompt: Text("e.g. nginx:latest")).textFieldStyle(.roundedBorder)
             }
             if imageDefaultConfig != nil {
                 PanelRow(title: "Image defaults",
                          subtitle: "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config.",
-                         info: "The image already uses these defaults at runtime. Adopting them makes those values explicit and editable in this form.") {
+                         info: "Images can define default startup settings. Adopt copies those defaults into this form so you can see and edit them before running.") {
                     Button {
                         adoptImageDefaults()
                     } label: {
@@ -67,7 +67,7 @@ struct RunSpecForm: View {
                     .buttonStyle(.glass)
                 }
             }
-            PanelRow(title: "Platform", info: "Select an image platform when the image is multi-platform (--platform).") {
+            PanelRow(title: "Platform", info: "Use this only when an image supports more than one CPU type. Leave Default unless you specifically need arm64 or amd64.") {
                 Picker("", selection: platformPresetBinding) {
                     Text("Default").tag("")
                     Text("Linux arm64").tag("linux/arm64")
@@ -78,26 +78,26 @@ struct RunSpecForm: View {
                 .labelsHidden().fixedSize()
             }
             if platformPresetBinding.wrappedValue == "custom" {
-                PanelField(label: "Custom platform", info: "Custom platform string passed to --platform.") {
+                PanelField(label: "Custom platform", info: "Advanced platform value in `os/arch` form, for example `linux/arm64`.") {
                     TextField("", text: $spec.platform, prompt: Text("os/arch[/variant]")).textFieldStyle(.roundedBorder)
                 }
             }
-            PanelField(label: "Name", info: "A stable name for the container. Leave blank for a generated one.") {
+            PanelField(label: "Name", info: "Optional friendly runtime name. Leave it blank and the container runtime will generate one.") {
                 TextField("", text: $spec.name, prompt: Text("optional")).textFieldStyle(.roundedBorder)
             }
-            PanelField(label: "Command", info: "Arguments passed to the image, replacing its default command.") {
+            PanelField(label: "Command", info: "Optional command to run instead of the image's normal startup command.") {
                 TextField("", text: $spec.command, prompt: Text("override the default command (optional)")).textFieldStyle(.roundedBorder)
             }
             PanelToggleRow(title: "Run in the background",
                            info: "Detached (-d): runs without attaching to its output.", isOn: $spec.detach)
             PanelToggleRow(title: "Remove when stopped",
-                           info: "Automatically deletes the container once it stops (--rm).", isOn: $spec.removeOnExit)
+                           info: "Deletes the container record when it stops. Use volumes if you need data to survive.", isOn: $spec.removeOnExit)
         }
     }
 
     private var resourcesSection: some View {
         Group {
-            PanelRow(title: "CPUs", info: "Virtual CPUs to allocate (--cpus). This Mac has \(hostCPUs) cores.") {
+            PanelRow(title: "CPUs", info: "Limit how much CPU the container can use. Default lets the runtime decide. This Mac has \(hostCPUs) cores.") {
                 Picker("", selection: cpuBinding) {
                     Text("Default").tag(0)
                     ForEach(1...max(1, hostCPUs), id: \.self) { Text("\($0)").tag($0) }
@@ -105,7 +105,7 @@ struct RunSpecForm: View {
                 .labelsHidden().fixedSize()
             }
             PanelToggleRow(title: "Limit memory",
-                           info: "Cap the container's memory (--memory). Off uses the runtime default.", isOn: memoryLimitBinding)
+                           info: "Set a memory ceiling for the container. If it goes past the limit, the runtime may stop it.", isOn: memoryLimitBinding)
             if !spec.memory.isEmpty {
                 PanelField(label: "Memory") {
                     HStack(spacing: Tokens.Space.s) {
@@ -254,17 +254,17 @@ struct RunSpecForm: View {
 
     private var personalizationSection: some View {
         Group {
-            PanelField(label: "Nickname", info: "A friendly display name shown on the card. Stored locally, not on the container.") {
+            PanelField(label: "Nickname", info: "A display name for the card only. It does not rename the real container.") {
                 TextField("", text: $spec.personalization.nickname, prompt: Text("display name (optional)")).textFieldStyle(.roundedBorder)
             }
-            PanelField(label: "Icon", info: "Any SF Symbol name to brand the card's icon chip.") {
+            PanelField(label: "Icon", info: "An SF Symbol name for the card icon, such as `shippingbox` or `bolt`.") {
                 TextField("", text: $spec.personalization.icon, prompt: Text("SF Symbol, e.g. globe, bolt")).textFieldStyle(.roundedBorder)
             }
-            PanelRow(title: "Color", info: "Color for the card's icon and (optionally) its background.") {
+            PanelRow(title: "Color", info: "Sets the card icon color. If background color is enabled, it also tints the glass card.") {
                 TintSelector(selection: $spec.personalization.tint)
             }
             PanelToggleRow(title: "Color the card background",
-                           info: "Wash the clear glass with the color. Off = clear glass with a colored icon.",
+                           info: "Adds a soft color wash behind the glass. Turn it off for clear glass with only a colored icon.",
                            isOn: $spec.personalization.fillBackground)
             if spec.personalization.fillBackground {
                 PanelField(label: "Opacity") {
@@ -276,7 +276,7 @@ struct RunSpecForm: View {
                     }
                 }
                 PanelToggleRow(title: "Gradient",
-                               info: "Fade the background color for a softer look.",
+                               info: "Blends the color across the card instead of using one flat wash.",
                                isOn: $spec.personalization.gradient)
                 if spec.personalization.gradient {
                     GradientAngleControl(angle: $spec.personalization.gradientAngle)
@@ -533,23 +533,25 @@ struct RunSpecForm: View {
                 removeButton { list.wrappedValue.remove(at: idx) }
             }
         }
-        HStack {
+        HStack(spacing: Tokens.Space.s) {
             addButton(addTitle) { list.wrappedValue.append("") }
-            Spacer()
             InfoButton(info)
+            Spacer()
         }
     }
 
     private func addButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Label(title, systemImage: "plus.circle") }
-            .buttonStyle(.plain)
-            .foregroundStyle(.tint)
+        GlassButton(singleItem: true) {
+            GlassButtonItem(help: title, action: action) {
+                Label(title, systemImage: "plus.circle")
+            }
+        }
     }
 
     private func removeButton(action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: "minus.circle.fill") }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+        GlassButton(singleItem: true) {
+            GlassButtonItem(systemName: "minus.circle.fill", help: "Remove", action: action)
+        }
     }
 
     private func sourcePicker(source: Binding<String>) -> some View {

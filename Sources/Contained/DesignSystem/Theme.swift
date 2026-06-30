@@ -4,9 +4,18 @@ import AppKit
 /// Design tokens — the single source of truth for spacing, radii, and type used across the app.
 enum Tokens {
     enum Radius {
+        /// Radius delta between nested glass levels: sheet → card → control → key cap.
+        static let step: CGFloat = 6
         static let control: CGFloat = 10
         static let card: CGFloat = 16
         static let sheet: CGFloat = 22
+        static let keyCap: CGFloat = control - step
+        static let iconChip: CGFloat = control
+
+        /// Radius for a shape inset inside a parent with the same corner center.
+        static func inset(from outer: CGFloat, by inset: CGFloat) -> CGFloat {
+            max(0, outer - inset)
+        }
     }
     enum Space {
         static let xs: CGFloat = 4
@@ -290,6 +299,8 @@ extension EnvironmentValues {
     @Entry var modalMaterial: WindowMaterial = .sheet
     /// The user-chosen toolbar-control (button) material, seeded at the app root.
     @Entry var buttonMaterial: WindowMaterial = .glassClear
+    /// The user-chosen resource-card material, seeded at the app root.
+    @Entry var cardMaterial: WindowMaterial = .glassRegular
 }
 
 private struct SheetMaterial: ViewModifier {

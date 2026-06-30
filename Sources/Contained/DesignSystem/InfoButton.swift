@@ -15,7 +15,9 @@ struct InfoButton: View {
     var body: some View {
         if app.settings.showInfoTips {
             Button { showing = true } label: {
-                Image(systemName: "info.circle").foregroundStyle(.secondary)
+                Image(systemName: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
             .help(text)                       // hover still works as a bonus for mouse users
@@ -43,7 +45,6 @@ extension View {
     func fieldInfo(_ text: String) -> some View {
         HStack(spacing: Tokens.Space.s) {
             self
-            Spacer(minLength: Tokens.Space.s)
             InfoButton(text)
         }
     }

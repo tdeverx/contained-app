@@ -26,6 +26,12 @@ struct GlassButtonItem<Label: View>: View {
     @State private var hovering = false
     @Environment(\.glassButtonItemHoverEnabled) private var hoverEnabled
 
+    private var itemForegroundStyle: AnyShapeStyle {
+        if role == .destructive { return AnyShapeStyle(Color.red) }
+        if let tint { return AnyShapeStyle(tint) }
+        return AnyShapeStyle(Color.white)
+    }
+
     init(role: ButtonRole? = nil, tint: Color? = nil, help: String = "",
          isCancel: Bool = false, isLabel: Bool = false, isIcon: Bool = false,
          action: (() -> Void)? = nil, @ViewBuilder label: @escaping () -> Label) {
@@ -42,6 +48,7 @@ struct GlassButtonItem<Label: View>: View {
     private var content: some View {
         label()
             .font(.body.weight(.medium))
+            .foregroundStyle(itemForegroundStyle)
             .padding(Tokens.Toolbar.iconInnerPadding)
             .frame(width: isIcon ? Tokens.Toolbar.buttonItemHeight : nil,
                    height: Tokens.Toolbar.buttonItemHeight)

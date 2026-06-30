@@ -328,7 +328,7 @@ struct CreationFlow: View {
 
     private func gridScaffold<C: View>(@ViewBuilder content: () -> C) -> some View {
         content()
-            .padding(Tokens.Space.m)
+            .padding(Tokens.Space.s)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 

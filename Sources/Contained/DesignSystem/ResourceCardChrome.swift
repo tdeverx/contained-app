@@ -141,7 +141,8 @@ struct ResourceCardIconChip: View {
             .font(symbolFont)
             .foregroundStyle(tint)
             .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
-            .background(tint.opacity(backgroundOpacity), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .background(tint.opacity(backgroundOpacity),
+                        in: RoundedRectangle(cornerRadius: Tokens.Radius.iconChip, style: .continuous))
     }
 }
 

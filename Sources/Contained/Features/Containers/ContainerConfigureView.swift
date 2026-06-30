@@ -50,11 +50,12 @@ struct ContainerConfigureView: View {
             }
         } content: {
             RunSpecForm(spec: $spec)
-                .padding(Tokens.Space.l)
+                .padding(Tokens.Space.s)
         } footer: {
             if app.settings.revealCLI {
                 CommandPreviewBar(command: spec.arguments())
-                    .padding(Tokens.Space.l)
+                    .padding(Tokens.Space.s)
+                    .frame(maxWidth: .infinity)
             }
         }
         .onAppear(perform: load)

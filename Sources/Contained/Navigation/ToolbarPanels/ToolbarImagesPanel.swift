@@ -56,7 +56,7 @@ struct ToolbarUpdatesPanel: View {
                 GlassButtonItem(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
                     Task { await app.runImageUpdateSweepNow() }
                 }
-                GlassButtonItem(systemName: "trash", help: "Prune Images") {
+                GlassButtonItem(systemName: "trash", role: .destructive, help: "Prune Images") {
                     ui.dispatch(.pruneImages)
                     onClose()
                 }
@@ -179,10 +179,6 @@ struct ToolbarImageGroupCard: View {
         let resolved = app.imageGroupStyle(for: group)
         return ResourceGlassCard(size: .medium,
                           isExpanded: isExpanded,
-                          fill: resolved.fillBackground ? resolved.color : nil,
-                          fillOpacity: resolved.backgroundOpacity,
-                          gradient: resolved.gradient,
-                          gradientAngle: resolved.gradientAngle,
                           elevated: false,
                           onTap: onTap) {
             cardHeader(group, image: image, style: resolved)
@@ -264,9 +260,11 @@ struct ToolbarImageGroupCard: View {
                                         .font(.caption2).foregroundStyle(.secondary)
                                 }
                             }
-                            .padding(Tokens.Space.m)
+                            .padding(Tokens.Space.s)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: Tokens.Radius.control))
+                            .background(.quaternary.opacity(0.25),
+                                        in: RoundedRectangle(cornerRadius: Tokens.Radius.control,
+                                                             style: .continuous))
                         }
                     }
                     .padding(Tokens.Space.s)
@@ -402,8 +400,10 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func tagList(_ group: LocalImageTagGroup) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.m) {
-            Text("Tags").font(.headline)
+        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            Text("Tags")
+                .font(.headline)
+                .padding(.leading, Tokens.Space.xs)
             ScrollView(.vertical) {
                 LazyVStack(spacing: Tokens.Space.s) {
                     ForEach(group.references, id: \.self) { reference in
@@ -420,19 +420,18 @@ struct ToolbarImageGroupCard: View {
     private func tagRow(_ reference: String, in group: LocalImageTagGroup) -> some View {
         let style = app.imageStyle(for: reference)
         return ResourceGlassCard(size: .medium,
-                                 fill: style.fillBackground ? style.color : nil,
-                                 fillOpacity: style.backgroundOpacity,
-                                 gradient: style.gradient,
-                                 gradientAngle: style.gradientAngle,
                                  elevated: false) {
-            HStack(spacing: Tokens.Space.s) {
+            ResourceCardHeader {
                 ImageStyleButton(reference: reference,
                                  style: style,
                                  target: .imageTag(reference: reference, groupID: group.id))
+            } content: {
                 VStack(alignment: .leading, spacing: 1) {
                     ResourceCardMonospacedTitleText(text: Format.shortImage(reference))
                     ResourceCardSubtitleText(text: repositoryName(reference))
                 }
+            } trailing: {
+                EmptyView()
             }
         } footerLeading: {
             Text("Local tag")
@@ -447,6 +446,18 @@ struct ToolbarImageGroupCard: View {
             footerAction("doc.text.magnifyingglass", help: "Inspect") { inspect(reference, in: group) }
             footerAction("trash", help: "Delete tag", tint: .red) { deletingReference = reference }
         }
+        .contextMenu { tagMenu(reference, in: group) }
+    }
+
+    /// Right-click actions for a single tag — mirrors the footer buttons so the row is consistent with
+    /// the group card (which has its own context menu).
+    @ViewBuilder
+    private func tagMenu(_ reference: String, in group: LocalImageTagGroup) -> some View {
+        Button { ui.runImage(reference); if isExpanded { onClose() } } label: { Label("Run…", systemImage: "play") }
+        Button { copyToPasteboard(reference) } label: { Label("Copy reference", systemImage: "doc.on.doc") }
+        Button { inspect(reference, in: group) } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
+        Divider()
+        Button(role: .destructive) { deletingReference = reference } label: { Label("Delete tag", systemImage: "trash") }
     }
 
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,

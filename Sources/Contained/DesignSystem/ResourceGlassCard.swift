@@ -31,6 +31,9 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     var isExpanded = false
     var controlsVisible = true
     var isSelected = false
+    /// When set, the selected state reads as a soft `white.opacity` wash (matching a hovered glass
+    /// button) instead of the 2.5pt accent stroke — used by the Activity and command-palette rows.
+    var usesSelectionFill = false
     var fill: Color?
     var fillOpacity: Double = 0.18
     var gradient: Bool = false
@@ -46,6 +49,14 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     @ViewBuilder var widget: () -> Widget
 
     @State private var hovering = false
+    @Environment(\.cardMaterial) private var cardMaterial
+
+    /// Render the selected state as a soft fill wash instead of the accent stroke.
+    func selectionFill(_ on: Bool = true) -> Self {
+        var copy = self
+        copy.usesSelectionFill = on
+        return copy
+    }
 
     init(size: ResourceCardSize,
          isExpanded: Bool = false,
@@ -87,24 +98,33 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     }
 
     private var surface: some View {
-        let shape = RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+        let cornerRadius = isExpanded ? Tokens.Radius.sheet : Tokens.Radius.card
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         return cardContent
             .frame(maxWidth: isExpanded ? ResourceCardExpandedMetrics.maxWidth : .infinity,
                    alignment: .leading)
             .clipShape(shape)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card,
-                          shadow: elevated,
-                          fill: fill,
-                          fillOpacity: fillOpacity,
-                          gradient: gradient,
-                          gradientAngle: gradientAngle)
+            .resourceCardMaterial(cardMaterial,
+                                  cornerRadius: cornerRadius,
+                                  shadow: elevated,
+                                  fill: fill,
+                                  fillOpacity: fillOpacity,
+                                  gradient: gradient,
+                                  gradientAngle: gradientAngle)
             .overlay {
                 if isSelected {
-                    RoundedRectangle(cornerRadius: Tokens.Radius.card)
-                        .strokeBorder(Color.accentColor, lineWidth: 2.5)
-                        .padding(1)
+                    if usesSelectionFill {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(AppMaterial.toolbarHoverFill)
+                    } else {
+                        RoundedRectangle(cornerRadius: Tokens.Radius.inset(from: cornerRadius, by: 1),
+                                         style: .continuous)
+                            .strokeBorder(Color.accentColor, lineWidth: 2.5)
+                            .padding(1)
+                    }
                 }
             }
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: isExpanded)
     }
 
     @ViewBuilder
@@ -159,6 +179,79 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, 10)
         }
+    }
+}
+
+private struct ResourceCardMaterialSurface: ViewModifier {
+    var material: WindowMaterial
+    var cornerRadius: CGFloat
+    var shadow: Bool
+    var fill: Color?
+    var fillOpacity: Double
+    var gradient: Bool
+    var gradientAngle: Double
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        content
+            .clipShape(shape)
+            .background {
+                if shadow {
+                    ExteriorShadow(cornerRadius: cornerRadius,
+                                   color: shadowColor,
+                                   radius: shadowRadius,
+                                   y: shadowY)
+                }
+            }
+            .background {
+                if let glass = material.glass {
+                    Color.clear.glassEffect(glass, in: shape)
+                } else {
+                    VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                        .clipShape(shape)
+                }
+            }
+            .background {
+                if let fill {
+                    shape.fill(fillStyle(fill))
+                }
+            }
+    }
+
+    private func fillStyle(_ color: Color) -> AnyShapeStyle {
+        if gradient {
+            let radians = gradientAngle * .pi / 180
+            let dx = cos(radians) / 2
+            let dy = sin(radians) / 2
+            return AnyShapeStyle(LinearGradient(
+                colors: [color.opacity(fillOpacity * 1.35), color.opacity(fillOpacity * 0.4)],
+                startPoint: UnitPoint(x: 0.5 - dx, y: 0.5 - dy),
+                endPoint: UnitPoint(x: 0.5 + dx, y: 0.5 + dy)))
+        }
+        return AnyShapeStyle(color.opacity(fillOpacity))
+    }
+
+    private var shadowColor: Color { .black.opacity((colorScheme == .dark ? 0.55 : 0.18)) }
+    private var shadowRadius: CGFloat { 10 }
+    private var shadowY: CGFloat { 4 }
+}
+
+private extension View {
+    func resourceCardMaterial(_ material: WindowMaterial,
+                              cornerRadius: CGFloat,
+                              shadow: Bool,
+                              fill: Color?,
+                              fillOpacity: Double,
+                              gradient: Bool,
+                              gradientAngle: Double) -> some View {
+        modifier(ResourceCardMaterialSurface(material: material,
+                                             cornerRadius: cornerRadius,
+                                             shadow: shadow,
+                                             fill: fill,
+                                             fillOpacity: fillOpacity,
+                                             gradient: gradient,
+                                             gradientAngle: gradientAngle))
     }
 }
 

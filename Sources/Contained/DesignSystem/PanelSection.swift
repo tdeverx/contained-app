@@ -89,9 +89,8 @@ struct PanelSection<Content: View>: View {
     }
 }
 
-/// A single settings row: a leading title (+ optional subtitle), a trailing control, and an optional
-/// info popover that reveals on hover at the far-right edge. Set `error` to tint the title red and show
-/// a red caption beneath — the scaffold's "something is wrong with this item" signal.
+/// A single settings row: a leading title (+ optional subtitle), optional info next to that title,
+/// and a trailing control. Set `error` to tint the title red and show a red caption beneath.
 struct PanelRow<Trailing: View>: View {
     var title: String
     var subtitle: String? = nil
@@ -99,13 +98,14 @@ struct PanelRow<Trailing: View>: View {
     var error: String? = nil
     @ViewBuilder var trailing: () -> Trailing
 
-    @State private var hovering = false
-
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: Tokens.Space.m) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title).foregroundStyle(error == nil ? Color.primary : Color.red)
+                    HStack(spacing: Tokens.Space.xs) {
+                        Text(title).foregroundStyle(error == nil ? Color.primary : Color.red)
+                        if let info { InfoButton(info) }
+                    }
                     if let subtitle {
                         Text(subtitle).font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -113,16 +113,12 @@ struct PanelRow<Trailing: View>: View {
                 }
                 Spacer(minLength: Tokens.Space.m)
                 trailing()
-                HoverInfo(info: info, hovering: hovering)
             }
             if let error {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
         }
         .frame(maxWidth: .infinity)
-        .contentShape(Rectangle())
-        .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: hovering)
     }
 }
 
@@ -147,8 +143,8 @@ struct PanelToggleRow: View {
     }
 }
 
-/// A labeled form field: a leading label, an expanding control (text field, picker, slider…), and an
-/// optional hover-revealed info popover. The form-row counterpart to `PanelRow` (which hugs its trailing
+/// A labeled form field: a leading label, optional info next to that label, and an expanding control.
+/// The form-row counterpart to `PanelRow` (which hugs its trailing
 /// control); here the control fills the remaining width like a grouped Form field. `error` tints the
 /// label red and shows a red caption beneath.
 struct PanelField<Control: View>: View {
@@ -158,39 +154,21 @@ struct PanelField<Control: View>: View {
     var labelWidth: CGFloat = 124
     @ViewBuilder var control: () -> Control
 
-    @State private var hovering = false
-
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: Tokens.Space.m) {
-                Text(label)
-                    .frame(width: labelWidth, alignment: .leading)
-                    .foregroundStyle(error == nil ? Color.primary : Color.red)
+                HStack(spacing: Tokens.Space.xs) {
+                    Text(label)
+                        .foregroundStyle(error == nil ? Color.primary : Color.red)
+                    if let info { InfoButton(info) }
+                }
+                .frame(width: labelWidth, alignment: .leading)
                 control().frame(maxWidth: .infinity)
-                HoverInfo(info: info, hovering: hovering)
             }
             if let error {
                 Text(error).font(.caption).foregroundStyle(.red)
                     .padding(.leading, labelWidth + Tokens.Space.m)
             }
-        }
-        .contentShape(Rectangle())
-        .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: hovering)
-    }
-}
-
-/// A trailing info affordance that only appears while its row is hovered. Wraps `InfoButton`, so it
-/// still honors the global "Show info tips" setting and the tap-to-pin popover.
-private struct HoverInfo: View {
-    var info: String?
-    var hovering: Bool
-
-    var body: some View {
-        if let info {
-            InfoButton(info)
-                .opacity(hovering ? 1 : 0)
-                .allowsHitTesting(hovering)
         }
     }
 }

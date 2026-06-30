@@ -1,20 +1,20 @@
 import SwiftUI
 
-/// A toolbar morph-panel body that **hugs its content vertically**. It measures the natural height of
-/// its fixed chrome (header, segmented pickers), its scrollable content, and any pinned footer, and
-/// reports the sum as the panel size — so the panel collapses toward its content (down to
-/// `Tokens.PanelSize.minHeight`) and grows with it.
+/// A toolbar morph-panel body: fixed chrome (header, segmented pickers) above a scrollable content area
+/// and an optional pinned footer.
 ///
-/// The enclosing `MorphingExpander` clamps the reported height to the available window area, so when the
-/// content is taller than the window the inner `ScrollView` scrolls instead of the panel overflowing.
-/// The content height is measured from the scroll *content* (independent of the `ScrollView`'s own
-/// frame), so there is no layout feedback loop.
+/// The panel takes the **fixed size** its host hands the `MorphingExpander` (e.g. `Tokens.PanelSize.*`).
+/// The inner `ScrollView` simply fills that area and scrolls; it does **not** measure its content. This
+/// matters for performance: an earlier version measured the scroll content's natural height (to make the
+/// panel hug it), which forced the whole `LazyVStack` to realize on open — slow for long lists like
+/// Activity. Filling a definite height keeps the list lazy (only visible rows render).
 ///
 /// Pass `scrolls: false` for content that brings **its own** scroll view (search results, build
-/// workspace, the run form's sub-lists). In that mode the scaffold does not wrap the content in a
-/// `ScrollView` and does not report a hugging size — the host supplies a fixed `morphPanelSize` — so the
-/// chrome stays unified without double-nesting scroll views.
+/// workspace, the paged run form). In that mode the scaffold doesn't wrap the content in a `ScrollView`,
+/// so scroll views aren't double-nested; the host (e.g. `CreationFlow`) supplies the size via
+/// `morphPanelSize`.
 struct MorphPanelScaffold<Chrome: View, Content: View, Footer: View>: View {
+    /// Retained for call-site compatibility; the panel's width comes from the host's morph target.
     var width: CGFloat
     var placement: MorphPanelPlacement = .anchored
     var scrollEdgeStyle: ScrollEdgeEffectStyle = .soft
@@ -27,23 +27,13 @@ struct MorphPanelScaffold<Chrome: View, Content: View, Footer: View>: View {
     /// Optional fixed chrome pinned below the scroll area (submit bars, command preview).
     @ViewBuilder var footer: () -> Footer
 
-    @State private var chromeHeight: CGFloat = 0
-    @State private var contentHeight: CGFloat = 0
-    @State private var footerHeight: CGFloat = 0
-
-    private var reportedHeight: CGFloat {
-        max(Tokens.PanelSize.minHeight, chromeHeight + contentHeight + footerHeight)
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             chrome()
-                .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: { chromeHeight = $0 })
             if scrolls {
                 ScrollView {
                     content()
                         .frame(maxWidth: .infinity)
-                        .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: { contentHeight = $0 })
                 }
                 .scrollEdgeEffectStyle(scrollEdgeStyle, for: .all)
             } else {
@@ -51,23 +41,8 @@ struct MorphPanelScaffold<Chrome: View, Content: View, Footer: View>: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             footer()
-                .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: { footerHeight = $0 })
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .reportPanelSize(scrolls ? CGSize(width: width, height: reportedHeight) : nil, placement: placement)
-    }
-}
-
-private extension View {
-    /// Report a hugging panel size + placement only when the scaffold is in scrolling mode; non-scrolling
-    /// pages are sized by their host (e.g. the paged `CreationFlow`).
-    @ViewBuilder
-    func reportPanelSize(_ size: CGSize?, placement: MorphPanelPlacement) -> some View {
-        if let size {
-            self.morphPanelSize(size).morphPanelPlacement(placement)
-        } else {
-            self
-        }
     }
 }
 

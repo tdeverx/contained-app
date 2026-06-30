@@ -65,6 +65,20 @@ private struct PaletteSection: Identifiable {
     var id: String { title ?? "__results" }
 }
 
+/// A palette row paired with its stable flat index (position in the full result list), so selection
+/// highlighting keys off position rather than `PaletteItem.id` (a per-evaluation UUID).
+private struct IndexedPaletteRow: Identifiable {
+    let index: Int
+    let item: PaletteItem
+    var id: Int { index }
+}
+
+private struct IndexedPaletteSection: Identifiable {
+    let id: Int
+    let title: String?
+    let rows: [IndexedPaletteRow]
+}
+
 /// The expanded command palette content hosted inside `MorphingExpander`.
 struct ToolbarCommandPalette: View {
     @Environment(AppModel.self) private var app
@@ -241,25 +255,25 @@ struct ToolbarCommandPalette: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
-                    if flatItems.isEmpty {
+                    let indexed = indexedSections   // one evaluation → stable positional indices
+                    if indexed.isEmpty {
                         emptyState
                     } else {
-                        ForEach(sections) { section in
+                        ForEach(indexed) { section in
                             if let title = section.title {
                                 sectionHeader(title)
                             }
-                            ForEach(section.items) { item in
-                                let index = flatIndex(of: item)
-                                PaletteResultCard(item: item,
-                                                  selected: index == ui.paletteIndex,
-                                                  action: { ui.paletteIndex = index; run(item) })
-                                .id(index)
+                            ForEach(section.rows) { row in
+                                PaletteResultCard(item: row.item,
+                                                  selected: row.index == ui.paletteIndex,
+                                                  action: { ui.paletteIndex = row.index; run(row.item) })
+                                .id(row.index)
                                 .contentShape(Rectangle())
                             }
                         }
                     }
                 }
-                .padding(Tokens.Space.m)
+                .padding(Tokens.Space.s)
             }
             .onChange(of: ui.paletteIndex) { _, new in proxy.scrollTo(new, anchor: .center) }
         }
@@ -327,8 +341,18 @@ struct ToolbarCommandPalette: View {
         return flatItems[ui.paletteIndex]
     }
 
-    private func flatIndex(of item: PaletteItem) -> Int {
-        flatItems.firstIndex { $0.id == item.id } ?? 0
+    /// The sections evaluated once with a running flat index per row. Rendering from this (rather than
+    /// re-deriving an index from `PaletteItem.id`, which is a fresh UUID per evaluation) guarantees only
+    /// the row at `paletteIndex` is highlighted.
+    private var indexedSections: [IndexedPaletteSection] {
+        var flat = 0
+        return sections.enumerated().map { offset, section in
+            let rows = section.items.map { item -> IndexedPaletteRow in
+                defer { flat += 1 }
+                return IndexedPaletteRow(index: flat, item: item)
+            }
+            return IndexedPaletteSection(id: offset, title: section.title, rows: rows)
+        }
     }
 
     private func keyboardHint(_ key: String, _ label: String) -> some View {
@@ -338,7 +362,8 @@ struct ToolbarCommandPalette: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: Tokens.Radius.keyCap,
+                                                              style: .continuous))
             Text(label).font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -518,7 +543,7 @@ private struct PaletteResultCard: View {
     private var plainCard: some View {
         ResourceGlassCard(size: .small,
                           isSelected: selected,
-                          fill: selected ? Color.accentColor : nil,
+                          fill: nil,
                           fillOpacity: selected ? 0.10 : 0.18,
                           elevated: false,
                           onTap: action) {
@@ -544,6 +569,7 @@ private struct PaletteResultCard: View {
         } footerActions: {
             EmptyView()
         }
+        .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -552,7 +578,7 @@ private struct PaletteResultCard: View {
         let name = style.displayName(fallback: snapshot.id)
         return ResourceGlassCard(size: .small,
                                  isSelected: selected,
-                                 fill: style.fillBackground ? style.color : (selected ? Color.accentColor : nil),
+                                 fill: style.fillBackground ? style.color : nil,
                                  fillOpacity: selected ? 0.14 : style.backgroundOpacity,
                                  gradient: style.gradient,
                                  gradientAngle: style.gradientAngle,
@@ -574,6 +600,7 @@ private struct PaletteResultCard: View {
                 accessory
             }
         }
+        .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -582,7 +609,7 @@ private struct PaletteResultCard: View {
         let status = app.imageUpdateStatus(for: group.primaryReference)
         return ResourceGlassCard(size: .small,
                                  isSelected: selected,
-                                 fill: style.fillBackground ? style.color : (selected ? Color.accentColor : nil),
+                                 fill: style.fillBackground ? style.color : nil,
                                  fillOpacity: selected ? 0.14 : style.backgroundOpacity,
                                  gradient: style.gradient,
                                  gradientAngle: style.gradientAngle,
@@ -604,6 +631,7 @@ private struct PaletteResultCard: View {
                 accessory
             }
         }
+        .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -611,7 +639,7 @@ private struct PaletteResultCard: View {
         let style = app.imageGroupStyle(forID: groupID)
         return ResourceGlassCard(size: .small,
                                  isSelected: selected,
-                                 fill: style.fillBackground ? style.color : (selected ? Color.accentColor : nil),
+                                 fill: style.fillBackground ? style.color : nil,
                                  fillOpacity: selected ? 0.14 : style.backgroundOpacity,
                                  gradient: style.gradient,
                                  gradientAngle: style.gradientAngle,
@@ -631,13 +659,14 @@ private struct PaletteResultCard: View {
                 accessory
             }
         }
+        .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func resourceCard(symbol: String, title: String, subtitle: String, footer: String) -> some View {
         ResourceGlassCard(size: .small,
                           isSelected: selected,
-                          fill: selected ? Color.accentColor : nil,
+                          fill: nil,
                           fillOpacity: selected ? 0.12 : 0.18,
                           elevated: false,
                           onTap: action) {
@@ -655,6 +684,7 @@ private struct PaletteResultCard: View {
                 accessory
             }
         }
+        .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -689,6 +719,7 @@ private struct PaletteResultCard: View {
                 accessory
             }
         }
+        .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 

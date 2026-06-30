@@ -148,33 +148,51 @@ struct ContainerCard: View {
         .overlay { if isBusy { ProgressView().controlSize(.small) } }
     }
 
+    @ViewBuilder
     private func headerRow(controlsReveal: Double = 1) -> some View {
+        if isExpanded {
+            compactHeaderRow
+                .overlay(alignment: .topTrailing) {
+                    headerButtons(controlsReveal: controlsReveal)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .padding(Tokens.Space.s)
+                        .zIndex(1)
+                }
+        } else {
+            compactHeaderRow
+        }
+    }
+
+    private var compactHeaderRow: some View {
         ResourceCardHeader {
             iconChip
         } content: {
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(alignment: .top, spacing: 4) {
-                    ResourceCardTitleText(text: name)
-                }
-                HStack(alignment: .top, spacing: 4) {
-                    ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
-                }
-            }
+            headerTitleBlock
         } trailing: {
-            headerButtons(controlsReveal: controlsReveal)
+            EmptyView()
         }
     }
 
     private func headerButtons(controlsReveal: Double) -> some View {
         GlassButton(singleItem: false) {
-            pagePicker
+            expandedPageButtons
             GlassButtonItem(systemName: "xmark", help: "Close") {
                 onClose()
             }
         }
-        .opacity(isExpanded ? controlsReveal : 0)
+        .opacity(controlsReveal)
         .animation(.easeOut(duration: 0.18), value: controlsReveal)
-        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    private var headerTitleBlock: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .top, spacing: 4) {
+                ResourceCardTitleText(text: name)
+            }
+            HStack(alignment: .top, spacing: 4) {
+                ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
+            }
+        }
     }
 
     private var iconChip: some View {
@@ -289,19 +307,15 @@ struct ContainerCard: View {
         Button(role: .destructive) { onDelete() } label: { Label("Delete", systemImage: "trash") }
     }
 
-    private var pagePicker: some View {
-        Menu {
-            ForEach(Tab.allCases) { item in
-                Button {
-                    tab = item
-                } label: {
-                    Label(item.rawValue, systemImage: item.systemImage)
-                }
+    @ViewBuilder
+    private var expandedPageButtons: some View {
+        ForEach(Tab.allCases) { item in
+            GlassButtonItem(help: item.rawValue, isIcon: true, action: { tab = item }) {
+                Image(systemName: item.systemImage)
+                    .foregroundStyle(Color.white)
+                    .opacity(tab == item ? 1 : 0.62)
             }
-        } label: {
-            GlassButtonItem(systemName: "line.3.horizontal.decrease", help: "Filter", isLabel: true)
         }
-        .buttonStyle(.plain)
     }
 
     private var detailBody: some View {

@@ -19,9 +19,9 @@ struct FilesTab: View {
                 Label("Not running", systemImage: "folder")
             } description: { Text("Start the container to browse its files.") }
         } else {
-            VStack(spacing: 0) {
+            ContainerToolTabScaffold {
                 pathBar
-                Divider()
+            } content: {
                 listing
             }
             .task(id: path) { await load() }
@@ -46,7 +46,6 @@ struct FilesTab: View {
                 GlassButtonItem(systemName: "arrow.clockwise", help: "Refresh") { Task { await load() } }
             }
         }
-        .padding(Tokens.Space.m)
     }
 
     @ViewBuilder
@@ -60,7 +59,7 @@ struct FilesTab: View {
                 LazyVStack(spacing: 1) {
                     ForEach(entries, id: \.self) { entry in row(entry) }
                 }
-                .padding(Tokens.Space.m)
+                .padding(Tokens.Space.s)
             }
             .scrollEdgeEffectStyle(.soft, for: .all)
         }
