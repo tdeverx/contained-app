@@ -23,6 +23,7 @@ struct PageScaffold<Actions: View, Content: View>: View {
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                         .padding(Tokens.Space.l)
                 }
+                .contentMargins(.bottom, ui.toolbarUIEnabled ? AppToolbar.bandHeight : 0, for: .scrollContent)
                 .scrollEdgeEffectStyle(.soft, for: .all)
             } else {
                 content()

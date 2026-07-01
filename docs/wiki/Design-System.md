@@ -39,7 +39,9 @@ or fall back to classic pages and sheets.
 `AppToolbar` is mounted inside the `NavigationSplitView` detail column by
 `ClassicShell`, not across the whole split view. The detail body receives top
 padding from `AppSafeAreaManager`, while the sidebar and bottom page edge keep
-native split-view layout. Toolbar page actions live in the top row to the left of
+native split-view layout. Scrollable page interiors add bottom scroll-content
+clearance for the floating toolbar, so the last row can move above it without
+lifting the page itself. Toolbar page actions live in the top row to the left of
 search; page filters live in the bottom row next to System and hide on pages
 without filters.
 

@@ -126,6 +126,7 @@
 
 - **Container card animations**: Fixed grow/shrink spring timing for smoother detail panel transitions
 - **Safe area calculation**: Custom toolbar bands are measured in the detail column only, with body content padded independently from the sidebar.
+- **Page scroll clearance**: Sidebar pages keep native bottom layout while scrollable content gets bottom breathing room for the floating toolbar.
 - **Registry navigation**: Registries now live only under Settings → Registries instead of appearing as a standalone app page.
 - **Search palette sizing**: Correct max-width constraints and dynamic field scaling
 - **Start/stop UI hang**: Container refreshes are now serialized so a user action and the background
