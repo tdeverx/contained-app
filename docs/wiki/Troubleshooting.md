@@ -52,4 +52,7 @@ Your containers, images, and volumes belong to the `container` runtime and are u
 
 ---
 
-Still stuck? [Open an issue](https://github.com/tdeverx/contained-app/issues).
+Still stuck? Ask in [Discussions Q&A](https://github.com/tdeverx/contained-app/discussions/categories/q-a)
+if you need help understanding the behavior. Open an
+[issue](https://github.com/tdeverx/contained-app/issues/new/choose) when you
+have an actionable bug, crash, regression, or tracked feature request.

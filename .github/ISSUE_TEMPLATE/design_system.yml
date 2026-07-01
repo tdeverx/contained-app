@@ -1,0 +1,73 @@
+name: Design system work
+description: Shared controls, cards, scaffolds, materials, or visual primitives
+title: "[Design System]: "
+labels: ["feature", "design", "needs-design"]
+body:
+  - type: textarea
+    id: surface
+    attributes:
+      label: Surface or primitive
+      description: What shared UI element or pattern should change?
+      placeholder: Buttons, cards, settings rows, panel scaffold, command preview...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is inconsistent, missing, hard to reuse, or hard to understand?
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: Describe the target behavior, reuse boundary, or visual standard.
+    validations:
+      required: false
+
+  - type: textarea
+    id: research-design
+    attributes:
+      label: Research / design checklist
+      description: What should be checked before implementation starts?
+      placeholder: |
+        - [ ] Inventory affected call sites
+        - [ ] Decide which behavior belongs in the shared primitive
+        - [ ] Confirm Settings/docs impact
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation checklist
+      description: What likely needs to change?
+      placeholder: |
+        - [ ] Move shared behavior into the primitive
+        - [ ] Remove duplicated local styling where appropriate
+        - [ ] Update docs/wiki if behavior or language changes
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Shared primitive is reusable from the expected screens
+        - [ ] App-specific state stays outside reusable UI
+        - [ ] Existing screens keep their intended behavior
+    validations:
+      required: false
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related links, blockers, or affected areas
+      description: Screens, issues, discussions, docs, examples, known blockers, or a suggested milestone.
+      placeholder: Containers, Images, Settings, toolbar panels, creation flow...
+    validations:
+      required: false

@@ -5,16 +5,6 @@ name: PR
 on:
   pull_request:
     branches: [main, nightly, beta, stable]
-    paths-ignore:
-      - 'docs/**'
-      - 'README.md'
-      - 'CODE_OF_CONDUCT.md'
-      - '.github/CONTRIBUTING.md'
-      - '.github/assets/**'
-      - 'LICENSE'
-      - 'NOTICE'
-      - '.gitignore'
-      - 'appcast.xml'
 
 concurrency:
   group: pr-${{ github.ref }}
@@ -34,6 +24,24 @@ jobs:
       - name: Toolchain
         run: swift --version && xcodebuild -version
 
+      - name: Classify changes
+        id: changes
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+          material=false
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            case "$file" in
+              docs/**|README.md|CODE_OF_CONDUCT.md|.github/CONTRIBUTING.md|.github/assets/**|.github/ISSUE_TEMPLATE/**|LICENSE|NOTICE|SECURITY.md|SUPPORT.md|CODEOWNERS|.github/dependabot.yml|.gitignore|appcast.xml)
+                ;;
+              *)
+                material=true
+                ;;
+            esac
+          done < <(git diff --name-only --diff-filter=ACMR "origin/${{ github.base_ref }}...HEAD")
+          echo "material=${material}" >> "$GITHUB_OUTPUT"
+
       - name: Repository validation
         env:
           NO_RELEASE_NOTE: ${{ contains(github.event.pull_request.labels.*.name, 'no-release-note') && '1' || '' }}
@@ -43,9 +51,11 @@ jobs:
           ./scripts/ci-validate.sh --base-ref "origin/${{ github.base_ref }}" --require-release-note
 
       - name: Release script fixtures
+        if: steps.changes.outputs.material == 'true'
         run: ./scripts/test-release-scripts.sh
 
       - name: Build & test
+        if: steps.changes.outputs.material == 'true'
         run: |
           set -euo pipefail
           swift build -c release
@@ -53,6 +63,7 @@ jobs:
           ./scripts/check-generated-clean.sh
 
       - name: Bundle smoke validation
+        if: steps.changes.outputs.material == 'true'
         run: |
           set -euo pipefail
           BUILD=$(CHANNEL=nightly ./scripts/version-info.sh build)
@@ -61,3 +72,7 @@ jobs:
           CHANNEL=nightly BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
           VERSION="${VERSION}" BUILD="${BUILD}" ./scripts/validate-bundle.sh Contained.app
           ./scripts/check-generated-clean.sh
+
+      - name: Skip build notice
+        if: steps.changes.outputs.material != 'true'
+        run: echo "Docs/community metadata only - build and bundle checks skipped."

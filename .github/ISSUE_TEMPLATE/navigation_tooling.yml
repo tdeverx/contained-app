@@ -1,0 +1,72 @@
+name: Navigation, toolbar, or panel work
+description: Page routing, toolbars, panels, morphs, measurements, or shell behavior
+title: "[Navigation]: "
+labels: ["feature", "navigation", "triage"]
+body:
+  - type: textarea
+    id: area
+    attributes:
+      label: Navigation area
+      description: What part of the shell, toolbar, panel system, or page flow is involved?
+      placeholder: Sidebar fallback, toolbar panel, plus morph, page filters, measurement system...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or goal
+      description: What should feel better, become reusable, or be fixed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: Note classic-sidebar fallback, native macOS behavior, measurement, animation, or accessibility requirements.
+    validations:
+      required: false
+
+  - type: textarea
+    id: research-design
+    attributes:
+      label: Research / design checklist
+      description: What should be decided before implementation starts?
+      placeholder: |
+        - [ ] Identify affected routes, panels, or toolbar surfaces
+        - [ ] Decide what belongs in reusable navigation infrastructure
+        - [ ] Confirm classic-sidebar and toolbar-first behavior
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation checklist
+      description: What likely needs to change?
+      placeholder: |
+        - [ ] Update navigation, toolbar, panel, or measurement code
+        - [ ] Add focused tests or smoke coverage where practical
+        - [ ] Update docs/wiki if behavior or terminology changes
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Classic sidebar still works
+        - [ ] Toolbar-first path works
+        - [ ] UI smoke-tested in Contained.app
+    validations:
+      required: false
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related links, blockers, or target
+      description: Issues, discussions, docs, known blockers, or a suggested milestone.
+    validations:
+      required: false
