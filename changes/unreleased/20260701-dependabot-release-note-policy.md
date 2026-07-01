@@ -1,1 +1,2 @@
 - Allowed dependency-only maintenance PRs to use the `no-release-note` path so grouped Dependabot updates can pass repository validation without manual changelog fragments.
+- Clarified that `CHANGELOG.md` is curated version-level release notes, while PR/build deltas should live in change fragments.

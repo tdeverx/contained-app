@@ -34,6 +34,8 @@ This file is the working contract for coding agents in this repository. Follow i
 - Nightly ships `Changes Since Last Nightly` plus `Full Release Notes`.
 - Keep `CHANGELOG.md` ordered with `Unreleased` above released version sections; in-app What's New
   and generated Sparkle notes should both show channel/build changes before full version notes.
+- Keep `CHANGELOG.md` curated and version-level. Put PR/build deltas in change fragments, not as
+  a running implementation inventory.
 - Prefer one committed change fragment per PR or user-facing change, not one file per commit.
 - Use `changes/unreleased/YYYYMMDD-short-slug.md` for normal fragments. Use `changes/beta/` or `changes/nightly/` only for channel-specific notes.
 - `scripts/collect-changes.sh` can compile fragments from a directory or git range.
