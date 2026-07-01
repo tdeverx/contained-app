@@ -427,18 +427,13 @@ struct ToolbarCommandPalette: View {
         }
         try? await Task.sleep(for: .milliseconds(350))
         guard !Task.isCancelled else { return }
-        guard let url = HubSearch.url(query: trimmedQuery) else { return }
         hubSearching = true
         hubError = nil
         defer { hubSearching = false }
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                throw URLError(.badServerResponse)
-            }
-            let decoded = try JSONDecoder().decode(HubSearchResponse.self, from: data)
+            let results = try await HubSearch.results(query: trimmedQuery)
             guard !Task.isCancelled else { return }
-            hubResults = decoded.results
+            hubResults = results
         } catch {
             guard !Task.isCancelled else { return }
             hubResults = []

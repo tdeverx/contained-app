@@ -1,12 +1,12 @@
 import Foundation
 
-/// The Sparkle update channel the user opts into. Each channel maps to an **independent appcast feed**
-/// hosted at the matching git branch's repo root (raw.githubusercontent.com). The app switches which
-/// feed Sparkle reads per selection (see `UpdaterController`), so a branch's manifest never has to be
-/// merged into another — promoting beta→stable is a normal branch merge and the feed follows.
+/// The Sparkle update channel the user opts into. Each channel maps to a branch-hosted appcast feed
+/// at the matching git branch's repo root (raw.githubusercontent.com). Stable and beta publish their
+/// own branch feeds; nightly is treated as a superset feed and also receives promoted beta/stable
+/// appcast items so Nightly users can see those builds without switching channels.
 ///
-/// Build numbers (`git rev-list --count HEAD`) are monotonic across branches, so a nightly user always
-/// has the highest build and is never stranded behind stable — no `sparkle:channel` tags needed.
+/// Build numbers are retained for promoted commits and Sparkle orders by `CFBundleVersion`, so no
+/// `sparkle:channel` tags are needed.
 enum UpdateChannel: String, CaseIterable, Identifiable, Codable, Sendable {
     case stable, beta, nightly
 
@@ -23,7 +23,7 @@ enum UpdateChannel: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
-    /// The independent Sparkle feed for this channel — the branch's `appcast.xml` served raw.
+    /// The Sparkle feed for this channel — the branch's `appcast.xml` served raw.
     var feedURL: String {
         "https://raw.githubusercontent.com/\(Links.owner)/\(Links.repo)/\(branch)/appcast.xml"
     }

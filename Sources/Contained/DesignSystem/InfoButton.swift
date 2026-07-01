@@ -43,15 +43,3 @@ struct InfoButton: View {
         }
     }
 }
-
-extension View {
-    /// Append an info-circle popover to a form row, pinned to the trailing edge (so the icon is
-    /// always far-right regardless of the row's own content width). The always-available replacement
-    /// for the old hover-only field tips.
-    func fieldInfo(_ text: String) -> some View {
-        HStack(spacing: Tokens.Space.s) {
-            self
-            InfoButton(text, visible: true)
-        }
-    }
-}

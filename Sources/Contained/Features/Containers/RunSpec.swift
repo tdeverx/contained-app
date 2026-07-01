@@ -346,7 +346,7 @@ struct RunSpec: Codable {
         return KeyValue(key: String(entry[..<eq]), value: String(entry[entry.index(after: eq)...]))
     }
 
-    /// Personalization + restart + user labels, deduped, as `key=value` strings.
+    /// Restart policy plus user labels, deduped as `key=value` strings.
     private func allLabels() -> [String] {
         var result: [String: String] = [:]
         for label in labels where label.isValid { result[label.key] = label.value }

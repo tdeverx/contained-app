@@ -29,9 +29,13 @@ final class HistoryStore {
         } catch {
             // Fall back to an in-memory store so the app still runs if the on-disk store can't open.
             let config = ModelConfiguration(isStoredInMemoryOnly: true)
-            container = try! ModelContainer(for: schema,
-                                            migrationPlan: HistoryMigrationPlan.self,
-                                            configurations: config)
+            do {
+                container = try ModelContainer(for: schema,
+                                               migrationPlan: HistoryMigrationPlan.self,
+                                               configurations: config)
+            } catch {
+                fatalError("Unable to create history store, including in-memory fallback: \(error)")
+            }
         }
         pruneOld()
     }

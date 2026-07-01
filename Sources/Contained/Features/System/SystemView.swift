@@ -71,30 +71,7 @@ struct SystemContent: View {
         _page = State(initialValue: initialPage)
     }
 
-    private enum VolumeKind: String {
-        case named = "Named"
-        case anonymous = "Temp"
-        case localPath = "Local path"
-
-        var symbol: String {
-            switch self {
-            case .named: return "externaldrive"
-            case .anonymous: return "externaldrive.badge.timemachine"
-            case .localPath: return "folder"
-            }
-        }
-    }
-
-    private struct VolumeInventoryEntry: Identifiable {
-        let id: String
-        let kind: VolumeKind
-        let title: String
-        let subtitle: String?
-        let containers: [ContainerSnapshot]
-        let resource: VolumeResource?
-        let source: String?
-        let destination: String?
-    }
+    private typealias VolumeInventoryEntry = SystemVolumeInventory.Entry
 
     enum PruneTarget: String, Identifiable {
         case containers, images, volumes, networks
@@ -227,54 +204,9 @@ struct SystemContent: View {
 
     // MARK: Volumes
 
-    private var sortedVolumes: [VolumeResource] {
-        app.volumes.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-
     private var volumeInventory: [VolumeInventoryEntry] {
-        let namedResources = Dictionary(uniqueKeysWithValues: sortedVolumes.map { ($0.name, $0) })
-        var byID: [String: VolumeInventoryEntry] = [:]
-
-        for volume in sortedVolumes {
-            let containers = containersMounting(source: volume.name)
-            byID["named:\(volume.name)"] = VolumeInventoryEntry(
-                id: "named:\(volume.name)",
-                kind: .named,
-                title: volume.name,
-                subtitle: volumeSubtitle(volume),
-                containers: containers,
-                resource: volume,
-                source: volume.name,
-                destination: nil
-            )
-        }
-
-        for snapshot in app.containers.snapshots {
-            for mount in snapshot.configuration.mounts {
-                guard let entry = mountInventoryEntry(mount, snapshot: snapshot, namedResources: namedResources) else {
-                    continue
-                }
-                if let existing = byID[entry.id] {
-                    var containers = existing.containers
-                    if !containers.contains(where: { $0.id == snapshot.id }) { containers.append(snapshot) }
-                    byID[entry.id] = VolumeInventoryEntry(id: existing.id,
-                                                          kind: existing.kind,
-                                                          title: existing.title,
-                                                          subtitle: existing.subtitle,
-                                                          containers: sortedContainers(containers),
-                                                          resource: existing.resource,
-                                                          source: existing.source,
-                                                          destination: existing.destination)
-                } else {
-                    byID[entry.id] = entry
-                }
-            }
-        }
-
-        return byID.values.sorted { lhs, rhs in
-            if lhs.kind.rawValue != rhs.kind.rawValue { return lhs.kind.rawValue < rhs.kind.rawValue }
-            return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-        }
+        SystemVolumeInventory.build(volumes: app.volumes,
+                                    containers: app.containers.snapshots)
     }
 
     // MARK: Volumes (condensed rows — the rich per-volume I/O card moves to a detail view)
@@ -323,7 +255,7 @@ struct SystemContent: View {
                     Text(entry.title).font(.system(.callout, design: .monospaced)).lineLimit(1)
                     ResourceBadgeText(text: entry.kind.rawValue)
                 }
-                if let subtitle = volumeRowSubtitle(entry) {
+                if let subtitle = SystemVolumeInventory.rowSubtitle(entry) {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
@@ -361,83 +293,6 @@ struct SystemContent: View {
             Button("Delete", systemImage: "trash", role: .destructive) {}
                 .disabled(true)
         }
-    }
-
-    private func volumeSubtitle(_ volume: VolumeResource) -> String? {
-        let config = volume.configuration
-        let parts = [config.sizeInBytes.map { Format.bytes($0) }, config.format].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    private func volumeRowSubtitle(_ entry: VolumeInventoryEntry) -> String? {
-        var parts: [String] = []
-        if let subtitle = entry.subtitle { parts.append(subtitle) }
-        if let destination = entry.destination { parts.append("→ \(destination)") }
-        if !entry.containers.isEmpty {
-            parts.append(entry.containers.map(\.displayName).joined(separator: ", "))
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    private func mountInventoryEntry(_ mount: Mount,
-                                     snapshot: ContainerSnapshot,
-                                     namedResources: [String: VolumeResource]) -> VolumeInventoryEntry? {
-        let source = mount.source?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let destination = mount.effectiveDestination
-        let type = mount.type?.lowercased()
-
-        if let source, !source.isEmpty, isLocalPath(source, type: type) {
-            return VolumeInventoryEntry(id: "path:\(source):\(destination ?? "")",
-                                        kind: .localPath,
-                                        title: source,
-                                        subtitle: typeLabel(type),
-                                        containers: [snapshot],
-                                        resource: nil,
-                                        source: source,
-                                        destination: destination)
-        }
-
-        if let source, !source.isEmpty {
-            let resource = namedResources[source]
-            return VolumeInventoryEntry(id: "named:\(source)",
-                                        kind: .named,
-                                        title: source,
-                                        subtitle: resource.map(volumeSubtitle(_:)) ?? typeLabel(type),
-                                        containers: [snapshot],
-                                        resource: resource,
-                                        source: source,
-                                        destination: destination)
-        }
-
-        guard destination != nil || type == "tmpfs" else { return nil }
-        let title = destination ?? "anonymous mount"
-        return VolumeInventoryEntry(id: "anon:\(snapshot.id):\(title)",
-                                    kind: .anonymous,
-                                    title: title,
-                                    subtitle: typeLabel(type),
-                                    containers: [snapshot],
-                                    resource: nil,
-                                    source: nil,
-                                    destination: destination)
-    }
-
-    private func isLocalPath(_ source: String, type: String?) -> Bool {
-        type == "bind" || type == "virtiofs" || source.hasPrefix("/") || source.hasPrefix("~/") || source.hasPrefix("./") || source.hasPrefix("../")
-    }
-
-    private func typeLabel(_ type: String?) -> String? {
-        guard let type, !type.isEmpty else { return nil }
-        return type.uppercased()
-    }
-
-    private func containersMounting(source: String) -> [ContainerSnapshot] {
-        sortedContainers(app.containers.snapshots.filter { snapshot in
-            snapshot.configuration.mounts.contains { $0.source == source }
-        })
-    }
-
-    private func sortedContainers(_ containers: [ContainerSnapshot]) -> [ContainerSnapshot] {
-        containers.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
 
     private var deletingVolumeBinding: Binding<Bool> {

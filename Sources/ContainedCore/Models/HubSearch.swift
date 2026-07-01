@@ -29,8 +29,8 @@ public struct HubSearchResponse: Decodable, Sendable {
     public let results: [HubSearchResult]
 }
 
-/// Docker Hub search endpoint helpers. Pure URL building so the query shape is unit-testable; the
-/// actual `URLSession` fetch lives in the app layer (no extra dependency).
+/// Docker Hub search endpoint helpers. Centralizes URL construction, response validation, and
+/// decoding so toolbar search and the full image picker cannot drift.
 public enum HubSearch {
     public static func url(query: String, pageSize: Int = 25) -> URL? {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
@@ -41,5 +41,16 @@ public enum HubSearch {
             URLQueryItem(name: "page_size", value: String(pageSize)),
         ]
         return components.url
+    }
+
+    public static func results(query: String,
+                               pageSize: Int = 25,
+                               session: URLSession = .shared) async throws -> [HubSearchResult] {
+        guard let url = url(query: query, pageSize: pageSize) else { return [] }
+        let (data, response) = try await session.data(from: url)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(HubSearchResponse.self, from: data).results
     }
 }

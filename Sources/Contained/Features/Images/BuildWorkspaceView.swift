@@ -45,36 +45,65 @@ struct BuildWorkspaceView: View {
     }
 
     private var form: some View {
-        Form {
-            Section("Source") {
-                LabeledContent("Context") {
-                    HStack {
-                        Text(contextDir?.path ?? "Choose a folder…")
-                            .foregroundStyle(contextDir == nil ? .secondary : .primary)
-                            .lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        GlassButton(singleItem: true) {
-                            GlassButtonItem(help: "Choose context folder", action: chooseFolder) {
-                                Label("Choose", systemImage: "folder")
-                            }
+        ScrollView {
+            VStack(spacing: Tokens.Space.l) {
+                sourceSection
+                optionsSection
+                commandSection
+            }
+            .padding(Tokens.Space.l)
+        }
+        .scrollEdgeEffectStyle(.soft, for: .all)
+        .frame(maxHeight: 420)
+    }
+
+    private var sourceSection: some View {
+        PanelSection(header: "Source") {
+            PanelField(label: "Context",
+                       info: "The build context: the folder sent to the builder, usually your project root.") {
+                HStack {
+                    Text(contextDir?.path ?? "Choose a folder...")
+                        .foregroundStyle(contextDir == nil ? .secondary : .primary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    GlassButton(singleItem: true) {
+                        GlassButtonItem(help: "Choose context folder", action: chooseFolder) {
+                            Label("Choose", systemImage: "folder")
                         }
                     }
                 }
-                .fieldInfo("The build context — the folder sent to the builder (usually your project root).")
-                TextField("Dockerfile", text: $dockerfile, prompt: Text("optional — defaults to <context>/Dockerfile"))
-                    .fieldInfo("Path to the Dockerfile (-f). Relative to the context if not absolute.")
-                TextField("Tag", text: $tag, prompt: Text("name for the built image, e.g. myapp:latest"))
-                    .fieldInfo("The resulting image reference (-t).")
             }
-            Section("Options") {
-                TextField("Platform", text: $platform, prompt: Text("optional, e.g. linux/arm64"))
-                Toggle("No cache", isOn: $noCache)
-                    .fieldInfo("Build every layer from scratch (--no-cache).")
-                ForEach($buildArgs) { $arg in
+            PanelField(label: "Dockerfile",
+                       info: "Path to the Dockerfile (-f). Relative to the context if not absolute.") {
+                TextField("", text: $dockerfile, prompt: Text("optional, defaults to <context>/Dockerfile"))
+                    .textFieldStyle(.roundedBorder)
+            }
+            PanelField(label: "Tag",
+                       info: "The resulting image reference (-t).") {
+                TextField("", text: $tag, prompt: Text("name for the built image, e.g. myapp:latest"))
+                    .textFieldStyle(.roundedBorder)
+            }
+        }
+    }
+
+    private var optionsSection: some View {
+        PanelSection(header: "Options") {
+            PanelField(label: "Platform") {
+                TextField("", text: $platform, prompt: Text("optional, e.g. linux/arm64"))
+                    .textFieldStyle(.roundedBorder)
+            }
+            PanelToggleRow(title: "No cache",
+                           info: "Build every layer from scratch (--no-cache).",
+                           isOn: $noCache)
+            ForEach($buildArgs) { $arg in
+                PanelField(label: "Build arg") {
                     HStack {
                         TextField("KEY", text: $arg.key)
+                            .textFieldStyle(.roundedBorder)
                         Text("=").foregroundStyle(.secondary)
                         TextField("value", text: $arg.value)
+                            .textFieldStyle(.roundedBorder)
                         GlassButton(singleItem: true) {
                             GlassButtonItem(systemName: "minus.circle.fill",
                                             help: "Remove build argument") {
@@ -83,37 +112,39 @@ struct BuildWorkspaceView: View {
                         }
                     }
                 }
+            }
+            PanelRow(title: "Build arguments",
+                     subtitle: buildArgs.isEmpty ? "No build-time variables added." : "\(buildArgs.count) argument(s)") {
                 GlassButton(singleItem: true) {
                     GlassButtonItem(help: "Add build argument", action: { buildArgs.append(KeyValue()) }) {
                         Label("Add build arg", systemImage: "plus.circle")
                     }
                 }
             }
-            Section {
-                HStack(spacing: Tokens.Space.s) {
-                    CommandPreviewBar(command: previewCommand)
-                        .frame(maxWidth: .infinity)
-                    if building {
-                        GlassButton(singleItem: true) {
-                            GlassButtonItem(role: .destructive, help: "Cancel build", action: { building = false }) {
-                                Label("Cancel", systemImage: "xmark")
-                            }
+        }
+    }
+
+    private var commandSection: some View {
+        PanelSection {
+            HStack(spacing: Tokens.Space.s) {
+                CommandPreviewBar(command: previewCommand)
+                    .frame(maxWidth: .infinity)
+                if building {
+                    GlassButton(singleItem: true) {
+                        GlassButtonItem(role: .destructive, help: "Cancel build", action: { building = false }) {
+                            Label("Cancel", systemImage: "xmark")
                         }
-                    } else {
-                        GlassButton(singleItem: true) {
-                            GlassButtonItem(help: "Build image", action: startBuild) {
-                                Label("Build", systemImage: "hammer.fill")
-                            }
-                        }
-                            .disabled(!canBuild)
                     }
+                } else {
+                    GlassButton(singleItem: true) {
+                        GlassButtonItem(help: "Build image", action: startBuild) {
+                            Label("Build", systemImage: "hammer.fill")
+                        }
+                    }
+                    .disabled(!canBuild)
                 }
             }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .scrollEdgeEffectStyle(.soft, for: .all)
-        .frame(maxHeight: 420)
     }
 
     private var argsDict: [String: String] {

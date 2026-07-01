@@ -177,7 +177,7 @@ enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
-    /// Parse a `contained.tint` label value, falling back to multicolor.
+    /// Parse a legacy `contained.tint` label value, falling back to multicolor.
     static func parse(_ raw: String?) -> AppTint {
         guard let raw, let tint = AppTint(rawValue: raw.lowercased()) else { return .multicolor }
         return tint

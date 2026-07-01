@@ -2,8 +2,8 @@ name: Nightly
 
 # Builds the latest `nightly` branch, ad-hoc signs, packages a DMG, and refreshes the rolling
 # `nightly-latest` release. The Sparkle feed (appcast.xml at this branch's repo root) is then
-# regenerated for the new DMG and committed back to `nightly` — the app reads it raw per channel,
-# so there's no cross-branch merge.
+# regenerated for the new DMG and committed back to `nightly`. Promoted beta/stable items are kept
+# in this feed too, so Nightly users can receive those builds without changing channels.
 #
 # No Apple Developer ID / notarization (no paid account). First launch of an unsigned build needs
 # right-click ▸ Open. Only secret: SPARKLE_ED_PRIVATE_KEY (DMG still ships without it).
@@ -22,6 +22,7 @@ on:
       - 'LICENSE'
       - 'NOTICE'
       - '.gitignore'
+      - 'appcast.xml'
   workflow_dispatch:
 
 concurrency:
@@ -53,14 +54,15 @@ jobs:
 
       - name: Bundle (ad-hoc signed) + DMG
         run: |
-          BUILD=$(git rev-list --count HEAD)
-          SHA=$(git rev-parse --short HEAD)
-          export VERSION="1.0.0-nightly.${BUILD}+${SHA}"
-          CHANNEL=nightly ./scripts/bundle.sh release
+          BUILD=$(./scripts/version-info.sh build)
+          SHA=$(./scripts/version-info.sh sha)
+          export BUILD SHA
+          export VERSION=$(CHANNEL=nightly BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
+          CHANNEL=nightly BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
           mkdir -p updates
           brew install create-dmg
           ./scripts/make-dmg.sh nightly Contained.app "updates/Contained-${VERSION}.dmg"
-          VERSION_VALUE="${VERSION}" ./scripts/release-body.sh > updates/release-notes.md
+          CHANNEL=nightly VERSION_VALUE="${VERSION}" ./scripts/release-body.sh > updates/release-notes.md
           {
             echo "Automated build of \`nightly\` @ ${SHA}."
             echo
@@ -69,6 +71,7 @@ jobs:
             echo "⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
           } > updates/github-release-notes.md
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "BUILD=${BUILD}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
       - name: Publish rolling nightly-latest release
@@ -81,19 +84,23 @@ jobs:
       - name: Update Sparkle feed (nightly branch appcast.xml)
         if: env.SPARKLE_ED_PRIVATE_KEY != ''
         run: |
+          PREVIOUS_APPCAST="$(mktemp)"
+          [ -f appcast.xml ] && cp appcast.xml "$PREVIOUS_APPCAST"
           KEYFILE="$(mktemp)"; printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$KEYFILE"
           BIN=".build/artifacts/sparkle/Sparkle/bin"
           [ -x "$BIN/generate_appcast" ] || BIN="$(dirname "$(find .build -type f -name generate_appcast | head -1)")"
           ED_KEY_FILE="$KEYFILE" \
             DOWNLOAD_PREFIX="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/" \
             ./scripts/appcast.sh "$BIN" updates
+          [ -s "$PREVIOUS_APPCAST" ] && ./scripts/promote-appcast-to-nightly.sh --non-nightly-only "$PREVIOUS_APPCAST" appcast.xml
           rm -f "$KEYFILE"
+          rm -f "$PREVIOUS_APPCAST"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add appcast.xml
           if git diff --cached --quiet; then
             echo "appcast unchanged — nothing to commit."
           else
-            git commit -m "ci: nightly appcast (${VERSION})"
+            git commit -m "ci: nightly appcast (${VERSION}) [skip ci]"
             git push origin HEAD:nightly
           fi

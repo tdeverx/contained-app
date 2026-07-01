@@ -45,7 +45,7 @@ Signed distribution builds update in-app via [Sparkle](https://sparkle-project.o
 | **Beta** | Pre-release builds, ahead of stable. |
 | **Nightly** | The latest build from every commit (CI). Bleeding edge. **(default while pre-1.0)** |
 
-Each channel has its own branch-hosted appcast feed (`stable`, `beta`, or `nightly`). Fresh installs default to Nightly during pre-1.0 development. The updater is inert in development builds.
+Each channel has a branch-hosted appcast feed (`stable`, `beta`, or `nightly`). The Nightly feed also includes promoted Beta and Stable builds, ordered by their retained build number, so Nightly users still receive those releases. Fresh installs default to Nightly during pre-1.0 development. The updater is inert in development builds.
 
 ## Uninstall
 

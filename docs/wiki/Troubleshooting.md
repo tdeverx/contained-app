@@ -23,7 +23,7 @@ Kernel and DNS operations (System → Kernel & DNS) may prompt for admin rights.
 
 - The updater is **inert in development builds** by design — it only runs in a signed release build pointed at the appcast feed.
 - Make sure you installed a released `.dmg` (see [[Installation]]), not a locally-built `Contained.app`.
-- Check your channel in **Settings → Updates**. Each channel reads its own branch-hosted appcast feed, and fresh pre-1.0 installs default to Nightly.
+- Check your channel in **Settings → Updates**. Each channel reads a branch-hosted appcast feed, and fresh pre-1.0 installs default to Nightly. Nightly also receives promoted Beta and Stable appcast items.
 
 ## I want bleeding-edge / pre-release builds
 

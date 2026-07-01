@@ -6,13 +6,15 @@ import Testing
 struct DecodingTests {
 
     @Test func placeholderSnapshotDecodes() {
-        // `ContainerSnapshot.placeholder` force-decodes a JSON template — guard that it never traps.
         let s = ContainerSnapshot.placeholder(id: "nginx", image: "nginx:latest")
         #expect(s.id == "nginx")
         #expect(s.image == "nginx:latest")
         #expect(s.state == .running)
         let stopped = ContainerSnapshot.placeholder(id: "x", image: "redis:7", state: .stopped)
         #expect(stopped.state == .stopped)
+        let quoted = ContainerSnapshot.placeholder(id: #"weird "id""#, image: #"repo/"quoted":tag"#)
+        #expect(quoted.id == #"weird "id""#)
+        #expect(quoted.image == #"repo/"quoted":tag"#)
     }
 
     @Test func decodesContainerList() throws {
@@ -27,7 +29,7 @@ struct DecodingTests {
         #expect(c.configuration.initProcess.environment.contains("FOO=bar"))
         #expect(c.configuration.publishedPorts.first?.hostPort == 18080)
         #expect(c.configuration.publishedPorts.first?.containerPort == 80)
-        // Personalization labels round-trip through the CLI.
+        // Legacy personalization labels still decode so older containers can migrate locally.
         #expect(c.tintLabel == "teal")
         #expect(c.iconLabel == "globe")
         #expect(c.startedDate != nil)

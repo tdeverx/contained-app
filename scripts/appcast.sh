@@ -4,10 +4,9 @@
 # One-time setup (keep the private key safe, never commit it):
 #   generate_keys                       # from Sparkle's bin; prints the public EdDSA key for Info.plist
 #
-# Per-branch feeds: each git branch (nightly / beta / stable) owns an independent appcast.xml at the
-# repo root, served raw from GitHub. The app picks the feed per channel at runtime (UpdaterController),
-# so there's no cross-branch merging — promoting a branch just carries its manifest along. Items carry
-# no channel tag; build numbers are monotonic across branches so the newest build always wins.
+# Per-branch feeds: stable and beta own their branch appcasts. Nightly is the superset feed: its
+# workflow writes the newest nightly item, and beta/stable workflows merge their promoted item into
+# nightly too. Items carry no channel tag; Sparkle orders by the retained CFBundleVersion build number.
 #
 # Usage:
 #   ./scripts/appcast.sh <path-to-sparkle-bin-dir> [updates-dir]
