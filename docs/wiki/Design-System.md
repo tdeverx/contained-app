@@ -120,4 +120,5 @@ open Contained.app
 ```
 
 For Contained UI work, relaunch the built app after passing tests so the current
-panel/card behavior is visible in the running app.
+panel/card behavior is visible in the running app. If an existing `Contained.app`
+is open, quit it before rebuilding and reopening the fresh bundle.

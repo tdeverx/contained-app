@@ -48,20 +48,14 @@ Maintainers use `scripts/release.sh` and `scripts/appcast.sh` for signing, notar
 
 ## Documentation
 
-The wiki is the source of truth for feature and implementation notes:
+The GitHub wiki is the source of truth for feature and implementation notes.
+The maintained wiki pages are mirrored in [`docs/wiki`](docs/wiki) so docs
+changes can be reviewed with code changes:
 
-- [Features](https://github.com/tdeverx/contained-app/wiki/Features)
-- [Command Palette](https://github.com/tdeverx/contained-app/wiki/Command-Palette)
-- [Design System](https://github.com/tdeverx/contained-app/wiki/Design-System)
-- [Run / Edit Form](https://github.com/tdeverx/contained-app/wiki/Run-Edit-Form)
-- [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts)
-- [Installation](https://github.com/tdeverx/contained-app/wiki/Installation)
-- [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting)
-- [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture)
-- [Release Runbook](https://github.com/tdeverx/contained-app/wiki/Release)
-- [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing)
-
-Local wiki mirrors for the pages currently maintained in this repository live in [`docs/wiki`](docs/wiki).
+- Start: [Features](https://github.com/tdeverx/contained-app/wiki/Features), [Installation](https://github.com/tdeverx/contained-app/wiki/Installation), [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts), [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting)
+- Workflows: [Creation Workflow](https://github.com/tdeverx/contained-app/wiki/Creation-Workflow), [Run / Edit Form](https://github.com/tdeverx/contained-app/wiki/Run-Edit-Form), [Compose Import](https://github.com/tdeverx/contained-app/wiki/Compose-Import), [Command Palette](https://github.com/tdeverx/contained-app/wiki/Command-Palette), [Updates](https://github.com/tdeverx/contained-app/wiki/Updates)
+- Feature areas: [Containers](https://github.com/tdeverx/contained-app/wiki/Features-Containers), [Images](https://github.com/tdeverx/contained-app/wiki/Features-Images), [Resources](https://github.com/tdeverx/contained-app/wiki/Features-Resources), [System & Settings](https://github.com/tdeverx/contained-app/wiki/System-Settings)
+- Maintainers: [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture), [Design System](https://github.com/tdeverx/contained-app/wiki/Design-System), [Release Runbook](https://github.com/tdeverx/contained-app/wiki/Release), [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing)
 
 ## Architecture
 
