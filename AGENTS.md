@@ -31,6 +31,7 @@ This file is the working contract for coding agents in this repository. Follow i
 - Prefer one committed change fragment per PR or user-facing change, not one file per commit.
 - Use `changes/unreleased/YYYYMMDD-short-slug.md` for normal fragments. Use `changes/beta/` or `changes/nightly/` only for channel-specific notes.
 - `scripts/collect-changes.sh` can compile fragments from a directory or git range.
+- When no explicit `CHANGES`/`CHANGES_DIR` source is provided, Beta/Nightly release notes use `scripts/changes-since-release.sh` to derive the build-change section from the previous matching appcast item and the changelog/change-fragment git delta.
 - Generated release-note scratch files belong under `updates/`, `.release/`, or `.release-notes/`; do not commit them.
 
 ## Design And UI Rules

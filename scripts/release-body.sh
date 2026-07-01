@@ -9,6 +9,7 @@ CHANGES_FILE="${CHANGES:-}"
 CHANGES_DIR_VALUE="${CHANGES_DIR:-}"
 VERSION_VALUE="${VERSION_VALUE:-${VERSION:-$(cat VERSION 2>/dev/null || true)}}"
 CHANNEL_VALUE="${CHANNEL:-}"
+CHANGES_FILE_IS_DEFAULT_CHANGELOG=false
 
 [ -f "$CHANGELOG" ] || { echo "✗ $CHANGELOG not found" >&2; exit 1; }
 [ -n "$VERSION_VALUE" ] || { echo "✗ VERSION is empty" >&2; exit 1; }
@@ -26,6 +27,7 @@ if [ -z "$CHANGES_FILE" ]; then
     CHANGES_FILE="CHANGES.md"
   else
     CHANGES_FILE="$CHANGELOG"
+    CHANGES_FILE_IS_DEFAULT_CHANGELOG=true
   fi
 fi
 
@@ -101,6 +103,9 @@ if [ "$CHANNEL_VALUE" = "beta" ] || [ "$CHANNEL_VALUE" = "nightly" ]; then
   default_changes_dir
   if [ -n "$CHANGES_DIR_VALUE" ] && [ -d "$CHANGES_DIR_VALUE" ]; then
     changes_fragment="$(collect_change_dir "$CHANGES_DIR_VALUE")"
+  fi
+  if [ -z "$changes_fragment" ] && $CHANGES_FILE_IS_DEFAULT_CHANGELOG; then
+    changes_fragment="$(CHANNEL="$CHANNEL_VALUE" VERSION_VALUE="$VERSION_VALUE" ./scripts/changes-since-release.sh)"
   fi
   if [ -z "$changes_fragment" ]; then
     changes_fragment="$(extract "$CHANGES_FILE" "$VERSION_VALUE")"

@@ -48,7 +48,7 @@ Prefer one committed fragment per PR or user-facing change, not one file per com
 CHANGES=updates/changes.md CHANNEL=beta VERSION_VALUE="$VERSION" ./scripts/release-body.sh
 ```
 
-When using a single `CHANGELOG.md`, keep `Unreleased` above released version sections, put version-wide notes under the base version section, and put current channel/build changes under `Unreleased` or a channel section such as `## [beta]` / `## [nightly]`.
+When using a single `CHANGELOG.md`, keep `Unreleased` above released version sections, put version-wide notes under the base version section, and put current channel/build changes under `Unreleased` or a channel section such as `## [beta]` / `## [nightly]`. If no explicit `CHANGES` or `CHANGES_DIR` source is supplied, `scripts/changes-since-release.sh` first reads the previous matching appcast item, extracts its commit SHA, and emits only the changelog/change-fragment lines added since that Beta/Nightly build. If no previous channel item exists, the scripts fall back to channel sections and then `Unreleased`. That prevents the "Changes Since Last ..." section from expanding to the full `Unreleased` changelog after the first channel build.
 
 Generated release-note files should be written under `updates/`, `.release/`, or `.release-notes/`. Do not commit generated notes from release workflows. The workflows only commit `appcast.xml`, and appcast-only commits are path-ignored and marked `[skip ci]` so they do not start another release build.
 
