@@ -22,12 +22,10 @@ This file is the working contract for coding agents in this repository. Follow i
 - PR CI enforces release-note coverage for material changes. Add a changelog/change fragment, or use the `no-release-note` label only for docs/meta/dependency-only maintenance.
 - Release workflows validate built bundles and generated appcasts before publishing or committing feed changes.
 
-## GitHub Issues And Projects
+## GitHub Issues
 
 - Follow `docs/wiki/Issues-and-Discussions.md` for issue routing, naming, labels, milestones, native parent/sub-issue links, and blocked-by/blocking links.
-- Keep issue labels, milestones, and GitHub Project fields aligned with the documented workflow.
 - Use area labels for ownership only; do not treat area labels as workflow state.
-- GitHub Projects reads/writes require project-scoped GitHub CLI auth. If project commands fail, ask the maintainer to refresh auth before attempting project setup.
 
 ## Release Notes
 
