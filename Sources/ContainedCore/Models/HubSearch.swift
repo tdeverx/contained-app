@@ -10,7 +10,10 @@ public struct HubSearchResult: Decodable, Sendable, Identifiable, Hashable {
 
     public var id: String { repoName }
     /// The reference to pull (Hub returns the canonical repo path for both official and user repos).
-    public var pullReference: String { repoName }
+    public var pullReference: String {
+        guard isOfficial, repoName.hasPrefix("library/") else { return repoName }
+        return String(repoName.dropFirst("library/".count))
+    }
 
     enum CodingKeys: String, CodingKey {
         case repoName = "repo_name"

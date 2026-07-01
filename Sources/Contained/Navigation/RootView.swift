@@ -101,6 +101,11 @@ struct RootView: View {
             if !settings.usesPanelNavigation { ui.activeMorph = nil }
             ui.ensureSelectedSectionIsNavigable()
         }
+        .onChange(of: settings.imageBuildEnabled) { _, enabled in
+            if !enabled, ui.selectedSection == .build {
+                ui.navigate(to: .images)
+            }
+        }
         .task {
             await app.bootstrapIfNeeded()
             app.coordinator.start(app: app)

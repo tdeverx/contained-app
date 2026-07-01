@@ -12,6 +12,7 @@ final class UIState {
         var entry: CreationEntry = .menu
         var prefillSpec: RunSpec?
         var editSnapshot: ContainerSnapshot?
+        var returnEntry: CreationEntry?
         var searchQuery = ""
         var requestToken = 0
     }
@@ -103,6 +104,11 @@ final class UIState {
         set { creation.searchQuery = newValue }
     }
 
+    var creationReturnEntry: CreationEntry? {
+        get { creation.returnEntry }
+        set { creation.returnEntry = newValue }
+    }
+
     private(set) var creationRequestToken: Int {
         get { creation.requestToken }
         set { creation.requestToken = newValue }
@@ -181,8 +187,10 @@ final class UIState {
         switch action {
         case .runContainer:
             navigate(to: .containers)
-        case .pullImage, .loadImage, .pruneImages, .build:
+        case .pullImage, .loadImage, .pruneImages:
             navigate(to: .images)
+        case .build:
+            navigate(to: .build)
         case .createVolume:
             navigate(to: .volumes)
         case .createNetwork:
@@ -221,8 +229,11 @@ final class UIState {
             case .runContainer:
                 presentCreate(RunSpec())
                 return
-            case .pullImage, .createVolume, .createNetwork, .build, .activityHistory:
+            case .pullImage, .createVolume, .createNetwork, .activityHistory:
                 navigateForClassicFallback(action)
+                return
+            case .build:
+                navigate(to: .build)
                 return
             case .loadImage, .pruneImages, .systemLogs:
                 pendingAction = action
@@ -252,7 +263,10 @@ final class UIState {
     }
 
     /// Open the creation flow in the toolbar add morph at a specific page.
-    func openCreationPanel(entry: CreationEntry = .menu, prefill spec: RunSpec? = nil, searchQuery: String = "") {
+    func openCreationPanel(entry: CreationEntry = .menu,
+                           prefill spec: RunSpec? = nil,
+                           searchQuery: String = "",
+                           returningTo returnEntry: CreationEntry? = nil) {
         guard panelNavigationEnabled else {
             switch entry {
             case .menu, .chooser, .configure:
@@ -261,25 +275,30 @@ final class UIState {
                 navigate(to: .networks)
             case .volume:
                 navigate(to: .volumes)
-            case .search, .build:
+            case .search:
                 navigate(to: .images)
+            case .build:
+                navigate(to: .build)
             }
             return
         }
         creationEntry = entry
         creationPrefillSpec = spec
         creationEditSnapshot = nil
+        creationReturnEntry = returnEntry
         creationSearchQuery = searchQuery
         creationRequestToken &+= 1
         activeMorph = .add
     }
 
-    func openCreationPanel(prefill spec: RunSpec) {
+    func openCreationPanel(prefill spec: RunSpec,
+                           returningTo returnEntry: CreationEntry? = nil,
+                           searchQuery: String = "") {
         guard panelNavigationEnabled else {
             presentCreate(spec)
             return
         }
-        openCreationPanel(entry: .configure, prefill: spec)
+        openCreationPanel(entry: .configure, prefill: spec, searchQuery: searchQuery, returningTo: returnEntry)
     }
 
     func openCreationPanel(editing snapshot: ContainerSnapshot) {
@@ -290,6 +309,7 @@ final class UIState {
         creationEntry = .configure
         creationPrefillSpec = nil
         creationEditSnapshot = snapshot
+        creationReturnEntry = nil
         creationRequestToken &+= 1
         activeMorph = .add
     }
@@ -306,7 +326,9 @@ final class UIState {
         }
     }
 
-    func runImage(_ reference: String) {
+    func runImage(_ reference: String,
+                  returningTo returnEntry: CreationEntry? = nil,
+                  searchQuery: String = "") {
         var spec = RunSpec()
         spec.image = reference
         guard panelNavigationEnabled else {
@@ -314,7 +336,7 @@ final class UIState {
             return
         }
         prefillQueue = []
-        openCreationPanel(prefill: spec)
+        openCreationPanel(prefill: spec, returningTo: returnEntry, searchQuery: searchQuery)
     }
 
     func useTemplate(_ spec: RunSpec) {
@@ -333,22 +355,31 @@ final class UIState {
     }
 
     /// Open the New-Container window for each queued spec in turn (compose import). Pulls each image
-    /// first (with progress), then presents the first window; the rest follow as windows close.
+    /// first (with progress), then presents the first editor; the rest follow as editors close. The
+    /// editor is the creation panel when panel navigation is enabled, otherwise the classic sheet.
     func beginPrefillQueue(_ specs: [RunSpec], using app: AppModel) {
         guard let first = specs.first else { return }
         prefillQueue = Array(specs.dropFirst())
         Task {
             for spec in specs { _ = await app.ensureImage(spec.image) }
-            presentCreate(first)
+            presentNextPrefill(first)
         }
     }
 
-    /// Advance to the next queued prefill when a New-Container window closes. No-op when drained.
+    /// Advance to the next queued prefill when a New-Container editor closes. No-op when drained.
     func advancePrefillQueue() {
         guard !prefillQueue.isEmpty else { return }
         let next = prefillQueue.removeFirst()
-        // Re-present on the next runloop so the previous sheet finishes dismissing first.
-        DispatchQueue.main.async { self.presentCreate(next) }
+        // Re-present on the next runloop so the previous sheet/panel finishes dismissing first.
+        DispatchQueue.main.async { self.presentNextPrefill(next) }
+    }
+
+    private func presentNextPrefill(_ spec: RunSpec) {
+        if panelNavigationEnabled {
+            openCreationPanel(prefill: spec)
+        } else {
+            presentCreate(spec)
+        }
     }
 }
 

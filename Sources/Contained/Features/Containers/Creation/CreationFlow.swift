@@ -8,8 +8,8 @@ import ContainedCore
 /// path — selecting a box resizes and advances to the next section.
 ///
 /// Pages: `menu` (Container / Network / Volume — toolbar only) → `chooser` (Search / Local image /
-/// Compose / Image archive / Templates / Skip) → `search` | `localImages` | `compose` |
-/// `pasteCompose` | `imageArchive` | `templates` | `network` | `volume` → `configure` (the shared
+/// Compose / Image archive / Templates) → `search` | `localImages` | `compose` |
+/// `pasteCompose` | `templates` | `network` | `volume` → `configure` (the shared
 /// `ContainerConfigureView`).
 struct CreationFlow: View {
     /// Where the flow starts: the toolbar `+` begins at `menu`; other entry points begin at `chooser`.
@@ -40,8 +40,20 @@ struct CreationFlow: View {
     var onSoftDismissChange: (((() -> Void)?) -> Void)?
 
     enum Page: Hashable {
-        case menu, chooser, search, localImages, compose, pasteCompose, imageArchive, templates
+        case menu, chooser, search, localImages, compose, pasteCompose, templates
         case network, volume, build, configure
+
+        init(_ entry: UIState.CreationEntry) {
+            switch entry {
+            case .menu: self = .menu
+            case .chooser: self = .chooser
+            case .search: self = .search
+            case .configure: self = .configure
+            case .network: self = .network
+            case .volume: self = .volume
+            case .build: self = .build
+            }
+        }
     }
     @State private var page: Page
     @State private var spec = RunSpec()
@@ -54,6 +66,8 @@ struct CreationFlow: View {
     @State private var networkSubnet = ""
     @State private var networkInternalOnly = false
     @State private var working = false
+    @State private var configureToken = 0
+    @State private var configureReturnPage: Page?
     @Namespace private var tileNamespace
 
     private var springAnim: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
@@ -67,8 +81,8 @@ struct CreationFlow: View {
         static let localImages = CGSize(width: 560, height: 520)
         static let composeWidth: CGFloat = 440
         static let pasteCompose = CGSize(width: 560, height: 520)
-        static let imageArchive = CGSize(width: 500, height: 360)
         static let templates = CGSize(width: 520, height: 470)
+        static let resource = CGSize(width: 520, height: 470)
         static let build = CGSize(width: 640, height: 680)
     }
 
@@ -76,12 +90,14 @@ struct CreationFlow: View {
          prefill: RunSpec? = nil,
          editSnapshot: ContainerSnapshot? = nil,
          searchQuery: String = "",
+         returnEntry: UIState.CreationEntry? = nil,
          onSoftDismissChange: (((() -> Void)?) -> Void)? = nil) {
         self.start = start
         self.editSnapshot = editSnapshot
         self.onClose = onClose
         self.onSoftDismissChange = onSoftDismissChange
         _initialSearchQuery = State(initialValue: searchQuery)
+        _configureReturnPage = State(initialValue: returnEntry.map(Page.init))
         if let prefill {
             _spec = State(initialValue: prefill)
         }
@@ -116,7 +132,6 @@ struct CreationFlow: View {
         case .localImages: localImagesPage
         case .compose:   composePage
         case .pasteCompose: pasteComposePage
-        case .imageArchive: imageArchivePage
         case .templates: templatesPage
         case .network:   networkPage
         case .volume:    volumePage
@@ -125,6 +140,7 @@ struct CreationFlow: View {
             ContainerConfigureView(mode: configureMode,
                                    leading: configureLeading,
                                    onFinished: onClose)
+            .id(configureToken)
         }
     }
 
@@ -137,10 +153,12 @@ struct CreationFlow: View {
                     box(symbol: "shippingbox", title: "Container",
                         subtitle: "Configure and run an image",
                         matchedID: "creation-option-0") { go(.chooser) }
-                    if app.settings.imageBuildEnabled {
-                        box(symbol: "hammer", title: "Build",
-                            subtitle: "Build an image from a Dockerfile",
-                            matchedID: "creation-option-1") { go(.build) }
+                    box(symbol: "hammer", title: "Build",
+                        subtitle: "Build an image from a Dockerfile",
+                        matchedID: "creation-option-1",
+                        enabled: app.settings.imageBuildEnabled) {
+                        guard app.settings.imageBuildEnabled else { return }
+                        go(.build)
                     }
                     box(symbol: "network", title: "Network",
                         subtitle: "Create a container network",
@@ -169,17 +187,19 @@ struct CreationFlow: View {
                     }
                     box(symbol: "slider.horizontal.3", title: "Start from scratch",
                         subtitle: "Configure manually",
-                        matchedID: "creation-option-2") { spec = RunSpec(); go(.configure) }
+                        matchedID: "creation-option-2") { configure(with: RunSpec()) }
                 }
                 optionRow {
-                    if app.settings.composeImportEnabled {
-                        box(symbol: "shippingbox.and.arrow.backward", title: "Compose",
-                            subtitle: "Paste YAML or choose a file",
-                            matchedID: "compose-option-0") { go(.compose) }
+                    box(symbol: "shippingbox.and.arrow.backward", title: "Compose",
+                        subtitle: "Paste YAML or choose a file",
+                        matchedID: "compose-option-0",
+                        enabled: app.settings.composeImportEnabled) {
+                        guard app.settings.composeImportEnabled else { return }
+                        go(.compose)
                     }
                     box(symbol: "archivebox", title: "Image archive",
-                        subtitle: "Load an image .tar") { go(.imageArchive) }
-                    box(symbol: "bookmark.fill", title: "Templates",
+                        subtitle: "Load an image .tar") { selectImageArchive() }
+                    box(symbol: "bookmark", title: "Templates",
                         subtitle: saved.isEmpty ? "None saved yet" : "Reuse a saved recipe",
                         enabled: !saved.isEmpty) { go(.templates) }
                 }
@@ -216,11 +236,9 @@ struct CreationFlow: View {
     }
 
     private var searchPage: some View {
-        pageScaffold(symbol: "magnifyingglass", title: "Search for an image", subtitle: "Pick one to configure and run",
-                     leading: .back { go(.chooser) }) {
+        contentOnlyScaffold {
             RegistryImageSearch(initialQuery: initialSearchQuery) { picked in
-                spec = picked
-                go(.configure)
+                configure(with: picked)
             }
         }
     }
@@ -229,8 +247,7 @@ struct CreationFlow: View {
         pageScaffold(symbol: "square.stack.3d.up", title: "Choose a local image", subtitle: "Use an image already pulled",
                      leading: .back { go(.chooser) }) {
             CreationLocalImagesContent(query: $localImageQuery) { picked in
-                spec = picked
-                go(.configure)
+                configure(with: picked)
             }
         }
     }
@@ -257,19 +274,10 @@ struct CreationFlow: View {
         }
     }
 
-    private var imageArchivePage: some View {
-        pageScaffold(symbol: "archivebox", title: "Load Image Archive", subtitle: "Import an OCI image .tar into the local store",
-                     leading: .back { go(.chooser) }) {
-            CreationImageArchiveContent(onSelect: selectImageArchive)
-        }
-    }
-
     private var templatesPage: some View {
-        pageScaffold(symbol: "bookmark.fill", title: "Use a saved template", subtitle: nil,
-                     leading: .back { go(.chooser) }) {
+        contentOnlyScaffold {
             CreationTemplatesContent(templates: saved) { selected in
-                spec = selected
-                go(.configure)
+                configure(with: selected)
             }
         }
     }
@@ -294,7 +302,11 @@ struct CreationFlow: View {
 
     private var configureLeading: ContainerConfigureView.Leading {
         if editSnapshot != nil { return .cancel(onClose) }
-        return start == .menu ? .back { go(.chooser) } : .cancel(onClose)
+        return configureBackTarget == nil ? .cancel(onClose) : .back(backFromConfigure)
+    }
+
+    private var configureBackTarget: Page? {
+        configureReturnPage ?? (start == .menu ? .chooser : nil)
     }
 
     private func pageScaffold<C: View>(symbol: String,
@@ -320,6 +332,13 @@ struct CreationFlow: View {
                 .padding(Tokens.Space.s)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: contentAlignment)
         }
+    }
+
+    private func contentOnlyScaffold<C: View>(contentAlignment: Alignment = .topLeading,
+                                              @ViewBuilder content: @escaping () -> C) -> some View {
+        content()
+            .padding(Tokens.Space.s)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: contentAlignment)
     }
 
     @ViewBuilder
@@ -364,6 +383,22 @@ struct CreationFlow: View {
         withAnimation(springAnim) { page = next }
     }
 
+    private func configure(with picked: RunSpec, returningTo returnPage: Page? = nil) {
+        let currentPage = page
+        spec = picked
+        configureReturnPage = returnPage ?? (currentPage == .configure ? nil : currentPage)
+        configureToken &+= 1
+        go(.configure)
+    }
+
+    private func backFromConfigure() {
+        guard let target = configureBackTarget else {
+            onClose()
+            return
+        }
+        go(target)
+    }
+
     private func publishSoftDismiss() {
         onSoftDismissChange?(page == .menu && start == .menu ? nil : { softDismiss() })
     }
@@ -381,11 +416,13 @@ struct CreationFlow: View {
             go(.chooser)
         case .pasteCompose:
             go(.compose)
-        case .search, .localImages, .imageArchive, .templates, .configure:
+        case .search, .localImages, .templates:
             switch start {
             case .menu: go(.chooser)
             default: onClose()
             }
+        case .configure:
+            backFromConfigure()
         }
     }
 
@@ -397,10 +434,9 @@ struct CreationFlow: View {
         case .localImages: return PanelSize.localImages
         case .compose:   return CGSize(width: PanelSize.composeWidth, height: optionPageHeight)
         case .pasteCompose: return PanelSize.pasteCompose
-        case .imageArchive: return PanelSize.imageArchive
         case .templates: return PanelSize.templates
-        case .network:   return Tokens.SheetSize.small
-        case .volume:    return Tokens.SheetSize.small
+        case .network:   return PanelSize.resource
+        case .volume:    return PanelSize.resource
         case .build:     return PanelSize.build
         case .configure: return Tokens.SheetSize.form
         }

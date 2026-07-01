@@ -89,13 +89,10 @@ struct RegistryImageSearch: View {
 
     private func quickPick(symbol: String, title: String, subtitle: String,
                            action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            choiceCard(symbol: symbol, title: title, subtitle: subtitle) {
-                GlassListRowChevron()
-            }
-            .contentShape(Rectangle())
+        choiceCard(symbol: symbol, title: title, subtitle: subtitle, action: action) {
+            GlassListRowChevron()
         }
-        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: Results
@@ -124,11 +121,8 @@ struct RegistryImageSearch: View {
             ScrollView {
                 LazyVStack(spacing: Tokens.Space.xs) {
                     ForEach(results) { result in
-                        Button { onSelect(RecommendedImage.spec(for: result.pullReference)) } label: {
-                            resultRow(result)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
+                        resultRow(result)
+                            .accessibilityAddTraits(.isButton)
                     }
                 }
             }
@@ -138,7 +132,8 @@ struct RegistryImageSearch: View {
     private func resultRow(_ result: HubSearchResult) -> some View {
         choiceCard(symbol: "shippingbox",
                    title: result.repoName,
-                   subtitle: result.shortDescription?.isEmpty == false ? result.shortDescription : nil) {
+                   subtitle: result.shortDescription?.isEmpty == false ? result.shortDescription : nil,
+                   action: { onSelect(RecommendedImage.spec(for: result.pullReference)) }) {
             HStack(spacing: Tokens.Space.s) {
                 if result.isOfficial {
                     Image(systemName: "checkmark.seal.fill").font(.caption2).foregroundStyle(.blue)
@@ -154,8 +149,9 @@ struct RegistryImageSearch: View {
     private func choiceCard<Accessory: View>(symbol: String,
                                              title: String,
                                              subtitle: String?,
+                                             action: @escaping () -> Void,
                                              @ViewBuilder accessory: @escaping () -> Accessory) -> some View {
-        ResourceGlassCard(size: .small, elevated: false) {
+        ResourceGlassCard(size: .small, elevated: false, onTap: action) {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: symbol, tint: .accentColor)
             } content: {

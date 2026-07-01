@@ -38,7 +38,8 @@ struct ToolbarPageSwitcher: View {
     var body: some View {
         ToolbarGlassMenuButton {
             ForEach(AppSectionGroup.allCases) { group in
-                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled).filter { $0.group == group }
+                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
+                    .filter { $0.group == group && ($0 != .build || app.settings.imageBuildEnabled) }
                 if !sections.isEmpty {
                     Section(group.rawValue) {
                         ForEach(sections) { section in
@@ -75,6 +76,8 @@ struct ToolbarPageSwitcher: View {
                 app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable
             }.count
             return "\(groups.count) local · \(updates) update\(updates == 1 ? "" : "s")"
+        case .build:
+            return "Dockerfile"
         case .volumes:
             return "\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")"
         case .networks:
@@ -161,6 +164,8 @@ struct ToolbarPageContextOptions: View {
                 }
             }
             .help(imagesSubtitle)
+        case .build:
+            EmptyView()
         case .networks:
             GlassButton {
                 GlassButtonItem(systemName: "plus", help: "New Network") {
@@ -259,6 +264,8 @@ struct ToolbarPageFilterOptions: View {
             ToolbarViewOptions()
         case .images:
             ImageViewOptions()
+        case .build:
+            EmptyView()
         case .templates:
             TemplateViewOptions()
         case .networks:

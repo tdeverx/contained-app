@@ -9,20 +9,57 @@ struct CreationNetworkFields: View {
     var onSubmit: () -> Void
 
     var body: some View {
-        VStack(spacing: Tokens.Space.l) {
-            PanelSection {
-                PanelField(label: "Name") {
-                    TextField("", text: $name, prompt: Text("my-network")).textFieldStyle(.roundedBorder)
+        CreationResourceForm(symbol: "network",
+                             title: networkName,
+                             subtitle: networkSubtitle,
+                             command: previewCommand) {
+            PanelSection(header: "Details", highlighted: hasValues) {
+                PanelField(label: "Name",
+                           info: "A readable name used by containers with `--network`.",
+                           error: nameError) {
+                    TextField("", text: $name, prompt: Text("my-network"))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(submitIfReady)
                 }
-                PanelField(label: "Subnet") {
-                    TextField("", text: $subnet, prompt: Text("optional, e.g. 10.0.0.0/24")).textFieldStyle(.roundedBorder)
+                PanelField(label: "Subnet",
+                           info: "Optional CIDR range for the network, for example `10.0.0.0/24`.") {
+                    TextField("", text: $subnet, prompt: Text("optional, e.g. 10.0.0.0/24"))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(submitIfReady)
                 }
-                PanelToggleRow(title: "Host-only (internal)", isOn: $internalOnly)
+                PanelToggleRow(title: "Internal only",
+                               subtitle: "Restrict containers on this network from external access.",
+                               isOn: $internalOnly)
             }
-            CreationSubmitBar(canSubmit: !name.trimmingCharacters(in: .whitespaces).isEmpty,
+        } footer: {
+            CreationSubmitBar(title: "Create network",
+                              systemImage: "network.badge.plus",
+                              canSubmit: canSubmit,
                               working: working,
                               action: onSubmit)
         }
+    }
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    private var trimmedSubnet: String { subnet.trimmingCharacters(in: .whitespaces) }
+    private var canSubmit: Bool { !trimmedName.isEmpty && !working }
+    private var hasValues: Bool { !trimmedName.isEmpty || !trimmedSubnet.isEmpty || internalOnly }
+    private var nameError: String? { trimmedName.isEmpty ? "A network name is required." : nil }
+    private var networkName: String { trimmedName.isEmpty ? "New network" : trimmedName }
+    private var networkSubtitle: String {
+        var parts = [internalOnly ? "internal" : "bridge"]
+        if !trimmedSubnet.isEmpty { parts.append(trimmedSubnet) }
+        return parts.joined(separator: "  ·  ")
+    }
+    private var previewCommand: [String] {
+        ContainerCommands.networkCreate(name: trimmedName.isEmpty ? "<name>" : trimmedName,
+                                        subnet: trimmedSubnet.isEmpty ? nil : trimmedSubnet,
+                                        internalOnly: internalOnly)
+    }
+
+    private func submitIfReady() {
+        guard canSubmit else { return }
+        onSubmit()
     }
 }
 
@@ -33,19 +70,49 @@ struct CreationVolumeFields: View {
     var onSubmit: () -> Void
 
     var body: some View {
-        VStack(spacing: Tokens.Space.l) {
-            PanelSection {
-                PanelField(label: "Name") {
-                    TextField("", text: $name, prompt: Text("my-volume")).textFieldStyle(.roundedBorder)
+        CreationResourceForm(symbol: "externaldrive",
+                             title: volumeName,
+                             subtitle: volumeSubtitle,
+                             command: previewCommand) {
+            PanelSection(header: "Details", highlighted: hasValues) {
+                PanelField(label: "Name",
+                           info: "A persistent storage name you can mount into containers.",
+                           error: nameError) {
+                    TextField("", text: $name, prompt: Text("my-volume"))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(submitIfReady)
                 }
-                PanelField(label: "Size") {
-                    TextField("", text: $size, prompt: Text("optional, e.g. 10G")).textFieldStyle(.roundedBorder)
+                PanelField(label: "Size",
+                           info: "Optional runtime-specific size hint, such as `10G`. Leave blank for default.") {
+                    TextField("", text: $size, prompt: Text("optional, e.g. 10G"))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(submitIfReady)
                 }
             }
-            CreationSubmitBar(canSubmit: !name.trimmingCharacters(in: .whitespaces).isEmpty,
+        } footer: {
+            CreationSubmitBar(title: "Create volume",
+                              systemImage: "externaldrive.badge.plus",
+                              canSubmit: canSubmit,
                               working: working,
                               action: onSubmit)
         }
+    }
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    private var trimmedSize: String { size.trimmingCharacters(in: .whitespaces) }
+    private var canSubmit: Bool { !trimmedName.isEmpty && !working }
+    private var hasValues: Bool { !trimmedName.isEmpty || !trimmedSize.isEmpty }
+    private var nameError: String? { trimmedName.isEmpty ? "A volume name is required." : nil }
+    private var volumeName: String { trimmedName.isEmpty ? "New volume" : trimmedName }
+    private var volumeSubtitle: String { trimmedSize.isEmpty ? "default size" : trimmedSize }
+    private var previewCommand: [String] {
+        ContainerCommands.volumeCreate(name: trimmedName.isEmpty ? "<name>" : trimmedName,
+                                       size: trimmedSize.isEmpty ? nil : trimmedSize)
+    }
+
+    private func submitIfReady() {
+        guard canSubmit else { return }
+        onSubmit()
     }
 }
 
@@ -80,13 +147,10 @@ struct CreationLocalImagesContent: View {
                 ScrollView {
                     LazyVStack(spacing: Tokens.Space.xs) {
                         ForEach(filteredLocalImages) { image in
-                            Button {
+                            CreationLocalImageRow(image: image) {
                                 onSelect(RecommendedImage.spec(for: image.reference))
-                            } label: {
-                                CreationLocalImageRow(image: image)
-                                    .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(.isButton)
                         }
                     }
                 }
@@ -130,24 +194,6 @@ struct CreationPastedComposeContent: View {
     }
 }
 
-struct CreationImageArchiveContent: View {
-    var onSelect: () -> Void
-
-    var body: some View {
-        ContentUnavailableView {
-            Label("Choose an image archive", systemImage: "archivebox")
-        } description: {
-            Text("After loading, choose Local image to configure and run it.")
-        } actions: {
-            Button(action: onSelect) {
-                Label("Select File", systemImage: "folder")
-            }
-            .buttonStyle(.glassProminent)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
 struct CreationTemplatesContent: View {
     let templates: [Template]
     var onSelect: (RunSpec) -> Void
@@ -156,15 +202,12 @@ struct CreationTemplatesContent: View {
         ScrollView {
             LazyVStack(spacing: Tokens.Space.s) {
                 ForEach(templates) { template in
-                    Button {
+                    CreationChoiceCard(symbol: "bookmark",
+                                       title: template.name,
+                                       subtitle: Format.shortImage(template.spec?.image ?? "—")) {
                         if let spec = template.spec { onSelect(spec) }
-                    } label: {
-                        CreationChoiceCard(symbol: "bookmark.fill",
-                                           title: template.name,
-                                           subtitle: Format.shortImage(template.spec?.image ?? "—"))
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(.isButton)
                 }
             }
         }
@@ -172,16 +215,18 @@ struct CreationTemplatesContent: View {
 }
 
 private struct CreationSubmitBar: View {
+    let title: String
+    let systemImage: String
     let canSubmit: Bool
     let working: Bool
     var action: () -> Void
 
     var body: some View {
-        HStack {
+        HStack(spacing: Tokens.Space.s) {
             Spacer()
             if working { ProgressView().controlSize(.small) }
             Button(action: action) {
-                Label("Create", systemImage: "checkmark")
+                Label(title, systemImage: systemImage)
             }
             .buttonStyle(.glassProminent)
             .disabled(!canSubmit || working)
@@ -191,8 +236,42 @@ private struct CreationSubmitBar: View {
     }
 }
 
+private struct CreationResourceForm<Fields: View, Footer: View>: View {
+    let symbol: String
+    let title: String
+    let subtitle: String
+    let command: [String]
+    @ViewBuilder var fields: () -> Fields
+    @ViewBuilder var footer: () -> Footer
+
+    var body: some View {
+        VStack(spacing: Tokens.Space.m) {
+            ResourceGlassCard(size: .small, elevated: false) {
+                ResourceCardHeader {
+                    ResourceCardIconChip(symbol: symbol, tint: .accentColor)
+                } content: {
+                    VStack(alignment: .leading, spacing: 1) {
+                        ResourceCardTitleText(text: title)
+                        ResourceCardSubtitleText(text: subtitle)
+                    }
+                } trailing: {
+                    ResourceBadgeText(text: "new", font: .caption2.weight(.semibold))
+                }
+            }
+
+            fields()
+
+            CommandPreviewBar(command: command)
+                .frame(maxWidth: .infinity)
+
+            footer()
+        }
+    }
+}
+
 private struct CreationLocalImageRow: View {
     let image: ContainedCore.ImageResource
+    var onSelect: () -> Void
 
     var body: some View {
         let runnable = image.variants.filter(\.isRunnable)
@@ -203,8 +282,8 @@ private struct CreationLocalImageRow: View {
 
         CreationChoiceCard(symbol: "square.stack.3d.up",
                            title: Format.shortImage(image.reference),
-                           subtitle: subtitle)
-            .contentShape(Rectangle())
+                           subtitle: subtitle,
+                           action: onSelect)
     }
 }
 
@@ -212,9 +291,10 @@ private struct CreationChoiceCard: View {
     let symbol: String
     let title: String
     let subtitle: String?
+    var action: () -> Void
 
     var body: some View {
-        ResourceGlassCard(size: .small, elevated: false) {
+        ResourceGlassCard(size: .small, elevated: false, onTap: action) {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: symbol, tint: .accentColor)
             } content: {

@@ -106,6 +106,7 @@ struct CommandTests {
         #expect(decoded.results.first?.repoName == "library/nginx")
         #expect(decoded.results.first?.isOfficial == true)
         #expect(decoded.results.first?.starCount == 18000)
+        #expect(decoded.results.first?.pullReference == "nginx")
     }
 
     @Test func parseVersionAndSupport() {

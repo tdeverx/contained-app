@@ -13,11 +13,14 @@ struct GlassOptionTile: View {
     var action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            guard enabled else { return }
+            action()
+        } label: {
             VStack(alignment: .leading, spacing: Tokens.Space.xs) {
                 Image(systemName: symbol)
                     .font(.title3)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(enabled ? Color.accentColor : Color.secondary)
                     .frame(width: 24, height: 24, alignment: .leading)
 
                 Spacer(minLength: Tokens.Space.s)
@@ -25,7 +28,7 @@ struct GlassOptionTile: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.callout.weight(.medium))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(enabled ? .primary : .secondary)
                         .lineLimit(1)
 
                     Text(subtitle ?? " ")
@@ -38,7 +41,7 @@ struct GlassOptionTile: View {
             }
             .padding(Tokens.Space.m)
             .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .leading)
-            .glassOptionTileSurface(cornerRadius: Tokens.Radius.card)
+            .glassOptionTileSurface(cornerRadius: Tokens.Radius.card, interactive: enabled)
             .contentShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
             .optionalMatchedGeometry(id: matchedID, namespace: matchedNamespace)
         }
@@ -69,9 +72,9 @@ private extension View {
         modifier(OptionalMatchedGeometry(id: id, namespace: namespace))
     }
 
-    func glassOptionTileSurface(cornerRadius: CGFloat) -> some View {
+    func glassOptionTileSurface(cornerRadius: CGFloat, interactive: Bool) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         return self
-            .glassEffect(.regular.interactive(), in: shape)
+            .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
     }
 }

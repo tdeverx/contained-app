@@ -2,8 +2,9 @@ import AppKit
 import ContainedCore
 
 /// Import a `compose.yaml` without a dedicated page: pick the file, translate each service with an
-/// image into a `RunSpec`, pull the images, then open a prefilled New-Container window per service
-/// (the prefill queue steps through them). Triggered from File ▸ Import Compose… and the palette.
+/// image into a `RunSpec`, pull the images, then open a prefilled New-Container editor per service
+/// (the prefill queue steps through them). Triggered from File ▸ Import Compose…, drag-and-drop,
+/// and the palette.
 @MainActor
 enum ComposeImport {
     /// Show an open panel, then import the chosen file.

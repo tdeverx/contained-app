@@ -336,10 +336,11 @@ struct ToolbarCommandPalette: View {
                 PaletteItem(title: "Run \(rec.name)", subtitle: rec.reference,
                             keywords: [rec.reference], kind: .image,
                             icon: rec.symbol, tint: .accentColor) {
-                    ui.runImage(rec.reference)
+                    ui.runImage(rec.reference, returningTo: .search)
                 }
             }
         }
+        let query = trimmedQuery
         return hubResults.map { result in
             let subtitle = result.shortDescription?.isEmpty == false
                 ? result.shortDescription
@@ -350,7 +351,7 @@ struct ToolbarCommandPalette: View {
                                kind: .image,
                                icon: result.isOfficial ? "checkmark.seal.fill" : "shippingbox",
                                tint: .accentColor) {
-                ui.runImage(result.pullReference)
+                ui.runImage(result.pullReference, returningTo: .search, searchQuery: query)
             }
         }
     }
@@ -368,7 +369,7 @@ struct ToolbarCommandPalette: View {
                         kind: .image,
                         visual: .imageGroup(group),
                         icon: "play.fill", tint: .green) {
-                ui.runImage(group.primaryReference)
+                ui.runImage(group.primaryReference, returningTo: .chooser)
             }
         }
     }

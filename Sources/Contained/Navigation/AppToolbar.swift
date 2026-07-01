@@ -208,11 +208,16 @@ struct AppToolbar: View {
                                  addSoftDismiss = nil
                                  ui.creationPrefillSpec = nil
                                  ui.creationEditSnapshot = nil
+                                 ui.creationReturnEntry = nil
                                  ui.requestMorphClose(.add)
+                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.36) {
+                                     ui.advancePrefillQueue()
+                                 }
                              },
                              prefill: ui.creationPrefillSpec,
                              editSnapshot: ui.creationEditSnapshot,
                              searchQuery: ui.creationSearchQuery,
+                             returnEntry: ui.creationReturnEntry,
                              onSoftDismissChange: { addSoftDismiss = $0 })
                     .id(ui.creationRequestToken)
             }
