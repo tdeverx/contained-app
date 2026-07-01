@@ -7,6 +7,7 @@ struct ToolbarUpdatesPanel: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     var showClose = true
+    var coordinateSpaceName = AppToolbar.space
     var onOpenImage: (LocalImageTagGroup, CGRect) -> Void
     var onClose: () -> Void
     @State private var imageFrames: [LocalImageTagGroup.ID: CGRect] = [:]
@@ -118,9 +119,9 @@ struct ToolbarUpdatesPanel: View {
                 GeometryReader { proxy in
                     Color.clear
                         .onAppear {
-                            imageFrames[group.id] = proxy.frame(in: .named(AppToolbar.space))
+                            imageFrames[group.id] = proxy.frame(in: .named(coordinateSpaceName))
                         }
-                        .onChange(of: proxy.frame(in: .named(AppToolbar.space))) { _, frame in
+                        .onChange(of: proxy.frame(in: .named(coordinateSpaceName))) { _, frame in
                             imageFrames[group.id] = frame
                         }
                 }

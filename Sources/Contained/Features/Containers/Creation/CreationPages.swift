@@ -84,6 +84,7 @@ struct CreationLocalImagesContent: View {
                                 onSelect(RecommendedImage.spec(for: image.reference))
                             } label: {
                                 CreationLocalImageRow(image: image)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                         }
@@ -161,6 +162,7 @@ struct CreationTemplatesContent: View {
                         CreationChoiceCard(symbol: "bookmark.fill",
                                            title: template.name,
                                            subtitle: Format.shortImage(template.spec?.image ?? "—"))
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
@@ -202,6 +204,7 @@ private struct CreationLocalImageRow: View {
         CreationChoiceCard(symbol: "square.stack.3d.up",
                            title: Format.shortImage(image.reference),
                            subtitle: subtitle)
+            .contentShape(Rectangle())
     }
 }
 
@@ -221,9 +224,10 @@ private struct CreationChoiceCard: View {
                         ResourceCardMonospacedSubtitleText(text: subtitle)
                     }
                 }
-            } trailing: {
-                GlassListRowChevron()
-            }
+        } trailing: {
+            GlassListRowChevron()
         }
+        .contentShape(Rectangle())
     }
+}
 }

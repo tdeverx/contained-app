@@ -136,8 +136,7 @@ private struct ClassicSectionPage: View {
         case .containers:
             ContainersGridView()
         case .images:
-            ToolbarUpdatesPanel(showClose: false, onOpenImage: { _, _ in }, onClose: {})
-                .task { await app.refreshImagesIfStale(force: true) }
+            ImagesPage()
         case .volumes:
             SystemContent(initialPage: .volumes, showClose: false, elevated: false, usesToolbarSelection: false)
         case .networks:
@@ -319,5 +318,98 @@ private struct NetworksPage: View {
         } catch {
             app.flash(error.localizedDescription)
         }
+    }
+}
+
+private struct ImagesPage: View {
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
+    @State private var detail: LocalImageTagGroup?
+    @State private var sourceFrame: CGRect?
+    @State private var presented = false
+    @State private var closeRequestToken = 0
+
+    var body: some View {
+        GeometryReader { viewport in
+            ZStack {
+                ToolbarUpdatesPanel(showClose: false,
+                                    coordinateSpaceName: pageImageSpace,
+                                    onOpenImage: openImageDetail,
+                                    onClose: {})
+                    .task { await app.refreshImagesIfStale(force: true) }
+
+                if let detail, presented {
+                    MorphingExpander(isPresented: detailBinding,
+                                     originFrame: usableSourceFrame ?? fallbackSourceFrame(in: viewport.size),
+                                     target: .anchored(size: Tokens.PanelSize.imageDetail,
+                                                       safeArea: imageDetailSafeAreaPolicy,
+                                                       margin: 16),
+                                     backdropStyle: .dim,
+                                     showsBackdrop: true,
+                                     closeRequestToken: closeRequestToken,
+                                     onBackdropTap: closeDetail) {
+                        ToolbarImageGroupCard(group: currentGroup(detail),
+                                              isExpanded: true,
+                                              onTap: {},
+                                              onClose: closeDetail)
+                    }
+                    .environment(\.appSafeAreas, imageDetailSafeAreas)
+                    .zIndex(10)
+                }
+            }
+            .coordinateSpace(.named(pageImageSpace))
+        }
+    }
+
+    private let pageImageSpace = "imagesPage"
+
+    private var imageDetailSafeAreaPolicy: AppSafeAreaPolicy {
+        ui.toolbarUIEnabled ? AppSafeAreaPolicy(excluding: .both, padding: .small) : .content
+    }
+
+    private var imageDetailSafeAreas: AppSafeAreaManager {
+        guard ui.toolbarUIEnabled else { return AppSafeAreaManager(system: EdgeInsets()) }
+        return AppSafeAreaManager(system: EdgeInsets(),
+                                  topToolbarHeight: AppToolbar.bandHeight,
+                                  bottomToolbarHeight: AppToolbar.bandHeight)
+    }
+
+    private var detailBinding: Binding<Bool> {
+        Binding(get: { presented }, set: { isPresented in
+            if isPresented {
+                presented = true
+            } else {
+                presented = false
+                detail = nil
+                sourceFrame = nil
+            }
+        })
+    }
+
+    private var usableSourceFrame: CGRect? {
+        guard let sourceFrame,
+              sourceFrame.width.isFinite, sourceFrame.height.isFinite,
+              sourceFrame.minX.isFinite, sourceFrame.minY.isFinite,
+              sourceFrame.width > 1, sourceFrame.height > 1
+        else { return nil }
+        return sourceFrame
+    }
+
+    private func fallbackSourceFrame(in size: CGSize) -> CGRect {
+        CGRect(x: size.width / 2 - 1, y: size.height / 2 - 1, width: 2, height: 2)
+    }
+
+    private func openImageDetail(_ group: LocalImageTagGroup, _ frame: CGRect) {
+        detail = group
+        sourceFrame = frame
+        presented = true
+    }
+
+    private func closeDetail() {
+        closeRequestToken &+= 1
+    }
+
+    private func currentGroup(_ group: LocalImageTagGroup) -> LocalImageTagGroup {
+        LocalImageTagGroup.groups(for: app.images).first { $0.id == group.id } ?? group
     }
 }

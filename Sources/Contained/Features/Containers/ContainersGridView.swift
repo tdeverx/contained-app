@@ -194,7 +194,7 @@ struct ContainersGridView: View {
                 if let detail {
                     let target = cardDetailTarget.rect(origin: .zero,
                                                        in: viewport.size,
-                                                       safeAreas: safeAreas)
+                                                       safeAreas: cardDetailSafeAreas)
                     let source = cardFrames[detail.id].flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
                     let rect = expanded ? target : source
                     expandedCard(detail)
@@ -386,6 +386,13 @@ struct ContainersGridView: View {
 
     private var cardDetailSafeAreaPolicy: AppSafeAreaPolicy {
         AppSafeAreaPolicy(excluding: .both, padding: .none, includesSystemInsets: false)
+    }
+
+    private var cardDetailSafeAreas: AppSafeAreaManager {
+        guard ui.toolbarUIEnabled else { return safeAreas }
+        return AppSafeAreaManager(system: safeAreas.system,
+                                  topToolbarHeight: AppToolbar.bandHeight,
+                                  bottomToolbarHeight: AppToolbar.bandHeight)
     }
 
     private func panelSize(in available: CGSize) -> CGSize {

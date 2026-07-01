@@ -85,10 +85,10 @@ struct AppToolbar: View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             if !isSidebarOpen {
                 settingsZone
+                ToolbarPageSwitcher()
             }
-            ToolbarPageSwitcher()
-            Spacer(minLength: Tokens.Space.m)
             ToolbarPageContextOptions()
+            Spacer(minLength: Tokens.Space.m)
             searchZone
         }
         .padding(.leading, Tokens.Toolbar.outerPadding)

@@ -38,8 +38,8 @@ struct GlassOptionTile: View {
             }
             .padding(Tokens.Space.m)
             .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .leading)
-            .contentShape(Rectangle())
             .glassOptionTileSurface(cornerRadius: Tokens.Radius.card)
+            .contentShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
             .optionalMatchedGeometry(id: matchedID, namespace: matchedNamespace)
         }
         .buttonStyle(.plain)

@@ -93,6 +93,7 @@ struct RegistryImageSearch: View {
             choiceCard(symbol: symbol, title: title, subtitle: subtitle) {
                 GlassListRowChevron()
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -125,6 +126,7 @@ struct RegistryImageSearch: View {
                     ForEach(results) { result in
                         Button { onSelect(RecommendedImage.spec(for: result.pullReference)) } label: {
                             resultRow(result)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -163,10 +165,11 @@ struct RegistryImageSearch: View {
                         ResourceCardSubtitleText(text: subtitle)
                     }
                 }
-            } trailing: {
-                accessory()
-            }
+        } trailing: {
+            accessory()
         }
+        .contentShape(Rectangle())
+    }
     }
 
     // MARK: Search plumbing
