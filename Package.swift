@@ -13,7 +13,7 @@ let package = Package(
         // than re-implementing one. AppKit-backed, bridged via NSViewRepresentable.
         .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.2.0"),
         // Compose import: a real YAML parser beats a fragile hand-rolled one. Pure Swift.
-        .package(url: "https://github.com/jpsim/Yams.git", from: "5.0.0"),
+        .package(url: "https://github.com/jpsim/Yams.git", from: "6.2.2"),
         // Auto-update (release): Sparkle, the de-facto macOS updater. Inert until a signed build
         // points SUFeedURL at a hosted appcast (see scripts/appcast.sh).
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
