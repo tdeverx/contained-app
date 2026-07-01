@@ -48,9 +48,9 @@ Maintainers use `scripts/release.sh` and `scripts/appcast.sh` for signing, notar
 
 ## Documentation
 
-The GitHub wiki is the source of truth for feature and implementation notes.
-The maintained wiki pages are mirrored in [`docs/wiki`](docs/wiki) so docs
-changes can be reviewed with code changes:
+[`docs/wiki`](docs/wiki) is the source of truth for feature and implementation
+notes. CI renders and publishes those pages to the GitHub wiki after merge, so
+docs changes can be reviewed with code changes:
 
 - Start: [Features](https://github.com/tdeverx/contained-app/wiki/Features), [Installation](https://github.com/tdeverx/contained-app/wiki/Installation), [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts), [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting)
 - Workflows: [Creation Workflow](https://github.com/tdeverx/contained-app/wiki/Creation-Workflow), [Run / Edit Form](https://github.com/tdeverx/contained-app/wiki/Run-Edit-Form), [Compose Import](https://github.com/tdeverx/contained-app/wiki/Compose-Import), [Command Palette](https://github.com/tdeverx/contained-app/wiki/Command-Palette), [Updates](https://github.com/tdeverx/contained-app/wiki/Updates)

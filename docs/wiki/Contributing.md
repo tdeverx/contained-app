@@ -63,7 +63,7 @@ Sources/Contained/       the SwiftUI app
 Tests/ContainedCoreTests/  golden-argv + decode + decision tests
 Tests/ContainedAppTests/   RunSpec argv + compose mapping
 scripts/                 bundle.sh, release.sh, appcast.sh
-docs/wiki/               local mirror of the GitHub wiki pages
+docs/wiki/               canonical source rendered into the GitHub wiki
 appcast.xml              Sparkle feed at the root of each release branch
 ```
 
@@ -78,7 +78,8 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Match the surrounding style** — comment density, naming, Liquid Glass idioms. Prefer shared primitives such as `PanelHeader`, `PanelSection`, `MorphPanelScaffold`, `ResourceGlassCard`, `CommandPreviewBar`, and `Tokens`.
 - **Gate debug-only tools at compile time.** Use `#if CONTAINED_DEBUG_TOOLS` for debug menus, diagnostics, fixtures, or local-only inspection surfaces. SwiftPM defines that flag only for debug builds, so release bundles exclude the code instead of merely hiding it at runtime.
 - **Keep the sidebar fallback working.** Toolbar-first UI and toolbar panel navigation are experimental gates, not replacements for the classic shell.
-- **Sync docs with behavior.** If behavior, settings, routes, or user-facing wording changes, update the matching page under `docs/wiki` and keep README links current.
+- **Sync docs with behavior.** If behavior, settings, routes, or user-facing wording changes, update the matching page under `docs/wiki` and keep README links current. Wiki-impacting PRs need the `wiki-approved` label; the wiki PR guard renders a preview and blocks until that label is present.
+- **Publish the wiki from the repo.** The Wiki Sync workflow renders `docs/wiki` after merge and pushes the GitHub wiki. If the default GitHub token cannot push the wiki in a repository setting, configure a `WIKI_SYNC_TOKEN` secret with wiki write access.
 - **Preserve update build numbers.** `scripts/version-info.sh` is the single build-number source of truth; beta/stable workflows must pass the retained `BUILD` into `scripts/bundle.sh` and merge promoted appcast items into the nightly feed.
 - **Keep code scanning intentional.** `.github/workflows/codeql.yml` is the repository-owned CodeQL setup. GitHub Actions workflow analysis runs on PRs and pushes that touch source, scripts, workflows, package files, or tests, plus a weekly scheduled baseline. Swift analysis is scheduled/manual because Swift CodeQL currently takes too long to be a healthy per-PR gate. Appcast-only, docs-only, changelog-resource-only, and change-fragment-only commits are ignored so generated release feed commits do not burn macOS scan minutes.
 - **Write release notes at the right level.** Keep `CHANGELOG.md` curated and version-level: use the base version section, such as `## [1.0.0]`, for durable user-facing release notes. Put PR/build deltas in `changes/unreleased/` fragments by default, not in `CHANGELOG.md` as a running implementation inventory. Use `changes/beta/` or `changes/nightly/` only for channel-specific notes. `scripts/collect-changes.sh` can compile those fragments for a directory or git range. When no explicit `CHANGES`/`CHANGES_DIR` source is provided, Beta/Nightly notes first try the previous matching appcast item plus the changelog/change-fragment git delta, then fall back to channel sections and `Unreleased` only as compatibility fallbacks. Stable ships full notes only; Beta/Nightly ship channel changes plus full notes.

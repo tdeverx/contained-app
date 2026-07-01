@@ -54,6 +54,9 @@ jobs:
         if: steps.changes.outputs.material == 'true'
         run: ./scripts/test-release-scripts.sh
 
+      - name: Wiki script fixtures
+        run: ./scripts/test-wiki-scripts.sh
+
       - name: Build & test
         if: steps.changes.outputs.material == 'true'
         run: |
