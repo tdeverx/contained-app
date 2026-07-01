@@ -57,18 +57,26 @@ jobs:
       - name: Build & test
         if: steps.guard.outputs.build == 'true'
         run: |
-          ./scripts/sync-changelog-resource.sh
+          set -euo pipefail
+          ./scripts/ci-validate.sh
           swift build -c release
           swift test
 
       - name: Bundle (ad-hoc signed) + DMG
         if: steps.guard.outputs.build == 'true'
         run: |
+          set -euo pipefail
           git fetch origin nightly:refs/remotes/origin/nightly
-          SHA=$(./scripts/version-info.sh sha)
-          BUILD=$(BUILD_SOURCE_REF=origin/nightly SHA="${SHA}" ./scripts/version-info.sh build)
-          export BUILD SHA
-          export VERSION=$(CHANNEL=beta BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
+          SHA=$(CHANNEL=beta ./scripts/version-info.sh sha)
+          BUILD=$(CHANNEL=beta BUILD_SOURCE_REF=origin/nightly SHA="${SHA}" ./scripts/version-info.sh build)
+          VERSION=$(CHANNEL=beta BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
+          export BUILD SHA VERSION
+          {
+            echo "BASE_VERSION=$(./scripts/version-info.sh base)"
+            echo "BUILD=${BUILD}"
+            echo "SHA=${SHA}"
+            echo "VERSION=${VERSION}"
+          } >> "$GITHUB_ENV"
           CHANNEL=beta BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
           mkdir -p updates
           brew install create-dmg
@@ -81,20 +89,27 @@ jobs:
             echo
             echo "⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
           } > updates/github-release-notes.md
-          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
-          echo "BUILD=${BUILD}" >> "$GITHUB_ENV"
-          echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
       - name: Publish beta release
         if: steps.guard.outputs.build == 'true'
         run: |
-          gh release create "v${VERSION}" updates/*.dmg \
-            --prerelease --title "Beta (${VERSION})" \
-            --notes-file updates/github-release-notes.md
+          set -euo pipefail
+          tag="v${VERSION}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" updates/*.dmg --clobber
+            gh release edit "$tag" \
+              --prerelease --title "Beta (${VERSION})" \
+              --notes-file updates/github-release-notes.md
+          else
+            gh release create "$tag" updates/*.dmg \
+              --prerelease --title "Beta (${VERSION})" \
+              --notes-file updates/github-release-notes.md
+          fi
 
       - name: Update Sparkle feed (beta branch appcast.xml)
         if: steps.guard.outputs.build == 'true' && env.SPARKLE_ED_PRIVATE_KEY != ''
         run: |
+          set -euo pipefail
           KEYFILE="$(mktemp)"; printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$KEYFILE"
           BIN=".build/artifacts/sparkle/Sparkle/bin"
           [ -x "$BIN/generate_appcast" ] || BIN="$(dirname "$(find .build -type f -name generate_appcast | head -1)")"

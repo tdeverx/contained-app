@@ -111,7 +111,7 @@ final class UpdaterController {
     }
 
     var currentReleaseNotesHTML: String {
-        Self.changelogHTML(for: Self.runningDisplayVersion()) ?? "<p>No release notes are bundled for this build.</p>"
+        Self.releaseNotesHTML(for: Self.runningDisplayVersion()) ?? "<p>No release notes are bundled for this build.</p>"
     }
 
     func markWhatsNewSeen() {
@@ -122,7 +122,7 @@ final class UpdaterController {
     private func showWhatsNewIfNeeded() {
         let version = Self.runningDisplayVersion()
         guard defaults.string(forKey: Self.lastSeenVersionKey) != version else { return }
-        showWhatsNew = Self.changelogHTML(for: version) != nil
+        showWhatsNew = Self.releaseNotesHTML(for: version) != nil
     }
 
     private static func runningDisplayVersion() -> String {
@@ -132,11 +132,10 @@ final class UpdaterController {
             ?? "1.0"
     }
 
-    private static func changelogHTML(for version: String) -> String? {
+    private static func releaseNotesHTML(for version: String) -> String? {
         guard let url = changelogResourceURL(),
               let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-        let section = ChangelogSection.extract(version: version, from: text)
-        return section.map { ChangelogSection.html(from: $0) }
+        return ChangelogSection.releaseNotesHTML(version: version, from: text)
     }
 
     static func changelogResourceURL(bundle: Bundle = .main) -> URL? {
@@ -172,12 +171,80 @@ final class UpdaterController {
 }
 
 enum ChangelogSection {
-    static func extract(version: String, from changelog: String) -> String? {
-        let base = version.split(separator: "+", maxSplits: 1).first
+    enum Channel {
+        case stable, beta, nightly
+
+        init(version: String) {
+            if version.contains("-nightly.") {
+                self = .nightly
+            } else if version.contains("-beta.") {
+                self = .beta
+            } else {
+                self = .stable
+            }
+        }
+
+        var changesTitle: String? {
+            switch self {
+            case .stable: return nil
+            case .beta: return "Changes Since Last Beta"
+            case .nightly: return "Changes Since Last Nightly"
+            }
+        }
+    }
+
+    static func releaseNotesHTML(version: String, from changelog: String) -> String? {
+        releaseNotesMarkdown(version: version, from: changelog).map(html(from:))
+    }
+
+    static func releaseNotesMarkdown(version: String, from changelog: String) -> String? {
+        let channel = Channel(version: version)
+        let base = baseVersion(version)
+        let fullNotes = extractFirst(candidates: [base, version], from: changelog)
+            ?? extractFirst(candidates: ["Unreleased"], from: changelog)
+        var sections: [String] = []
+
+        if let changesTitle = channel.changesTitle,
+           let changes = extractChanges(version: version, channel: channel, from: changelog),
+           changes != fullNotes {
+            sections.append("## \(changesTitle)\n\n\(changes)")
+        }
+
+        if let fullNotes {
+            sections.append("## Full Release Notes\n\n\(fullNotes)")
+        }
+
+        guard !sections.isEmpty else { return nil }
+        return sections.joined(separator: "\n\n")
+    }
+
+    private static func extractChanges(version: String, channel: Channel, from changelog: String) -> String? {
+        let channelVersion: String
+        switch channel {
+        case .stable:
+            return nil
+        case .beta:
+            channelVersion = "beta"
+        case .nightly:
+            channelVersion = "nightly"
+        }
+
+        return extractFirst(candidates: [version, channelVersion, "Unreleased"], from: changelog)
+    }
+
+    private static func baseVersion(_ version: String) -> String {
+        version.split(separator: "+", maxSplits: 1).first
             .flatMap { $0.split(separator: "-", maxSplits: 1).first }
             .map(String.init) ?? version
+    }
+
+    static func extract(version: String, from changelog: String) -> String? {
+        let base = baseVersion(version)
+        return extractFirst(candidates: [version, base, "Unreleased"], from: changelog)
+    }
+
+    private static func extractFirst(candidates: [String], from changelog: String) -> String? {
         let lines = changelog.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        let candidates = [version, base, "Unreleased"]
         let start = candidates.compactMap { candidate in
             lines.firstIndex(where: { line in
                 line.hasPrefix("## ") && (line.contains(candidate) || line.contains("[\(candidate)]"))
@@ -200,9 +267,19 @@ enum ChangelogSection {
             if line.hasPrefix("### ") {
                 if inList { html += "</ul>"; inList = false }
                 html += "<h3>\(line.dropFirst(4))</h3>"
+            } else if line.hasPrefix("## ") {
+                if inList { html += "</ul>"; inList = false }
+                html += "<h2>\(line.dropFirst(3))</h2>"
+            } else if line.hasPrefix("#### ") {
+                if inList { html += "</ul>"; inList = false }
+                html += "<h4>\(line.dropFirst(5))</h4>"
             } else if line.hasPrefix("- ") {
                 if !inList { html += "<ul>"; inList = true }
                 html += "<li>\(line.dropFirst(2))</li>"
+            } else if line.trimmingCharacters(in: .whitespaces).hasPrefix("- ") {
+                if !inList { html += "<ul>"; inList = true }
+                let item = line.trimmingCharacters(in: .whitespaces).dropFirst(2)
+                html += "<li>\(item)</li>"
             } else if line.trimmingCharacters(in: .whitespaces).isEmpty {
                 if inList { html += "</ul>"; inList = false }
             } else {

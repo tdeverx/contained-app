@@ -38,7 +38,9 @@ private struct HTMLView: NSViewRepresentable {
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { font: -apple-system-body; margin: 24px; color: text; }
+            h2 { font: -apple-system-title2; margin-top: 22px; margin-bottom: 10px; }
             h3 { font: -apple-system-headline; margin-top: 18px; }
+            h4 { font: -apple-system-subheadline; margin-top: 14px; margin-bottom: 4px; }
             li { margin: 6px 0; }
           </style>
         </head>

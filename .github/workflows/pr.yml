@@ -31,8 +31,11 @@ jobs:
       - name: Toolchain
         run: swift --version && xcodebuild -version
 
+      - name: Repository validation
+        run: ./scripts/ci-validate.sh
+
       - name: Build & test
         run: |
-          ./scripts/sync-changelog-resource.sh
+          set -euo pipefail
           swift build -c release
           swift test

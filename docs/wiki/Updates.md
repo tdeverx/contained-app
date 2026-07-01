@@ -25,6 +25,10 @@ promoted Beta and Stable appcast items. Sparkle orders them by `CFBundleVersion`
 so release workflows retain the same build number when a commit moves between
 Nightly, Beta, and Stable.
 
+Release workflows only commit root `appcast.xml` back to channel branches.
+Those appcast-only commits are path-ignored and marked `[skip ci]` to avoid
+release loops.
+
 Fresh installs default to Nightly during pre-1.0 development.
 
 ## Release notes
@@ -32,16 +36,21 @@ Fresh installs default to Nightly during pre-1.0 development.
 Release notes are generated from full release notes plus channel/build changes.
 By default both come from `CHANGELOG.md`; `RELEASE_NOTES.md`, `CHANGES.md`, and
 `CHANGES_DIR` are supported when maintainers want split sources. The release
-scripts embed the composed notes into Sparkle appcasts and the app can show:
+scripts embed the composed notes into Sparkle appcasts, and the bundled in-app
+What's New view uses the same order:
 
-- What's New in This Build
-- What's New in an available update
+- channel/build changes first, when the channel has them
+- full version notes second
 
 Generated notes follow the channel:
 
 - Stable: `Full Release Notes`.
 - Beta: `Changes Since Last Beta` plus `Full Release Notes`.
 - Nightly: `Changes Since Last Nightly` plus `Full Release Notes`.
+
+`scripts/ci-validate.sh` checks that ordering before CI builds, and
+`scripts/sync-changelog-resource.sh --check` fails when the bundled in-app
+changelog resource has drifted from the root `CHANGELOG.md`.
 
 ## Image updates
 

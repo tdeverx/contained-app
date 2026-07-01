@@ -37,6 +37,13 @@ if [ -z "$build" ]; then
   build="$(build_from_source_ref || git rev-list --count HEAD 2>/dev/null || echo 1)"
 fi
 
+case "$build" in
+  ''|*[!0-9]*)
+    echo "✗ Build number must be a positive integer, got '$build'" >&2
+    exit 1
+    ;;
+esac
+
 case "$command" in
   base)
     printf '%s\n' "$base"
@@ -64,8 +71,22 @@ case "$command" in
         ;;
     esac
     ;;
+  env)
+    case "$channel" in
+      stable|beta|nightly) ;;
+      *)
+        echo "✗ Unknown channel '$channel' (expected stable, beta, or nightly)" >&2
+        exit 1
+        ;;
+    esac
+    printf 'BASE_VERSION=%s\n' "$base"
+    printf 'BUILD=%s\n' "$build"
+    printf 'SHA=%s\n' "$sha"
+    printf 'VERSION='
+    CHANNEL="$channel" BUILD="$build" SHA="$sha" BASE_VERSION="$base" "$0" version
+    ;;
   *)
-    echo "Usage: $0 [base|build|sha|version] [stable|beta|nightly]" >&2
+    echo "Usage: $0 [base|build|sha|version|env] [stable|beta|nightly]" >&2
     exit 1
     ;;
 esac
