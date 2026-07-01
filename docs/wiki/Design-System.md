@@ -45,6 +45,10 @@ lifting the page itself. Toolbar page actions live in the top row to the left of
 search; page filters live in the bottom row next to System and hide on pages
 without filters.
 
+Bottom page filters use the shared toolbar menu-button shape. Containers,
+Images, Templates, and Networks all expose their page-specific grouping/sorting
+state from this slot rather than inventing page-local controls.
+
 Contextual page controls act on the current page. They should switch page or
 subpage state directly rather than opening morph panels. Global toolbar buttons
 and menu commands own panel presentation.

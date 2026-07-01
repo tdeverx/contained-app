@@ -38,11 +38,11 @@ struct ToolbarPageSwitcher: View {
                 if !sections.isEmpty {
                     Section(group.rawValue) {
                         ForEach(sections) { section in
-                        Button {
-                            ui.navigate(to: section)
-                        } label: {
-                            Label(section.title, systemImage: section.symbol)
-                        }
+                            Button {
+                                ui.navigate(to: section)
+                            } label: {
+                                Label(section.title, systemImage: section.symbol)
+                            }
                         }
                     }
                 }
@@ -254,6 +254,12 @@ struct ToolbarPageFilterOptions: View {
         switch ui.selectedSection {
         case .containers:
             ToolbarViewOptions()
+        case .images:
+            ImageViewOptions()
+        case .templates:
+            TemplateViewOptions()
+        case .networks:
+            NetworkViewOptions()
         case .activity:
             @Bindable var ui = ui
             ToolbarGlassMenuButton {
@@ -298,4 +304,135 @@ struct ToolbarPageFilterOptions: View {
         .frame(height: Tokens.Toolbar.buttonGroupHeight)
         .contentShape(Rectangle())
     }
+}
+
+private struct ImageViewOptions: View {
+    @Environment(UIState.self) private var ui
+
+    var body: some View {
+        @Bindable var ui = ui
+        return ToolbarGlassMenuButton {
+            Picker("Group by", selection: $ui.imageGrouping) {
+                ForEach(ImageGrouping.allCases) { grouping in
+                    Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
+                }
+            }
+            .pickerStyle(.inline)
+            Picker("Sort by", selection: $ui.imageSort) {
+                ForEach(ImageSort.allCases) { sort in
+                    Label(sort.title, systemImage: sort.symbol).tag(sort)
+                }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Picker("Filter", selection: $ui.imageFilter) {
+                ForEach(ImageFilter.allCases) { filter in
+                    Label(filter.title, systemImage: filter.symbol).tag(filter)
+                }
+            }
+            .pickerStyle(.inline)
+        } labelContent: {
+            optionLabel(symbol: ui.imageGrouping.symbol,
+                        title: "Images",
+                        subtitle: imageSubtitle)
+        }
+        .help("Image filters")
+    }
+
+    private var imageSubtitle: String {
+        var parts = ["by \(ui.imageGrouping.title)"]
+        if ui.imageFilter != .all { parts.append(ui.imageFilter.title) }
+        return parts.joined(separator: " · ")
+    }
+}
+
+private struct TemplateViewOptions: View {
+    @Environment(UIState.self) private var ui
+
+    var body: some View {
+        @Bindable var ui = ui
+        return ToolbarGlassMenuButton {
+            Picker("Group by", selection: $ui.templateGrouping) {
+                ForEach(TemplateGrouping.allCases) { grouping in
+                    Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
+                }
+            }
+            .pickerStyle(.inline)
+            Picker("Sort by", selection: $ui.templateSort) {
+                ForEach(TemplateSort.allCases) { sort in
+                    Label(sort.title, systemImage: sort.symbol).tag(sort)
+                }
+            }
+            .pickerStyle(.inline)
+        } labelContent: {
+            optionLabel(symbol: ui.templateGrouping.symbol,
+                        title: "Templates",
+                        subtitle: "by \(ui.templateGrouping.title) · \(ui.templateSort.title)")
+        }
+        .help("Template grouping")
+    }
+}
+
+private struct NetworkViewOptions: View {
+    @Environment(UIState.self) private var ui
+
+    var body: some View {
+        @Bindable var ui = ui
+        return ToolbarGlassMenuButton {
+            Picker("Group by", selection: $ui.networkGrouping) {
+                ForEach(NetworkGrouping.allCases) { grouping in
+                    Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
+                }
+            }
+            .pickerStyle(.inline)
+            Picker("Sort by", selection: $ui.networkSort) {
+                ForEach(NetworkSort.allCases) { sort in
+                    Label(sort.title, systemImage: sort.symbol).tag(sort)
+                }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Picker("Filter", selection: $ui.networkFilter) {
+                ForEach(NetworkFilter.allCases) { filter in
+                    Label(filter.title, systemImage: filter.symbol).tag(filter)
+                }
+            }
+            .pickerStyle(.inline)
+        } labelContent: {
+            optionLabel(symbol: ui.networkGrouping.symbol,
+                        title: "Networks",
+                        subtitle: networkSubtitle)
+        }
+        .help("Network filters")
+    }
+
+    private var networkSubtitle: String {
+        var parts = ["by \(ui.networkGrouping.title)"]
+        if ui.networkFilter != .all { parts.append(ui.networkFilter.title) }
+        return parts.joined(separator: " · ")
+    }
+}
+
+private func optionLabel(symbol: String, title: String, subtitle: String) -> some View {
+    HStack(spacing: Tokens.Toolbar.searchIconGap) {
+        Image(systemName: symbol)
+            .font(.body)
+            .foregroundStyle(.secondary)
+            .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.primary)
+            Text(subtitle)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        Image(systemName: "chevron.down")
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.tertiary)
+    }
+    .lineLimit(1)
+    .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
+    .frame(height: Tokens.Toolbar.buttonGroupHeight)
+    .contentShape(Rectangle())
 }

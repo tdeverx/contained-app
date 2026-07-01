@@ -10,6 +10,7 @@ struct SystemContent: View {
     /// Flat cards (no shadow) when hosted in the toolbar morph panel; elevated if shown standalone.
     var showClose: Bool
     var elevated = true
+    var usesToolbarSelection = true
     var onClose: () -> Void = {}
 
     @State private var working = false
@@ -47,11 +48,11 @@ struct SystemContent: View {
     }
 
     private var activePage: SystemPage {
-        ui.toolbarUIEnabled && !showClose ? ui.systemPage : page
+        ui.toolbarUIEnabled && !showClose && usesToolbarSelection ? ui.systemPage : page
     }
 
     private func setPage(_ item: SystemPage) {
-        if ui.toolbarUIEnabled && !showClose {
+        if ui.toolbarUIEnabled && !showClose && usesToolbarSelection {
             ui.systemPage = item
         } else {
             page = item
@@ -61,9 +62,11 @@ struct SystemContent: View {
     init(initialPage: SystemPage = .engine,
          showClose: Bool = true,
          elevated: Bool = true,
+         usesToolbarSelection: Bool = true,
          onClose: @escaping () -> Void = {}) {
         self.showClose = showClose
         self.elevated = elevated
+        self.usesToolbarSelection = usesToolbarSelection
         self.onClose = onClose
         _page = State(initialValue: initialPage)
     }

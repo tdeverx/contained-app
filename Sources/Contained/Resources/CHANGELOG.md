@@ -43,6 +43,7 @@
 - **Toolbar keyboard shortcuts**: `⌘N` (New), `⌘S` (Search), `⌘U` (Updates), `⌘I` (Activity)
 - **Container view options**: Bottom toolbar filter control to group the Containers page by Network / Volume / Image / Flat, sort by Name / Status / Image, and toggle running-only.
 - **Page actions in the top toolbar**: page-specific actions sit left of search; filters stay in the bottom toolbar when a page has useful filtering.
+- **Expanded page filters**: Images, Templates, and Networks now expose bottom-toolbar grouping, sorting, and filtering controls alongside Containers.
 - **Activity unread badge**: The toolbar Activity bell fills and gains an accent + red dot when there are unread events; the panel adds Mark-all-read and Clear controls and highlights unread rows; events mark read on dismiss
 - **Reusable activity/status asset** (`ActivityStatusView`): long-running operations (image pulls, etc.) now morph the bottom-left system-status capsule in place instead of a separate floating progress bar
 
@@ -128,6 +129,8 @@
 - **Container card animations**: Fixed grow/shrink spring timing for smoother detail panel transitions
 - **Safe area calculation**: Custom toolbar bands are measured in the detail column only, with body content padded independently from the sidebar.
 - **Page scroll clearance**: Sidebar pages keep native bottom layout while scrollable content gets real interior bottom breathing room for the floating toolbar.
+- **Volumes page routing**: the Volumes sidebar page now opens the Volumes view instead of inheriting the System panel's Engine selection.
+- **Network page spacing**: Networks now uses the same page interior padding as the other toolbar-era pages.
 - **Registry navigation**: Registries now live only under Settings → Registries instead of appearing as a standalone app page.
 - **Search palette sizing**: Correct max-width constraints and dynamic field scaling
 - **Start/stop UI hang**: Container refreshes are now serialized so a user action and the background

@@ -22,7 +22,7 @@ struct PageScaffold<Actions: View, Content: View>: View {
                     VStack(spacing: 0) {
                         content()
                             .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .padding(Tokens.Space.l)
+                            .padding(ui.toolbarUIEnabled ? Tokens.Space.s : Tokens.Space.l)
                         if ui.toolbarUIEnabled {
                             Color.clear
                                 .frame(height: AppToolbar.bandHeight)

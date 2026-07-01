@@ -52,6 +52,37 @@ struct ToolbarTemplatesPanel: View {
         showClose || !ui.toolbarUIEnabled
     }
 
+    private var sortedTemplates: [Template] {
+        saved.sorted { lhs, rhs in
+            switch ui.templateSort {
+            case .newest:
+                if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
+            case .name:
+                if lhs.name.localizedCaseInsensitiveCompare(rhs.name) != .orderedSame {
+                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                }
+            case .image:
+                let lhsImage = lhs.spec?.image ?? ""
+                let rhsImage = rhs.spec?.image ?? ""
+                if lhsImage.localizedCaseInsensitiveCompare(rhsImage) != .orderedSame {
+                    return lhsImage.localizedCaseInsensitiveCompare(rhsImage) == .orderedAscending
+                }
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    private var templateSections: [(title: String, templates: [Template])] {
+        switch ui.templateGrouping {
+        case .none:
+            return [("", sortedTemplates)]
+        case .image:
+            return Dictionary(grouping: sortedTemplates, by: templateImageTitle)
+                .map { ($0.key, $0.value) }
+                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        }
+    }
+
     var body: some View {
         MorphPanelScaffold(width: Tokens.PanelSize.templates.width) {
             if showsHeader {
@@ -62,10 +93,16 @@ struct ToolbarTemplatesPanel: View {
             }
         } content: {
             LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
-                if saved.isEmpty {
+                if sortedTemplates.isEmpty {
                     emptyCard
                 } else {
-                    ForEach(saved) { template in templateCard(template) }
+                    ForEach(Array(templateSections.enumerated()), id: \.offset) { _, section in
+                        if ui.templateGrouping != .none {
+                            ResourceBadgeText(text: section.title, font: .caption.weight(.semibold))
+                                .padding(.horizontal, Tokens.Space.xs)
+                        }
+                        ForEach(section.templates) { template in templateCard(template) }
+                    }
                 }
             }
             .padding(Tokens.Space.s)
@@ -145,6 +182,11 @@ struct ToolbarTemplatesPanel: View {
     private func delete(_ template: Template) {
         modelContext.delete(template)
         try? modelContext.save()
+    }
+
+    private func templateImageTitle(_ template: Template) -> String {
+        let image = template.spec?.image.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return image.isEmpty ? "No image" : Format.shortImage(image)
     }
 }
 

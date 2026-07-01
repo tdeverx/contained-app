@@ -12,16 +12,28 @@ struct ToolbarUpdatesPanel: View {
     @State private var imageFrames: [LocalImageTagGroup.ID: CGRect] = [:]
 
     private var imageGroups: [LocalImageTagGroup] {
-        LocalImageTagGroup.groups(for: app.images).sorted { lhs, rhs in
-            let lhsRank = imageRank(lhs)
-            let rhsRank = imageRank(rhs)
-            if lhsRank != rhsRank { return lhsRank < rhsRank }
-            return lhs.primaryReference.localizedCaseInsensitiveCompare(rhs.primaryReference) == .orderedAscending
+        sortedImageGroups(LocalImageTagGroup.groups(for: app.images).filter(matchesFilter))
+    }
+
+    private var imageSections: [(title: String, groups: [LocalImageTagGroup])] {
+        switch ui.imageGrouping {
+        case .none:
+            return [("", imageGroups)]
+        case .registry:
+            return Dictionary(grouping: imageGroups, by: registryTitle)
+                .map { ($0.key, sortedImageGroups($0.value)) }
+                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .status:
+            return Dictionary(grouping: imageGroups, by: statusTitle)
+                .map { ($0.key, sortedImageGroups($0.value)) }
+                .sorted { lhs, rhs in statusRank(lhs.title) < statusRank(rhs.title) }
         }
     }
 
     private var updateCount: Int {
-        imageGroups.filter { app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable }.count
+        LocalImageTagGroup.groups(for: app.images).filter {
+            app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable
+        }.count
     }
 
     private var showsHeader: Bool {
@@ -41,8 +53,14 @@ struct ToolbarUpdatesPanel: View {
                 if imageGroups.isEmpty {
                     emptyCard
                 } else {
-                    ForEach(imageGroups) { group in
-                        imageRow(group)
+                    ForEach(Array(imageSections.enumerated()), id: \.offset) { _, section in
+                        if ui.imageGrouping != .none {
+                            ResourceBadgeText(text: section.title, font: .caption.weight(.semibold))
+                                .padding(.horizontal, Tokens.Space.xs)
+                        }
+                        ForEach(section.groups) { group in
+                            imageRow(group)
+                        }
                     }
                 }
             }
@@ -116,6 +134,58 @@ struct ToolbarUpdatesPanel: View {
         case .checking: return 2
         case .unknown: return 3
         case .current: return 4
+        }
+    }
+
+    private func sortedImageGroups(_ groups: [LocalImageTagGroup]) -> [LocalImageTagGroup] {
+        groups.sorted { lhs, rhs in
+            switch ui.imageSort {
+            case .status:
+                let lhsRank = imageRank(lhs)
+                let rhsRank = imageRank(rhs)
+                if lhsRank != rhsRank { return lhsRank < rhsRank }
+            case .tags:
+                if lhs.references.count != rhs.references.count { return lhs.references.count > rhs.references.count }
+            case .name:
+                break
+            }
+            return lhs.primaryReference.localizedCaseInsensitiveCompare(rhs.primaryReference) == .orderedAscending
+        }
+    }
+
+    private func matchesFilter(_ group: LocalImageTagGroup) -> Bool {
+        switch ui.imageFilter {
+        case .all:
+            return true
+        case .updates:
+            return app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable
+        case .errors:
+            return app.imageUpdateStatus(for: group.primaryReference).state == .error
+        }
+    }
+
+    private func registryTitle(_ group: LocalImageTagGroup) -> String {
+        let parsed = RegistryImageReference.parse(group.primaryReference)
+        return parsed.registry == "registry-1.docker.io" ? "docker.io" : parsed.registry
+    }
+
+    private func statusTitle(_ group: LocalImageTagGroup) -> String {
+        switch app.imageUpdateStatus(for: group.primaryReference).state {
+        case .updateAvailable: return "Updates available"
+        case .error: return "Errors"
+        case .checking: return "Checking"
+        case .unknown: return "Unknown"
+        case .current: return "Current"
+        }
+    }
+
+    private func statusRank(_ title: String) -> Int {
+        switch title {
+        case "Updates available": return 0
+        case "Errors": return 1
+        case "Checking": return 2
+        case "Unknown": return 3
+        default: return 4
         }
     }
 

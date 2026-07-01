@@ -280,7 +280,7 @@ struct ContainersGridView: View {
                 ResourceBadgeText(text: "builtin", font: .caption2.weight(.medium))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Tokens.Space.xs)
         .padding(.vertical, Tokens.Space.xs)
         .contextMenu { if let resource = group.resource { networkMenu(resource) } }

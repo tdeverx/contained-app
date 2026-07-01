@@ -139,7 +139,7 @@ private struct ClassicSectionPage: View {
             ToolbarUpdatesPanel(showClose: false, onOpenImage: { _, _ in }, onClose: {})
                 .task { await app.refreshImagesIfStale(force: true) }
         case .volumes:
-            SystemContent(initialPage: .volumes, showClose: false, elevated: false)
+            SystemContent(initialPage: .volumes, showClose: false, elevated: false, usesToolbarSelection: false)
         case .networks:
             NetworksPage()
         case .system:
@@ -163,7 +163,40 @@ private struct NetworksPage: View {
     @State private var deletingNetwork: NetworkResource?
 
     private var sortedNetworks: [NetworkResource] {
-        app.networks.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        app.networks.filter(matchesFilter).sorted { lhs, rhs in
+            switch ui.networkSort {
+            case .name:
+                break
+            case .mode:
+                let lhsMode = lhs.configuration.mode ?? ""
+                let rhsMode = rhs.configuration.mode ?? ""
+                if lhsMode.localizedCaseInsensitiveCompare(rhsMode) != .orderedSame {
+                    return lhsMode.localizedCaseInsensitiveCompare(rhsMode) == .orderedAscending
+                }
+            case .plugin:
+                let lhsPlugin = lhs.configuration.plugin ?? ""
+                let rhsPlugin = rhs.configuration.plugin ?? ""
+                if lhsPlugin.localizedCaseInsensitiveCompare(rhsPlugin) != .orderedSame {
+                    return lhsPlugin.localizedCaseInsensitiveCompare(rhsPlugin) == .orderedAscending
+                }
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    private var networkSections: [(title: String, networks: [NetworkResource])] {
+        switch ui.networkGrouping {
+        case .none:
+            return [("", sortedNetworks)]
+        case .kind:
+            return Dictionary(grouping: sortedNetworks) { $0.isBuiltin ? "Built-in" : "Custom" }
+                .map { ($0.key, $0.value) }
+                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .mode:
+            return Dictionary(grouping: sortedNetworks) { $0.configuration.mode ?? "No mode" }
+                .map { ($0.key, $0.value) }
+                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        }
     }
 
     var body: some View {
@@ -183,10 +216,18 @@ private struct NetworksPage: View {
                     .frame(maxWidth: .infinity, minHeight: 280)
             } else {
                 LazyVStack(spacing: Tokens.Space.s) {
-                    ForEach(sortedNetworks) { network in
-                        networkRow(network)
+                    ForEach(Array(networkSections.enumerated()), id: \.offset) { _, section in
+                        if ui.networkGrouping != .none {
+                            ResourceBadgeText(text: section.title, font: .caption.weight(.semibold))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, Tokens.Space.xs)
+                        }
+                        ForEach(section.networks) { network in
+                            networkRow(network)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .task { await app.refreshNetworks() }
@@ -254,6 +295,14 @@ private struct NetworksPage: View {
         .compactMap { $0 }
         .filter { !$0.isEmpty }
         .joined(separator: " · ")
+    }
+
+    private func matchesFilter(_ network: NetworkResource) -> Bool {
+        switch ui.networkFilter {
+        case .all: return true
+        case .custom: return !network.isBuiltin
+        case .builtin: return network.isBuiltin
+        }
     }
 
     private var deleteNetworkBinding: Binding<Bool> {
