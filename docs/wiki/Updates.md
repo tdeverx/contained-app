@@ -54,6 +54,12 @@ Generated notes follow the channel:
 - Beta: `Changes Since Last Beta` plus `Full Release Notes`.
 - Nightly: `Changes Since Last Nightly` plus `Full Release Notes`.
 
+For Beta and Nightly, the generated build-change section is a real channel
+delta. When no explicit `CHANGES`/`CHANGES_DIR` source is provided, the release
+scripts read the previous matching appcast item, extract its commit SHA, and use
+the changelog/change-fragment git diff from that commit to the build being
+published. The full version notes still come from the base version section.
+
 `scripts/ci-validate.sh` checks that ordering before CI builds, and
 `scripts/sync-changelog-resource.sh --check` fails when the bundled in-app
 changelog resource has drifted from the root `CHANGELOG.md`.

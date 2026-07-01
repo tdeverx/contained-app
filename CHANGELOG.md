@@ -2,6 +2,11 @@
 
 ## [Unreleased] - Creation Workflow 10
 
+### Fixed
+
+- **Release-note deltas**: Nightly and Beta release notes now derive `Changes Since Last ...` from
+  the previous channel appcast item instead of falling back to the full `Unreleased` changelog.
+
 ### Added
 
 #### Toolbar & Navigation Redesign
@@ -165,6 +170,20 @@
 - The legacy sidebar toggle setting is obsolete; sidebar is now the default shell and the toolbar UI has its own experimental flag.
 - Existing container and image styles are preserved
 - Activity events recorded before this version are treated as unread on first launch (the `isRead` column defaults to false); opening and dismissing the Activity panel clears the badge
+
+## [nightly] - Current Nightly
+
+### Fixed
+
+- **Release-note deltas**: Nightly update prompts now show only the changelog/change-fragment lines
+  added since the previous Nightly appcast item, followed by the full version release notes.
+
+## [beta] - Current Beta
+
+### Fixed
+
+- **Release-note deltas**: Beta update prompts now use the same previous-channel appcast delta logic
+  as Nightly, while still keeping full version release notes below the build changes.
 
 ## [1.0.0] - Initial macOS Container Control Surface
 

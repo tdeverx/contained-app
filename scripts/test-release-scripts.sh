@@ -82,6 +82,28 @@ fragment_output="$(./scripts/collect-changes.sh "$tmp/changes")"
 assert_contains "$fragment_output" "- First fragment." "fragment collection"
 assert_contains "$fragment_output" "- Second fragment." "fragment collection"
 
+echo "▸ Checking automatic channel deltas..."
+delta_appcast="$tmp/previous-nightly.xml"
+cat > "$delta_appcast" <<'XML'
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>Contained</title>
+    <item>
+      <title>1.0.0-nightly.82+98e9cd2</title>
+      <sparkle:version>82</sparkle:version>
+      <sparkle:shortVersionString>1.0.0-nightly.82+98e9cd2</sparkle:shortVersionString>
+      <description>Previous nightly notes.</description>
+      <enclosure url="https://example.com/Contained.dmg" length="1" type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
+XML
+auto_notes="$(APPCAST="$delta_appcast" CHANNEL=nightly VERSION_VALUE=1.0.0-nightly.84+293b593 ./scripts/release-body.sh)"
+assert_contains "$auto_notes" "## Changes Since Last Nightly" "automatic nightly notes"
+assert_contains "$auto_notes" "CI strengthening pass" "automatic nightly notes"
+assert_not_contains "$auto_notes" "Toolbar & Navigation Redesign" "automatic nightly notes"
+
 echo "▸ Checking appcast promotion and validation..."
 promoted="$tmp/promoted.xml"
 beta_only="$tmp/beta.xml"
