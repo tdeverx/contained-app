@@ -47,7 +47,7 @@ struct AppToolbar: View {
             // Toolbar controls sit above the morph dim/blur backdrop so they stay crisp while a panel
             // is open. The active panel itself is layered above the controls, so expanded content never
             // tucks under the toolbar bands.
-            .zIndex(100)
+            .zIndex(300)
             addMorphLayer
                 .zIndex(ui.activeMorph == .add ? 150 : 0)
             paletteMorphLayer
@@ -63,7 +63,7 @@ struct AppToolbar: View {
             settingsMorphLayer
                 .zIndex(ui.activeMorph == .settings ? 150 : 0)
             toolbarImageDetailLayer
-                .zIndex(toolbarImageDetail == nil ? 0 : 90)
+                .zIndex(toolbarImageDetail == nil ? 0 : 200)
         }
         .coordinateSpace(.named(Self.space))
         .onPreferenceChange(ToolbarSlotKey.self) { slots = $0 }
@@ -142,7 +142,7 @@ struct AppToolbar: View {
     private var bottomToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             systemStatusButton
-            ToolbarViewOptions()
+            ToolbarPageContextOptions()
             Spacer(minLength: Tokens.Space.m)
             bottomActionGroup
         }

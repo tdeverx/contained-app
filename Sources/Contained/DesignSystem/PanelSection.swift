@@ -1,5 +1,16 @@
 import SwiftUI
 
+private struct PanelSectionHighlightedKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+private extension EnvironmentValues {
+    var panelSectionHighlighted: Bool {
+        get { self[PanelSectionHighlightedKey.self] }
+        set { self[PanelSectionHighlightedKey.self] = newValue }
+    }
+}
+
 /// A grouped settings-style section for hugging panels — the intrinsic-height replacement for a Form
 /// `Section`. Renders an optional header label, a flat glass card holding its rows, and an optional
 /// caption footer, matching the app's glass-card language instead of Form's solid grouped backing.
@@ -34,6 +45,7 @@ struct PanelSection<Content: View>: View {
                 VStack(alignment: .leading, spacing: rowSpacing) {
                     content()
                 }
+                .environment(\.panelSectionHighlighted, highlighted)
                 .padding(Tokens.Space.m)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
@@ -98,14 +110,24 @@ struct PanelRow<Trailing: View>: View {
     var error: String? = nil
     @ViewBuilder var trailing: () -> Trailing
 
+    @Environment(\.panelSectionHighlighted) private var sectionHighlighted
+    @State private var labelHovering = false
+
+    private var labelColor: Color {
+        if error != nil { return .red }
+        return sectionHighlighted ? .accentColor : .primary
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: Tokens.Space.m) {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: Tokens.Space.xs) {
-                        Text(title).foregroundStyle(error == nil ? Color.primary : Color.red)
-                        if let info { InfoButton(info) }
+                        Text(title).foregroundStyle(labelColor)
+                        if let info { InfoButton(info, visible: labelHovering) }
                     }
+                    .contentShape(Rectangle())
+                    .onHover { labelHovering = $0 }
                     if let subtitle {
                         Text(subtitle).font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -154,14 +176,24 @@ struct PanelField<Control: View>: View {
     var labelWidth: CGFloat = 124
     @ViewBuilder var control: () -> Control
 
+    @Environment(\.panelSectionHighlighted) private var sectionHighlighted
+    @State private var labelHovering = false
+
+    private var labelColor: Color {
+        if error != nil { return .red }
+        return sectionHighlighted ? .accentColor : .primary
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: Tokens.Space.m) {
                 HStack(spacing: Tokens.Space.xs) {
                     Text(label)
-                        .foregroundStyle(error == nil ? Color.primary : Color.red)
-                    if let info { InfoButton(info) }
+                        .foregroundStyle(labelColor)
+                    if let info { InfoButton(info, visible: labelHovering) }
                 }
+                .contentShape(Rectangle())
+                .onHover { labelHovering = $0 }
                 .frame(width: labelWidth, alignment: .leading)
                 control().frame(maxWidth: .infinity)
             }

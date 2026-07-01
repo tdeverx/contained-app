@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PageScaffold<Actions: View, Content: View>: View {
+    @Environment(UIState.self) private var ui
     let symbol: String
     let title: String
     let subtitle: String
@@ -10,10 +11,12 @@ struct PageScaffold<Actions: View, Content: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
-                actions()
+            if !ui.toolbarUIEnabled {
+                PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
+                    actions()
+                }
+                Divider()
             }
-            Divider()
             if scrolls {
                 ScrollView {
                     content()

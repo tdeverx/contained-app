@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedCore
 
 private struct ToolbarGlassMenuButton<LabelContent: View, MenuContent: View>: View {
     @ViewBuilder var menuContent: () -> MenuContent
@@ -130,5 +131,154 @@ struct ToolbarViewOptions: View {
         var parts = ["by \(ui.grouping.title)"]
         if ui.runningOnly { parts.append("running") }
         return parts.joined(separator: " · ")
+    }
+}
+
+/// Contextual controls for the selected page. This occupies the same bottom-toolbar slot as the
+/// Containers filter; pages with no page-specific filtering/actions simply omit the slot.
+struct ToolbarPageContextOptions: View {
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
+
+    var body: some View {
+        switch ui.selectedSection {
+        case .containers:
+            ToolbarViewOptions()
+        case .images:
+            ToolbarGlassMenuButton {
+                Button {
+                    ui.dispatch(.loadImage)
+                } label: {
+                    Label("Load Image Tar", systemImage: "square.and.arrow.down")
+                }
+                Button {
+                    Task { await app.runImageUpdateSweepNow() }
+                } label: {
+                    Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
+                }
+                Divider()
+                Button(role: .destructive) {
+                    ui.dispatch(.pruneImages)
+                } label: {
+                    Label("Prune Images", systemImage: "trash")
+                }
+            } labelContent: {
+                contextLabel(symbol: "square.stack.3d.up",
+                             title: "Images",
+                             subtitle: imagesSubtitle)
+            }
+        case .networks:
+            ToolbarGlassMenuButton {
+                Button {
+                    ui.dispatch(.createNetwork)
+                } label: {
+                    Label("New Network", systemImage: "plus")
+                }
+                Button {
+                    Task { await app.refreshNetworks() }
+                } label: {
+                    Label("Refresh Networks", systemImage: "arrow.clockwise")
+                }
+            } labelContent: {
+                contextLabel(symbol: "network",
+                             title: "Networks",
+                             subtitle: "\(app.networks.count) total")
+            }
+        case .volumes:
+            ToolbarGlassMenuButton {
+                Button {
+                    ui.dispatch(.createVolume)
+                } label: {
+                    Label("New Volume", systemImage: "plus")
+                }
+                Button {
+                    Task { await app.refreshSystemResources() }
+                } label: {
+                    Label("Refresh Volumes", systemImage: "arrow.clockwise")
+                }
+            } labelContent: {
+                contextLabel(symbol: "externaldrive",
+                             title: "Volumes",
+                             subtitle: "\(app.volumes.count) total")
+            }
+        case .system:
+            ToolbarGlassMenuButton {
+                Button {
+                    app.coordinator.wake()
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                Button {
+                    ui.dispatch(.systemLogs)
+                } label: {
+                    Label("System Logs", systemImage: "text.alignleft")
+                }
+            } labelContent: {
+                contextLabel(symbol: "gearshape.2",
+                             title: "System",
+                             subtitle: app.serviceLabel)
+            }
+        case .activity:
+            ToolbarGlassMenuButton {
+                Button {
+                    app.historyStore.markAllEventsRead()
+                } label: {
+                    Label("Mark All Read", systemImage: "checkmark.circle")
+                }
+                Button(role: .destructive) {
+                    app.historyStore.clearEvents()
+                } label: {
+                    Label("Clear Activity", systemImage: "trash")
+                }
+            } labelContent: {
+                contextLabel(symbol: "bell",
+                             title: "Activity",
+                             subtitle: "History")
+            }
+        case .registries:
+            ToolbarGlassMenuButton {
+                Button {
+                    ui.dispatch(.registryLogin)
+                } label: {
+                    Label("Registry Login", systemImage: "person.badge.key")
+                }
+            } labelContent: {
+                contextLabel(symbol: "key",
+                             title: "Registries",
+                             subtitle: "Credentials")
+            }
+        case .templates, .settings:
+            EmptyView()
+        }
+    }
+
+    private var imagesSubtitle: String {
+        let groups = LocalImageTagGroup.groups(for: app.images)
+        let updates = groups.filter { app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable }.count
+        return "\(groups.count) local · \(updates) update\(updates == 1 ? "" : "s")"
+    }
+
+    private func contextLabel(symbol: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: Tokens.Toolbar.searchIconGap) {
+            Image(systemName: symbol)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .lineLimit(1)
+        .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
+        .frame(height: Tokens.Toolbar.buttonGroupHeight)
+        .contentShape(Rectangle())
     }
 }

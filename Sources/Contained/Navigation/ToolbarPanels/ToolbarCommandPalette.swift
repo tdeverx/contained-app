@@ -44,14 +44,17 @@ struct ToolbarCommandPalette: View {
     private var sections: [PaletteSection] {
         switch scope {
         case .dockerHub:
-            return [PaletteSection(title: "Docker Hub", items: hubItems())]
+            return [PaletteSection(title: "Docker Hub", items: PaletteItem.deduplicated(hubItems()))]
         case .localImages:
-            return [PaletteSection(title: "Local images", items: localImageItems())]
+            return [PaletteSection(title: "Local images", items: PaletteItem.deduplicated(localImageItems()))]
         case nil:
             if trimmedQuery.isEmpty {
                 return browseSections()
             }
-            return [PaletteSection(title: nil, items: PaletteItem.filtered(trimmedQuery, app: app, ui: ui))]
+            return [PaletteSection(title: nil,
+                                   items: PaletteItem.deduplicated(PaletteItem.filtered(trimmedQuery,
+                                                                                       app: app,
+                                                                                       ui: ui)))]
         }
     }
 
@@ -324,7 +327,7 @@ struct ToolbarCommandPalette: View {
                                       uniquingKeysWith: { a, _ in a })
         return grouped.keys
             .sorted { (orderByTitle[$0] ?? 0) < (orderByTitle[$1] ?? 0) }
-            .map { PaletteSection(title: $0, items: grouped[$0] ?? []) }
+            .map { PaletteSection(title: $0, items: PaletteItem.deduplicated(grouped[$0] ?? [])) }
     }
 
     private func hubItems() -> [PaletteItem] {

@@ -190,7 +190,7 @@ struct PaletteItem: Identifiable {
         return deduplicated(items)
     }
 
-    private static func deduplicated(_ items: [PaletteItem]) -> [PaletteItem] {
+    static func deduplicated(_ items: [PaletteItem]) -> [PaletteItem] {
         var seen = Set<String>()
         return items.filter { item in
             seen.insert("\(item.kind.rawValue)|\(item.title)|\(item.subtitle ?? "")").inserted

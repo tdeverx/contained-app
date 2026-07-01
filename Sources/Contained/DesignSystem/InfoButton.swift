@@ -6,11 +6,15 @@ import SwiftUI
 /// globally in Settings → Appearance.
 struct InfoButton: View {
     let text: String
+    var visible = true
     @Environment(AppModel.self) private var app
     @Environment(\.modalMaterial) private var modalMaterial
     @State private var showing = false
 
-    init(_ text: String) { self.text = text }
+    init(_ text: String, visible: Bool = true) {
+        self.text = text
+        self.visible = visible
+    }
 
     var body: some View {
         if app.settings.showInfoTips {
@@ -20,6 +24,8 @@ struct InfoButton: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .opacity(visible || showing ? 1 : 0)
+            .allowsHitTesting(visible || showing)
             .help(text)                       // hover still works as a bonus for mouse users
             .accessibilityLabel("More info")
             .popover(isPresented: $showing, arrowEdge: .trailing) {
@@ -45,7 +51,7 @@ extension View {
     func fieldInfo(_ text: String) -> some View {
         HStack(spacing: Tokens.Space.s) {
             self
-            InfoButton(text)
+            InfoButton(text, visible: true)
         }
     }
 }

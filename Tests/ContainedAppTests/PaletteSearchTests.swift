@@ -52,4 +52,18 @@ struct PaletteSearchTests {
         #expect(prefix > typo)
         #expect(initials > loose)
     }
+
+    @Test func paletteItemsDeduplicateByDisplayedCommand() {
+        let first = PaletteItem(title: "Images", subtitle: "Workloads", kind: .navigation,
+                                icon: "square.stack.3d.up", tint: .secondary) {}
+        let duplicate = PaletteItem(title: "Images", subtitle: "Workloads", kind: .navigation,
+                                    icon: "square.stack.3d.up", tint: .secondary) {}
+        let distinct = PaletteItem(title: "Images", subtitle: "Image", kind: .image,
+                                   icon: "play.fill", tint: .green) {}
+
+        let deduped = PaletteItem.deduplicated([first, duplicate, distinct])
+
+        #expect(deduped.count == 2)
+        #expect(deduped.map(\.kind) == [.navigation, .image])
+    }
 }
