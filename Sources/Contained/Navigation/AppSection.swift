@@ -11,6 +11,17 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case activity
     case settings
 
+    static let allCases: [AppSection] = [
+        .containers,
+        .images,
+        .volumes,
+        .networks,
+        .system,
+        .templates,
+        .activity,
+        .settings,
+    ]
+
     var id: String { rawValue }
 
     var title: String {

@@ -45,26 +45,23 @@ struct AppToolbar: View {
                     .frame(height: Tokens.Toolbar.controlHeight)
                     .padding(.bottom, bottomRowInset)
             }
-            // Toolbar controls sit above the morph dim/blur backdrop so they stay crisp while a panel
-            // is open. The active panel itself is layered above the controls, so expanded content never
-            // tucks under the toolbar bands.
-            .zIndex(300)
+            .zIndex(100)
             addMorphLayer
-                .zIndex(ui.activeMorph == .add ? 150 : 0)
+                .zIndex(ui.activeMorph == .add ? 300 : 0)
             paletteMorphLayer
-                .zIndex(ui.activeMorph == .palette ? 150 : 0)
+                .zIndex(ui.activeMorph == .palette ? 300 : 0)
             updatesMorphLayer
-                .zIndex(ui.activeMorph == .updates ? 150 : 0)
+                .zIndex(ui.activeMorph == .updates ? 300 : 0)
             activityMorphLayer
-                .zIndex(ui.activeMorph == .activity ? 150 : 0)
+                .zIndex(ui.activeMorph == .activity ? 300 : 0)
             templatesMorphLayer
-                .zIndex(ui.activeMorph == .templates ? 150 : 0)
+                .zIndex(ui.activeMorph == .templates ? 300 : 0)
             systemMorphLayer
-                .zIndex(ui.activeMorph == .system ? 150 : 0)
+                .zIndex(ui.activeMorph == .system ? 300 : 0)
             settingsMorphLayer
-                .zIndex(ui.activeMorph == .settings ? 150 : 0)
+                .zIndex(ui.activeMorph == .settings ? 300 : 0)
             toolbarImageDetailLayer
-                .zIndex(toolbarImageDetail == nil ? 0 : 200)
+                .zIndex(toolbarImageDetail == nil ? 0 : 350)
         }
         .coordinateSpace(.named(Self.space))
         .onPreferenceChange(ToolbarSlotKey.self) { slots = $0 }
@@ -86,7 +83,9 @@ struct AppToolbar: View {
 
     private var topToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
-            settingsZone
+            if !isSidebarOpen {
+                settingsZone
+            }
             ToolbarPageSwitcher()
             Spacer(minLength: Tokens.Space.m)
             ToolbarPageContextOptions()
@@ -109,6 +108,10 @@ struct AppToolbar: View {
         .fixedSize(horizontal: true, vertical: false)
         .opacity(ui.activeMorph == .settings ? 0 : 1)
         .background(singleSlotReader(.settings))
+    }
+
+    private var isSidebarOpen: Bool {
+        app.settings.sidebarNavigationEnabled && ui.sidebarVisible
     }
 
     private var searchZone: some View {
@@ -466,11 +469,7 @@ struct AppToolbar: View {
     }
 
     private func openSectionOrPanel(_ section: AppSection, morph: UIState.ToolbarMorph) {
-        if ui.panelNavigationEnabled {
-            ui.toggleMorph(morph)
-        } else {
-            ui.navigate(to: section)
-        }
+        ui.navigate(to: section)
     }
 }
 

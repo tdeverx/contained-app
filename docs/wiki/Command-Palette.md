@@ -52,6 +52,10 @@ When adding a feature, check whether it needs one or more palette entries:
 - settings toggles and bounded settings values, such as menu bar visibility,
   CLI preview visibility, info tips, and app tint
 
+Registry credential actions should route to Settings → Registries. Registries do
+not appear as their own app page in the sidebar, page switcher, or navigation
+results.
+
 ## Implementation map
 
 - `Sources/Contained/Features/Palette/CommandPalette.swift` owns the indexed

@@ -224,7 +224,7 @@ struct ContainedApp: App {
         if app.settings.usesPanelNavigation {
             ui.openSettings(to: page)
         } else {
-            ui.navigate(to: page == .registries ? .registries : .settings)
+            ui.navigate(to: .settings)
         }
     }
 

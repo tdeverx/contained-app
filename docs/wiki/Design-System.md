@@ -37,11 +37,15 @@ settings. `experimentalToolbarUI` turns on the custom top/bottom toolbar chrome;
 or fall back to classic pages and sheets.
 
 `AppToolbar` is mounted inside the `NavigationSplitView` detail column by
-`ClassicShell`, not across the whole split view. The detail body receives top and
-bottom padding from `AppSafeAreaManager`, while the sidebar keeps native split
-view layout. Toolbar page actions live in the top row to the left of search;
-page filters live in the bottom row next to System and hide on pages without
-filters.
+`ClassicShell`, not across the whole split view. The detail body receives top
+padding from `AppSafeAreaManager`, while the sidebar and bottom page edge keep
+native split-view layout. Toolbar page actions live in the top row to the left of
+search; page filters live in the bottom row next to System and hide on pages
+without filters.
+
+Contextual page controls act on the current page. They should switch page or
+subpage state directly rather than opening morph panels. Global toolbar buttons
+and menu commands own panel presentation.
 
 ## Resource cards
 

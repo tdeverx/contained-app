@@ -77,7 +77,7 @@ struct PaletteItem: Identifiable {
                 ComposeImport.pickAndImport(app: app, ui: ui)
             })
         }
-        // Registry credentials live on the Settings → Registries morph page (not a modal sheet).
+        // Registry credentials live on the Settings → Registries page, not as a standalone app page.
         items.append(PaletteItem(title: "Registry login", subtitle: "create",
                                  keywords: ["registry", "credentials", "docker login", "sign in"],
                                  kind: .create, icon: "person.badge.key", tint: .accentColor) {

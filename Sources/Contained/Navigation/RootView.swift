@@ -13,8 +13,6 @@ struct RootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Image load/prune are global actions because images now live in a toolbar panel.
     @State private var pruningImages = false
-    /// Registry login is presented globally while saved credentials are managed in Settings.
-    @State private var registryLogin = false
     /// System logs are reachable from menus and the command palette while system resources live in a
     /// toolbar panel.
     @State private var showSystemLogs = false
@@ -40,18 +38,17 @@ struct RootView: View {
                              html: app.updater.currentReleaseNotesHTML,
                              onClose: { app.updater.markWhatsNewSeen() })
         }
-        // These used to live on now-removed pages (Images / Registries / System); they're dispatched
-        // globally from the toolbar panels, menus, and the command palette.
+        // These used to live on now-removed pages (Images / System); they're dispatched globally from
+        // toolbar panels, menus, and the command palette. Registry credentials always live in Settings.
         .onChange(of: ui.pendingAction) { _, action in
             switch action {
             case .loadImage:     ui.pendingAction = nil; loadImageTar()
             case .pruneImages:   ui.pendingAction = nil; pruningImages = true
-            case .registryLogin: ui.pendingAction = nil; registryLogin = true
+            case .registryLogin: ui.pendingAction = nil; ui.openSettings(to: .registries)
             case .systemLogs:    ui.pendingAction = nil; showSystemLogs = true
             default: break
             }
         }
-        .sheet(isPresented: $registryLogin) { RegistryLoginSheet() }
         .sheet(isPresented: $showSystemLogs) { SystemLogsSheet() }
         .confirmationDialog("Prune images?", isPresented: $pruningImages) {
             Button("Remove unused", role: .destructive) { Task { await pruneImages(all: false) } }

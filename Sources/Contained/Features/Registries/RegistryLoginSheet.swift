@@ -2,8 +2,7 @@ import SwiftUI
 import ContainedCore
 
 /// Sign in to a registry. The user types their own credentials; the password is sent via stdin.
-/// Registry credential management lives in Settings → Registries; this sheet is shared by that tab
-/// and the global "Registry login" command.
+/// Registry credential management lives in Settings → Registries; this sheet is launched from that tab.
 struct RegistryLoginSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss

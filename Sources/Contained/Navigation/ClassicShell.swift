@@ -47,12 +47,11 @@ struct ClassicShell: View {
     }
 
     private var detailPage: some View {
-        let insets = toolbarSafeAreas.insets(AppSafeAreaPolicy(excluding: .both, padding: .none))
+        let insets = toolbarSafeAreas.insets(AppSafeAreaPolicy(excluding: .top, padding: .none))
         return ClassicSectionPage(section: ui.selectedSection)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // Body-only padding from the same custom safe-area measurer used by morph panels.
             .padding(.top, ui.toolbarUIEnabled ? insets.top : 0)
-            .padding(.bottom, ui.toolbarUIEnabled ? insets.bottom : 0)
             .ignoresSafeArea(.container, edges: .vertical)
     }
 

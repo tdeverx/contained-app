@@ -108,6 +108,7 @@
 - **ContainerCard refactor**: Extracted form logic into shared `ContainerConfigureView` (used by both sheet and paged flow)
 - **Container grid backdrop**: Replaced manual blur/dim with `globalBackdrop` system
 - **Palette links respect presentation mode**: commands route through the shared presentation layer, opening morph panels only when toolbar panel navigation is enabled and falling back to pages/sheets otherwise.
+- **Contextual toolbar controls**: page-specific toolbar buttons now switch page/subpage state directly instead of opening morph panels.
 - **Activity progress relocated**: the floating activity/progress bar was removed in favour of the morphing bottom-left status capsule
 
 #### API & Architecture
@@ -125,6 +126,7 @@
 
 - **Container card animations**: Fixed grow/shrink spring timing for smoother detail panel transitions
 - **Safe area calculation**: Custom toolbar bands are measured in the detail column only, with body content padded independently from the sidebar.
+- **Registry navigation**: Registries now live only under Settings → Registries instead of appearing as a standalone app page.
 - **Search palette sizing**: Correct max-width constraints and dynamic field scaling
 - **Start/stop UI hang**: Container refreshes are now serialized so a user action and the background
   polling tick no longer run `list`+`stats` concurrently (decoding JSON on the main actor and

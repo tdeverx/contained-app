@@ -136,8 +136,8 @@ struct ToolbarViewOptions: View {
     }
 }
 
-/// Contextual controls for the selected page. This occupies the same bottom-toolbar slot as the
-/// Containers filter; pages with no page-specific filtering/actions simply omit the slot.
+/// Contextual controls for the selected page. These act on the current page and never open toolbar
+/// morph panels; panel routing belongs to global toolbar buttons and menus.
 struct ToolbarPageContextOptions: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -218,16 +218,13 @@ struct ToolbarPageContextOptions: View {
                 }
             }
         case .registries:
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "person.badge.key", help: "Registry Login") {
-                    ui.dispatch(.registryLogin)
-                }
-            }
+            EmptyView()
         case .settings:
             GlassButton {
                 ForEach(SettingsContent.SettingsPage.allCases) { page in
                     GlassButtonItem(help: page.rawValue, isIcon: true, action: {
-                        ui.openSettings(to: page)
+                        ui.settingsPage = page
+                        ui.navigate(to: .settings)
                     }) {
                         Image(systemName: page.systemImage)
                             .foregroundStyle(Color.white)
@@ -256,28 +253,46 @@ struct ToolbarPageFilterOptions: View {
             ToolbarViewOptions()
         case .activity:
             @Bindable var ui = ui
-            GlassButton(singleItem: true) {
-                Menu {
-                    Picker("Filter", selection: $ui.activityFilter) {
-                        Label("All events", systemImage: "tray.full").tag(EventKind?.none)
-                        Divider()
-                        ForEach(EventKind.allCases, id: \.self) { kind in
-                            Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
-                        }
+            ToolbarGlassMenuButton {
+                Picker("Filter", selection: $ui.activityFilter) {
+                    Label("All events", systemImage: "tray.full").tag(EventKind?.none)
+                    Divider()
+                    ForEach(EventKind.allCases, id: \.self) { kind in
+                        Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
                     }
-                    .pickerStyle(.inline)
-                } label: {
-                    GlassButtonItem(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
-                                                                         : "line.3.horizontal.decrease.circle.fill",
-                                    help: ui.activityFilter == nil ? "Filter Activity" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
                 }
-                .buttonStyle(.plain)
-                .menuStyle(.button)
-                .menuIndicator(.hidden)
+                .pickerStyle(.inline)
+            } labelContent: {
+                activityFilterLabel
             }
             .help(ui.activityFilter == nil ? "Filter Activity" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
         default:
             EmptyView()
         }
+    }
+
+    private var activityFilterLabel: some View {
+        HStack(spacing: Tokens.Toolbar.searchIconGap) {
+            Image(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
+                                                       : "line.3.horizontal.decrease.circle.fill")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Activity")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(ui.activityFilter?.rawValue.capitalized ?? "All events")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .lineLimit(1)
+        .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
+        .frame(height: Tokens.Toolbar.buttonGroupHeight)
+        .contentShape(Rectangle())
     }
 }

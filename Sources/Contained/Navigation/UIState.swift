@@ -146,7 +146,7 @@ final class UIState {
     func openSettings(to page: SettingsContent.SettingsPage) {
         settingsPage = page
         guard panelNavigationEnabled else {
-            navigate(to: page == .registries ? .registries : .settings)
+            navigate(to: .settings)
             return
         }
         if activeMorph != .settings { activeMorph = .settings }
@@ -174,7 +174,7 @@ final class UIState {
         case .createNetwork:
             navigate(to: .networks)
         case .registryLogin:
-            navigate(to: .registries)
+            openSettings(to: .registries)
         case .activityHistory:
             navigate(to: .activity)
         case .systemLogs:
@@ -198,6 +198,10 @@ final class UIState {
 
     /// Run an action by opening the right creation page, morph panel, or global sheet.
     func dispatch(_ action: PendingAction) {
+        if action == .registryLogin {
+            openSettings(to: .registries)
+            return
+        }
         if !panelNavigationEnabled {
             switch action {
             case .runContainer:
@@ -206,8 +210,10 @@ final class UIState {
             case .pullImage, .createVolume, .createNetwork, .build, .activityHistory:
                 navigateForClassicFallback(action)
                 return
-            case .loadImage, .pruneImages, .registryLogin, .systemLogs:
+            case .loadImage, .pruneImages, .systemLogs:
                 pendingAction = action
+                return
+            case .registryLogin:
                 return
             }
         }
@@ -224,8 +230,10 @@ final class UIState {
             openCreationPanel(entry: .build)
         case .activityHistory:
             activeMorph = .activity
-        case .loadImage, .pruneImages, .registryLogin, .systemLogs:
+        case .loadImage, .pruneImages, .systemLogs:
             pendingAction = action
+        case .registryLogin:
+            break
         }
     }
 
