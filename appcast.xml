@@ -3,10 +3,10 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.82+98e9cd2</title>
-            <pubDate>Wed, 01 Jul 2026 17:23:34 +0000</pubDate>
-            <sparkle:version>82</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.82+98e9cd2</sparkle:shortVersionString>
+            <title>1.0.0-nightly.84+293b593</title>
+            <pubDate>Wed, 01 Jul 2026 17:43:45 +0000</pubDate>
+            <sparkle:version>84</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.84+293b593</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
@@ -174,6 +174,11 @@
 <p>  syntax, workflow YAML syntax, and Stable/Beta/Nightly release-note ordering; PR and release</p>
 <p>  workflows now fail on drift instead of rewriting tracked resources in CI.</p>
 <ul>
+<li>**CI strengthening pass**: Added PR release-note enforcement, release-script fixture coverage,</li>
+</ul>
+<p>  generated-file drift checks, bundle validation, appcast validation, and the</p>
+<p>  `CONTAINED_DEBUG_TOOLS` debug-only compile flag so diagnostics can stay out of release bundles.</p>
+<ul>
 <li>**Release workflow rerun safety**: Beta and Stable workflows now update existing GitHub releases</li>
 </ul>
 <p>  on reruns, and local `scripts/release.sh` defaults to the Stable channel to avoid accidentally</p>
@@ -297,7 +302,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.82+98e9cd2.dmg" length="7848741" type="application/octet-stream" sparkle:edSignature="HDTu1G7ddPhL6W6rWNvg59pTbTSwTmr8I+CVIxsyApFkGPVxhfhcELjXqd5EW9nq2vZVbGII/lTywFZDhgFODw=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.84+293b593.dmg" length="7848888" type="application/octet-stream" sparkle:edSignature="62187CWRwqSNsqeXIHfXjlhyWVXroaSu0C9cVws4cgQMmPnU3Shig/bzO2215XMgifj1BTgNUYfofDQm18DIDA=="/>
         </item>
     </channel>
 </rss>
