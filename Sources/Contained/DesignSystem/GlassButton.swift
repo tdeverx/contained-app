@@ -127,7 +127,6 @@ struct GlassButton<Content: View>: View {
             .padding(.horizontal, Tokens.Toolbar.iconInnerPadding)
             .frame(height: height)
             .frame(minWidth: minWidth)
-            .scaleEffect(interactive && hovering ? 1.015 : 1)
             .background {
                 if singleItem && interactive {
                     Capsule(style: .continuous)
@@ -136,7 +135,7 @@ struct GlassButton<Content: View>: View {
             }
             .environment(\.glassButtonItemHoverEnabled, !singleItem && interactive)
             .onHover { if interactive { hovering = $0 } }
-            .animation(.spring(response: 0.18, dampingFraction: 0.82), value: hovering)
             .toolbarControlMaterial(in: Capsule())
+            .animation(.spring(response: 0.18, dampingFraction: 0.82), value: hovering)
     }
 }

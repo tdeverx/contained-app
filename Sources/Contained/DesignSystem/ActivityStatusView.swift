@@ -29,7 +29,7 @@ struct ActivityStatusView: View {
             Text(activity.title)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .foregroundStyle(.primary)
+                .foregroundStyle(.secondary)
             if let percent = percentText {
                 Text(percent)
                     .font(.caption.weight(.semibold))
