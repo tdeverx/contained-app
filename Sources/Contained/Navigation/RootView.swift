@@ -85,16 +85,21 @@ struct RootView: View {
         .preferredColorScheme(settings.appearance.colorScheme)
         .onAppear { applyAppearance(settings.appearance) }
         .onAppear { ui.toolbarUIEnabled = settings.experimentalToolbarUI }
-        .onAppear { ui.panelNavigationEnabled = settings.usesPanelNavigation }
+        .onAppear {
+            ui.panelNavigationEnabled = settings.usesPanelNavigation
+            ui.ensureSelectedSectionIsNavigable()
+        }
         .onChange(of: settings.appearance) { _, mode in applyAppearance(mode) }
         .onChange(of: settings.experimentalToolbarUI) { _, enabled in
             ui.toolbarUIEnabled = enabled
             ui.panelNavigationEnabled = settings.usesPanelNavigation
             if !enabled { ui.activeMorph = nil }
+            ui.ensureSelectedSectionIsNavigable()
         }
         .onChange(of: settings.experimentalPanelNavigation) { _, _ in
             ui.panelNavigationEnabled = settings.usesPanelNavigation
             if !settings.usesPanelNavigation { ui.activeMorph = nil }
+            ui.ensureSelectedSectionIsNavigable()
         }
         .task {
             await app.bootstrapIfNeeded()

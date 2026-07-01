@@ -22,6 +22,22 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         .settings,
     ]
 
+    static func navigableSections(panelNavigationEnabled: Bool) -> [AppSection] {
+        allCases.filter { section in
+            section.isNavigable(panelNavigationEnabled: panelNavigationEnabled)
+        }
+    }
+
+    func isNavigable(panelNavigationEnabled: Bool) -> Bool {
+        guard panelNavigationEnabled else { return true }
+        switch self {
+        case .system, .activity, .settings:
+            return false
+        default:
+            return true
+        }
+    }
+
     var id: String { rawValue }
 
     var title: String {

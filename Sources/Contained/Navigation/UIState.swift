@@ -157,6 +157,12 @@ final class UIState {
         if activeMorph != nil { requestMorphClose() }
     }
 
+    func ensureSelectedSectionIsNavigable() {
+        if !selectedSection.isNavigable(panelNavigationEnabled: panelNavigationEnabled) {
+            selectedSection = .containers
+        }
+    }
+
     func setSidebarVisible(_ visible: Bool) {
         withAnimation(.easeInOut(duration: 0.24)) {
             sidebarVisible = visible

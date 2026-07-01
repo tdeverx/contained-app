@@ -49,6 +49,10 @@ Contextual page controls act on the current page. They should switch page or
 subpage state directly rather than opening morph panels. Global toolbar buttons
 and menu commands own panel presentation.
 
+When toolbar panel navigation is enabled, panel-owned destinations such as
+System, Activity, and Settings are removed from page navigation and remain
+available through their toolbar/menu entry points.
+
 ## Resource cards
 
 Use `ResourceGlassCard` for containers, images, tags, volumes, networks, and

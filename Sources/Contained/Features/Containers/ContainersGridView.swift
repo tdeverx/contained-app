@@ -175,12 +175,13 @@ struct ContainersGridView: View {
                             ForEach(groups) { group in
                                 groupSection(group)
                             }
+                            Color.clear
+                                .frame(height: Tokens.Toolbar.band)
                         }
                         .padding(.horizontal, Tokens.Space.l)
                     }
                 }
                 .contentMargins(.top, ui.toolbarUIEnabled ? 0 : Tokens.Toolbar.band, for: .scrollContent)
-                .contentMargins(.bottom, Tokens.Toolbar.band, for: .scrollContent)
 
                 if detail != nil {
                     Color.clear

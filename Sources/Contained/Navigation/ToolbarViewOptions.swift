@@ -34,12 +34,15 @@ struct ToolbarPageSwitcher: View {
     var body: some View {
         ToolbarGlassMenuButton {
             ForEach(AppSectionGroup.allCases) { group in
-                Section(group.rawValue) {
-                    ForEach(AppSection.allCases.filter { $0.group == group }) { section in
+                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled).filter { $0.group == group }
+                if !sections.isEmpty {
+                    Section(group.rawValue) {
+                        ForEach(sections) { section in
                         Button {
                             ui.navigate(to: section)
                         } label: {
                             Label(section.title, systemImage: section.symbol)
+                        }
                         }
                     }
                 }

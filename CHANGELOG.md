@@ -109,6 +109,7 @@
 - **Container grid backdrop**: Replaced manual blur/dim with `globalBackdrop` system
 - **Palette links respect presentation mode**: commands route through the shared presentation layer, opening morph panels only when toolbar panel navigation is enabled and falling back to pages/sheets otherwise.
 - **Contextual toolbar controls**: page-specific toolbar buttons now switch page/subpage state directly instead of opening morph panels.
+- **Panel navigation pages**: when toolbar panel navigation is enabled, panel-owned destinations such as System, Activity, and Settings are hidden from page/sidebar navigation.
 - **Activity progress relocated**: the floating activity/progress bar was removed in favour of the morphing bottom-left status capsule
 
 #### API & Architecture
@@ -126,7 +127,7 @@
 
 - **Container card animations**: Fixed grow/shrink spring timing for smoother detail panel transitions
 - **Safe area calculation**: Custom toolbar bands are measured in the detail column only, with body content padded independently from the sidebar.
-- **Page scroll clearance**: Sidebar pages keep native bottom layout while scrollable content gets bottom breathing room for the floating toolbar.
+- **Page scroll clearance**: Sidebar pages keep native bottom layout while scrollable content gets real interior bottom breathing room for the floating toolbar.
 - **Registry navigation**: Registries now live only under Settings → Registries instead of appearing as a standalone app page.
 - **Search palette sizing**: Correct max-width constraints and dynamic field scaling
 - **Start/stop UI hang**: Container refreshes are now serialized so a user action and the background

@@ -74,13 +74,16 @@ struct ClassicShell: View {
 
 private struct AppSidebar: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
     @Binding var selection: AppSection
 
     var body: some View {
         List(selection: $selection) {
             ForEach(AppSectionGroup.allCases) { group in
-                Section(group.rawValue) {
-                    ForEach(AppSection.allCases.filter { $0.group == group }) { section in
+                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled).filter { $0.group == group }
+                if !sections.isEmpty {
+                    Section(group.rawValue) {
+                        ForEach(sections) { section in
                         Label {
                             HStack {
                                 Text(section.title)
@@ -95,6 +98,7 @@ private struct AppSidebar: View {
                             Image(systemName: section.symbol)
                         }
                         .tag(section)
+                        }
                     }
                 }
             }

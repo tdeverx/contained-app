@@ -19,11 +19,16 @@ struct PageScaffold<Actions: View, Content: View>: View {
             }
             if scrolls {
                 ScrollView {
-                    content()
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(Tokens.Space.l)
+                    VStack(spacing: 0) {
+                        content()
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(Tokens.Space.l)
+                        if ui.toolbarUIEnabled {
+                            Color.clear
+                                .frame(height: AppToolbar.bandHeight)
+                        }
+                    }
                 }
-                .contentMargins(.bottom, ui.toolbarUIEnabled ? AppToolbar.bandHeight : 0, for: .scrollContent)
                 .scrollEdgeEffectStyle(.soft, for: .all)
             } else {
                 content()

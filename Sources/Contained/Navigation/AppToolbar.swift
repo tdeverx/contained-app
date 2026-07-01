@@ -158,7 +158,7 @@ struct AppToolbar: View {
     private var systemStatusButton: some View {
         GlassButton(singleItem: true) {
             GlassButtonItem(help: app.activity?.title ?? "System \(app.serviceLabel)", action: {
-                openSectionOrPanel(.system, morph: .system)
+                openGlobalSectionOrPanel(.system, morph: .system)
             }) {
                 if let activity = app.activity {
                     ActivityStatusView(activity: activity, style: .inline)
@@ -183,8 +183,8 @@ struct AppToolbar: View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             GlassButton {
                 GlassButtonItem(systemName: "plus", help: "Add") { ui.openCreationPanel() }
-                GlassButtonItem(systemName: "shippingbox", help: "Images") { openSectionOrPanel(.images, morph: .updates) }
-                GlassButtonItem(systemName: "bookmark", help: "Templates") { openSectionOrPanel(.templates, morph: .templates) }
+                GlassButtonItem(systemName: "shippingbox", help: "Images") { openGlobalSectionOrPanel(.images, morph: .updates) }
+                GlassButtonItem(systemName: "bookmark", help: "Templates") { openGlobalSectionOrPanel(.templates, morph: .templates) }
                 ActivityToolbarButton()
             }
             .opacity(isBottomGroupMorphActive ? 0 : 1)
@@ -468,8 +468,12 @@ struct AppToolbar: View {
         toolbarImageCloseRequestToken &+= 1
     }
 
-    private func openSectionOrPanel(_ section: AppSection, morph: UIState.ToolbarMorph) {
-        ui.navigate(to: section)
+    private func openGlobalSectionOrPanel(_ section: AppSection, morph: UIState.ToolbarMorph) {
+        if ui.panelNavigationEnabled {
+            ui.toggleMorph(morph)
+        } else {
+            ui.navigate(to: section)
+        }
     }
 }
 
