@@ -67,7 +67,7 @@ struct UpdaterControllerTests {
         let updater = UpdaterController(defaults: UserDefaults(suiteName: "ContainedUpdaterTests-\(UUID().uuidString)")!)
 
         #expect(!updater.currentReleaseNotesHTML.contains("No release notes are bundled"))
-        #expect(updater.currentReleaseNotesHTML.contains("Sparkle release notes"))
+        #expect(updater.currentReleaseNotesHTML.contains("First complete Contained release"))
     }
 
     @Test func prereleaseVersionsUseBaseChangelogSection() throws {
@@ -77,7 +77,37 @@ struct UpdaterControllerTests {
 
         let section = ChangelogSection.extract(version: "1.0.0-beta.1+abc123", from: releaseText)
 
-        #expect(section?.contains("Sparkle release notes") == true)
+        #expect(section?.contains("First complete Contained release") == true)
+    }
+
+    @Test func inAppReleaseNotesComposeBuildChangesBeforeFullVersionNotes() throws {
+        let changelog = """
+        # Changelog
+
+        ## [Unreleased] - Current Build
+
+        ### Fixed
+
+        #### Polish
+
+        - Build-level note.
+
+        ## [1.0.0] - Version Notes
+
+        ### Added
+
+        - Version-level note.
+        """
+
+        let html = try #require(ChangelogSection.releaseNotesHTML(version: "1.0.0-nightly.999+abcdef",
+                                                                  from: changelog))
+        let changesHeading = try #require(html.range(of: "<h2>Changes Since Last Nightly</h2>"))
+        let fullHeading = try #require(html.range(of: "<h2>Full Release Notes</h2>"))
+
+        #expect(changesHeading.lowerBound < fullHeading.lowerBound)
+        #expect(html.contains("<h4>Polish</h4>"))
+        #expect(html.contains("Build-level note."))
+        #expect(html.contains("Version-level note."))
     }
 
     @Test func appBundleChangelogURLUsesContentsResources() throws {
@@ -124,6 +154,8 @@ struct UpdaterControllerTests {
 
         ### Fixed
 
+        #### Polish
+
         - Nightly-only build note.
         """.write(to: changes, atomically: true, encoding: .utf8)
         let archive = work.appendingPathComponent("Contained-1.0.0-nightly.999+abcdef.dmg")
@@ -150,6 +182,7 @@ struct UpdaterControllerTests {
         let changesHeading = try #require(html.range(of: "<h2>Changes Since Last Nightly</h2>"))
         let fullHeading = try #require(html.range(of: "<h2>Full Release Notes</h2>"))
         #expect(changesHeading.lowerBound < fullHeading.lowerBound)
+        #expect(html.contains("<h4>Polish</h4>"))
         #expect(html.contains("Nightly-only build note."))
         #expect(html.contains("Version-level release note."))
         #expect(!html.contains("No release notes were found"))

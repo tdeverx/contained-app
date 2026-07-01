@@ -4,18 +4,18 @@
 
 ## Checks
 
+- [ ] `./scripts/ci-validate.sh`
 - [ ] `swift build`
 - [ ] `swift test`
 - [ ] `git diff --check`
 - [ ] UI/app changes smoke-tested with `./scripts/bundle.sh debug`
-- [ ] Script changes checked with `bash -n scripts/*.sh`
-- [ ] Workflow changes parsed with `ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path) }' .github/workflows/*.yml`
+- [ ] Script/workflow changes covered by `./scripts/ci-validate.sh`
 
 ## Release Notes And Docs
 
 - [ ] Added or updated a release/change note, or this PR does not need one
 - [ ] Updated `docs/wiki` for user-facing behavior or workflow changes, or this PR does not need docs
-- [ ] Synced `Sources/Contained/Resources/CHANGELOG.md` when `CHANGELOG.md` changed
+- [ ] Synced `Sources/Contained/Resources/CHANGELOG.md` when `CHANGELOG.md` changed (`./scripts/sync-changelog-resource.sh --check` passes)
 
 ## Update Safety
 

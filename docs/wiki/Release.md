@@ -8,9 +8,9 @@ The maintainer runbook for cutting a build and feeding the Sparkle update channe
   - Stable: `1.0.0`
   - Beta: `1.0.0-beta.<build>+<shortsha>`
   - Nightly: `1.0.0-nightly.<build>+<shortsha>` (set automatically by CI)
-- **`CFBundleVersion`** (build number) — a monotonic integer. `scripts/version-info.sh build` is the single source of truth for scripts and CI; no workflow should calculate a build number directly. Beta/stable workflows first try to reuse the matching nightly appcast build for the promoted commit, then fall back to `git rev-list --count HEAD`. Sparkle orders updates by this, so it must be retained across nightly, beta, and stable for the same promoted build.
+- **`CFBundleVersion`** (build number) — a monotonic integer. `scripts/version-info.sh build` is the single source of truth for scripts and CI; no workflow should calculate or validate a build number directly. The script rejects non-numeric build values. Beta/stable workflows first try to reuse the matching nightly appcast build for the promoted commit, then fall back to `git rev-list --count HEAD`. Sparkle orders updates by this, so it must be retained across nightly, beta, and stable for the same promoted build.
 
-Set the marketing version for a manual build with `VERSION=… ./scripts/bundle.sh`.
+Set the marketing version for a manual build with `VERSION=… ./scripts/bundle.sh`. `scripts/release.sh` defaults to the Stable channel; set `CHANNEL=beta` only when intentionally cutting a beta locally.
 
 ## Channels
 
@@ -25,6 +25,8 @@ The app's Settings → Updates picker changes the feed URL. Appcast items do not
 ## Release Notes
 
 Release notes are composed by `scripts/release-body.sh` and embedded by `scripts/release-notes.sh`.
+The bundled in-app What's New view mirrors that order so local release notes and Sparkle appcast
+notes do not drift.
 
 - Stable ships `Full Release Notes` for the base marketing version, such as `1.0.0`.
 - Beta ships `Changes Since Last Beta` followed by `Full Release Notes`.
@@ -46,9 +48,11 @@ Prefer one committed fragment per PR or user-facing change, not one file per com
 CHANGES=updates/changes.md CHANNEL=beta VERSION_VALUE="$VERSION" ./scripts/release-body.sh
 ```
 
-When using a single `CHANGELOG.md`, put version-wide notes under the base version section and current channel/build changes under `Unreleased` or a channel section such as `## [beta]` / `## [nightly]`.
+When using a single `CHANGELOG.md`, keep `Unreleased` above released version sections, put version-wide notes under the base version section, and put current channel/build changes under `Unreleased` or a channel section such as `## [beta]` / `## [nightly]`.
 
 Generated release-note files should be written under `updates/`, `.release/`, or `.release-notes/`. Do not commit generated notes from release workflows. The workflows only commit `appcast.xml`, and appcast-only commits are path-ignored and marked `[skip ci]` so they do not start another release build.
+
+Run `./scripts/ci-validate.sh` before opening release/workflow PRs. It checks bundled changelog sync, shell syntax, workflow YAML syntax, and the expected Stable/Beta/Nightly release-note shape. CI runs the same script before Swift builds.
 
 ## One-time setup
 
@@ -60,7 +64,8 @@ Generated release-note files should be written under `updates/`, `.release/`, or
 ## Cutting a stable or beta release (local)
 
 ```sh
-VERSION=1.0.0 ./scripts/release.sh                 # build → codesign → DMG → notarize → staple
+VERSION=1.0.0 ./scripts/release.sh                 # Stable build -> codesign -> DMG -> notarize -> staple
+CHANNEL=beta VERSION=1.0.0-beta.79+abc123 ./scripts/release.sh
 ./scripts/appcast.sh /path/to/Sparkle/bin updates  # embed notes + generate root appcast.xml
 ```
 
@@ -73,7 +78,7 @@ Then:
 
 `.github/workflows/nightly.yml` builds the latest green `nightly` on every push (newest commit wins via `concurrency: cancel-in-progress`), ad-hoc signs, refreshes the rolling **nightly** pre-release with the new DMG, regenerates the nightly appcast item, preserves promoted beta/stable items already in the feed, and commits root `appcast.xml` to the `nightly` branch. It skips appcast signing when `SPARKLE_ED_PRIVATE_KEY` is absent.
 
-`.github/workflows/beta.yml` and `.github/workflows/stable.yml` build promoted branches, retain the build number for the matching nightly commit when available, write their own branch appcast, and merge the promoted appcast item into the nightly feed. All workflows ask `scripts/version-info.sh` for the build number.
+`.github/workflows/beta.yml` and `.github/workflows/stable.yml` build promoted branches, retain the build number for the matching nightly commit when available, write their own branch appcast, and merge the promoted appcast item into the nightly feed. They upsert GitHub release assets on reruns so a retry refreshes the same tag instead of failing on an existing release. All workflows ask `scripts/version-info.sh` for the build number.
 
 ## Notes
 

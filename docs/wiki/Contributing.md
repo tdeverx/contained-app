@@ -20,6 +20,7 @@ appcast.xml              Sparkle feed at the root of each release branch
 ## Conventions
 
 - **Agents start at `AGENTS.md`.** Coding agents should read the root agent guide before editing; it summarizes branch, update, release-note, design-system, and verification rules.
+- **Directory names are intentional.** SwiftPM folders stay `Sources` and `Tests`, Swift source domains use PascalCase, and repository infrastructure uses lowercase names such as `docs` and `scripts`. Put helper scripts in `scripts/` and use hyphenated names for multi-word shell scripts.
 - **Every CLI action goes through a `ContainerCommands` builder** + a `ContainerClient` wrapper, with a golden-argv test. The UI never assembles argv inline — this keeps "Reveal CLI" honest.
 - **Pure decision logic is factored into `ContainedCore`** (`RestartDecision`, `HealthDecision`, compose ordering) and unit-tested without spawning processes.
 - **No `contained.*` personalization labels.** Card styles and healthchecks live in local stores. Only `contained.restart` and `contained.stack` are written (they must round-trip through the container).
@@ -29,10 +30,12 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Sync docs with behavior.** If behavior, settings, routes, or user-facing wording changes, update the matching page under `docs/wiki` and keep README links current.
 - **Preserve update build numbers.** `scripts/version-info.sh` is the single build-number source of truth; beta/stable workflows must pass the retained `BUILD` into `scripts/bundle.sh` and merge promoted appcast items into the nightly feed.
 - **Write release notes at the right level.** Put version-wide notes under the base version section, such as `## [1.0.0]`. Put channel/build changes under `Unreleased`, `## [nightly]`, `## [beta]`, or split them into `CHANGES_DIR` fragments. Prefer one fragment per PR/user-facing change under `changes/unreleased/` over one file per commit. `scripts/collect-changes.sh` can compile those fragments for a directory or git range. Stable ships full notes only; Beta/Nightly ship channel changes plus full notes.
+- **Let CI check invariants, not fix them.** `scripts/ci-validate.sh` checks bundled changelog sync, shell syntax, workflow YAML syntax, and Stable/Beta/Nightly release-note ordering. If `CHANGELOG.md` changes, run `./scripts/sync-changelog-resource.sh` locally and commit the bundled resource; CI uses `--check` so drift fails loudly.
 
 ## Before a PR
 
 ```sh
+./scripts/ci-validate.sh                       # release/workflow invariants
 swift build && swift test                     # must be green
 git diff --check                              # no whitespace damage
 ./scripts/bundle.sh debug && open Contained.app # smoke-test the screens you touched

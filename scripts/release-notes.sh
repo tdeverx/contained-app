@@ -27,9 +27,15 @@ html="$(printf '%s\n' "$fragment" | awk '
     print "<h3>" $0 "</h3>"
     next
   }
-  /^- / {
+  /^#### / {
+    if (in_list) { print "</ul>"; in_list=0 }
+    sub(/^#### /, "")
+    print "<h4>" $0 "</h4>"
+    next
+  }
+  /^[[:space:]]*- / {
     if (!in_list) { print "<ul>"; in_list=1 }
-    sub(/^- /, "")
+    sub(/^[[:space:]]*- /, "")
     print "<li>" $0 "</li>"
     next
   }

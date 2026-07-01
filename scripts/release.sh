@@ -17,9 +17,10 @@ cd "$(dirname "$0")/.."
 APP="Contained.app"
 DMG="Contained.dmg"
 ENTITLEMENTS="scripts/Contained.entitlements"
+CHANNEL="${CHANNEL:-stable}"
 
 echo "▸ Building release bundle…"
-./scripts/bundle.sh release
+CHANNEL="$CHANNEL" ./scripts/bundle.sh release
 
 echo "▸ Code-signing (hardened runtime)…"
 codesign --force --deep --options runtime --timestamp \

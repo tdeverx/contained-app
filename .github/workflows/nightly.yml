@@ -48,16 +48,24 @@ jobs:
 
       - name: Build & test
         run: |
-          ./scripts/sync-changelog-resource.sh
+          set -euo pipefail
+          ./scripts/ci-validate.sh
           swift build -c release
           swift test
 
       - name: Bundle (ad-hoc signed) + DMG
         run: |
-          BUILD=$(./scripts/version-info.sh build)
-          SHA=$(./scripts/version-info.sh sha)
-          export BUILD SHA
-          export VERSION=$(CHANNEL=nightly BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
+          set -euo pipefail
+          BUILD=$(CHANNEL=nightly ./scripts/version-info.sh build)
+          SHA=$(CHANNEL=nightly ./scripts/version-info.sh sha)
+          VERSION=$(CHANNEL=nightly BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
+          export BUILD SHA VERSION
+          {
+            echo "BASE_VERSION=$(./scripts/version-info.sh base)"
+            echo "BUILD=${BUILD}"
+            echo "SHA=${SHA}"
+            echo "VERSION=${VERSION}"
+          } >> "$GITHUB_ENV"
           CHANNEL=nightly BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
           mkdir -p updates
           brew install create-dmg
@@ -70,12 +78,9 @@ jobs:
             echo
             echo "⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
           } > updates/github-release-notes.md
-          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
-          echo "BUILD=${BUILD}" >> "$GITHUB_ENV"
-          echo "SHA=${SHA}" >> "$GITHUB_ENV"
-
       - name: Publish rolling nightly-latest release
         run: |
+          set -euo pipefail
           gh release delete nightly-latest --yes --cleanup-tag || true
           gh release create nightly-latest updates/*.dmg \
             --prerelease --title "Nightly (${VERSION})" \
@@ -84,6 +89,7 @@ jobs:
       - name: Update Sparkle feed (nightly branch appcast.xml)
         if: env.SPARKLE_ED_PRIVATE_KEY != ''
         run: |
+          set -euo pipefail
           PREVIOUS_APPCAST="$(mktemp)"
           [ -f appcast.xml ] && cp appcast.xml "$PREVIOUS_APPCAST"
           KEYFILE="$(mktemp)"; printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$KEYFILE"
