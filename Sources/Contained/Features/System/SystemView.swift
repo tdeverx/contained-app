@@ -42,6 +42,10 @@ struct SystemContent: View {
         }
     }
 
+    private var showsHeader: Bool {
+        showClose || !ui.toolbarUIEnabled
+    }
+
     init(initialPage: SystemPage = .engine,
          showClose: Bool = true,
          elevated: Bool = true,
@@ -92,9 +96,11 @@ struct SystemContent: View {
 
     var body: some View {
         MorphPanelScaffold(width: Tokens.PanelSize.system.width) {
-            VStack(spacing: 0) {
-                header
-                Divider()
+            if showsHeader {
+                VStack(spacing: 0) {
+                    header
+                    Divider()
+                }
             }
         } content: {
             VStack(alignment: .leading, spacing: Tokens.Space.l) {

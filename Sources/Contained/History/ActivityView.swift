@@ -24,15 +24,15 @@ private let activityEventsDescriptor: FetchDescriptor<EventRecord> = {
 
 struct ActivityContent: View {
     @Query(activityEventsDescriptor) private var events: [EventRecord]
+    @Environment(UIState.self) private var ui
     @Environment(\.modelContext) private var modelContext
-    @State private var filter: EventKind?
     var showClose = false
     /// Flat tiles (no shadow) when hosted in the toolbar morph panel; elevated in the standalone sheet.
     var elevated = true
     var onClose: () -> Void = {}
 
     private var filtered: [EventRecord] {
-        guard let filter else { return events }
+        guard let filter = ui.activityFilter else { return events }
         return events.filter { $0.kind == filter }
     }
 
@@ -40,7 +40,7 @@ struct ActivityContent: View {
 
     private var subtitle: String {
         let base = "\(filtered.count) event\(filtered.count == 1 ? "" : "s")"
-        let scoped = filter == nil ? base : "\(base) · \(filter!.rawValue.capitalized)"
+        let scoped = ui.activityFilter == nil ? base : "\(base) · \(ui.activityFilter!.rawValue.capitalized)"
         return unreadCount > 0 ? "\(scoped) · \(unreadCount) unread" : scoped
     }
 
@@ -56,8 +56,9 @@ struct ActivityContent: View {
     /// A single filter control: a glass menu whose checkmark tracks the active kind. It *filters* the
     /// list in place (it isn't a set of page tabs).
     private var filterMenu: some View {
-        Menu {
-            Picker("Filter", selection: $filter) {
+        @Bindable var ui = ui
+        return Menu {
+            Picker("Filter", selection: $ui.activityFilter) {
                 Label("All events", systemImage: "tray.full").tag(EventKind?.none)
                 if !presentKinds.isEmpty { Divider() }
                 ForEach(presentKinds, id: \.self) { kind in
@@ -66,39 +67,45 @@ struct ActivityContent: View {
             }
             .pickerStyle(.inline)
         } label: {
-            GlassButtonItem(systemName: filter == nil ? "line.3.horizontal.decrease"
-                                                      : "line.3.horizontal.decrease.circle.fill",
-                            help: filter == nil ? "Filter" : "Filter: \(filter!.rawValue.capitalized)")
+            GlassButtonItem(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
+                                                                 : "line.3.horizontal.decrease.circle.fill",
+                            help: ui.activityFilter == nil ? "Filter" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
         }
         .buttonStyle(.plain)
         .disabled(presentKinds.isEmpty)
     }
 
+    private var showsHeader: Bool {
+        showClose || !ui.toolbarUIEnabled
+    }
+
     var body: some View {
         MorphPanelScaffold(width: Tokens.PanelSize.activity.width) {
-            VStack(spacing: 0) {
-                PanelHeader(symbol: "bell",
-                            title: "Activity",
-                            subtitle: subtitle) {
-                    GlassButton {
-                        filterMenu
-                        GlassButtonItem(systemName: "checkmark.circle",
-                                        help: filter == nil ? "Mark all as read"
-                                                            : "Mark \(filter!.rawValue.capitalized) as read",
-                                        action: markFilteredRead)
-                            .disabled(filteredUnreadCount == 0)
-                        GlassButtonItem(systemName: "trash",
-                                        role: .destructive,
-                                        help: filter == nil ? "Clear activity"
-                                                            : "Clear \(filter!.rawValue.capitalized) events",
-                                        action: clearFiltered)
-                            .disabled(filtered.isEmpty)
-                        if showClose {
-                            GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+            if showsHeader {
+                VStack(spacing: 0) {
+                    PanelHeader(symbol: "bell",
+                                title: "Activity",
+                                subtitle: subtitle) {
+                        GlassButton {
+                            filterMenu
+                            GlassButtonItem(systemName: "checkmark.circle",
+                                            help: ui.activityFilter == nil ? "Mark all as read"
+                                                                          : "Mark \(ui.activityFilter!.rawValue.capitalized) as read",
+                                            action: markFilteredRead)
+                                .disabled(filteredUnreadCount == 0)
+                            GlassButtonItem(systemName: "trash",
+                                            role: .destructive,
+                                            help: ui.activityFilter == nil ? "Clear activity"
+                                                                          : "Clear \(ui.activityFilter!.rawValue.capitalized) events",
+                                            action: clearFiltered)
+                                .disabled(filtered.isEmpty)
+                            if showClose {
+                                GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                            }
                         }
                     }
+                    Divider()
                 }
-                Divider()
             }
         } content: {
             if filtered.isEmpty {
@@ -137,7 +144,7 @@ struct ActivityContent: View {
     /// Header action: clears only the currently-shown events. With no filter that's everything; with a
     /// filter active it removes just that kind.
     private func clearFiltered() {
-        if let filter {
+        if let filter = ui.activityFilter {
             for event in events where event.kind == filter { modelContext.delete(event) }
         } else {
             try? modelContext.delete(model: EventRecord.self)

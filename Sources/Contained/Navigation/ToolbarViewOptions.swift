@@ -219,7 +219,17 @@ struct ToolbarPageContextOptions: View {
                              subtitle: app.serviceLabel)
             }
         case .activity:
+            @Bindable var ui = ui
             ToolbarGlassMenuButton {
+                Picker("Filter", selection: $ui.activityFilter) {
+                    Label("All events", systemImage: "tray.full").tag(EventKind?.none)
+                    Divider()
+                    ForEach(EventKind.allCases, id: \.self) { kind in
+                        Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
+                    }
+                }
+                .pickerStyle(.inline)
+                Divider()
                 Button {
                     app.historyStore.markAllEventsRead()
                 } label: {
@@ -231,9 +241,9 @@ struct ToolbarPageContextOptions: View {
                     Label("Clear Activity", systemImage: "trash")
                 }
             } labelContent: {
-                contextLabel(symbol: "bell",
+                contextLabel(symbol: ui.activityFilter == nil ? "bell" : "line.3.horizontal.decrease.circle.fill",
                              title: "Activity",
-                             subtitle: "History")
+                             subtitle: ui.activityFilter?.rawValue.capitalized ?? "All events")
             }
         case .registries:
             ToolbarGlassMenuButton {
@@ -247,7 +257,21 @@ struct ToolbarPageContextOptions: View {
                              title: "Registries",
                              subtitle: "Credentials")
             }
-        case .templates, .settings:
+        case .settings:
+            ToolbarGlassMenuButton {
+                ForEach(SettingsContent.SettingsPage.allCases) { page in
+                    Button {
+                        ui.openSettings(to: page)
+                    } label: {
+                        Label(page.rawValue, systemImage: page.systemImage)
+                    }
+                }
+            } labelContent: {
+                contextLabel(symbol: "gearshape",
+                             title: "Settings",
+                             subtitle: ui.settingsPage?.rawValue ?? "Sections")
+            }
+        case .templates:
             EmptyView()
         }
     }

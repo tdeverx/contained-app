@@ -48,11 +48,17 @@ struct ToolbarTemplatesPanel: View {
     var showClose = true
     var onClose: () -> Void
 
+    private var showsHeader: Bool {
+        showClose || !ui.toolbarUIEnabled
+    }
+
     var body: some View {
         MorphPanelScaffold(width: Tokens.PanelSize.templates.width) {
-            VStack(alignment: .leading, spacing: 0) {
-                header
-                Divider()
+            if showsHeader {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                    Divider()
+                }
             }
         } content: {
             LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {

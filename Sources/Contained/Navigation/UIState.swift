@@ -51,6 +51,7 @@ final class UIState {
     /// driven by the top-left toolbar view-options control.
     var grouping: ContainerGrouping = .network
     var sort: ContainerSort = .name
+    var activityFilter: EventKind? = nil
 
     /// When set, `SettingsContent` will switch to this page as soon as it appears / becomes active.
     /// Cleared by `SettingsContent` after it consumes the value.

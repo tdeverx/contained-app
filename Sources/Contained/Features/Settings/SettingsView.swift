@@ -43,12 +43,18 @@ struct SettingsContent: View {
         _page = State(initialValue: initialPage)
     }
 
+    private var showsHeader: Bool {
+        onClose != nil || !ui.toolbarUIEnabled
+    }
+
     var body: some View {
         @Bindable var settings = app.settings
         MorphPanelScaffold(width: Tokens.PanelSize.settings.width, placement: .centered) {
-            VStack(spacing: 0) {
-                header
-                Divider()
+            if showsHeader {
+                VStack(spacing: 0) {
+                    header
+                    Divider()
+                }
             }
         } content: {
             sectionBody(settings: settings)

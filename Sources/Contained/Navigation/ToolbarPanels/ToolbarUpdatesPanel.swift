@@ -24,11 +24,17 @@ struct ToolbarUpdatesPanel: View {
         imageGroups.filter { app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable }.count
     }
 
+    private var showsHeader: Bool {
+        showClose || !ui.toolbarUIEnabled
+    }
+
     var body: some View {
         MorphPanelScaffold(width: Tokens.PanelSize.images.width) {
-            VStack(alignment: .leading, spacing: 0) {
-                header
-                Divider()
+            if showsHeader {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                    Divider()
+                }
             }
         } content: {
             LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
