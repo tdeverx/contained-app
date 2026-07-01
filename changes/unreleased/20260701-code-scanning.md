@@ -1,0 +1,4 @@
+- Improved GitHub CodeQL scanning so workflow checks run on relevant source, script, workflow, package, and test changes without rerunning for generated appcast-only update feed commits.
+- Kept Swift CodeQL enabled as a scheduled/manual scan while avoiding a slow per-PR Swift gate.
+- Kept release-note fixture and custom changelog generation isolated from the repository's default change-fragment directory unless `CHANGES_DIR` is explicitly supplied.
+- Fixed empty channel-delta generation so "since last nightly/beta" notes fall back deliberately instead of treating a blank normalized diff as content.

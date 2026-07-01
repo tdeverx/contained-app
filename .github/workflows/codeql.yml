@@ -1,0 +1,93 @@
+name: CodeQL Advanced
+
+# Repository-owned CodeQL advanced setup. This keeps scan triggers aligned with release workflow
+# path filters, so appcast-only bot commits do not spend macOS minutes on a security scan.
+
+on:
+  pull_request:
+    branches: [main, nightly, beta, stable]
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'CODE_OF_CONDUCT.md'
+      - '.github/**/*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/assets/**'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
+      - 'Sources/Contained/Resources/CHANGELOG.md'
+      - 'appcast.xml'
+      - 'changes/**'
+  push:
+    branches: [nightly, beta, stable]
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'CODE_OF_CONDUCT.md'
+      - '.github/**/*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/assets/**'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
+      - 'Sources/Contained/Resources/CHANGELOG.md'
+      - 'appcast.xml'
+      - 'changes/**'
+  schedule:
+    - cron: '37 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-actions:
+    name: Analyze (actions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: actions
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:actions'
+
+  analyze-swift:
+    name: Analyze (swift)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: swift
+          build-mode: autobuild
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:swift'

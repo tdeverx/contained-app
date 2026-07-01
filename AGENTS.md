@@ -17,6 +17,7 @@ This file is the working contract for coding agents in this repository. Follow i
 - `CFBundleVersion` must be retained when a nightly build is promoted to beta or stable.
 - Stable and beta own their branch appcasts; nightly is a superset feed that also receives promoted beta/stable appcast items.
 - Appcast-only bot commits must not trigger release loops. Keep `appcast.xml` path-ignored in workflows and use `[skip ci]` for appcast bot commits.
+- CodeQL uses the checked-in advanced setup at `.github/workflows/codeql.yml`. Actions workflow analysis runs on PRs, pushes, and the weekly baseline; Swift analysis is scheduled/manual because Swift CodeQL currently takes too long to be a healthy per-PR gate. Keep appcast, docs, and release-note-only paths ignored there too.
 - PR/release workflows run `scripts/ci-validate.sh`; keep that script fast and focused on repository invariants before expensive Swift builds.
 - PR CI enforces release-note coverage for material changes. Add a changelog/change fragment, or use the `no-release-note` label only for docs/meta-only work.
 - Release workflows validate built bundles and generated appcasts before publishing or committing feed changes.
@@ -67,6 +68,13 @@ For release scripts/workflows:
 ./scripts/ci-validate.sh
 ./scripts/test-release-scripts.sh
 swift test --filter UpdaterControllerTests
+```
+
+For CodeQL/workflow changes:
+
+```sh
+./scripts/ci-validate.sh
+swift build --arch arm64 --product Contained
 ```
 
 For generated release artifacts:

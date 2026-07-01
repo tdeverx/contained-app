@@ -69,7 +69,7 @@ lines.each do |line|
   end
 end
 
-puts output.join("\n")
+puts output.join("\n") unless output.empty?
 '
 }
 

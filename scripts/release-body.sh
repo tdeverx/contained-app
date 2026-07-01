@@ -4,12 +4,19 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 CHANGELOG="${CHANGELOG:-CHANGELOG.md}"
+CHANGES_WAS_SET="${CHANGES+x}"
+CHANGES_DIR_WAS_SET="${CHANGES_DIR+x}"
 RELEASE_NOTES_FILE="${RELEASE_NOTES:-}"
 CHANGES_FILE="${CHANGES:-}"
 CHANGES_DIR_VALUE="${CHANGES_DIR:-}"
 VERSION_VALUE="${VERSION_VALUE:-${VERSION:-$(cat VERSION 2>/dev/null || true)}}"
 CHANNEL_VALUE="${CHANNEL:-}"
 CHANGES_FILE_IS_DEFAULT_CHANGELOG=false
+USE_REPO_DEFAULT_CHANGELOG=false
+
+case "$CHANGELOG" in
+  CHANGELOG.md|./CHANGELOG.md) USE_REPO_DEFAULT_CHANGELOG=true ;;
+esac
 
 [ -f "$CHANGELOG" ] || { echo "✗ $CHANGELOG not found" >&2; exit 1; }
 [ -n "$VERSION_VALUE" ] || { echo "✗ VERSION is empty" >&2; exit 1; }
@@ -69,6 +76,7 @@ collect_change_dir() {
 
 default_changes_dir() {
   [ -z "$CHANGES_DIR_VALUE" ] || return 0
+  $USE_REPO_DEFAULT_CHANGELOG || return 0
   for candidate in "changes/$CHANNEL_VALUE" "changes/unreleased"; do
     if [ -d "$candidate" ]; then
       CHANGES_DIR_VALUE="$candidate"
@@ -100,12 +108,25 @@ fi
 
 changes_fragment=""
 if [ "$CHANNEL_VALUE" = "beta" ] || [ "$CHANNEL_VALUE" = "nightly" ]; then
-  default_changes_dir
   if [ -n "$CHANGES_DIR_VALUE" ] && [ -d "$CHANGES_DIR_VALUE" ]; then
     changes_fragment="$(collect_change_dir "$CHANGES_DIR_VALUE")"
   fi
-  if [ -z "$changes_fragment" ] && $CHANGES_FILE_IS_DEFAULT_CHANGELOG; then
+  if [ -z "$changes_fragment" ] \
+    && [ -z "$CHANGES_DIR_WAS_SET" ] \
+    && [ -z "$CHANGES_WAS_SET" ] \
+    && $CHANGES_FILE_IS_DEFAULT_CHANGELOG \
+    && $USE_REPO_DEFAULT_CHANGELOG; then
     changes_fragment="$(CHANNEL="$CHANNEL_VALUE" VERSION_VALUE="$VERSION_VALUE" ./scripts/changes-since-release.sh)"
+  fi
+  if [ -z "$changes_fragment" ] \
+    && [ -z "$CHANGES_DIR_WAS_SET" ] \
+    && [ -z "$CHANGES_WAS_SET" ] \
+    && $CHANGES_FILE_IS_DEFAULT_CHANGELOG \
+    && $USE_REPO_DEFAULT_CHANGELOG; then
+    default_changes_dir
+    if [ -n "$CHANGES_DIR_VALUE" ] && [ -d "$CHANGES_DIR_VALUE" ]; then
+      changes_fragment="$(collect_change_dir "$CHANGES_DIR_VALUE")"
+    fi
   fi
   if [ -z "$changes_fragment" ]; then
     changes_fragment="$(extract "$CHANGES_FILE" "$VERSION_VALUE")"
