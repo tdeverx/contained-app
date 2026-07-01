@@ -3,15 +3,16 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.90+04a223d</title>
-            <pubDate>Wed, 01 Jul 2026 21:03:54 +0000</pubDate>
-            <sparkle:version>90</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.90+04a223d</sparkle:shortVersionString>
+            <title>1.0.0-nightly.93+45ed39a</title>
+            <pubDate>Wed, 01 Jul 2026 22:03:13 +0000</pubDate>
+            <sparkle:version>93</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.93+45ed39a</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
 <ul>
-<li>Improved GitHub contributor setup with expanded issue templates, support/security files, discussion guidance, Dependabot configuration, and a PR workflow that still reports the required check for docs-only changes.</li>
+<li>Allowed dependency-only maintenance PRs to use the `no-release-note` path so grouped Dependabot updates can pass repository validation without manual changelog fragments.</li>
+<li>Clarified that `CHANGELOG.md` is curated version-level release notes, while PR/build deltas should live in change fragments.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -119,7 +120,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.90+04a223d.dmg" length="7849090" type="application/octet-stream" sparkle:edSignature="DkapMzM4/YvCDu5wToKMdvZoLBrtFpqPXlLbUfuh1sHDghRHajm15XtL77BbLuZKLm6MWzhz9W2doOrfst5VAA=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.93+45ed39a.dmg" length="7842879" type="application/octet-stream" sparkle:edSignature="dSfc3rxRHX40I81xPkBy4CQxKXJp/LnBVP4exidwGVbIZ6c+S5C+nzr1Ioa4o/jnmNs6Q7Lp9nmXJJedsl1SCw=="/>
         </item>
     </channel>
 </rss>
