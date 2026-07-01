@@ -55,7 +55,21 @@ changes can be reviewed with code changes:
 - Start: [Features](https://github.com/tdeverx/contained-app/wiki/Features), [Installation](https://github.com/tdeverx/contained-app/wiki/Installation), [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts), [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting)
 - Workflows: [Creation Workflow](https://github.com/tdeverx/contained-app/wiki/Creation-Workflow), [Run / Edit Form](https://github.com/tdeverx/contained-app/wiki/Run-Edit-Form), [Compose Import](https://github.com/tdeverx/contained-app/wiki/Compose-Import), [Command Palette](https://github.com/tdeverx/contained-app/wiki/Command-Palette), [Updates](https://github.com/tdeverx/contained-app/wiki/Updates)
 - Feature areas: [Containers](https://github.com/tdeverx/contained-app/wiki/Features-Containers), [Images](https://github.com/tdeverx/contained-app/wiki/Features-Images), [Resources](https://github.com/tdeverx/contained-app/wiki/Features-Resources), [System & Settings](https://github.com/tdeverx/contained-app/wiki/System-Settings)
-- Maintainers: [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture), [Design System](https://github.com/tdeverx/contained-app/wiki/Design-System), [Release Runbook](https://github.com/tdeverx/contained-app/wiki/Release), [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing)
+- Maintainers: [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture), [Design System](https://github.com/tdeverx/contained-app/wiki/Design-System), [Release Runbook](https://github.com/tdeverx/contained-app/wiki/Release), [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing), [Issues and Discussions](https://github.com/tdeverx/contained-app/wiki/Issues-and-Discussions)
+
+## Contributing And Support
+
+Start with the [wiki](https://github.com/tdeverx/contained-app/wiki) and
+[Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting).
+Use [Discussions Q&A](https://github.com/tdeverx/contained-app/discussions/categories/q-a)
+for setup help and questions, and
+[open an issue](https://github.com/tdeverx/contained-app/issues/new/choose) for
+actionable bugs, crashes, regressions, or tracked feature work.
+
+Please read the [contributing guide](https://github.com/tdeverx/contained-app/wiki/Contributing)
+before opening a larger PR. Do not post vulnerabilities publicly; use
+[private vulnerability reporting](https://github.com/tdeverx/contained-app/security/advisories/new)
+instead.
 
 ## Architecture
 

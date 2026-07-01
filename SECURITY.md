@@ -8,9 +8,9 @@ channels exist.
 
 ## Reporting A Vulnerability
 
-Please do not open a public issue for a vulnerability. Email the maintainer or
-use GitHub's private vulnerability reporting when it is available for this
-repository.
+Please do not open a public issue for a vulnerability. Use
+[GitHub private vulnerability reporting](https://github.com/tdeverx/contained-app/security/advisories/new)
+so details stay private while a fix is prepared.
 
 Include:
 
