@@ -32,10 +32,29 @@ jobs:
         run: swift --version && xcodebuild -version
 
       - name: Repository validation
-        run: ./scripts/ci-validate.sh
+        env:
+          NO_RELEASE_NOTE: ${{ contains(github.event.pull_request.labels.*.name, 'no-release-note') && '1' || '' }}
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+          ./scripts/ci-validate.sh --base-ref "origin/${{ github.base_ref }}" --require-release-note
+
+      - name: Release script fixtures
+        run: ./scripts/test-release-scripts.sh
 
       - name: Build & test
         run: |
           set -euo pipefail
           swift build -c release
           swift test
+          ./scripts/check-generated-clean.sh
+
+      - name: Bundle smoke validation
+        run: |
+          set -euo pipefail
+          BUILD=$(CHANNEL=nightly ./scripts/version-info.sh build)
+          SHA=$(CHANNEL=nightly ./scripts/version-info.sh sha)
+          VERSION=$(CHANNEL=nightly BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
+          CHANNEL=nightly BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
+          VERSION="${VERSION}" BUILD="${BUILD}" ./scripts/validate-bundle.sh Contained.app
+          ./scripts/check-generated-clean.sh

@@ -52,7 +52,17 @@ When using a single `CHANGELOG.md`, keep `Unreleased` above released version sec
 
 Generated release-note files should be written under `updates/`, `.release/`, or `.release-notes/`. Do not commit generated notes from release workflows. The workflows only commit `appcast.xml`, and appcast-only commits are path-ignored and marked `[skip ci]` so they do not start another release build.
 
-Run `./scripts/ci-validate.sh` before opening release/workflow PRs. It checks bundled changelog sync, shell syntax, workflow YAML syntax, and the expected Stable/Beta/Nightly release-note shape. CI runs the same script before Swift builds.
+Run `./scripts/ci-validate.sh` before opening release/workflow PRs. It checks bundled changelog sync, shell syntax, workflow YAML syntax, and the expected Stable/Beta/Nightly release-note shape. PR CI also passes a base ref so material source/script/workflow changes must include a release note or change fragment unless the PR carries the `no-release-note` label.
+
+Release helper behavior is covered by `./scripts/test-release-scripts.sh`. CI also runs:
+
+```sh
+./scripts/check-generated-clean.sh
+VERSION="$VERSION" BUILD="$BUILD" ./scripts/validate-bundle.sh Contained.app
+CHANNEL="$CHANNEL" ./scripts/validate-appcast.sh appcast.xml
+```
+
+`check-generated-clean.sh` catches tracked files rewritten by build/generation steps. `validate-bundle.sh` checks the bundle executable, Info.plist version/build values, bundled changelog, Sparkle.framework, and code signature. `validate-appcast.sh` checks XML structure, numeric Sparkle build numbers, short versions, enclosure URLs, release notes, and channel shape; the nightly channel intentionally allows Stable/Beta/Nightly items because it is the superset feed.
 
 ## One-time setup
 
@@ -79,6 +89,8 @@ Then:
 `.github/workflows/nightly.yml` builds the latest green `nightly` on every push (newest commit wins via `concurrency: cancel-in-progress`), ad-hoc signs, refreshes the rolling **nightly** pre-release with the new DMG, regenerates the nightly appcast item, preserves promoted beta/stable items already in the feed, and commits root `appcast.xml` to the `nightly` branch. It skips appcast signing when `SPARKLE_ED_PRIVATE_KEY` is absent.
 
 `.github/workflows/beta.yml` and `.github/workflows/stable.yml` build promoted branches, retain the build number for the matching nightly commit when available, write their own branch appcast, and merge the promoted appcast item into the nightly feed. They upsert GitHub release assets on reruns so a retry refreshes the same tag instead of failing on an existing release. All workflows ask `scripts/version-info.sh` for the build number.
+
+After appcast generation, workflows validate the branch feed before committing it. Beta and Stable workflows validate the promoted nightly feed inside the temporary nightly worktree before pushing the appcast-only `[skip ci]` commit.
 
 ## Notes
 

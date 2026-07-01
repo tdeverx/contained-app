@@ -34,7 +34,10 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "Sources/Contained",
-            resources: [.process("Resources")]
+            resources: [.process("Resources")],
+            swiftSettings: [
+                .define("CONTAINED_DEBUG_TOOLS", .when(configuration: .debug)),
+            ]
         ),
         .testTarget(
             name: "ContainedCoreTests",
