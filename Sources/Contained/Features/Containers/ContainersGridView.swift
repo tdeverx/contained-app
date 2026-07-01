@@ -343,10 +343,14 @@ struct ContainersGridView: View {
     private func expandedCard(_ snapshot: ContainerSnapshot) -> some View {
         // `controlsVisible: expanded` so the footer buttons + close fade out as soon as a close
         // starts (expanded → false), finishing before the shrink animation does.
-        containerCard(snapshot, isExpanded: true, controlsVisible: expanded) {}
+        containerCard(snapshot,
+                      isExpanded: true,
+                      cornerRadiusOverride: expanded ? Tokens.Radius.sheet : Tokens.Radius.card,
+                      controlsVisible: expanded) {}
     }
 
     private func containerCard(_ snapshot: ContainerSnapshot, isExpanded: Bool,
+                               cornerRadiusOverride: CGFloat? = nil,
                                controlsVisible: Bool = true, onTap: @escaping () -> Void) -> some View {
         let style = app.containerStyle(for: snapshot)
         return ContainerCard(
@@ -359,6 +363,7 @@ struct ContainersGridView: View {
             isBusy: store.busyIDs.contains(snapshot.id),
             hasImageUpdate: app.imageUpdateStatus(for: snapshot.image).state == .updateAvailable,
             isExpanded: isExpanded,
+            cornerRadiusOverride: cornerRadiusOverride,
             controlsVisible: controlsVisible,
             onTap: onTap,
             onStart: { Task { await store.start(snapshot.id) } },

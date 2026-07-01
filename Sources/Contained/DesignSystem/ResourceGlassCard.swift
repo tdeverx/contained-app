@@ -29,6 +29,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
                          FooterActions: View, Widget: View>: View {
     var size: ResourceCardSize
     var isExpanded = false
+    var cornerRadiusOverride: CGFloat?
     var controlsVisible = true
     var isSelected = false
     /// When set, the selected state reads as a soft `white.opacity` wash (matching a hovered glass
@@ -60,6 +61,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
 
     init(size: ResourceCardSize,
          isExpanded: Bool = false,
+         cornerRadiusOverride: CGFloat? = nil,
          controlsVisible: Bool = true,
          isSelected: Bool = false,
          fill: Color? = nil,
@@ -75,6 +77,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
          @ViewBuilder widget: @escaping () -> Widget) {
         self.size = size
         self.isExpanded = isExpanded
+        self.cornerRadiusOverride = cornerRadiusOverride
         self.controlsVisible = controlsVisible
         self.isSelected = isSelected
         self.fill = fill
@@ -98,7 +101,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     }
 
     private var surface: some View {
-        let cornerRadius = isExpanded ? Tokens.Radius.sheet : Tokens.Radius.card
+        let cornerRadius = cornerRadiusOverride ?? (isExpanded ? Tokens.Radius.sheet : Tokens.Radius.card)
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         return cardContent
             .frame(maxWidth: isExpanded ? ResourceCardExpandedMetrics.maxWidth : .infinity,
@@ -125,6 +128,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
                 }
             }
             .animation(.spring(response: 0.42, dampingFraction: 0.86), value: isExpanded)
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: cornerRadiusOverride)
     }
 
     @ViewBuilder
