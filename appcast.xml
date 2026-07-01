@@ -3,20 +3,37 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.56+905ec05</title>
-            <pubDate>Tue, 30 Jun 2026 23:41:49 +0000</pubDate>
-            <sparkle:version>56</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.56+905ec05</sparkle:shortVersionString>
+            <title>1.0.0-nightly.58+496197a</title>
+            <pubDate>Wed, 01 Jul 2026 01:27:02 +0000</pubDate>
+            <sparkle:version>58</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.58+496197a</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h3>Added</h3>
 <ul>
-<li>Versioned `.containedbackup` export and import for settings, local personalization, health checks, templates, and activity history.</li>
-<li>Rollback guard for data created by newer app schemas, with an export-before-reset path.</li>
-<li>Sparkle release notes in appcasts and an in-app “What’s New” view.</li>
+<li>Versioned `.containedbackup` export/import for settings, personalization, health checks, templates, and activity history, with per-category selection and merge/replace import behavior.</li>
+<li>Rollback guard for data created by newer app schemas, including an export-before-reset path and a best-effort keep-readable-data option.</li>
+<li>Sparkle release notes from `CHANGELOG.md`, with appcast-embedded HTML and in-app “What’s New” views for current and available builds.</li>
+<li>Classic sidebar navigation as the default shell, covering Containers, Images, Volumes, Networks, System, Registries, Templates, Activity, and Settings.</li>
+<li>`Toolbar-first UI` experimental flag, off by default, to restore the floating morph toolbar shell when enabled.</li>
+<li>`Toolbar panel navigation` experimental flag, off by default, to choose whether access points open toolbar morph panels or classic pages/sheets.</li>
+<li>Menu and menu-bar navigation fallback that routes plus/menu actions directly to the relevant full page instead of opening creation-flow sheets.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li>Fresh installs default to the Nightly update channel and automatically check for app updates.</li>
+<li>Each release workflow now publishes GitHub release notes and Sparkle appcast notes from the same changelog section.</li>
+<li>Pre-release build versions such as `1.0.0-nightly.N+sha` resolve release notes from the matching base `1.0.0` changelog section.</li>
+</ul>
+<h3>Technical</h3>
+<ul>
+<li>Added `AppStateEnvelope`, `JSONValue`, `MigrationStep`, and `StateMigrator` as the baseline for forward migration and downgrade handling from schema version 1 onward.</li>
+<li>Added SwiftData history schema/migration scaffolding and purge-dead-row cleanup hooks for history, personalization, health checks, and image update records.</li>
+<li>Added `AppSection`, `ClassicShell`, and `PageScaffold` so sidebar pages and toolbar panels can share content without duplicating layouts.</li>
+<li>Moved custom toolbar safe-area measurement into the detail column so the sidebar is never padded or covered by toolbar chrome.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.56+905ec05.dmg" length="6635602" type="application/octet-stream" sparkle:edSignature="rxS/W2/xbyrDeyCYad1rI1XlMUSVFoMwgl9Em1Zr2KSccVXcpEiVv6b5ieAj9+t5a8WV0KAXJ2HNKzYfXFkSBQ=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.58+496197a.dmg" length="7742776" type="application/octet-stream" sparkle:edSignature="zr3D6ES203O8hK79c37ET/yVRMVgIvGwlRKR+qDXUTv/e83uLDPUeA/tjGNRfKTTmu0FEyymmjXGbw5GW1o8Bw=="/>
         </item>
     </channel>
 </rss>
