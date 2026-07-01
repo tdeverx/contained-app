@@ -151,7 +151,11 @@ struct ToolbarTemplatesPanel: View {
                 GlassListRowChevron()
             }
         } footerLeading: {
-            ResourceCardSubtitleText(text: "Saved run configuration")
+            ResourceCardFooterMini {
+                Image(systemName: "bookmark").font(.caption2)
+            } text: {
+                ResourceCardMetricText(text: "Saved run configuration")
+            }
         } footerActions: {
             Button(role: .destructive) { delete(template) } label: {
                 ResourceCardFooterMini {

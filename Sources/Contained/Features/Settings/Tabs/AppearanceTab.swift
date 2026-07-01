@@ -20,14 +20,18 @@ struct AppearanceTab: View {
                 }
             }
 
-            PanelSection(header: "Layout & glass",
-                         footer: "Main background controls the window backing. Card material applies to compact and expanded resource cards. Panel & sheet material controls floating panels and sheets. Button material controls toolbar controls. Glass options use Liquid Glass; the rest use macOS vibrancy.") {
+            PanelSection(header: "Layout") {
                 PanelRow(title: "Card size") {
                     Picker("", selection: $settings.density) {
                         ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
                     }
                     .pickerStyle(.segmented).labelsHidden().fixedSize()
                 }
+                PanelToggleRow(title: "Show info tips", isOn: $settings.showInfoTips)
+            }
+
+            PanelSection(header: "Materials",
+                         footer: "Glass options use Liquid Glass. Other options use macOS vibrancy and follow the window background.") {
                 PanelRow(title: "Main background material",
                          info: "Changes the material behind the main container grid.") {
                     materialMenu($settings.windowMaterial)
@@ -44,36 +48,35 @@ struct AppearanceTab: View {
                          info: "Changes toolbar glass buttons and grouped icon controls.") {
                     materialMenu($settings.buttonMaterial)
                 }
-                PanelToggleRow(title: "Tint button glass",
-                               info: "Adds a color wash inside toolbar glass buttons.",
-                               isOn: $settings.buttonTintEnabled)
-                if settings.buttonTintEnabled {
-                    PanelRow(title: "Button tint") {
-                        TintSelector(selection: $settings.buttonTint)
-                    }
-                    PanelRow(title: "Button tint opacity") {
-                        HStack(spacing: Tokens.Space.s) {
-                            Slider(value: $settings.buttonTintOpacity, in: 0.05...0.6).frame(width: 140)
-                            Text(Format.percent(settings.buttonTintOpacity))
-                                .monospacedDigit()
-                                .frame(width: Tokens.FormWidth.shortReadout)
-                        }
-                    }
-                    PanelToggleRow(title: "Button tint gradient", isOn: $settings.buttonTintGradient)
-                    if settings.buttonTintGradient {
-                        GradientAngleControl(angle: $settings.buttonTintGradientAngle)
-                    }
-                    PanelRow(title: "Button tint blend mode") {
-                        Picker("", selection: $settings.buttonTintBlendMode) {
-                            ForEach(ColorLayerBlendMode.allCases) { mode in
-                                Text(mode.displayName).tag(mode)
-                            }
-                        }
-                        .labelsHidden()
-                        .fixedSize()
+            }
+
+            PanelSection(header: "Button tint",
+                         footer: "Button tint uses the same color layer model as card backgrounds, applied inside toolbar glass controls.",
+                         enabled: $settings.buttonTintEnabled) {
+                PanelRow(title: "Tint") {
+                    TintSelector(selection: $settings.buttonTint)
+                }
+                PanelRow(title: "Opacity") {
+                    HStack(spacing: Tokens.Space.s) {
+                        Slider(value: $settings.buttonTintOpacity, in: 0.05...0.6).frame(width: 140)
+                        Text(Format.percent(settings.buttonTintOpacity))
+                            .monospacedDigit()
+                            .frame(width: Tokens.FormWidth.shortReadout)
                     }
                 }
-                PanelToggleRow(title: "Show info tips", isOn: $settings.showInfoTips)
+                PanelToggleRow(title: "Gradient", isOn: $settings.buttonTintGradient)
+                if settings.buttonTintGradient {
+                    GradientAngleControl(angle: $settings.buttonTintGradientAngle)
+                }
+                PanelRow(title: "Blend mode") {
+                    Picker("", selection: $settings.buttonTintBlendMode) {
+                        ForEach(ColorLayerBlendMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
             }
 
             ImageDefaultStyleSection(settings: settings)
@@ -95,7 +98,7 @@ private struct ImageDefaultStyleSection: View {
     private var style: Personalization { app.personalization.defaultImageStyle }
 
     var body: some View {
-        PanelSection(header: "Default image cards",
+        PanelSection(header: "Default image card style",
                      footer: "When on, image groups, image rows, and containers without their own style inherit this design. Specific image, image-group, tag, and container styles remain local overrides above this default.",
                      enabled: $settings.imageDefaultStyleEnabled) {
             HStack(spacing: Tokens.Space.m) {

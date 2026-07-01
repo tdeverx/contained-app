@@ -136,7 +136,7 @@ struct EventRow: View {
                                      tint: event.kind.tint,
                                      backgroundOpacity: 0.22)
             } content: {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     ResourceCardTitleText(text: event.message)
                     HStack(spacing: Tokens.Space.xs) {
                         ResourceBadgeText(text: event.kind.rawValue.capitalized)

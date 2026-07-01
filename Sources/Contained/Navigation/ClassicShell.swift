@@ -275,7 +275,11 @@ private struct NetworksPage: View {
             }
         } footerLeading: {
             if network.isBuiltin {
-                ResourceBadgeText(text: "builtin", font: .caption2.weight(.medium))
+                ResourceCardFooterMini {
+                    Image(systemName: "network.badge.shield.half.filled").font(.caption2)
+                } text: {
+                    ResourceCardMetricText(text: "Built-in")
+                }
             }
         } footerActions: {
             EmptyView()

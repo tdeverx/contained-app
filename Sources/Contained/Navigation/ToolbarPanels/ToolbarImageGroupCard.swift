@@ -69,11 +69,16 @@ struct ToolbarImageGroupCard: View {
         let status = app.imageUpdateStatus(for: group.primaryReference)
         let resolved = app.imageGroupStyle(for: group)
         return ResourceGlassCard(size: .medium,
-                          isExpanded: isExpanded,
-                          elevated: false,
-                          onTap: onTap) {
+                                 isExpanded: isExpanded,
+                                 fill: resolved.fillBackground ? resolved.color : nil,
+                                 fillOpacity: resolved.backgroundOpacity,
+                                 gradient: resolved.gradient,
+                                 gradientAngle: resolved.gradientAngle,
+                                 blendMode: resolved.backgroundBlendMode,
+                                 elevated: false,
+                                 onTap: onTap) {
             cardHeader(group, image: image, style: resolved)
-            } bodyContent: {
+        } bodyContent: {
             tagList(group)
         } footerLeading: {
             HStack(spacing: 10) {
@@ -311,6 +316,11 @@ struct ToolbarImageGroupCard: View {
     private func tagRow(_ reference: String, in group: LocalImageTagGroup) -> some View {
         let style = app.imageStyle(for: reference)
         return ResourceGlassCard(size: .medium,
+                                 fill: style.fillBackground ? style.color : nil,
+                                 fillOpacity: style.backgroundOpacity,
+                                 gradient: style.gradient,
+                                 gradientAngle: style.gradientAngle,
+                                 blendMode: style.backgroundBlendMode,
                                  elevated: false) {
             ResourceCardHeader {
                 ImageStyleButton(reference: reference,
@@ -325,9 +335,11 @@ struct ToolbarImageGroupCard: View {
                 EmptyView()
             }
         } footerLeading: {
-            Text("Local tag")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            ResourceCardFooterMini {
+                Image(systemName: "tag").font(.caption2)
+            } text: {
+                ResourceCardMetricText(text: "Local tag")
+            }
         } footerActions: {
             footerAction("play", help: "Run") {
                 ui.runImage(reference)

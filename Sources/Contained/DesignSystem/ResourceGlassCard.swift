@@ -214,21 +214,27 @@ private struct ResourceCardMaterialSurface: ViewModifier {
                 }
             }
             .background {
-                if let glass = material.glass {
-                    Color.clear.glassEffect(glass, in: shape)
-                } else {
-                    VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
-                        .clipShape(shape)
+                ZStack {
+                    if let glass = material.glass {
+                        Color.clear.glassEffect(glass, in: shape)
+                    } else {
+                        VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                    }
+
+                    fillLayer(shape)
                 }
+                .clipShape(shape)
+                .compositingGroup()
             }
-            .background {
-                if let fill {
-                    shape.fill(fillStyle(fill))
-                        .blendMode(blendMode.blendMode)
-                        .clipShape(shape)
-                }
-            }
-            .compositingGroup()
+    }
+
+    @ViewBuilder
+    private func fillLayer(_ shape: RoundedRectangle) -> some View {
+        if let fill {
+            shape.fill(fillStyle(fill))
+                .blendMode(blendMode.blendMode)
+                .clipShape(shape)
+        }
     }
 
     private func fillStyle(_ color: Color) -> AnyShapeStyle {
