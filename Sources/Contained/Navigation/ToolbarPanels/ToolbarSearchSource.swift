@@ -7,7 +7,7 @@ struct ToolbarSearchSource: View {
 
     /// The toolbar search field escalates into the command palette only when that experimental
     /// feature is enabled; otherwise it stays a plain page filter.
-    private var paletteEnabled: Bool { app.settings.commandPaletteEnabled }
+    private var paletteEnabled: Bool { app.settings.commandPaletteEnabled && ui.panelNavigationEnabled }
 
     var body: some View {
         @Bindable var ui = ui

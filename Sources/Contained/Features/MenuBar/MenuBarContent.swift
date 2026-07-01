@@ -260,15 +260,11 @@ struct MenuBarContent: View {
     }
 
     private func route(_ action: PendingAction) {
-        if app.settings.experimentalToolbarUI {
-            ui.dispatch(action)
-        } else {
-            ui.navigateForClassicFallback(action)
-        }
+        ui.dispatch(action)
     }
 
     private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
-        if app.settings.experimentalToolbarUI {
+        if app.settings.usesPanelNavigation {
             ui.toggleMorph(morph)
         } else {
             ui.navigate(to: section)
@@ -277,7 +273,7 @@ struct MenuBarContent: View {
 
     private func openSettings(to page: SettingsContent.SettingsPage) {
         ui.settingsPage = page
-        if app.settings.experimentalToolbarUI {
+        if app.settings.usesPanelNavigation {
             ui.openSettings(to: page)
         } else {
             ui.navigate(to: page == .registries ? .registries : .settings)

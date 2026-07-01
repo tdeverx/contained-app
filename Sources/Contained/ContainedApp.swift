@@ -200,15 +200,11 @@ struct ContainedApp: App {
     }
 
     private func route(_ action: PendingAction) {
-        if app.settings.experimentalToolbarUI {
-            ui.dispatch(action)
-        } else {
-            ui.navigateForClassicFallback(action)
-        }
+        ui.dispatch(action)
     }
 
     private func routePalette() {
-        if app.settings.experimentalToolbarUI {
+        if app.settings.usesPanelNavigation {
             ui.toggleMorph(.palette)
         } else {
             ui.navigate(to: .containers)
@@ -216,7 +212,7 @@ struct ContainedApp: App {
     }
 
     private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
-        if app.settings.experimentalToolbarUI {
+        if app.settings.usesPanelNavigation {
             ui.toggleMorph(morph)
         } else {
             ui.navigate(to: section)
@@ -225,7 +221,7 @@ struct ContainedApp: App {
 
     private func openSettings(to page: SettingsContent.SettingsPage = .appearance) {
         ui.settingsPage = page
-        if app.settings.experimentalToolbarUI {
+        if app.settings.usesPanelNavigation {
             ui.openSettings(to: page)
         } else {
             ui.navigate(to: page == .registries ? .registries : .settings)

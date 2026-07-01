@@ -143,7 +143,7 @@ struct ToolbarPageContextOptions: View {
     var body: some View {
         switch ui.selectedSection {
         case .containers:
-            ToolbarViewOptions()
+            EmptyView()
         case .images:
             GlassButton {
                 GlassButtonItem(systemName: "square.and.arrow.down", help: "Load Image Tar") {
@@ -207,23 +207,7 @@ struct ToolbarPageContextOptions: View {
                 }
             }
         case .activity:
-            @Bindable var ui = ui
             GlassButton {
-                Menu {
-                    Picker("Filter", selection: $ui.activityFilter) {
-                        Label("All events", systemImage: "tray.full").tag(EventKind?.none)
-                        Divider()
-                        ForEach(EventKind.allCases, id: \.self) { kind in
-                            Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
-                        }
-                    }
-                    .pickerStyle(.inline)
-                } label: {
-                    GlassButtonItem(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
-                                                                         : "line.3.horizontal.decrease.circle.fill",
-                                    help: ui.activityFilter == nil ? "Filter" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
-                }
-                .buttonStyle(.plain)
                 GlassButtonItem(systemName: "checkmark.circle", help: "Mark all read") {
                     app.historyStore.markAllEventsRead()
                 }
@@ -259,27 +243,38 @@ struct ToolbarPageContextOptions: View {
         return "\(groups.count) local · \(updates) update\(updates == 1 ? "" : "s")"
     }
 
-    private func contextLabel(symbol: String, title: String, subtitle: String) -> some View {
-        HStack(spacing: Tokens.Toolbar.searchIconGap) {
-            Image(systemName: symbol)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Text(subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+}
+
+struct ToolbarPageFilterOptions: View {
+    @Environment(UIState.self) private var ui
+
+    var body: some View {
+        switch ui.selectedSection {
+        case .containers:
+            ToolbarViewOptions()
+        case .activity:
+            @Bindable var ui = ui
+            GlassButton(singleItem: true) {
+                Menu {
+                    Picker("Filter", selection: $ui.activityFilter) {
+                        Label("All events", systemImage: "tray.full").tag(EventKind?.none)
+                        Divider()
+                        ForEach(EventKind.allCases, id: \.self) { kind in
+                            Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    GlassButtonItem(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
+                                                                         : "line.3.horizontal.decrease.circle.fill",
+                                    help: ui.activityFilter == nil ? "Filter Activity" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
+                }
+                .buttonStyle(.plain)
+                .menuStyle(.button)
+                .menuIndicator(.hidden)
             }
-            Image(systemName: "chevron.down")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
+        default:
+            EmptyView()
         }
-        .lineLimit(1)
-        .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
-        .frame(height: Tokens.Toolbar.buttonGroupHeight)
-        .contentShape(Rectangle())
     }
 }

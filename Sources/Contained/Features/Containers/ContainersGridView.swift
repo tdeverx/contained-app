@@ -179,7 +179,7 @@ struct ContainersGridView: View {
                         .padding(.horizontal, Tokens.Space.l)
                     }
                 }
-                .contentMargins(.vertical, Tokens.Toolbar.band, for: .scrollContent)
+                .contentMargins(.vertical, ui.toolbarUIEnabled ? 0 : Tokens.Toolbar.band, for: .scrollContent)
 
                 if detail != nil {
                     Color.clear

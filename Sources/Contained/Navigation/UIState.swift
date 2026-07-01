@@ -47,6 +47,7 @@ final class UIState {
     var selectedSection: AppSection = .containers
     var sidebarVisible = true
     var toolbarUIEnabled = false
+    var panelNavigationEnabled = false
     /// How the Containers page groups its cards (Network / Volume / Image / Flat) and orders them —
     /// driven by the top-left toolbar view-options control.
     var grouping: ContainerGrouping = .network
@@ -61,6 +62,7 @@ final class UIState {
     /// A one-shot action requested by menus or the command palette. `RootView` consumes global
     /// actions, while toolbar panels and the Containers page handle their local operations directly.
     var pendingAction: PendingAction?
+    var editSheetSnapshot: ContainerSnapshot?
 
     // MARK: Compatibility accessors
 
@@ -144,7 +146,7 @@ final class UIState {
     /// Open the Settings panel and navigate to a specific page in one call.
     func openSettings(to page: SettingsContent.SettingsPage) {
         settingsPage = page
-        guard toolbarUIEnabled else {
+        guard panelNavigationEnabled else {
             navigate(to: page == .registries ? .registries : .settings)
             return
         }
@@ -197,9 +199,12 @@ final class UIState {
 
     /// Run an action by opening the right creation page, morph panel, or global sheet.
     func dispatch(_ action: PendingAction) {
-        if !toolbarUIEnabled {
+        if !panelNavigationEnabled {
             switch action {
-            case .runContainer, .pullImage, .createVolume, .createNetwork, .build, .activityHistory:
+            case .runContainer:
+                presentCreate(RunSpec())
+                return
+            case .pullImage, .createVolume, .createNetwork, .build, .activityHistory:
                 navigateForClassicFallback(action)
                 return
             case .loadImage, .pruneImages, .registryLogin, .systemLogs:
@@ -227,16 +232,16 @@ final class UIState {
 
     /// Open the creation flow in the toolbar add morph at a specific page.
     func openCreationPanel(entry: CreationEntry = .menu, prefill spec: RunSpec? = nil, searchQuery: String = "") {
-        guard toolbarUIEnabled else {
+        guard panelNavigationEnabled else {
             switch entry {
+            case .menu, .chooser, .configure:
+                presentCreate(spec ?? RunSpec())
             case .network:
                 navigate(to: .networks)
             case .volume:
                 navigate(to: .volumes)
             case .search, .build:
                 navigate(to: .images)
-            default:
-                navigate(to: .containers)
             }
             return
         }
@@ -249,12 +254,16 @@ final class UIState {
     }
 
     func openCreationPanel(prefill spec: RunSpec) {
+        guard panelNavigationEnabled else {
+            presentCreate(spec)
+            return
+        }
         openCreationPanel(entry: .configure, prefill: spec)
     }
 
     func openCreationPanel(editing snapshot: ContainerSnapshot) {
-        guard toolbarUIEnabled else {
-            navigate(to: .containers)
+        guard panelNavigationEnabled else {
+            editSheetSnapshot = snapshot
             return
         }
         creationEntry = .configure
@@ -277,19 +286,19 @@ final class UIState {
     }
 
     func runImage(_ reference: String) {
-        guard toolbarUIEnabled else {
-            navigate(to: .images)
-            return
-        }
         var spec = RunSpec()
         spec.image = reference
+        guard panelNavigationEnabled else {
+            presentCreate(spec)
+            return
+        }
         prefillQueue = []
         openCreationPanel(prefill: spec)
     }
 
     func useTemplate(_ spec: RunSpec) {
-        guard toolbarUIEnabled else {
-            navigate(to: .templates)
+        guard panelNavigationEnabled else {
+            presentCreate(spec)
             return
         }
         prefillQueue = []

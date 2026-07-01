@@ -14,8 +14,12 @@ struct ExperimentalTab: View {
             PanelSection(header: "Experimental",
                          footer: "These features are still being refined. They're off by default; enable any you want to try. You can turn them back off at any time.") {
                 PanelToggleRow(title: "Toolbar-first UI",
-                               info: "Use the floating morph toolbar instead of the default sidebar and menu navigation.",
+                               info: "Show the floating app toolbar. Navigation and edit/create presentation are controlled separately below.",
                                isOn: $settings.experimentalToolbarUI)
+                PanelToggleRow(title: "Toolbar panel navigation",
+                               info: "Open create/edit flows and page utilities in toolbar morph panels. When off, access points use classic pages and sheets.",
+                               isOn: $settings.experimentalPanelNavigation)
+                    .disabled(!settings.experimentalToolbarUI)
                 PanelToggleRow(title: "Sidebar navigation",
                                info: "Keep the sidebar visible in either shell. Turn this off for a page-only layout.",
                                isOn: $settings.sidebarNavigationEnabled)

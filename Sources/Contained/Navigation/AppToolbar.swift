@@ -88,6 +88,7 @@ struct AppToolbar: View {
             settingsZone
             ToolbarPageSwitcher()
             Spacer(minLength: Tokens.Space.m)
+            ToolbarPageContextOptions()
             searchZone
         }
         .padding(.leading, Tokens.Toolbar.outerPadding)
@@ -142,7 +143,7 @@ struct AppToolbar: View {
     private var bottomToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             systemStatusButton
-            ToolbarPageContextOptions()
+            ToolbarPageFilterOptions()
             Spacer(minLength: Tokens.Space.m)
             bottomActionGroup
         }
@@ -153,7 +154,7 @@ struct AppToolbar: View {
     private var systemStatusButton: some View {
         GlassButton(singleItem: true) {
             GlassButtonItem(help: app.activity?.title ?? "System \(app.serviceLabel)", action: {
-                ui.toggleMorph(.system)
+                openSectionOrPanel(.system, morph: .system)
             }) {
                 if let activity = app.activity {
                     ActivityStatusView(activity: activity, style: .inline)
@@ -178,8 +179,8 @@ struct AppToolbar: View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             GlassButton {
                 GlassButtonItem(systemName: "plus", help: "Add") { ui.openCreationPanel() }
-                GlassButtonItem(systemName: "shippingbox", help: "Images") { ui.toggleMorph(.updates) }
-                GlassButtonItem(systemName: "bookmark", help: "Templates") { ui.toggleMorph(.templates) }
+                GlassButtonItem(systemName: "shippingbox", help: "Images") { openSectionOrPanel(.images, morph: .updates) }
+                GlassButtonItem(systemName: "bookmark", help: "Templates") { openSectionOrPanel(.templates, morph: .templates) }
                 ActivityToolbarButton()
             }
             .opacity(isBottomGroupMorphActive ? 0 : 1)
@@ -462,6 +463,14 @@ struct AppToolbar: View {
     private func closeToolbarImageDetail() {
         toolbarImageCloseRequestToken &+= 1
     }
+
+    private func openSectionOrPanel(_ section: AppSection, morph: UIState.ToolbarMorph) {
+        if ui.panelNavigationEnabled {
+            ui.toggleMorph(morph)
+        } else {
+            ui.navigate(to: section)
+        }
+    }
 }
 
 /// The Activity bell in the bottom toolbar cluster. Filled + accent-tinted when there are unread
@@ -476,7 +485,13 @@ private struct ActivityToolbarButton: View {
         let hasUnread = count > 0
         return GlassButtonItem(help: hasUnread ? "Activity — \(count) unread" : "Activity",
                                isIcon: true,
-                               action: { ui.toggleMorph(.activity) }) {
+                               action: {
+                                   if ui.panelNavigationEnabled {
+                                       ui.toggleMorph(.activity)
+                                   } else {
+                                       ui.navigate(to: .activity)
+                                   }
+                               }) {
             Image(systemName: hasUnread ? "bell.fill" : "bell")
                 .foregroundStyle(app.settings.accentTint.color)
         }

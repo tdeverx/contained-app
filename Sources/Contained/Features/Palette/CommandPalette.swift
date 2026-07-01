@@ -134,9 +134,7 @@ struct PaletteItem: Identifiable {
                                  kind: .container, icon: "arrow.down.circle", tint: .orange) {
             Task { await app.pullAvailableContainerImageUpdates() }
         })
-        // Maintenance actions. Load uses a native open panel and Prune a native confirmation; "System
-        // logs" opens the System morph page rather than a modal sheet. (Activity is reachable via the
-        // Activity navigation entry above, so it isn't duplicated here.)
+        // Maintenance actions. Load uses a native open panel and Prune a native confirmation.
         let pageActions: [(String, String, PendingAction)] = [
             ("Load image tar…", "square.and.arrow.down", .loadImage),
             ("Prune images…", "trash", .pruneImages),
@@ -149,7 +147,7 @@ struct PaletteItem: Identifiable {
         items.append(PaletteItem(title: "System logs", subtitle: "action",
                                  keywords: ["service", "runtime", "diagnostics"],
                                  kind: .action, icon: "text.alignleft", tint: .secondary) {
-            ui.toggleMorph(.system)
+            ui.dispatch(.systemLogs)
         })
         items.append(contentsOf: settingsItems(app: app, ui: ui))
         items.append(contentsOf: imageItems(app: app, ui: ui))

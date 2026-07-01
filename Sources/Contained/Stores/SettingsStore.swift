@@ -65,6 +65,9 @@ final class SettingsStore {
     var keyboardShortcutsEnabled: Bool { didSet { defaults.set(keyboardShortcutsEnabled, forKey: Keys.keyboardShortcutsEnabled) } }
     /// Toolbar-first morph UI. Off by default so the sidebar shell is the stable fresh-install path.
     var experimentalToolbarUI: Bool { didSet { defaults.set(experimentalToolbarUI, forKey: Keys.experimentalToolbarUI) } }
+    /// Route page/panel actions through toolbar morph panels instead of classic pages/sheets.
+    var experimentalPanelNavigation: Bool { didSet { defaults.set(experimentalPanelNavigation, forKey: Keys.experimentalPanelNavigation) } }
+    var usesPanelNavigation: Bool { experimentalToolbarUI && experimentalPanelNavigation }
     /// Classic-shell sidebar visibility. Separate from the toolbar toggle so users can keep the
     /// stable content shell but reclaim width when they want a page-only layout.
     var sidebarNavigationEnabled: Bool { didSet { defaults.set(sidebarNavigationEnabled, forKey: Keys.sidebarNavigationEnabled) } }
@@ -125,6 +128,7 @@ final class SettingsStore {
         imageBuildEnabled = defaults.object(forKey: Keys.imageBuildEnabled) as? Bool ?? false
         keyboardShortcutsEnabled = defaults.object(forKey: Keys.keyboardShortcutsEnabled) as? Bool ?? false
         experimentalToolbarUI = defaults.object(forKey: Keys.experimentalToolbarUI) as? Bool ?? false
+        experimentalPanelNavigation = defaults.object(forKey: Keys.experimentalPanelNavigation) as? Bool ?? false
         sidebarNavigationEnabled = defaults.object(forKey: Keys.sidebarNavigationEnabled) as? Bool ?? true
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
@@ -159,6 +163,7 @@ final class SettingsStore {
                        imageBuildEnabled: imageBuildEnabled,
                        keyboardShortcutsEnabled: keyboardShortcutsEnabled,
                        experimentalToolbarUI: experimentalToolbarUI,
+                       experimentalPanelNavigation: experimentalPanelNavigation,
                        sidebarNavigationEnabled: sidebarNavigationEnabled)
     }
 
@@ -192,6 +197,7 @@ final class SettingsStore {
         imageBuildEnabled = snapshot.imageBuildEnabled
         keyboardShortcutsEnabled = snapshot.keyboardShortcutsEnabled
         experimentalToolbarUI = snapshot.experimentalToolbarUI
+        experimentalPanelNavigation = snapshot.experimentalPanelNavigation
         sidebarNavigationEnabled = snapshot.sidebarNavigationEnabled
     }
 
@@ -233,6 +239,7 @@ final class SettingsStore {
         static let imageBuildEnabled = "experimental.imageBuild"
         static let keyboardShortcutsEnabled = "experimental.keyboardShortcuts"
         static let experimentalToolbarUI = "experimental.toolbarUI"
+        static let experimentalPanelNavigation = "experimental.panelNavigation"
         static let sidebarNavigationEnabled = "experimental.sidebarNavigation"
     }
 }
@@ -267,6 +274,7 @@ struct SettingsBackup: Codable, Equatable {
     var imageBuildEnabled: Bool
     var keyboardShortcutsEnabled: Bool
     var experimentalToolbarUI: Bool
+    var experimentalPanelNavigation: Bool
     var sidebarNavigationEnabled: Bool
 
     private enum CodingKeys: String, CodingKey {
@@ -275,7 +283,8 @@ struct SettingsBackup: Codable, Equatable {
         case imageUpdateIntervalHours, imageUpdateChecksEnabled, appUpdateChecksEnabled, autoRestartEnabled
         case notifyOnCrash, revealCLI, historyRetentionDays, loggingLevel, enabledLogDestinations
         case enabledLogCategories, updateChannel, commandPaletteEnabled, hubSearchEnabled
-        case composeImportEnabled, imageBuildEnabled, keyboardShortcutsEnabled, experimentalToolbarUI, sidebarNavigationEnabled
+        case composeImportEnabled, imageBuildEnabled, keyboardShortcutsEnabled, experimentalToolbarUI
+        case experimentalPanelNavigation, sidebarNavigationEnabled
     }
 
     init(accentTint: AppTint,
@@ -307,6 +316,7 @@ struct SettingsBackup: Codable, Equatable {
          imageBuildEnabled: Bool,
          keyboardShortcutsEnabled: Bool = false,
          experimentalToolbarUI: Bool,
+         experimentalPanelNavigation: Bool = false,
          sidebarNavigationEnabled: Bool = true) {
         self.accentTint = accentTint
         self.appearance = appearance
@@ -337,6 +347,7 @@ struct SettingsBackup: Codable, Equatable {
         self.imageBuildEnabled = imageBuildEnabled
         self.keyboardShortcutsEnabled = keyboardShortcutsEnabled
         self.experimentalToolbarUI = experimentalToolbarUI
+        self.experimentalPanelNavigation = experimentalPanelNavigation
         self.sidebarNavigationEnabled = sidebarNavigationEnabled
     }
 
@@ -374,6 +385,7 @@ struct SettingsBackup: Codable, Equatable {
         imageBuildEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageBuildEnabled) ?? false
         keyboardShortcutsEnabled = try container.decodeIfPresent(Bool.self, forKey: .keyboardShortcutsEnabled) ?? false
         experimentalToolbarUI = try container.decodeIfPresent(Bool.self, forKey: .experimentalToolbarUI) ?? false
+        experimentalPanelNavigation = try container.decodeIfPresent(Bool.self, forKey: .experimentalPanelNavigation) ?? false
         sidebarNavigationEnabled = try container.decodeIfPresent(Bool.self, forKey: .sidebarNavigationEnabled) ?? true
     }
 
@@ -408,6 +420,7 @@ struct SettingsBackup: Codable, Equatable {
         try container.encode(imageBuildEnabled, forKey: .imageBuildEnabled)
         try container.encode(keyboardShortcutsEnabled, forKey: .keyboardShortcutsEnabled)
         try container.encode(experimentalToolbarUI, forKey: .experimentalToolbarUI)
+        try container.encode(experimentalPanelNavigation, forKey: .experimentalPanelNavigation)
         try container.encode(sidebarNavigationEnabled, forKey: .sidebarNavigationEnabled)
     }
 }

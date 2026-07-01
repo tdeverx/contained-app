@@ -26,6 +26,9 @@ struct RootView: View {
         .sheet(isPresented: $ui.showRunSheet, onDismiss: { ui.prefillSpec = nil; ui.advancePrefillQueue() }) {
             ContainerEditSheet(mode: .new(prefill: ui.prefillSpec))
         }
+        .sheet(item: $ui.editSheetSnapshot) { snapshot in
+            ContainerEditSheet(mode: .edit(snapshot, onComplete: {}))
+        }
         .sheet(isPresented: downgradeBinding) {
             DowngradeDecisionView(schemaVersion: app.downgradeSchemaVersion ?? StateMigrator.currentSchemaVersion,
                                   onExportAndReset: { app.exportForDowngradeAndReset() },
@@ -85,10 +88,16 @@ struct RootView: View {
         .preferredColorScheme(settings.appearance.colorScheme)
         .onAppear { applyAppearance(settings.appearance) }
         .onAppear { ui.toolbarUIEnabled = settings.experimentalToolbarUI }
+        .onAppear { ui.panelNavigationEnabled = settings.usesPanelNavigation }
         .onChange(of: settings.appearance) { _, mode in applyAppearance(mode) }
         .onChange(of: settings.experimentalToolbarUI) { _, enabled in
             ui.toolbarUIEnabled = enabled
+            ui.panelNavigationEnabled = settings.usesPanelNavigation
             if !enabled { ui.activeMorph = nil }
+        }
+        .onChange(of: settings.experimentalPanelNavigation) { _, _ in
+            ui.panelNavigationEnabled = settings.usesPanelNavigation
+            if !settings.usesPanelNavigation { ui.activeMorph = nil }
         }
         .task {
             await app.bootstrapIfNeeded()
@@ -113,18 +122,23 @@ struct RootView: View {
             ZStack {
                 ContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
                 toolbarContent
-                    .ignoresSafeArea(.container, edges: .vertical)
+                    .padding(.top, AppToolbar.bandHeight)
+                    .padding(.bottom, AppToolbar.bandHeight)
+                    .environment(\.appSafeAreas, AppSafeAreaManager(system: EdgeInsets()))
             }
             // The app-wide toolbar draws up into the title-bar band; its morph panels center within the
             // content area.
-            .overlay { AppToolbar().ignoresSafeArea(.container, edges: .vertical) }
+            .overlay {
+                AppToolbar()
+                    .environment(\.appSafeAreas,
+                                  AppSafeAreaManager(system: EdgeInsets(),
+                                                     topToolbarHeight: AppToolbar.bandHeight,
+                                                     bottomToolbarHeight: AppToolbar.bandHeight))
+                    .ignoresSafeArea(.container, edges: .vertical)
+            }
             // Bypass AppKit's titlebar safe-area math for app content; our custom toolbar bands are the
             // source of truth so top and bottom spacing stay symmetrical. Applied here (outside the
             // overlay) so AppToolbar's morph panels also see the real band heights.
-            .environment(\.appSafeAreas,
-                         AppSafeAreaManager(system: EdgeInsets(),
-                                            topToolbarHeight: AppToolbar.bandHeight,
-                                            bottomToolbarHeight: AppToolbar.bandHeight))
         }
         // Right-click the empty background for the page's overflow actions (cards/rows keep their own
         // context menus, which take precedence). Double-click it to zoom the window — the gesture the
@@ -178,7 +192,7 @@ struct RootView: View {
     }
 
     private func openPaletteOrContainers() {
-        if app.settings.experimentalToolbarUI {
+        if app.settings.usesPanelNavigation {
             ui.toggleMorph(.palette)
         } else {
             ui.navigate(to: .containers)
@@ -186,7 +200,7 @@ struct RootView: View {
     }
 
     private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
-        if app.settings.experimentalToolbarUI {
+        if app.settings.usesPanelNavigation {
             ui.toggleMorph(morph)
         } else {
             ui.navigate(to: section)
