@@ -1,0 +1,18 @@
+# Default ownership for all repository changes.
+* @tdeverx
+
+# Core app areas.
+/Sources/ContainedCore/ @tdeverx
+/Sources/Contained/ @tdeverx
+/Tests/ @tdeverx
+
+# Repository operations.
+/.github/ @tdeverx
+/scripts/ @tdeverx
+/docs/ @tdeverx
+/CHANGELOG.md @tdeverx
+/Sources/Contained/Resources/CHANGELOG.md @tdeverx
+
+# Release channels and update feeds.
+/appcast.xml @tdeverx
+/VERSION @tdeverx

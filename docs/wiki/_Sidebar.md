@@ -19,5 +19,6 @@
 - Maintainers
   - [[Architecture]]
   - [[Design System|Design-System]]
-  - [[Contributing]]
   - [[Release]]
+- [[Contributing]]
+- [[Issues-and-Discussions]]

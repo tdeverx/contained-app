@@ -1,56 +1,74 @@
 name: Bug report
-description: Something isn't working as expected
+description: Something is not working as expected
 title: "[Bug]: "
-labels: ["bug"]
+labels: ["bug", "triage"]
 body:
   - type: markdown
     attributes:
-      value: Thanks for taking the time to file a bug! Please fill out the details below so it can be reproduced.
+      value: |
+        Thanks for taking the time to report this. A short, clear report is enough; fill in what you know and leave the rest blank.
+
   - type: textarea
-    id: what-happened
+    id: summary
     attributes:
       label: What happened?
-      description: A clear description of the bug, and what you expected instead.
-      placeholder: When I…, I expected…, but instead…
+      description: What did you try, what did you expect, and what happened instead?
+      placeholder: I tried to..., expected..., but...
     validations:
       required: true
+
   - type: textarea
-    id: repro
+    id: steps
     attributes:
       label: Steps to reproduce
+      description: A small repeatable path is ideal. If it only happened once, describe the flow as best you can.
       placeholder: |
-        1. Go to…
-        2. Click…
-        3. See…
+        1. Open...
+        2. Click...
+        3. See...
     validations:
-      required: true
+      required: false
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: How much does this block you?
+      placeholder: Blocks the task completely / annoying but workable / visual only / not sure
+    validations:
+      required: false
+
   - type: input
     id: app-version
     attributes:
       label: Contained version
-      description: From the menu bar — Contained ▸ About Contained.
-      placeholder: e.g. 1.0.0-beta.1 (build 21)
+      description: From Contained > About Contained, or the commit/branch if running from source.
+      placeholder: "1.0.0-nightly.88+c26d7b3"
     validations:
-      required: true
+      required: false
+
   - type: input
     id: macos
     attributes:
       label: macOS version
-      placeholder: e.g. macOS 26.0
+      placeholder: "macOS 26.0"
     validations:
-      required: true
+      required: false
+
   - type: input
     id: cli-version
     attributes:
-      label: container CLI version
-      description: Output of `container --version`.
-      placeholder: e.g. 1.0.0
+      label: Apple container CLI version
+      description: Output of `container --version`, if this touches container operations.
+      placeholder: "1.0.0"
     validations:
       required: false
+
   - type: textarea
     id: logs
     attributes:
-      label: Logs / screenshots
-      description: Any relevant log output or screenshots. "Reveal CLI" output is especially helpful.
+      label: Logs, screenshots, or Reveal CLI output
+      description: Paste only what you are comfortable sharing. Please remove tokens, private paths, and personal data.
+      render: text
     validations:
       required: false

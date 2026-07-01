@@ -1,0 +1,1 @@
+- Improved GitHub contributor setup with expanded issue templates, support/security files, discussion guidance, Dependabot configuration, and a PR workflow that still reports the required check for docs-only changes.

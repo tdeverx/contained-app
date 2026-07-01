@@ -1,0 +1,59 @@
+name: Crash report
+description: Contained quits, freezes, or shows a crash report
+title: "[Crash]: "
+labels: ["bug", "high", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Crash reports are extremely useful. Please remove anything private before posting logs.
+
+  - type: textarea
+    id: crash-summary
+    attributes:
+      label: What were you doing?
+      description: Describe the last few actions before the crash or freeze.
+      placeholder: I opened..., clicked..., then Contained...
+    validations:
+      required: true
+
+  - type: textarea
+    id: repeatability
+    attributes:
+      label: Can you make it happen again?
+      placeholder: Always / sometimes / only happened once / not sure
+    validations:
+      required: false
+
+  - type: textarea
+    id: crash-log
+    attributes:
+      label: Crash report or relevant log
+      description: Paste the top crashed thread and exception details, or attach the crash report.
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Contained version
+      placeholder: "1.0.0-nightly.88+c26d7b3"
+    validations:
+      required: false
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "macOS 26.0"
+    validations:
+      required: false
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Screenshots or extra context
+      description: Anything else that helps explain the crash.
+    validations:
+      required: false

@@ -1,8 +1,20 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 📖 Documentation (Wiki)
+  - name: Documentation (Wiki)
     url: https://github.com/tdeverx/contained-app/wiki
     about: Features, installation, and architecture.
-  - name: 🛠 Troubleshooting
+  - name: Troubleshooting
     url: https://github.com/tdeverx/contained-app/wiki/Troubleshooting
     about: Common issues and fixes — please check here before filing a bug.
+  - name: Help and Q&A
+    url: https://github.com/tdeverx/contained-app/discussions/categories/q-a
+    about: Setup help, usage questions, and unclear behavior that is not yet an actionable bug.
+  - name: Ideas and early proposals
+    url: https://github.com/tdeverx/contained-app/discussions/categories/ideas
+    about: Product ideas and rough proposals before they become tracked issues.
+  - name: Development and architecture
+    url: https://github.com/tdeverx/contained-app/discussions/30
+    about: Package boundaries, design-system direction, navigation, backend, release-process, and automation design.
+  - name: Show and tell
+    url: https://github.com/tdeverx/contained-app/discussions/categories/show-and-tell
+    about: Share what you are building or how you use Contained.

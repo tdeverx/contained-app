@@ -1,0 +1,64 @@
+name: Backend or runtime work
+description: Apple container, Docker compatibility, command abstraction, compose, or runtime behavior
+title: "[Backend]: "
+labels: ["feature", "backend", "triage"]
+body:
+  - type: textarea
+    id: runtime-area
+    attributes:
+      label: Runtime area
+      description: What backend, command, data model, or runtime behavior is involved?
+      placeholder: Apple container, Docker, compose, images, networks, volumes, command building...
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What capability or abstraction should exist when this is done?
+    validations:
+      required: true
+
+  - type: textarea
+    id: research-design
+    attributes:
+      label: Research / design checklist
+      description: What should be answered before implementation starts?
+      placeholder: |
+        - [ ] Inventory affected ContainerCommands and ContainerClient call sites
+        - [ ] Identify Apple container compatibility requirements
+        - [ ] Note Docker or future-backend differences
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation checklist
+      description: What likely needs to change?
+      placeholder: |
+        - [ ] Keep CLI actions behind ContainerCommands and ContainerClient
+        - [ ] Put pure decisions in ContainedCore
+        - [ ] Add focused tests
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Existing Apple container behavior stays compatible
+        - [ ] SwiftUI does not assemble backend argv inline
+        - [ ] Unsupported backend capabilities are handled clearly
+    validations:
+      required: false
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related links, blockers, or compatibility notes
+      description: Issues, docs, commands, migration concerns, backend-specific notes, known blockers, or a suggested milestone.
+    validations:
+      required: false

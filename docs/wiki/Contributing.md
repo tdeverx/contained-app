@@ -2,6 +2,51 @@
 
 Forks, issues, and pull requests are welcome. Contained is **source-available** under the [PolyForm Noncommercial License 1.0.0](https://github.com/tdeverx/contained-app/blob/main/LICENSE) — contributions are accepted under those same non-commercial terms, and the "Contained" name and branding are reserved (see [NOTICE](https://github.com/tdeverx/contained-app/blob/main/NOTICE)).
 
+## Issues And Discussions
+
+Start with the [wiki](https://github.com/tdeverx/contained-app/wiki), then choose
+the place that fits:
+
+- Use **Discussions Q&A** for setup help, usage questions, and unclear behavior
+  that is not yet an actionable bug.
+- Use **Ideas** for early product thoughts before there is a concrete task.
+- Use the **Development and architecture** starter thread in General for package
+  boundaries, design-system direction, navigation strategy, backend choices,
+  release process, and automation design until GitHub category setup is
+  customized further.
+- Use **Issues** for bugs, crashes, accepted features, exploration tasks,
+  architecture tasks, and implementation checklists.
+
+Blank issues are disabled. Use the closest issue form so reports stay readable
+and easy to triage. See [[Issues-and-Discussions]] for examples.
+
+For feature, architecture, backend, navigation, design-system, and exploration
+work, issues should include a short goal or context, a research/design checklist,
+an implementation checklist, and acceptance criteria. Bug and crash forms stay
+lighter so reports are not intimidating; maintainers can add implementation
+checklists after triage.
+
+Labels are intentionally short and color-coded. Use one type label (`bug`,
+`feature`, or `other`), add neutral area labels such as `app`, `core`,
+`design`, `navigation`, `backend`, `docker`, `release`, or `repo`, then add a
+status like `triage`, `planned`, `backlog`, `up-next`, `in-progress`,
+`needs-info`, `needs-design`, `released`, `blocked`, or `wont-fix`. Broad
+changes to old issues should be previewed before they are applied. Issue bodies
+should only be rewritten by maintainers or when the original reporter has
+explicitly allowed it.
+
+Use native GitHub relationships for hard sequencing: parent/sub-issues for work
+breakdown, and blocked-by/blocking links when one issue genuinely cannot move
+until another issue is resolved. Keep softer context as plain related links.
+Milestones are target buckets: `beta` for work expected before the next beta,
+`stable` for the first stable-release bar, and `future` for accepted but
+unscheduled or post-beta work.
+
+Release branches (`nightly`, `beta`, and `stable`) are protected against
+deletion and force-pushes. Normal work should move through pull requests. A full
+required-PR/check rule still needs a release-bot-safe bypass before it can be
+enforced without breaking appcast publishing.
+
 ## Layout
 
 ```
@@ -34,8 +79,14 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Write release notes at the right level.** Put version-wide notes under the base version section, such as `## [1.0.0]`. Put channel/build changes under `Unreleased`, `## [nightly]`, `## [beta]`, or split them into `CHANGES_DIR` fragments. Prefer one fragment per PR/user-facing change under `changes/unreleased/` over one file per commit. `scripts/collect-changes.sh` can compile those fragments for a directory or git range. When no explicit `CHANGES`/`CHANGES_DIR` source is provided, Beta/Nightly notes first try the previous matching appcast item plus the changelog/change-fragment git delta, then fall back to channel sections. Stable ships full notes only; Beta/Nightly ship channel changes plus full notes.
 - **Let CI check invariants, not fix them.** `scripts/ci-validate.sh` checks bundled changelog sync, shell syntax, workflow YAML syntax, Stable/Beta/Nightly release-note ordering, and PR release-note coverage when given a base ref. If `CHANGELOG.md` changes, run `./scripts/sync-changelog-resource.sh` locally and commit the bundled resource; CI uses `--check` so drift fails loudly.
 - **Use `no-release-note` narrowly.** PR CI accepts the label only through `NO_RELEASE_NOTE=1`; reserve it for docs/meta-only work that does not change shipped behavior, scripts, workflows, tests, or source.
+- **Use `wiki-approved` for direct wiki-impacting changes only when a maintainer has reviewed the docs impact.** The wiki sync automation prototype is tracked separately in issue #26 and should not be assumed to exist until that issue is resolved.
 
 ## Before a PR
+
+Link a tracked issue when the PR changes user-facing behavior, architecture,
+runtime/backend behavior, release/workflow policy, security/auth/networking, or
+anything that needed design/research. Tiny docs fixes, dependency bumps, typo
+fixes, and direct review follow-ups can skip the issue when the PR explains why.
 
 ```sh
 ./scripts/ci-validate.sh                       # release/workflow invariants

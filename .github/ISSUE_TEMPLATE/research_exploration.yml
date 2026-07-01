@@ -1,0 +1,73 @@
+name: Exploration or decision
+description: Investigate an idea, technical option, API, or design direction
+title: "[Explore]: "
+labels: ["other", "needs-design"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question to answer
+      description: What decision should this exploration help us make?
+      placeholder: Should Contained...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why does this matter now?
+    validations:
+      required: false
+
+  - type: textarea
+    id: exploration-tasks
+    attributes:
+      label: Research / design checklist
+      placeholder: |
+        - [ ] Review...
+        - [ ] Compare...
+        - [ ] Summarize tradeoffs...
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation checklist
+      description: What follow-up work should happen if the recommendation is accepted?
+      placeholder: |
+        - [ ] Post the recommendation and tradeoffs
+        - [ ] Create or update follow-up implementation issues
+        - [ ] Update docs/wiki if policy or workflow changes
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What would make the exploration complete?
+      placeholder: |
+        - [ ] Recommendation is clear
+        - [ ] Risks and alternatives are documented
+        - [ ] Next step is filed, linked, or explicitly rejected
+    validations:
+      required: false
+
+  - type: textarea
+    id: sources
+    attributes:
+      label: Known sources, links, or blockers
+      description: Include docs, issues, examples, prior discussions, known blockers, or a suggested milestone if available.
+    validations:
+      required: false
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Expected output
+      description: What should the final comment or follow-up issue contain?
+      placeholder: Recommendation, links, risks, next implementation issue...
+    validations:
+      required: false

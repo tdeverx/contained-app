@@ -2,15 +2,27 @@
 
 - 
 
-## Checks
+## Linked Issue
 
+- Closes #
+- No linked issue because:
+- [ ] This PR links an issue, or explains why one is not needed
+
+## Change Type
+
+- [ ] App/UI behavior
+- [ ] Core/runtime logic
+- [ ] Release, workflow, or script behavior
+- [ ] Docs, issue templates, or repository metadata only
+
+## Validation
+
+- [ ] `git diff --check`
 - [ ] `./scripts/ci-validate.sh`
-- [ ] `./scripts/test-release-scripts.sh`
 - [ ] `swift build`
 - [ ] `swift test`
-- [ ] `git diff --check`
 - [ ] UI/app changes smoke-tested with `./scripts/bundle.sh debug`
-- [ ] Script/workflow changes covered by `./scripts/ci-validate.sh` and relevant fixture/validator scripts
+- [ ] Release/script changes covered by `./scripts/test-release-scripts.sh` and relevant validators
 
 ## Release Notes And Docs
 
@@ -20,7 +32,11 @@
 
 ## Update Safety
 
-- [ ] Did not compute build numbers outside `scripts/version-info.sh`
-- [ ] Did not remove Nightly's ability to receive promoted Beta/Stable appcast items
-- [ ] Did not introduce generated-file commits that can trigger release loops
-- [ ] Bundle/appcast changes were validated with `scripts/validate-bundle.sh` / `scripts/validate-appcast.sh`
+- [ ] Build numbers still come only from `scripts/version-info.sh`
+- [ ] Nightly can still receive promoted Beta/Stable appcast items
+- [ ] Generated appcast commits still use `[skip ci]` and do not trigger release loops
+- [ ] Bundle/appcast changes were validated with `scripts/validate-bundle.sh` and `scripts/validate-appcast.sh`
+
+## Notes For Reviewers
+
+-
