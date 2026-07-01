@@ -29,6 +29,12 @@ Release workflows only commit root `appcast.xml` back to channel branches.
 Those appcast-only commits are path-ignored and marked `[skip ci]` to avoid
 release loops.
 
+CI validates generated appcasts before those commits. The validator requires a
+numeric Sparkle build number, a short version, an enclosure URL, and embedded or
+linked release notes. Stable feeds reject Beta/Nightly short versions, Beta feeds
+require Beta short versions, and Nightly feeds allow all three channels because
+Nightly users should receive promoted builds without switching channels.
+
 Fresh installs default to Nightly during pre-1.0 development.
 
 ## Release notes
@@ -51,6 +57,8 @@ Generated notes follow the channel:
 `scripts/ci-validate.sh` checks that ordering before CI builds, and
 `scripts/sync-changelog-resource.sh --check` fails when the bundled in-app
 changelog resource has drifted from the root `CHANGELOG.md`.
+PR CI also requires material source/script/workflow changes to include a release
+note or change fragment unless the PR is explicitly labeled `no-release-note`.
 
 ## Image updates
 

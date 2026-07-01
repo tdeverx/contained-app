@@ -50,8 +50,10 @@ jobs:
         run: |
           set -euo pipefail
           ./scripts/ci-validate.sh
+          ./scripts/test-release-scripts.sh
           swift build -c release
           swift test
+          ./scripts/check-generated-clean.sh
 
       - name: Bundle (ad-hoc signed) + DMG
         run: |
@@ -67,6 +69,8 @@ jobs:
             echo "VERSION=${VERSION}"
           } >> "$GITHUB_ENV"
           CHANNEL=nightly BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
+          VERSION="${VERSION}" BUILD="${BUILD}" ./scripts/validate-bundle.sh Contained.app
+          ./scripts/check-generated-clean.sh
           mkdir -p updates
           brew install create-dmg
           ./scripts/make-dmg.sh nightly Contained.app "updates/Contained-${VERSION}.dmg"
@@ -99,6 +103,7 @@ jobs:
             DOWNLOAD_PREFIX="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/" \
             ./scripts/appcast.sh "$BIN" updates
           [ -s "$PREVIOUS_APPCAST" ] && ./scripts/promote-appcast-to-nightly.sh --non-nightly-only "$PREVIOUS_APPCAST" appcast.xml
+          CHANNEL=nightly ./scripts/validate-appcast.sh appcast.xml
           rm -f "$KEYFILE"
           rm -f "$PREVIOUS_APPCAST"
           git config user.name  "github-actions[bot]"

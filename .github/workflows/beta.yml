@@ -59,8 +59,10 @@ jobs:
         run: |
           set -euo pipefail
           ./scripts/ci-validate.sh
+          ./scripts/test-release-scripts.sh
           swift build -c release
           swift test
+          ./scripts/check-generated-clean.sh
 
       - name: Bundle (ad-hoc signed) + DMG
         if: steps.guard.outputs.build == 'true'
@@ -78,6 +80,8 @@ jobs:
             echo "VERSION=${VERSION}"
           } >> "$GITHUB_ENV"
           CHANNEL=beta BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
+          VERSION="${VERSION}" BUILD="${BUILD}" ./scripts/validate-bundle.sh Contained.app
+          ./scripts/check-generated-clean.sh
           mkdir -p updates
           brew install create-dmg
           ./scripts/make-dmg.sh beta Contained.app "updates/Contained-${VERSION}.dmg"
@@ -116,6 +120,7 @@ jobs:
           ED_KEY_FILE="$KEYFILE" \
             DOWNLOAD_PREFIX="https://github.com/tdeverx/contained-app/releases/download/v${VERSION}/" \
             ./scripts/appcast.sh "$BIN" updates
+          CHANNEL=beta ./scripts/validate-appcast.sh appcast.xml
           rm -f "$KEYFILE"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -136,6 +141,7 @@ jobs:
           ./scripts/promote-appcast-to-nightly.sh "$PROMOTED_APPCAST" "$NIGHTLY_WORKTREE/appcast.xml"
           (
             cd "$NIGHTLY_WORKTREE"
+            CHANNEL=nightly "$GITHUB_WORKSPACE/scripts/validate-appcast.sh" appcast.xml
             git config user.name  "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add appcast.xml

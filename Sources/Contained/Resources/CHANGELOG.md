@@ -148,6 +148,9 @@
 - **CI validation guardrail**: Added `scripts/ci-validate.sh` for bundled changelog drift, shell
   syntax, workflow YAML syntax, and Stable/Beta/Nightly release-note ordering; PR and release
   workflows now fail on drift instead of rewriting tracked resources in CI.
+- **CI strengthening pass**: Added PR release-note enforcement, release-script fixture coverage,
+  generated-file drift checks, bundle validation, appcast validation, and the
+  `CONTAINED_DEBUG_TOOLS` debug-only compile flag so diagnostics can stay out of release bundles.
 - **Release workflow rerun safety**: Beta and Stable workflows now update existing GitHub releases
   on reruns, and local `scripts/release.sh` defaults to the Stable channel to avoid accidentally
   cutting a stable version with nightly assets.

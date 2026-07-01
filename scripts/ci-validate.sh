@@ -4,6 +4,33 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+base_ref=""
+head_ref="HEAD"
+require_release_note=false
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --base-ref)
+      base_ref="${2:-}"
+      [ -n "$base_ref" ] || { echo "✗ --base-ref requires a value" >&2; exit 1; }
+      shift 2
+      ;;
+    --head-ref)
+      head_ref="${2:-}"
+      [ -n "$head_ref" ] || { echo "✗ --head-ref requires a value" >&2; exit 1; }
+      shift 2
+      ;;
+    --require-release-note)
+      require_release_note=true
+      shift
+      ;;
+    *)
+      echo "Usage: $0 [--base-ref <ref>] [--head-ref <ref>] [--require-release-note]" >&2
+      exit 1
+      ;;
+  esac
+done
+
 fail() {
   echo "✗ $*" >&2
   exit 1
@@ -50,5 +77,10 @@ nightly_full_line="$(printf '%s\n' "$nightly_notes" | first_line_matching '^## F
 [ -n "$nightly_changes_line" ] || fail "nightly release notes are missing Changes Since Last Nightly"
 [ -n "$nightly_full_line" ] || fail "nightly release notes are missing Full Release Notes"
 [ "$nightly_changes_line" -lt "$nightly_full_line" ] || fail "nightly changes must appear before full release notes"
+
+if $require_release_note; then
+  echo "▸ Checking PR release-note coverage…"
+  BASE_REF="$base_ref" HEAD_REF="$head_ref" ./scripts/require-release-note.sh
+fi
 
 echo "✓ CI validation passed."

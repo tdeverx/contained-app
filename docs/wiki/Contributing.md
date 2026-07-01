@@ -26,16 +26,19 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **No `contained.*` personalization labels.** Card styles and healthchecks live in local stores. Only `contained.restart` and `contained.stack` are written (they must round-trip through the container).
 - **Never put secrets or personal data in test fixtures.** Fixtures are captured CLI output — scrub tokens, domains, and paths before committing. (`.gitignore` blocks signing material; push protection is on.)
 - **Match the surrounding style** — comment density, naming, Liquid Glass idioms. Prefer shared primitives such as `PanelHeader`, `PanelSection`, `MorphPanelScaffold`, `ResourceGlassCard`, `CommandPreviewBar`, and `Tokens`.
+- **Gate debug-only tools at compile time.** Use `#if CONTAINED_DEBUG_TOOLS` for debug menus, diagnostics, fixtures, or local-only inspection surfaces. SwiftPM defines that flag only for debug builds, so release bundles exclude the code instead of merely hiding it at runtime.
 - **Keep the sidebar fallback working.** Toolbar-first UI and toolbar panel navigation are experimental gates, not replacements for the classic shell.
 - **Sync docs with behavior.** If behavior, settings, routes, or user-facing wording changes, update the matching page under `docs/wiki` and keep README links current.
 - **Preserve update build numbers.** `scripts/version-info.sh` is the single build-number source of truth; beta/stable workflows must pass the retained `BUILD` into `scripts/bundle.sh` and merge promoted appcast items into the nightly feed.
 - **Write release notes at the right level.** Put version-wide notes under the base version section, such as `## [1.0.0]`. Put channel/build changes under `Unreleased`, `## [nightly]`, `## [beta]`, or split them into `CHANGES_DIR` fragments. Prefer one fragment per PR/user-facing change under `changes/unreleased/` over one file per commit. `scripts/collect-changes.sh` can compile those fragments for a directory or git range. Stable ships full notes only; Beta/Nightly ship channel changes plus full notes.
-- **Let CI check invariants, not fix them.** `scripts/ci-validate.sh` checks bundled changelog sync, shell syntax, workflow YAML syntax, and Stable/Beta/Nightly release-note ordering. If `CHANGELOG.md` changes, run `./scripts/sync-changelog-resource.sh` locally and commit the bundled resource; CI uses `--check` so drift fails loudly.
+- **Let CI check invariants, not fix them.** `scripts/ci-validate.sh` checks bundled changelog sync, shell syntax, workflow YAML syntax, Stable/Beta/Nightly release-note ordering, and PR release-note coverage when given a base ref. If `CHANGELOG.md` changes, run `./scripts/sync-changelog-resource.sh` locally and commit the bundled resource; CI uses `--check` so drift fails loudly.
+- **Use `no-release-note` narrowly.** PR CI accepts the label only through `NO_RELEASE_NOTE=1`; reserve it for docs/meta-only work that does not change shipped behavior, scripts, workflows, tests, or source.
 
 ## Before a PR
 
 ```sh
 ./scripts/ci-validate.sh                       # release/workflow invariants
+./scripts/test-release-scripts.sh              # release script fixtures
 swift build && swift test                     # must be green
 git diff --check                              # no whitespace damage
 ./scripts/bundle.sh debug && open Contained.app # smoke-test the screens you touched
