@@ -52,6 +52,7 @@ final class UIState {
     var grouping: ContainerGrouping = .network
     var sort: ContainerSort = .name
     var activityFilter: EventKind? = nil
+    var systemPage: SystemContent.SystemPage = .engine
 
     /// When set, `SettingsContent` will switch to this page as soon as it appears / becomes active.
     /// Cleared by `SettingsContent` after it consumes the value.

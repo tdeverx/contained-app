@@ -145,131 +145,108 @@ struct ToolbarPageContextOptions: View {
         case .containers:
             ToolbarViewOptions()
         case .images:
-            ToolbarGlassMenuButton {
-                Button {
+            GlassButton {
+                GlassButtonItem(systemName: "square.and.arrow.down", help: "Load Image Tar") {
                     ui.dispatch(.loadImage)
-                } label: {
-                    Label("Load Image Tar", systemImage: "square.and.arrow.down")
                 }
-                Button {
+                GlassButtonItem(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
                     Task { await app.runImageUpdateSweepNow() }
-                } label: {
-                    Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
                 }
-                Divider()
-                Button(role: .destructive) {
+                GlassButtonItem(systemName: "trash", role: .destructive, help: "Prune Images") {
                     ui.dispatch(.pruneImages)
-                } label: {
-                    Label("Prune Images", systemImage: "trash")
                 }
-            } labelContent: {
-                contextLabel(symbol: "square.stack.3d.up",
-                             title: "Images",
-                             subtitle: imagesSubtitle)
             }
+            .help(imagesSubtitle)
         case .networks:
-            ToolbarGlassMenuButton {
-                Button {
+            GlassButton {
+                GlassButtonItem(systemName: "plus", help: "New Network") {
                     ui.dispatch(.createNetwork)
-                } label: {
-                    Label("New Network", systemImage: "plus")
                 }
-                Button {
+                GlassButtonItem(systemName: "arrow.clockwise", help: "Refresh Networks") {
                     Task { await app.refreshNetworks() }
-                } label: {
-                    Label("Refresh Networks", systemImage: "arrow.clockwise")
                 }
-            } labelContent: {
-                contextLabel(symbol: "network",
-                             title: "Networks",
-                             subtitle: "\(app.networks.count) total")
             }
+            .help("\(app.networks.count) network\(app.networks.count == 1 ? "" : "s")")
         case .volumes:
-            ToolbarGlassMenuButton {
-                Button {
+            GlassButton {
+                GlassButtonItem(systemName: "plus", help: "New Volume") {
                     ui.dispatch(.createVolume)
-                } label: {
-                    Label("New Volume", systemImage: "plus")
                 }
-                Button {
+                GlassButtonItem(systemName: "arrow.clockwise", help: "Refresh Volumes") {
                     Task { await app.refreshSystemResources() }
-                } label: {
-                    Label("Refresh Volumes", systemImage: "arrow.clockwise")
                 }
-            } labelContent: {
-                contextLabel(symbol: "externaldrive",
-                             title: "Volumes",
-                             subtitle: "\(app.volumes.count) total")
             }
+            .help("\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")")
         case .system:
-            ToolbarGlassMenuButton {
-                Button {
-                    app.coordinator.wake()
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
+            HStack(spacing: Tokens.Toolbar.groupSpacing) {
+                GlassButton {
+                    if app.serviceHealthy {
+                        GlassButtonItem(systemName: "stop.fill", role: .destructive, help: "Stop service") {
+                            Task { await app.stopService() }
+                        }
+                    } else {
+                        GlassButtonItem(systemName: "play.fill", help: "Start service") {
+                            Task { await app.startService() }
+                        }
+                    }
+                    GlassButtonItem(systemName: "arrow.clockwise", help: "Restart service") {
+                        Task { await app.restartService() }
+                    }
                 }
-                Button {
-                    ui.dispatch(.systemLogs)
-                } label: {
-                    Label("System Logs", systemImage: "text.alignleft")
+                GlassButton {
+                    ForEach(SystemContent.SystemPage.allCases) { page in
+                        GlassButtonItem(help: page.rawValue, isIcon: true, action: { ui.systemPage = page }) {
+                            Image(systemName: page.systemImage)
+                                .foregroundStyle(Color.white)
+                                .opacity(ui.systemPage == page ? 1 : 0.62)
+                        }
+                    }
+                    GlassButtonItem(systemName: "text.alignleft", help: "System Logs") {
+                        ui.dispatch(.systemLogs)
+                    }
                 }
-            } labelContent: {
-                contextLabel(symbol: "gearshape.2",
-                             title: "System",
-                             subtitle: app.serviceLabel)
             }
         case .activity:
             @Bindable var ui = ui
-            ToolbarGlassMenuButton {
-                Picker("Filter", selection: $ui.activityFilter) {
-                    Label("All events", systemImage: "tray.full").tag(EventKind?.none)
-                    Divider()
-                    ForEach(EventKind.allCases, id: \.self) { kind in
-                        Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
+            GlassButton {
+                Menu {
+                    Picker("Filter", selection: $ui.activityFilter) {
+                        Label("All events", systemImage: "tray.full").tag(EventKind?.none)
+                        Divider()
+                        ForEach(EventKind.allCases, id: \.self) { kind in
+                            Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
+                        }
                     }
+                    .pickerStyle(.inline)
+                } label: {
+                    GlassButtonItem(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
+                                                                         : "line.3.horizontal.decrease.circle.fill",
+                                    help: ui.activityFilter == nil ? "Filter" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
                 }
-                .pickerStyle(.inline)
-                Divider()
-                Button {
+                .buttonStyle(.plain)
+                GlassButtonItem(systemName: "checkmark.circle", help: "Mark all read") {
                     app.historyStore.markAllEventsRead()
-                } label: {
-                    Label("Mark All Read", systemImage: "checkmark.circle")
                 }
-                Button(role: .destructive) {
+                GlassButtonItem(systemName: "trash", role: .destructive, help: "Clear activity") {
                     app.historyStore.clearEvents()
-                } label: {
-                    Label("Clear Activity", systemImage: "trash")
                 }
-            } labelContent: {
-                contextLabel(symbol: ui.activityFilter == nil ? "bell" : "line.3.horizontal.decrease.circle.fill",
-                             title: "Activity",
-                             subtitle: ui.activityFilter?.rawValue.capitalized ?? "All events")
             }
         case .registries:
-            ToolbarGlassMenuButton {
-                Button {
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "person.badge.key", help: "Registry Login") {
                     ui.dispatch(.registryLogin)
-                } label: {
-                    Label("Registry Login", systemImage: "person.badge.key")
                 }
-            } labelContent: {
-                contextLabel(symbol: "key",
-                             title: "Registries",
-                             subtitle: "Credentials")
             }
         case .settings:
-            ToolbarGlassMenuButton {
+            GlassButton {
                 ForEach(SettingsContent.SettingsPage.allCases) { page in
-                    Button {
+                    GlassButtonItem(help: page.rawValue, isIcon: true, action: {
                         ui.openSettings(to: page)
-                    } label: {
-                        Label(page.rawValue, systemImage: page.systemImage)
+                    }) {
+                        Image(systemName: page.systemImage)
+                            .foregroundStyle(Color.white)
                     }
                 }
-            } labelContent: {
-                contextLabel(symbol: "gearshape",
-                             title: "Settings",
-                             subtitle: ui.settingsPage?.rawValue ?? "Sections")
             }
         case .templates:
             EmptyView()

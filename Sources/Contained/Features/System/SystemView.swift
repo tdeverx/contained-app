@@ -46,6 +46,18 @@ struct SystemContent: View {
         showClose || !ui.toolbarUIEnabled
     }
 
+    private var activePage: SystemPage {
+        ui.toolbarUIEnabled && !showClose ? ui.systemPage : page
+    }
+
+    private func setPage(_ item: SystemPage) {
+        if ui.toolbarUIEnabled && !showClose {
+            ui.systemPage = item
+        } else {
+            page = item
+        }
+    }
+
     init(initialPage: SystemPage = .engine,
          showClose: Bool = true,
          elevated: Bool = true,
@@ -104,7 +116,7 @@ struct SystemContent: View {
             }
         } content: {
             VStack(alignment: .leading, spacing: Tokens.Space.l) {
-                switch page {
+                switch activePage {
                 case .engine: engineStatusCard
                 case .automation: automationCard
                 case .volumes: volumesCard
@@ -140,7 +152,7 @@ struct SystemContent: View {
     private var header: some View {
         PanelHeader(symbol: "gearshape.2",
                     title: "System",
-                    subtitle: page.subtitle) {
+                    subtitle: activePage.subtitle) {
             HStack(spacing: Tokens.Toolbar.groupSpacing) {
                 engineControls
                 GlassButton {
@@ -157,10 +169,10 @@ struct SystemContent: View {
     @ViewBuilder
     private var pageButtons: some View {
         ForEach(SystemPage.allCases) { item in
-            GlassButtonItem(help: item.rawValue, isIcon: true, action: { page = item }) {
+            GlassButtonItem(help: item.rawValue, isIcon: true, action: { setPage(item) }) {
                 Image(systemName: item.systemImage)
                     .foregroundStyle(Color.white)
-                    .opacity(page == item ? 1 : 0.62)
+                    .opacity(activePage == item ? 1 : 0.62)
             }
         }
     }
