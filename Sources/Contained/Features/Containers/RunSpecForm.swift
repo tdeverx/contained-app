@@ -281,6 +281,16 @@ struct RunSpecForm: View {
                 if spec.personalization.gradient {
                     GradientAngleControl(angle: $spec.personalization.gradientAngle)
                 }
+                PanelRow(title: "Blend mode",
+                         info: "Controls how the card color wash blends with the glass behind it.") {
+                    Picker("", selection: $spec.personalization.backgroundBlendMode) {
+                        ForEach(ColorLayerBlendMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
             }
         }
     }

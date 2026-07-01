@@ -11,6 +11,17 @@ private extension EnvironmentValues {
     }
 }
 
+struct GlassButtonTintStyle: Equatable, Sendable {
+    var enabled = false
+    var tint: AppTint = .multicolor
+    var opacity = 0.18
+    var gradient = true
+    var gradientAngle = 135.0
+    var blendMode: ColorLayerBlendMode = .softLight
+
+    static let disabled = GlassButtonTintStyle()
+}
+
 /// A reusable glass button item: an icon or text button with the shared 28pt inner height and 4pt
 /// padding. Place it inside `GlassButton` to get the full 36pt glass capsule.
 struct GlassButtonItem<Label: View>: View {
@@ -127,8 +138,10 @@ struct GlassButton<Content: View>: View {
 
     @State private var hovering = false
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.buttonTintStyle) private var tintStyle
 
     var body: some View {
+        let shape = Capsule(style: .continuous)
         HStack(spacing: spacing) { content() }
             .padding(.horizontal, Tokens.Toolbar.iconInnerPadding)
             .frame(height: height)
@@ -145,7 +158,31 @@ struct GlassButton<Content: View>: View {
             }
             .environment(\.glassButtonItemHoverEnabled, !singleItem && interactive)
             .onHover { if interactive { hovering = $0 } }
-            .toolbarControlMaterial(in: Capsule())
+            .background { tintLayer(in: shape) }
+            .toolbarControlMaterial(in: shape)
             .animation(.spring(response: 0.18, dampingFraction: 0.82), value: hovering)
+    }
+
+    @ViewBuilder
+    private func tintLayer(in shape: Capsule) -> some View {
+        if tintStyle.enabled {
+            shape
+                .fill(tintFillStyle(tintStyle.tint.color))
+                .blendMode(tintStyle.blendMode.blendMode)
+                .clipShape(shape)
+        }
+    }
+
+    private func tintFillStyle(_ color: Color) -> AnyShapeStyle {
+        if tintStyle.gradient {
+            let radians = tintStyle.gradientAngle * .pi / 180
+            let dx = cos(radians) / 2
+            let dy = sin(radians) / 2
+            return AnyShapeStyle(LinearGradient(
+                colors: [color.opacity(tintStyle.opacity * 1.35), color.opacity(tintStyle.opacity * 0.4)],
+                startPoint: UnitPoint(x: 0.5 - dx, y: 0.5 - dy),
+                endPoint: UnitPoint(x: 0.5 + dx, y: 0.5 + dy)))
+        }
+        return AnyShapeStyle(color.opacity(tintStyle.opacity))
     }
 }

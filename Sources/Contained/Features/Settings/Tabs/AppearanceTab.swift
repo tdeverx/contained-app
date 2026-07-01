@@ -44,6 +44,35 @@ struct AppearanceTab: View {
                          info: "Changes toolbar glass buttons and grouped icon controls.") {
                     materialMenu($settings.buttonMaterial)
                 }
+                PanelToggleRow(title: "Tint button glass",
+                               info: "Adds a color wash inside toolbar glass buttons.",
+                               isOn: $settings.buttonTintEnabled)
+                if settings.buttonTintEnabled {
+                    PanelRow(title: "Button tint") {
+                        TintSelector(selection: $settings.buttonTint)
+                    }
+                    PanelRow(title: "Button tint opacity") {
+                        HStack(spacing: Tokens.Space.s) {
+                            Slider(value: $settings.buttonTintOpacity, in: 0.05...0.6).frame(width: 140)
+                            Text(Format.percent(settings.buttonTintOpacity))
+                                .monospacedDigit()
+                                .frame(width: Tokens.FormWidth.shortReadout)
+                        }
+                    }
+                    PanelToggleRow(title: "Button tint gradient", isOn: $settings.buttonTintGradient)
+                    if settings.buttonTintGradient {
+                        GradientAngleControl(angle: $settings.buttonTintGradientAngle)
+                    }
+                    PanelRow(title: "Button tint blend mode") {
+                        Picker("", selection: $settings.buttonTintBlendMode) {
+                            ForEach(ColorLayerBlendMode.allCases) { mode in
+                                Text(mode.displayName).tag(mode)
+                            }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                }
                 PanelToggleRow(title: "Show info tips", isOn: $settings.showInfoTips)
             }
 
@@ -104,6 +133,15 @@ private struct ImageDefaultStyleSection: View {
                 if style.gradient {
                     GradientAngleControl(angle: styleBinding(\.gradientAngle))
                 }
+                PanelRow(title: "Blend mode") {
+                    Picker("", selection: styleBinding(\.backgroundBlendMode)) {
+                        ForEach(ColorLayerBlendMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
             }
         }
     }
@@ -118,4 +156,3 @@ private struct ImageDefaultStyleSection: View {
         }
     }
 }
-

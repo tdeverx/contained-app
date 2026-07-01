@@ -19,6 +19,7 @@ struct Personalization: Codable, Hashable, Sendable {
     var backgroundOpacity: Double = Self.defaultBackgroundOpacity
     var gradient: Bool = true
     var gradientAngle: Double = Self.defaultGradientAngle   // degrees, 0 = leading→trailing, clockwise
+    var backgroundBlendMode: ColorLayerBlendMode = .softLight
     var widgets: [WidgetConfiguration] = WidgetConfiguration.defaultWidgets()
     var showStatusIndicator: Bool = true
     var showStatusIcon: Bool = true
@@ -71,6 +72,7 @@ struct Personalization: Codable, Hashable, Sendable {
     enum CodingKeys: String, CodingKey {
         case schemaVersion
         case tint, iconEnabled, icon, nickname, fillBackground, backgroundOpacity, gradient, gradientAngle
+        case backgroundBlendMode
         case widgets, showStatusIndicator, showStatusIcon, showStatusText, graphMetric, graphStyle
     }
 
@@ -87,6 +89,8 @@ struct Personalization: Codable, Hashable, Sendable {
         gradient = try container.decodeIfPresent(Bool.self, forKey: .gradient) ?? true
         gradientAngle = try container.decodeIfPresent(Double.self, forKey: .gradientAngle)
             ?? Self.defaultGradientAngle
+        backgroundBlendMode = try container.decodeIfPresent(ColorLayerBlendMode.self, forKey: .backgroundBlendMode)
+            ?? .softLight
         showStatusIndicator = try container.decodeIfPresent(Bool.self, forKey: .showStatusIndicator) ?? true
         showStatusIcon = try container.decodeIfPresent(Bool.self, forKey: .showStatusIcon) ?? true
         showStatusText = try container.decodeIfPresent(Bool.self, forKey: .showStatusText) ?? true
@@ -117,6 +121,7 @@ struct Personalization: Codable, Hashable, Sendable {
         try container.encode(backgroundOpacity, forKey: .backgroundOpacity)
         try container.encode(gradient, forKey: .gradient)
         try container.encode(gradientAngle, forKey: .gradientAngle)
+        try container.encode(backgroundBlendMode, forKey: .backgroundBlendMode)
         try container.encode(widgets, forKey: .widgets)
         try container.encode(showStatusIndicator, forKey: .showStatusIndicator)
         try container.encode(showStatusIcon, forKey: .showStatusIcon)
@@ -137,6 +142,7 @@ struct Personalization: Codable, Hashable, Sendable {
         backgroundOpacity = labels["contained.bgOpacity"].flatMap(Double.init) ?? Self.defaultBackgroundOpacity
         gradient = labels["contained.gradient"] == "1"
         gradientAngle = labels["contained.bgAngle"].flatMap(Double.init) ?? Self.defaultGradientAngle
+        backgroundBlendMode = .softLight
         showStatusIndicator = true
         showStatusIcon = true
         showStatusText = true

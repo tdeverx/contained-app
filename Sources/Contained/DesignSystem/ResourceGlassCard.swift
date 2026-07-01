@@ -39,6 +39,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
     var fillOpacity: Double = 0.18
     var gradient: Bool = false
     var gradientAngle: Double = 135
+    var blendMode: ColorLayerBlendMode = .softLight
     /// Lift the card with a shadow. Pass `false` for flat tiles inside an already-elevated panel
     /// (e.g. the toolbar Images/Activity morph panels), matching the creation-menu tile style.
     var elevated: Bool = true
@@ -68,6 +69,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
+         blendMode: ColorLayerBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header,
@@ -84,6 +86,7 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
         self.fillOpacity = fillOpacity
         self.gradient = gradient
         self.gradientAngle = gradientAngle
+        self.blendMode = blendMode
         self.elevated = elevated
         self.onTap = onTap
         self.header = header
@@ -113,7 +116,8 @@ struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: View,
                                   fill: fill,
                                   fillOpacity: fillOpacity,
                                   gradient: gradient,
-                                  gradientAngle: gradientAngle)
+                                  gradientAngle: gradientAngle,
+                                  blendMode: blendMode)
             .overlay {
                 if isSelected {
                     if usesSelectionFill {
@@ -194,6 +198,7 @@ private struct ResourceCardMaterialSurface: ViewModifier {
     var fillOpacity: Double
     var gradient: Bool
     var gradientAngle: Double
+    var blendMode: ColorLayerBlendMode
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
@@ -219,8 +224,11 @@ private struct ResourceCardMaterialSurface: ViewModifier {
             .background {
                 if let fill {
                     shape.fill(fillStyle(fill))
+                        .blendMode(blendMode.blendMode)
+                        .clipShape(shape)
                 }
             }
+            .compositingGroup()
     }
 
     private func fillStyle(_ color: Color) -> AnyShapeStyle {
@@ -248,14 +256,16 @@ private extension View {
                               fill: Color?,
                               fillOpacity: Double,
                               gradient: Bool,
-                              gradientAngle: Double) -> some View {
+                              gradientAngle: Double,
+                              blendMode: ColorLayerBlendMode) -> some View {
         modifier(ResourceCardMaterialSurface(material: material,
                                              cornerRadius: cornerRadius,
                                              shadow: shadow,
                                              fill: fill,
                                              fillOpacity: fillOpacity,
                                              gradient: gradient,
-                                             gradientAngle: gradientAngle))
+                                             gradientAngle: gradientAngle,
+                                             blendMode: blendMode))
     }
 }
 
@@ -267,6 +277,7 @@ extension ResourceGlassCard where BodyContent == EmptyView, FooterLeading == Emp
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
+         blendMode: ColorLayerBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header) {
@@ -276,6 +287,7 @@ extension ResourceGlassCard where BodyContent == EmptyView, FooterLeading == Emp
                   fillOpacity: fillOpacity,
                   gradient: gradient,
                   gradientAngle: gradientAngle,
+                  blendMode: blendMode,
                   elevated: elevated,
                   onTap: onTap,
                   header: header,
@@ -295,6 +307,7 @@ extension ResourceGlassCard where BodyContent == EmptyView, Widget == EmptyView 
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
+         blendMode: ColorLayerBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header,
@@ -308,6 +321,7 @@ extension ResourceGlassCard where BodyContent == EmptyView, Widget == EmptyView 
                   fillOpacity: fillOpacity,
                   gradient: gradient,
                   gradientAngle: gradientAngle,
+                  blendMode: blendMode,
                   elevated: elevated,
                   onTap: onTap,
                   header: header,
@@ -327,6 +341,7 @@ extension ResourceGlassCard where Widget == EmptyView {
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
+         blendMode: ColorLayerBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header,
@@ -341,6 +356,7 @@ extension ResourceGlassCard where Widget == EmptyView {
                   fillOpacity: fillOpacity,
                   gradient: gradient,
                   gradientAngle: gradientAngle,
+                  blendMode: blendMode,
                   elevated: elevated,
                   onTap: onTap,
                   header: header,

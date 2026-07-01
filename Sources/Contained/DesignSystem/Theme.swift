@@ -184,6 +184,32 @@ enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
+enum ColorLayerBlendMode: String, CaseIterable, Identifiable, Codable, Sendable {
+    case normal, softLight, overlay, multiply, screen
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .normal: return "Normal"
+        case .softLight: return "Soft Light"
+        case .overlay: return "Overlay"
+        case .multiply: return "Multiply"
+        case .screen: return "Screen"
+        }
+    }
+
+    var blendMode: BlendMode {
+        switch self {
+        case .normal: return .normal
+        case .softLight: return .softLight
+        case .overlay: return .overlay
+        case .multiply: return .multiply
+        case .screen: return .screen
+        }
+    }
+}
+
 enum AppearanceMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case system, light, dark
     var id: String { rawValue }
@@ -304,6 +330,8 @@ extension EnvironmentValues {
     @Entry var buttonMaterial: WindowMaterial = .glassClear
     /// The user-chosen resource-card material, seeded at the app root.
     @Entry var cardMaterial: WindowMaterial = .glassRegular
+    /// Optional color/gradient wash layered into glass buttons.
+    @Entry var buttonTintStyle: GlassButtonTintStyle = .disabled
 }
 
 private struct SheetMaterial: ViewModifier {

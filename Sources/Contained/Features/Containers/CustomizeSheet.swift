@@ -185,6 +185,11 @@ struct CustomizeSheet: View {
                         }
                         Toggle("Gradient", isOn: $style.gradient)
                         if style.gradient { GradientAngleControl(angle: $style.gradientAngle) }
+                        Picker("Blend mode", selection: $style.backgroundBlendMode) {
+                            ForEach(ColorLayerBlendMode.allCases) { mode in
+                                Text(mode.displayName).tag(mode)
+                            }
+                        }
                     }
                 }
                 .disabled(settingsDisabled)

@@ -77,6 +77,7 @@ struct PaletteResultCard: View {
                                  fillOpacity: selected ? 0.14 : style.backgroundOpacity,
                                  gradient: style.gradient,
                                  gradientAngle: style.gradientAngle,
+                                 blendMode: style.backgroundBlendMode,
                                  elevated: false,
                                  onTap: action) {
             ResourceCardHeader {
@@ -123,6 +124,7 @@ struct PaletteResultCard: View {
                                  fillOpacity: selected ? 0.14 : style.backgroundOpacity,
                                  gradient: style.gradient,
                                  gradientAngle: style.gradientAngle,
+                                 blendMode: style.backgroundBlendMode,
                                  elevated: false,
                                  onTap: action) {
             ResourceCardHeader {

@@ -133,6 +133,7 @@ struct ContainerCard: View {
                           fillOpacity: styleForDisplay.backgroundOpacity,
                           gradient: styleForDisplay.gradient,
                           gradientAngle: styleForDisplay.gradientAngle,
+                          blendMode: styleForDisplay.backgroundBlendMode,
                           onTap: onTap) {
             headerRow(controlsReveal: controlsVisible ? 1 : 0)
         } bodyContent: {

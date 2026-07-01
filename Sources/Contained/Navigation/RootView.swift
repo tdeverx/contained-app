@@ -81,6 +81,12 @@ struct RootView: View {
         .tint(settings.accentTint.color)
         .environment(\.modalMaterial, settings.modalMaterial)
         .environment(\.buttonMaterial, settings.buttonMaterial)
+        .environment(\.buttonTintStyle, GlassButtonTintStyle(enabled: settings.buttonTintEnabled,
+                                                             tint: settings.buttonTint,
+                                                             opacity: settings.buttonTintOpacity,
+                                                             gradient: settings.buttonTintGradient,
+                                                             gradientAngle: settings.buttonTintGradientAngle,
+                                                             blendMode: settings.buttonTintBlendMode))
         .environment(\.cardMaterial, settings.cardMaterial)
         .preferredColorScheme(settings.appearance.colorScheme)
         .onAppear { applyAppearance(settings.appearance) }

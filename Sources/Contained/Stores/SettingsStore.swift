@@ -15,6 +15,13 @@ final class SettingsStore {
     var modalMaterial: WindowMaterial { didSet { defaults.set(modalMaterial.rawValue, forKey: Keys.modalMaterial) } }
     /// Material for toolbar control surfaces (glass buttons / search field).
     var buttonMaterial: WindowMaterial { didSet { defaults.set(buttonMaterial.rawValue, forKey: Keys.buttonMaterial) } }
+    /// Optional color wash applied inside toolbar glass buttons.
+    var buttonTintEnabled: Bool { didSet { defaults.set(buttonTintEnabled, forKey: Keys.buttonTintEnabled) } }
+    var buttonTint: AppTint { didSet { defaults.set(buttonTint.rawValue, forKey: Keys.buttonTint) } }
+    var buttonTintOpacity: Double { didSet { defaults.set(buttonTintOpacity, forKey: Keys.buttonTintOpacity) } }
+    var buttonTintGradient: Bool { didSet { defaults.set(buttonTintGradient, forKey: Keys.buttonTintGradient) } }
+    var buttonTintGradientAngle: Double { didSet { defaults.set(buttonTintGradientAngle, forKey: Keys.buttonTintGradientAngle) } }
+    var buttonTintBlendMode: ColorLayerBlendMode { didSet { defaults.set(buttonTintBlendMode.rawValue, forKey: Keys.buttonTintBlendMode) } }
     /// Material for resource cards, both compact and expanded.
     var cardMaterial: WindowMaterial { didSet { defaults.set(cardMaterial.rawValue, forKey: Keys.cardMaterial) } }
     /// Show the info.circle help popovers throughout the app.
@@ -97,6 +104,12 @@ final class SettingsStore {
         windowMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.windowMaterial) ?? "") ?? .fullScreenUI
         modalMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.modalMaterial) ?? "") ?? .sheet
         buttonMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.buttonMaterial) ?? "") ?? .glassClear
+        buttonTintEnabled = defaults.object(forKey: Keys.buttonTintEnabled) as? Bool ?? false
+        buttonTint = AppTint(rawValue: defaults.string(forKey: Keys.buttonTint) ?? "") ?? .multicolor
+        buttonTintOpacity = defaults.object(forKey: Keys.buttonTintOpacity) as? Double ?? 0.18
+        buttonTintGradient = defaults.object(forKey: Keys.buttonTintGradient) as? Bool ?? true
+        buttonTintGradientAngle = defaults.object(forKey: Keys.buttonTintGradientAngle) as? Double ?? Personalization.defaultGradientAngle
+        buttonTintBlendMode = ColorLayerBlendMode(rawValue: defaults.string(forKey: Keys.buttonTintBlendMode) ?? "") ?? .softLight
         cardMaterial = WindowMaterial(rawValue: defaults.string(forKey: Keys.cardMaterial) ?? "") ?? .glassRegular
         showInfoTips = defaults.object(forKey: Keys.showInfoTips) as? Bool ?? true
         imageDefaultStyleEnabled = defaults.object(forKey: Keys.imageDefaultStyleEnabled) as? Bool ?? true
@@ -141,6 +154,12 @@ final class SettingsStore {
                        windowMaterial: windowMaterial,
                        modalMaterial: modalMaterial,
                        buttonMaterial: buttonMaterial,
+                       buttonTintEnabled: buttonTintEnabled,
+                       buttonTint: buttonTint,
+                       buttonTintOpacity: buttonTintOpacity,
+                       buttonTintGradient: buttonTintGradient,
+                       buttonTintGradientAngle: buttonTintGradientAngle,
+                       buttonTintBlendMode: buttonTintBlendMode,
                        cardMaterial: cardMaterial,
                        showInfoTips: showInfoTips,
                        imageDefaultStyleEnabled: imageDefaultStyleEnabled,
@@ -175,6 +194,12 @@ final class SettingsStore {
         windowMaterial = snapshot.windowMaterial
         modalMaterial = snapshot.modalMaterial
         buttonMaterial = snapshot.buttonMaterial
+        buttonTintEnabled = snapshot.buttonTintEnabled
+        buttonTint = snapshot.buttonTint
+        buttonTintOpacity = snapshot.buttonTintOpacity
+        buttonTintGradient = snapshot.buttonTintGradient
+        buttonTintGradientAngle = snapshot.buttonTintGradientAngle
+        buttonTintBlendMode = snapshot.buttonTintBlendMode
         cardMaterial = snapshot.cardMaterial
         showInfoTips = snapshot.showInfoTips
         imageDefaultStyleEnabled = snapshot.imageDefaultStyleEnabled
@@ -217,6 +242,12 @@ final class SettingsStore {
         static let windowMaterial = "windowMaterial"
         static let modalMaterial = "modalMaterial"
         static let buttonMaterial = "buttonMaterial"
+        static let buttonTintEnabled = "buttonTint.enabled"
+        static let buttonTint = "buttonTint.tint"
+        static let buttonTintOpacity = "buttonTint.opacity"
+        static let buttonTintGradient = "buttonTint.gradient"
+        static let buttonTintGradientAngle = "buttonTint.gradientAngle"
+        static let buttonTintBlendMode = "buttonTint.blendMode"
         static let cardMaterial = "cardMaterial"
         static let showInfoTips = "showInfoTips"
         static let imageDefaultStyleEnabled = "imageDefaultStyleEnabled"
@@ -252,6 +283,12 @@ struct SettingsBackup: Codable, Equatable {
     var windowMaterial: WindowMaterial
     var modalMaterial: WindowMaterial
     var buttonMaterial: WindowMaterial
+    var buttonTintEnabled: Bool
+    var buttonTint: AppTint
+    var buttonTintOpacity: Double
+    var buttonTintGradient: Bool
+    var buttonTintGradientAngle: Double
+    var buttonTintBlendMode: ColorLayerBlendMode
     var cardMaterial: WindowMaterial
     var showInfoTips: Bool
     var imageDefaultStyleEnabled: Bool
@@ -279,7 +316,10 @@ struct SettingsBackup: Codable, Equatable {
     var sidebarNavigationEnabled: Bool
 
     private enum CodingKeys: String, CodingKey {
-        case accentTint, appearance, density, windowMaterial, modalMaterial, buttonMaterial, cardMaterial
+        case accentTint, appearance, density, windowMaterial, modalMaterial, buttonMaterial
+        case buttonTintEnabled, buttonTint, buttonTintOpacity, buttonTintGradient, buttonTintGradientAngle
+        case buttonTintBlendMode
+        case cardMaterial
         case showInfoTips, imageDefaultStyleEnabled, keepInMenuBar, cliPathOverride, refreshInterval
         case imageUpdateIntervalHours, imageUpdateChecksEnabled, appUpdateChecksEnabled, autoRestartEnabled
         case notifyOnCrash, revealCLI, historyRetentionDays, loggingLevel, enabledLogDestinations
@@ -294,6 +334,12 @@ struct SettingsBackup: Codable, Equatable {
          windowMaterial: WindowMaterial,
          modalMaterial: WindowMaterial,
          buttonMaterial: WindowMaterial,
+         buttonTintEnabled: Bool = false,
+         buttonTint: AppTint = .multicolor,
+         buttonTintOpacity: Double = 0.18,
+         buttonTintGradient: Bool = true,
+         buttonTintGradientAngle: Double = Personalization.defaultGradientAngle,
+         buttonTintBlendMode: ColorLayerBlendMode = .softLight,
          cardMaterial: WindowMaterial,
          showInfoTips: Bool,
          imageDefaultStyleEnabled: Bool,
@@ -325,6 +371,12 @@ struct SettingsBackup: Codable, Equatable {
         self.windowMaterial = windowMaterial
         self.modalMaterial = modalMaterial
         self.buttonMaterial = buttonMaterial
+        self.buttonTintEnabled = buttonTintEnabled
+        self.buttonTint = buttonTint
+        self.buttonTintOpacity = buttonTintOpacity
+        self.buttonTintGradient = buttonTintGradient
+        self.buttonTintGradientAngle = buttonTintGradientAngle
+        self.buttonTintBlendMode = buttonTintBlendMode
         self.cardMaterial = cardMaterial
         self.showInfoTips = showInfoTips
         self.imageDefaultStyleEnabled = imageDefaultStyleEnabled
@@ -360,6 +412,14 @@ struct SettingsBackup: Codable, Equatable {
         windowMaterial = try container.decode(WindowMaterial.self, forKey: .windowMaterial)
         modalMaterial = try container.decode(WindowMaterial.self, forKey: .modalMaterial)
         buttonMaterial = try container.decodeIfPresent(WindowMaterial.self, forKey: .buttonMaterial) ?? .glassClear
+        buttonTintEnabled = try container.decodeIfPresent(Bool.self, forKey: .buttonTintEnabled) ?? false
+        buttonTint = try container.decodeIfPresent(AppTint.self, forKey: .buttonTint) ?? .multicolor
+        buttonTintOpacity = try container.decodeIfPresent(Double.self, forKey: .buttonTintOpacity) ?? 0.18
+        buttonTintGradient = try container.decodeIfPresent(Bool.self, forKey: .buttonTintGradient) ?? true
+        buttonTintGradientAngle = try container.decodeIfPresent(Double.self, forKey: .buttonTintGradientAngle)
+            ?? Personalization.defaultGradientAngle
+        buttonTintBlendMode = try container.decodeIfPresent(ColorLayerBlendMode.self, forKey: .buttonTintBlendMode)
+            ?? .softLight
         cardMaterial = try container.decodeIfPresent(WindowMaterial.self, forKey: .cardMaterial) ?? .glassRegular
         showInfoTips = try container.decodeIfPresent(Bool.self, forKey: .showInfoTips) ?? true
         imageDefaultStyleEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageDefaultStyleEnabled) ?? true
@@ -398,6 +458,12 @@ struct SettingsBackup: Codable, Equatable {
         try container.encode(windowMaterial, forKey: .windowMaterial)
         try container.encode(modalMaterial, forKey: .modalMaterial)
         try container.encode(buttonMaterial, forKey: .buttonMaterial)
+        try container.encode(buttonTintEnabled, forKey: .buttonTintEnabled)
+        try container.encode(buttonTint, forKey: .buttonTint)
+        try container.encode(buttonTintOpacity, forKey: .buttonTintOpacity)
+        try container.encode(buttonTintGradient, forKey: .buttonTintGradient)
+        try container.encode(buttonTintGradientAngle, forKey: .buttonTintGradientAngle)
+        try container.encode(buttonTintBlendMode, forKey: .buttonTintBlendMode)
         try container.encode(cardMaterial, forKey: .cardMaterial)
         try container.encode(showInfoTips, forKey: .showInfoTips)
         try container.encode(imageDefaultStyleEnabled, forKey: .imageDefaultStyleEnabled)

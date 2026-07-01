@@ -42,6 +42,7 @@ struct VolumeCard: View {
                           fillOpacity: style.backgroundOpacity,
                           gradient: style.gradient,
                           gradientAngle: style.gradientAngle,
+                          blendMode: style.backgroundBlendMode,
                           elevated: elevated) {
             ResourceCardHeader {
                 CardStyleButton(style: style, target: .volume(name: volume.name), help: "Customize volume")
