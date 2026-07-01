@@ -11,7 +11,7 @@ struct CommandPreviewBar: View {
     var body: some View {
         HStack(spacing: Tokens.Space.s) {
             Image(systemName: "terminal")
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(rendered)
                     .font(.system(.caption, design: .monospaced))

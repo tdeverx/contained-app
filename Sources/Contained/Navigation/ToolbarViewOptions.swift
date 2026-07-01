@@ -202,7 +202,6 @@ struct ToolbarPageContextOptions: View {
                     ForEach(SystemContent.SystemPage.allCases) { page in
                         GlassButtonItem(help: page.rawValue, isIcon: true, action: { ui.systemPage = page }) {
                             Image(systemName: page.systemImage)
-                                .foregroundStyle(Color.white)
                                 .opacity(ui.systemPage == page ? 1 : 0.62)
                         }
                     }
@@ -230,7 +229,6 @@ struct ToolbarPageContextOptions: View {
                         ui.navigate(to: .settings)
                     }) {
                         Image(systemName: page.systemImage)
-                            .foregroundStyle(Color.white)
                     }
                 }
             }

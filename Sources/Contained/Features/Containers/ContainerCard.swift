@@ -311,7 +311,6 @@ struct ContainerCard: View {
         ForEach(Tab.allCases) { item in
             GlassButtonItem(help: item.rawValue, isIcon: true, action: { tab = item }) {
                 Image(systemName: item.systemImage)
-                    .foregroundStyle(Color.white)
                     .opacity(tab == item ? 1 : 0.62)
             }
         }

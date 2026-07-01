@@ -81,7 +81,6 @@ struct SettingsContent: View {
                 ForEach(SettingsPage.allCases) { item in
                     GlassButtonItem(help: item.rawValue, isIcon: true, action: { page = item }) {
                         Image(systemName: item.systemImage)
-                            .foregroundStyle(Color.white)
                             .opacity(page == item ? 1 : 0.62)
                     }
                 }

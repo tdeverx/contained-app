@@ -487,7 +487,8 @@ private struct ActivityToolbarButton: View {
     var body: some View {
         let count = unread.count
         let hasUnread = count > 0
-        return GlassButtonItem(help: hasUnread ? "Activity — \(count) unread" : "Activity",
+        return GlassButtonItem(tint: hasUnread ? app.settings.accentTint.color : .white,
+                               help: hasUnread ? "Activity — \(count) unread" : "Activity",
                                isIcon: true,
                                action: {
                                    if ui.panelNavigationEnabled {
@@ -497,7 +498,6 @@ private struct ActivityToolbarButton: View {
                                    }
                                }) {
             Image(systemName: hasUnread ? "bell.fill" : "bell")
-                .foregroundStyle(app.settings.accentTint.color)
         }
     }
 }

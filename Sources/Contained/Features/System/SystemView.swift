@@ -174,7 +174,6 @@ struct SystemContent: View {
         ForEach(SystemPage.allCases) { item in
             GlassButtonItem(help: item.rawValue, isIcon: true, action: { setPage(item) }) {
                 Image(systemName: item.systemImage)
-                    .foregroundStyle(Color.white)
                     .opacity(activePage == item ? 1 : 0.62)
             }
         }
