@@ -1,7 +1,8 @@
 name: Beta
 
 # Builds on every push to `beta`, ad-hoc signs, packages a DMG, publishes a `v<version>-beta.<build>`
-# pre-release, and regenerates this branch's appcast.xml (the beta channel's feed).
+# pre-release, regenerates this branch's appcast.xml (the beta channel's feed), and merges the
+# promoted beta item into the nightly appcast so Nightly users can receive it too.
 #
 # `beta` starts as a basic-files branch with no source — the build steps skip cleanly (green) until
 # code is promoted from `nightly`. Version base comes from the root VERSION file.
@@ -22,6 +23,7 @@ on:
       - 'LICENSE'
       - 'NOTICE'
       - '.gitignore'
+      - 'appcast.xml'
   workflow_dispatch:
 
 concurrency:
@@ -62,15 +64,16 @@ jobs:
       - name: Bundle (ad-hoc signed) + DMG
         if: steps.guard.outputs.build == 'true'
         run: |
-          BASE=$(cat VERSION 2>/dev/null || echo 1.0.0)
-          BUILD=$(git rev-list --count HEAD)
-          SHA=$(git rev-parse --short HEAD)
-          export VERSION="${BASE}-beta.${BUILD}+${SHA}"
-          CHANNEL=beta ./scripts/bundle.sh release
+          git fetch origin nightly:refs/remotes/origin/nightly
+          SHA=$(./scripts/version-info.sh sha)
+          BUILD=$(BUILD_SOURCE_REF=origin/nightly SHA="${SHA}" ./scripts/version-info.sh build)
+          export BUILD SHA
+          export VERSION=$(CHANNEL=beta BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
+          CHANNEL=beta BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
           mkdir -p updates
           brew install create-dmg
           ./scripts/make-dmg.sh beta Contained.app "updates/Contained-${VERSION}.dmg"
-          VERSION_VALUE="${VERSION}" ./scripts/release-body.sh > updates/release-notes.md
+          CHANNEL=beta VERSION_VALUE="${VERSION}" ./scripts/release-body.sh > updates/release-notes.md
           {
             echo "Automated beta build @ ${SHA}."
             echo
@@ -79,6 +82,7 @@ jobs:
             echo "⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
           } > updates/github-release-notes.md
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "BUILD=${BUILD}" >> "$GITHUB_ENV"
           echo "SHA=${SHA}" >> "$GITHUB_ENV"
 
       - name: Publish beta release
@@ -104,6 +108,28 @@ jobs:
           if git diff --cached --quiet; then
             echo "appcast unchanged — nothing to commit."
           else
-            git commit -m "ci: beta appcast (v${VERSION})"
+            git commit -m "ci: beta appcast (v${VERSION}) [skip ci]"
             git push origin HEAD:beta
           fi
+
+          PROMOTED_APPCAST="$(mktemp)"
+          cp appcast.xml "$PROMOTED_APPCAST"
+          git fetch origin nightly:refs/remotes/origin/nightly
+          NIGHTLY_WORKTREE="$(mktemp -d)"
+          rm -rf "$NIGHTLY_WORKTREE"
+          git worktree add "$NIGHTLY_WORKTREE" origin/nightly
+          ./scripts/promote-appcast-to-nightly.sh "$PROMOTED_APPCAST" "$NIGHTLY_WORKTREE/appcast.xml"
+          (
+            cd "$NIGHTLY_WORKTREE"
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add appcast.xml
+            if git diff --cached --quiet; then
+              echo "nightly appcast already contains beta item."
+            else
+              git commit -m "ci: include beta appcast item (v${VERSION}) [skip ci]"
+              git push origin HEAD:nightly
+            fi
+          )
+          git worktree remove "$NIGHTLY_WORKTREE" --force
+          rm -f "$PROMOTED_APPCAST"

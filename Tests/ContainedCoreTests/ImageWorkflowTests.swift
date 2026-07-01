@@ -61,6 +61,19 @@ struct ImageWorkflowTests {
         #expect(groups.first?.references == ["docker.io/library/alpine:latest", "localhost/alpine:test"])
     }
 
+    @Test func hubSearchFetchesThroughSharedHelper() async throws {
+        let session = Self.session { request in
+            #expect(request.url?.path == "/v2/search/repositories")
+            #expect(request.url?.query?.contains("query=nginx") == true)
+            #expect(request.url?.query?.contains("page_size=25") == true)
+            return Self.response(url: request.url!, status: 200, body: """
+            {"results":[{"repo_name":"library/nginx","short_description":"web server","star_count":18000,"is_official":true,"is_automated":false}]}
+            """)
+        }
+        let results = try await HubSearch.results(query: "nginx", session: session)
+        #expect(results.map(\.pullReference) == ["nginx"])
+    }
+
     @Test func registryManifestReadsDigest() async throws {
         let session = Self.session { request in
             #expect(request.httpMethod == "HEAD")

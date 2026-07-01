@@ -14,6 +14,7 @@ on:
       - 'LICENSE'
       - 'NOTICE'
       - '.gitignore'
+      - 'appcast.xml'
 
 concurrency:
   group: pr-${{ github.ref }}

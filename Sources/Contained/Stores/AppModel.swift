@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 import ContainedCore
 
 /// Root app state: locates the CLI, owns the typed client and the feature stores, and tracks the
@@ -72,78 +71,6 @@ final class AppModel {
     }
     var imageUpdateIntervalDescription: String {
         "Every \(settings.imageUpdateIntervalHours) hour\(settings.imageUpdateIntervalHours == 1 ? "" : "s")"
-    }
-
-    var defaultImageStyle: Personalization {
-        settings.imageDefaultStyleEnabled ? personalization.defaultImageStyle : Personalization()
-    }
-
-    func imageStyle(for reference: String) -> Personalization {
-        let groupID = LocalImageTagGroup.groups(for: images).first { group in
-            group.references.contains(reference)
-        }?.id
-        return personalization.imageDefault(for: reference, groupID: groupID) ?? defaultImageStyle
-    }
-
-    func imageGroupStyle(for group: LocalImageTagGroup) -> Personalization {
-        personalization.imageGroupDefault(for: group.id) ?? defaultImageStyle
-    }
-
-    /// The group's style by id (used where only the id is known, e.g. a tag resolving its parent).
-    func imageGroupStyle(forID id: String) -> Personalization {
-        personalization.imageGroupDefault(for: id) ?? defaultImageStyle
-    }
-
-    func volumeStyle(for name: String) -> Personalization {
-        var style = personalization.volumeStyle(for: name) ?? Personalization()
-        style.normalizeVolumeWidgets()
-        return style
-    }
-
-    // MARK: Per-volume I/O (aggregated from the containers that mount the volume)
-
-    /// Containers that mount the named volume (matches a named-volume mount source).
-    func containersMounting(volume name: String) -> [ContainerSnapshot] {
-        containers.snapshots.filter { snapshot in
-            snapshot.configuration.mounts.contains { $0.source == name }
-        }
-    }
-
-    /// The current block read/write rate for a volume — summed across every container mounting it.
-    func volumeIORate(for name: String, metric: GraphMetric) -> Double {
-        containersMounting(volume: name).reduce(0) { total, snapshot in
-            total + (containers.statsByID[snapshot.id].map { metric.value(from: $0) } ?? 0)
-        }
-    }
-
-    /// A read/write sparkline series for a volume — the element-wise sum of the mounting containers'
-    /// block-I/O history, right-aligned so the most recent samples line up.
-    func volumeIOHistory(for name: String, metric: GraphMetric) -> [Double] {
-        let series = containersMounting(volume: name).compactMap {
-            containers.historyByID[$0.id]?[metric]?.values
-        }
-        return Self.sumRightAligned(series)
-    }
-
-    private static func sumRightAligned(_ series: [[Double]]) -> [Double] {
-        let maxLen = series.map(\.count).max() ?? 0
-        guard maxLen > 0 else { return [] }
-        var result = [Double](repeating: 0, count: maxLen)
-        for s in series {
-            let offset = maxLen - s.count
-            for (i, value) in s.enumerated() { result[offset + i] += value }
-        }
-        return result
-    }
-
-    func containerStyle(for snapshot: ContainerSnapshot) -> Personalization {
-        let groupID = LocalImageTagGroup.groups(for: images).first { group in
-            group.references.contains(snapshot.image)
-        }?.id
-        return personalization.resolved(id: snapshot.id,
-                                        image: snapshot.image,
-                                        groupID: groupID,
-                                        fallback: defaultImageStyle)
     }
 
     /// One in-flight operation shown in the bottom progress bar.
@@ -531,93 +458,6 @@ final class AppModel {
         bannerClear = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Self.bannerDuration))
             if !Task.isCancelled { self?.banner = nil }
-        }
-    }
-
-    /// Apply a new history-retention window: persist it, sync the store, and prune immediately.
-    func applyHistoryRetention(_ days: Int) {
-        settings.historyRetentionDays = days
-        historyStore.retentionDays = days
-        historyStore.pruneOld()
-    }
-
-    /// Wipe all recorded metrics and events.
-    func clearHistory() {
-        historyStore.clearAll()
-        flash("History cleared")
-        logger.record("History cleared", category: .system, severity: .warning)
-    }
-
-    func exportConfiguration(to url: URL, sections: Set<AppStateSection> = Set(AppStateSection.allCases)) throws {
-        let envelope = try AppStateEnvelope.make(from: self, sections: sections)
-        let data = try JSONEncoder.containedBackup().encode(envelope)
-        try data.write(to: url, options: .atomic)
-    }
-
-    func importConfiguration(from url: URL,
-                             sections selected: Set<AppStateSection> = Set(AppStateSection.allCases),
-                             replace: Bool) throws {
-        let data = try Data(contentsOf: url)
-        let imported = try JSONDecoder.containedBackup().decode(AppStateEnvelope.self, from: data)
-        let envelope = try migrator.migrateToCurrent(imported)
-        try apply(envelope: envelope, selected: selected, replace: replace)
-        UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
-    }
-
-    func resolveDowngradeByKeepingReadableData() {
-        UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
-        downgradeSchemaVersion = nil
-        flash("Kept readable local data")
-    }
-
-    func exportForDowngradeAndReset() {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.containedBackup, .json]
-        panel.nameFieldStringValue = "Contained Downgrade Backup.containedbackup"
-        panel.canCreateDirectories = true
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            try exportConfiguration(to: url)
-            resetIncompatibleLocalState()
-            downgradeSchemaVersion = nil
-            flash("Exported backup and reset local state")
-        } catch {
-            flash(error.localizedDescription)
-        }
-    }
-
-    func resetIncompatibleLocalState() {
-        historyStore.clearAll()
-        UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
-    }
-
-    func purgeDeadRows() {
-        let liveContainerIDs = Set(containers.snapshots.map(\.id))
-        let liveImageRefs = Set(images.map(\.reference))
-        let personalizations = personalization.purgeOrphans(liveContainerIDs: liveContainerIDs,
-                                                            liveImageRefs: liveImageRefs)
-        let checks = healthChecks.purgeOrphans(liveContainerIDs: liveContainerIDs)
-        let history = historyStore.purgeOrphans(liveContainerIDs: liveContainerIDs)
-        flash("Cleaned \(personalizations + checks + history.events + history.metrics) stale row(s)")
-    }
-
-    private func apply(envelope: AppStateEnvelope, selected: Set<AppStateSection>, replace: Bool) throws {
-        if selected.contains(.settings), let value = envelope.sections[.settings] {
-            settings.applyBackup(try value.decode(SettingsBackup.self))
-            historyStore.retentionDays = settings.historyRetentionDays
-            updater.channel = settings.updateChannel
-        }
-        if selected.contains(.personalization), let value = envelope.sections[.personalization] {
-            personalization.applyBackup(try value.decode(PersonalizationBackup.self), replace: replace)
-        }
-        if selected.contains(.healthChecks), let value = envelope.sections[.healthChecks] {
-            healthChecks.applyBackup(try value.decode([String: HealthCheck].self), replace: replace)
-        }
-        if selected.contains(.templates), let value = envelope.sections[.templates] {
-            historyStore.applyTemplates(try value.decode([TemplateSnapshot].self), replace: replace)
-        }
-        if selected.contains(.history), let value = envelope.sections[.history] {
-            historyStore.applyHistory(try value.decode(HistoryBackup.self), replace: replace)
         }
     }
 

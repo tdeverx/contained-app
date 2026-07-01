@@ -6,21 +6,49 @@ The maintainer runbook for cutting a build and feeding the Sparkle update channe
 
 - **`CFBundleShortVersionString`** (marketing version) — semver, with a pre-release suffix per channel:
   - Stable: `1.0.0`
-  - Beta: `1.0.0-beta.1`, `1.0.0-beta.2`, …
+  - Beta: `1.0.0-beta.<build>+<shortsha>`
   - Nightly: `1.0.0-nightly.<build>+<shortsha>` (set automatically by CI)
-- **`CFBundleVersion`** (build number) — a monotonic integer; `scripts/bundle.sh` derives it from `git rev-list --count HEAD`. Sparkle orders updates by this, so it must only ever increase.
+- **`CFBundleVersion`** (build number) — a monotonic integer. `scripts/version-info.sh build` is the single source of truth for scripts and CI; no workflow should calculate a build number directly. Beta/stable workflows first try to reuse the matching nightly appcast build for the promoted commit, then fall back to `git rev-list --count HEAD`. Sparkle orders updates by this, so it must be retained across nightly, beta, and stable for the same promoted build.
 
 Set the marketing version for a manual build with `VERSION=… ./scripts/bundle.sh`.
 
 ## Channels
 
-Each channel owns an independent `appcast.xml` at the root of its branch, served through `raw.githubusercontent.com`:
+Each channel has an `appcast.xml` at the root of its branch, served through `raw.githubusercontent.com`:
 
 - **stable** — `stable/appcast.xml`
 - **beta** — `beta/appcast.xml`
-- **nightly** — `nightly/appcast.xml`
+- **nightly** — `nightly/appcast.xml`, a superset feed containing the newest nightly item plus promoted beta/stable items
 
 The app's Settings → Updates picker changes the feed URL. Appcast items do not need `<sparkle:channel>` tags because the selected branch feed is the channel.
+
+## Release Notes
+
+Release notes are composed by `scripts/release-body.sh` and embedded by `scripts/release-notes.sh`.
+
+- Stable ships `Full Release Notes` for the base marketing version, such as `1.0.0`.
+- Beta ships `Changes Since Last Beta` followed by `Full Release Notes`.
+- Nightly ships `Changes Since Last Nightly` followed by `Full Release Notes`.
+
+The current repo can keep using `CHANGELOG.md` as both sources. The scripts are also ready for split files:
+
+- `RELEASE_NOTES.md` or `RELEASE_NOTES=/path/to/file` — durable, version-wide notes that can be built up while a release is in progress.
+- `CHANGES.md` or `CHANGES=/path/to/file` — channel/build-level changes since the last comparable release.
+- `CHANGES_DIR=/path/to/dir` — concatenates sorted `.md` fragments, useful when a beta should compile every change fragment accumulated since the previous beta.
+
+Prefer one committed fragment per PR or user-facing change, not one file per commit. A good shape is `changes/unreleased/YYYYMMDD-short-slug.md`; channel-specific fragments can live in `changes/beta/` or `changes/nightly/` when needed. Multiple small files avoid merge conflicts and let CI concatenate every fragment changed since the previous beta/nightly marker.
+
+`scripts/collect-changes.sh` can compile fragments from a directory or a git range:
+
+```sh
+./scripts/collect-changes.sh changes/unreleased > updates/changes.md
+./scripts/collect-changes.sh "v1.0.0-beta.78..HEAD" changes/unreleased > updates/changes.md
+CHANGES=updates/changes.md CHANNEL=beta VERSION_VALUE="$VERSION" ./scripts/release-body.sh
+```
+
+When using a single `CHANGELOG.md`, put version-wide notes under the base version section and current channel/build changes under `Unreleased` or a channel section such as `## [beta]` / `## [nightly]`.
+
+Generated release-note files should be written under `updates/`, `.release/`, or `.release-notes/`. Do not commit generated notes from release workflows. The workflows only commit `appcast.xml`, and appcast-only commits are path-ignored and marked `[skip ci]` so they do not start another release build.
 
 ## One-time setup
 
@@ -39,15 +67,13 @@ VERSION=1.0.0 ./scripts/release.sh                 # build → codesign → DMG 
 Then:
 
 1. Create a GitHub release tagged `v1.0.0` (or `v1.0.0-beta.N`, with **Pre-release** checked for betas); upload the `.dmg` as a release asset. The appcast's enclosure URLs point at these assets via `--download-url-prefix`.
-2. Commit the updated root `appcast.xml` back to the same branch that owns the channel. Clients on that channel get offered the update.
+2. Commit the updated root `appcast.xml` back to the same branch that owns the channel. When promoting beta or stable, merge that appcast item into `nightly/appcast.xml` too so Nightly users get the promoted build.
 
 ## Nightly (CI)
 
-`.github/workflows/nightly.yml` builds the latest green `nightly` on every push (newest commit wins via `concurrency: cancel-in-progress`), signs + notarizes, refreshes the rolling **nightly** pre-release with the new DMG, regenerates the nightly appcast item, and commits root `appcast.xml` to the `nightly` branch. It **skips the sign/notarize/publish steps cleanly when the secrets above are absent**, so the workflow stays green on a fresh public repo until you add them.
+`.github/workflows/nightly.yml` builds the latest green `nightly` on every push (newest commit wins via `concurrency: cancel-in-progress`), ad-hoc signs, refreshes the rolling **nightly** pre-release with the new DMG, regenerates the nightly appcast item, preserves promoted beta/stable items already in the feed, and commits root `appcast.xml` to the `nightly` branch. It skips appcast signing when `SPARKLE_ED_PRIVATE_KEY` is absent.
 
-`.github/workflows/release.yml` is the manual (`workflow_dispatch`) equivalent for stable/beta tags.
-
-> **Note:** GitHub doesn't yet offer macOS 26 / Xcode 26 runners. Both workflows detect the runner's Xcode version and skip the build (staying green) until a macOS 26 image is available — bump `runs-on` then.
+`.github/workflows/beta.yml` and `.github/workflows/stable.yml` build promoted branches, retain the build number for the matching nightly commit when available, write their own branch appcast, and merge the promoted appcast item into the nightly feed. All workflows ask `scripts/version-info.sh` for the build number.
 
 ## Notes
 

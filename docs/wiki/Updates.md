@@ -20,18 +20,28 @@ Each appcast lives at the root of its branch and is served by
 `raw.githubusercontent.com`. The selected feed is the channel, so appcast items
 do not need Sparkle channel tags.
 
+The Nightly feed is intentionally a superset: it contains nightly builds plus
+promoted Beta and Stable appcast items. Sparkle orders them by `CFBundleVersion`,
+so release workflows retain the same build number when a commit moves between
+Nightly, Beta, and Stable.
+
 Fresh installs default to Nightly during pre-1.0 development.
 
 ## Release notes
 
-Release notes come from `CHANGELOG.md`. The release scripts embed matching notes
-into Sparkle appcasts and the app can show:
+Release notes are generated from full release notes plus channel/build changes.
+By default both come from `CHANGELOG.md`; `RELEASE_NOTES.md`, `CHANGES.md`, and
+`CHANGES_DIR` are supported when maintainers want split sources. The release
+scripts embed the composed notes into Sparkle appcasts and the app can show:
 
 - What's New in This Build
 - What's New in an available update
 
-Pre-release versions such as `1.0.0-nightly.N+sha` resolve notes from the base
-`1.0.0` changelog section.
+Generated notes follow the channel:
+
+- Stable: `Full Release Notes`.
+- Beta: `Changes Since Last Beta` plus `Full Release Notes`.
+- Nightly: `Changes Since Last Nightly` plus `Full Release Notes`.
 
 ## Image updates
 

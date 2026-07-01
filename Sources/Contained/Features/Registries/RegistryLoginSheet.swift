@@ -26,18 +26,33 @@ struct RegistryLoginSheet: View {
                     }
                 }
             }
-            Form {
-                TextField("Server", text: $server, prompt: Text("e.g. ghcr.io, docker.io"))
-                    .textContentType(.URL)
-                TextField("Username", text: $username, prompt: Text("registry username"))
-                    .textContentType(.username)
-                SecureField("Password / token", text: $password, prompt: Text("password or access token"))
+            VStack(spacing: Tokens.Space.l) {
+                PanelSection(header: "Credentials") {
+                    PanelField(label: "Server") {
+                        TextField("", text: $server, prompt: Text("e.g. ghcr.io, docker.io"))
+                            .textContentType(.URL)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    PanelField(label: "Username") {
+                        TextField("", text: $username, prompt: Text("registry username"))
+                            .textContentType(.username)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    PanelField(label: "Password") {
+                        SecureField("", text: $password, prompt: Text("password or access token"))
+                            .textFieldStyle(.roundedBorder)
+                    }
+                }
                 if let error {
-                    Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.red).font(.caption)
+                    PanelSection {
+                        Label(error, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                            .font(.caption)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
+            .padding(Tokens.Space.l)
         }
         .frame(Tokens.SheetSize.small)
         .sheetMaterial()

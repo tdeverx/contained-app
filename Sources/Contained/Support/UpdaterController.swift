@@ -4,10 +4,10 @@ import Sparkle
 /// Thin wrapper over Sparkle's standard updater. Inert until a signed build sets `SUFeedURL` +
 /// `SUPublicEDKey` in Info.plist and points them at a hosted appcast.
 ///
-/// Channels: each channel (stable/beta/nightly) has its **own** appcast feed at the matching git
-/// branch's repo root (see `UpdateChannel.feedURL`). The `ChannelDelegate` overrides Sparkle's
-/// `SUFeedURL` per the selected channel via `feedURLString(for:)`, so switching channels just points
-/// the updater at a different branch's manifest — no cross-branch merging.
+/// Channels: each channel (stable/beta/nightly) reads a branch-hosted appcast feed at the matching
+/// git branch's repo root (see `UpdateChannel.feedURL`). Stable and beta are branch-local feeds;
+/// nightly is a superset feed that also carries promoted beta/stable items. The `ChannelDelegate`
+/// overrides Sparkle's `SUFeedURL` per the selected channel via `feedURLString(for:)`.
 @MainActor
 @Observable
 final class UpdaterController {

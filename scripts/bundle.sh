@@ -14,10 +14,10 @@ APP="Contained.app"
 CHANNEL="${CHANNEL:-nightly}"
 # Marketing version (CFBundleShortVersionString): semver, with a pre-release suffix for non-stable
 # channels (e.g. 1.0.0, 1.0.0-beta.1, 1.0.0-nightly.137+abc1234). Override via env in CI.
-VERSION="${VERSION:-1.0.0-beta.1}"
-# Build number (CFBundleVersion): a monotonic integer Sparkle orders by. Commit count always
-# increases; fall back to 1 outside a git checkout.
-BUILD="${BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
+VERSION="${VERSION:-$(CHANNEL="$CHANNEL" ./scripts/version-info.sh version)}"
+# Build number (CFBundleVersion): a monotonic integer Sparkle orders by. CI may set BUILD or
+# BUILD_SOURCE_REF to retain the build number of a promoted nightly commit.
+BUILD="${BUILD:-$(./scripts/version-info.sh build)}"
 
 ./scripts/sync-changelog-resource.sh
 

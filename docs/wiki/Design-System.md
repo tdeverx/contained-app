@@ -15,6 +15,14 @@ components before adding one-off surfaces.
 - Personalization is local app state. Tint, icon, nickname, and background
   styling should not be written back to container labels.
 
+Style ownership:
+
+- `Personalization` is the resolved card style.
+- `WidgetConfiguration`, `GraphStyle`, and `WidgetInterpolation` own card
+  metric-widget schema and graph options.
+- `PersonalizationStore` owns persistence, inheritance, backup, and legacy
+  `contained.*` label migration.
+
 ## Panel scaffolding
 
 Use `MorphPanelScaffold` for toolbar panels. It provides the shared chrome,
@@ -28,6 +36,23 @@ Guidelines:
 - omit `PanelHeader` when the primary control is itself the header, such as the
   Command Palette search field
 - keep footer hints compact and secondary
+
+## Settings-style editors
+
+Use `PanelSection`, `PanelRow`, `PanelField`, and `PanelToggleRow` for dense
+settings and editor surfaces inside glass panels. This keeps Customize, Run/Edit,
+registry login, image build, and Settings aligned on one row rhythm and one
+info-button placement model.
+
+Guidelines:
+
+- keep sections top-level; avoid nesting glass cards inside glass cards
+- put explanatory help in the row `info` slot instead of appending ad-hoc
+  trailing info buttons
+- split repeated editors into focused subviews when the parent sheet also owns
+  persistence or presentation state
+- use `SheetHeader` for modal sheets and `PanelHeader` for in-window morph
+  panels or embedded panel pages
 
 ## Toolbar shell
 

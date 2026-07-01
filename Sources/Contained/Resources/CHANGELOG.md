@@ -155,6 +155,16 @@
 - **Design tokens**: Added `Tokens.Toolbar` enum for all toolbar sizing and spacing
 - **Geometry helpers**: `MorphGeometry` utilities for panel sizing, clamping, and target rect calculation
 - **Optional matched geometry**: Helper for conditional `.matchedGeometryEffect()` in tiles
+- **Housekeeping pass**: Normalized Customize, registry login, and image build editor surfaces onto
+  `PanelSection`/`PanelRow`/`PanelField`; split `CustomizeWidgetsPanel`, `SystemVolumeInventory`,
+  `PanelHeader`, `GlassSurface`, `WidgetConfiguration`, `PersonalizationStore`, `SettingsBackup`,
+  and toolbar filter/action option files into focused ownership; moved resource-style lookup and
+  configuration import/export into `AppModel` extensions; centralized Docker Hub search fetching in
+  `HubSearch`.
+- **Release workflow hardening**: Centralized version/build derivation in `scripts/version-info.sh`,
+  retained promoted nightly build numbers for beta/stable bundles, kept the nightly appcast as a
+  superset of nightly plus promoted release items, and composed generated release notes from full
+  version notes plus channel-specific change notes for beta/nightly builds.
 - **Polish pass**: Extracted the image-update subsystem into `AppModel+ImageUpdates.swift` (core
   `AppModel` 774 → 586 lines) and collapsed the four sweep/pull methods into two shared helpers; split
   the 771-line `ToolbarSearchPalette.swift` into `ToolbarSearchSource`, `ToolbarCommandPalette`, and

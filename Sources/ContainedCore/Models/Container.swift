@@ -13,26 +13,55 @@ public struct ContainerSnapshot: Codable, Sendable, Identifiable, Hashable {
     public var image: String { configuration.image.reference }
     public var startedDate: Date? { status.startedDate }
 
-    /// Personalization is stored as namespaced container labels so it round-trips through the CLI.
+    /// Legacy personalization labels, kept only so older containers can migrate into local storage.
     public var tintLabel: String? { configuration.labels["contained.tint"] }
     public var iconLabel: String? { configuration.labels["contained.icon"] }
     public var nicknameLabel: String? { configuration.labels["contained.nickname"] }
+    /// Functional restart policy label consumed by the app-managed watchdog.
     public var restartLabel: String? { configuration.labels["contained.restart"] }
 
-    /// Name shown in the UI: nickname label if present, otherwise the container id.
+    /// Legacy display name fallback. Newer UI resolves nicknames through `PersonalizationStore`.
     public var displayName: String { nicknameLabel ?? id }
 
     /// A synthetic snapshot for previews and image-level customization (styling an image's default
-    /// before any container from it exists). Decodes from a minimal JSON template — the fields a card
-    /// reads are set; everything else falls back to its decode default.
+    /// before any container from it exists). Encodes a minimal payload first so unusual image or
+    /// volume names are escaped safely before decoding through the same defaults as real snapshots.
     public static func placeholder(id: String, image: String,
                                    state: RuntimeStatus = .running) -> ContainerSnapshot {
-        let json = """
-        {"id":"\(id)","status":{"state":"\(state.rawValue)"},\
-        "configuration":{"id":"\(id)","image":{"reference":"\(image)"},"initProcess":{}}}
-        """
-        return try! JSONDecoder().decode(ContainerSnapshot.self, from: Data(json.utf8))
+        let payload = PlaceholderSnapshotPayload(
+            id: id,
+            status: .init(state: state.rawValue),
+            configuration: .init(id: id, image: .init(reference: image), initProcess: .init())
+        )
+        do {
+            let data = try JSONEncoder().encode(payload)
+            return try JSONDecoder().decode(ContainerSnapshot.self, from: data)
+        } catch {
+            preconditionFailure("Invalid placeholder snapshot: \(error)")
+        }
     }
+}
+
+private struct PlaceholderSnapshotPayload: Encodable {
+    let id: String
+    let status: Status
+    let configuration: Configuration
+
+    struct Status: Encodable {
+        let state: String
+    }
+
+    struct Configuration: Encodable {
+        let id: String
+        let image: Image
+        let initProcess: InitProcess
+    }
+
+    struct Image: Encodable {
+        let reference: String
+    }
+
+    struct InitProcess: Encodable {}
 }
 
 /// The `status` object inside a snapshot.

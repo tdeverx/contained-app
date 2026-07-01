@@ -23,23 +23,23 @@ Contained is a SwiftUI-native macOS app that wraps Apple's `container` CLI. It s
 
 ## Stores (app)
 
-- **`AppModel`** — root state: locates the CLI, owns the client + feature stores, tracks bootstrap status, wires logging/updating, and runs the per-tick coordination.
+- **`AppModel`** — root state: locates the CLI, owns the client + feature stores, tracks bootstrap status, wires logging/updating, and runs the per-tick coordination. Focused extensions own image/resource style lookup, image-update sweeps, and configuration import/export.
 - **`ContainersStore`** — the container list, live stats deltas, and lifecycle actions.
 - **`RefreshCoordinator`** — adaptive polling (stats are polled, not truly streamed — the CLI emits one frame then blocks).
 - **`RestartWatchdog`** — app-managed restart policy (`container` has no native `--restart`); diffs states each tick and re-issues `start` with backoff.
 - **`HealthMonitor`** — app-managed healthchecks: interval-gated `exec` probes with consecutive-failure tracking.
 - **`HistoryStore`** — SwiftData stack for the persistent event log + metric samples (the "rewind" timeline) with bounded retention.
-- **`UpdaterController`** — wraps Sparkle; the user's selected update channel chooses an independent branch-hosted appcast feed.
-- **`SettingsStore`** — persists appearance, update cadence, logging, material choices, and experimental feature gates.
-- **`UIState`** — owns navigation, sidebar visibility, toolbar morph state, palette routing, and creation/edit flow handoff.
+- **`UpdaterController`** — wraps Sparkle; the user's selected update channel chooses a branch-hosted appcast feed. Stable and Beta feeds are branch-local, while Nightly is a superset that also carries promoted release items.
+- **`SettingsStore`** — persists appearance, update cadence, logging, material choices, and experimental feature gates. `SettingsBackup` owns the portable export/import shape.
+- **`UIState`** — owns navigation, sidebar visibility, toolbar morph state, palette routing, and creation/edit flow handoff. Toolbar grouping/sort/filter enums and one-shot actions live in adjacent navigation files so routing state stays readable.
 
 ## Design system
 
-Liquid Glass helpers and reusable primitives include `MorphPanelScaffold`, `PanelHeader`, `PanelSection`, `ResourceGlassCard`, `CommandPreviewBar`, `InfoButton`, `ToolbarIconButton`, and `Tokens` groups for toolbar, panel, spacing, radius, and icon sizing. See [[Design System|Design-System]].
+Liquid Glass helpers and reusable primitives include `MorphPanelScaffold`, `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `ResourceGlassCard`, `GlassSurface`, `CommandPreviewBar`, `InfoButton`, `ToolbarIconButton`, and `Tokens` groups for toolbar, panel, spacing, radius, and icon sizing. See [[Design System|Design-System]].
 
 ## Local-only personalization
 
-Card styles and healthchecks are stored locally (keyed by container id / image reference) — **never** injected as personalization labels, keeping the CLI and containers clean. Functional app-managed labels such as restart policy must round-trip through the container.
+Card styles and healthchecks are stored locally (keyed by container id / image reference) — **never** injected as personalization labels, keeping the CLI and containers clean. `Personalization` owns the resolved style shape, `WidgetConfiguration` owns metric widget schema/options, and `PersonalizationStore` owns persistence and inheritance. Functional app-managed labels such as restart policy must round-trip through the container.
 
 ## Testing
 
