@@ -31,12 +31,15 @@ struct StreamConsole: View {
                         }
                         Color.clear.frame(height: 1).id(bottomID)
                     }
-                    .padding(Tokens.Space.m)
+                    .padding(Tokens.Space.s)
                 }
                 .scrollEdgeEffectStyle(.soft, for: .all)
                 .onChange(of: lines.count) { _, _ in proxy.scrollTo(bottomID, anchor: .bottom) }
             }
-            .background(.black.opacity(0.06), in: RoundedRectangle(cornerRadius: Tokens.Radius.control))
+            .padding(Tokens.Space.s)
+            .background(.black.opacity(0.22),
+                        in: RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
+            .padding(Tokens.Space.s)
         }
         .task { await consume() }
     }
@@ -56,12 +59,14 @@ struct StreamConsole: View {
             }
             Spacer()
             Text("\(lines.count) lines").font(.caption).foregroundStyle(.secondary).monospacedDigit()
-            GlassCircleButton(systemName: "doc.on.doc", help: "Copy log") {
-                copyToPasteboard(lines.joined(separator: "\n"))
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "doc.on.doc", help: "Copy log") {
+                    copyToPasteboard(lines.joined(separator: "\n"))
+                }
             }
         }
         .font(.callout)
-        .padding(.vertical, Tokens.Space.s)
+        .padding(Tokens.Space.s)
     }
 
     private func consume() async {

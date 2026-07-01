@@ -269,6 +269,41 @@ struct RunSpecTests {
         #expect(RunSpecForm.memorySpec(gb: 1.5) == "1536M")
     }
 
+    @Test func adoptsPulledImageDefaultsIntoEmptyRunFields() throws {
+        let data = try Data(contentsOf: fixturesURL.appending(path: "image-inspect.json"))
+        let images = try ContainerJSON.decode([ImageResource].self, from: data)
+        var spec = RunSpec()
+        spec.image = "alpine"
+
+        let defaults = try #require(spec.imageDefaults(in: images))
+        let applied = spec.adoptImageDefaults(from: defaults)
+
+        #expect(applied >= 3)
+        #expect(spec.command == "/bin/sh")
+        #expect(spec.workingDir == "/")
+        #expect(spec.env.contains { $0.key == "PATH" && !$0.value.isEmpty })
+        #expect(spec.hasGeneralOptions)
+        #expect(spec.hasEnvironmentOptions)
+        #expect(spec.hasAdvancedOptions)
+    }
+
+    @Test func adoptingImageDefaultsDoesNotOverwriteExistingEdits() throws {
+        let data = try Data(contentsOf: fixturesURL.appending(path: "image-inspect.json"))
+        let images = try ContainerJSON.decode([ImageResource].self, from: data)
+        var spec = RunSpec()
+        spec.image = "alpine"
+        spec.command = "custom"
+        spec.workingDir = "/app"
+        spec.env = [KeyValue(key: "PATH", value: "/custom")]
+
+        let defaults = try #require(spec.imageDefaults(in: images))
+        _ = spec.adoptImageDefaults(from: defaults)
+
+        #expect(spec.command == "custom")
+        #expect(spec.workingDir == "/app")
+        #expect(spec.env.filter { $0.key == "PATH" }.map(\.value) == ["/custom"])
+    }
+
     @Test func runSpecIsCodable() throws {
         var spec = RunSpec()
         spec.image = "redis:7"
@@ -359,5 +394,12 @@ struct RunSpecTests {
             if Array(haystack[start..<start + needle.count]) == needle { return true }
         }
         return false
+    }
+
+    private var fixturesURL: URL {
+        URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "ContainedCoreTests/Fixtures", directoryHint: .isDirectory)
     }
 }

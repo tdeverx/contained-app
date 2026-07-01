@@ -31,9 +31,9 @@ struct BuildWorkspaceView: View {
                                        dockerfile: dockerfile.isEmpty ? nil : dockerfile,
                                        buildArgs: argsDict, noCache: noCache,
                                        platform: platform.isEmpty ? nil : platform)
-                }, onComplete: { ok in if ok { Task { await app.refreshResource(.images) } } })
+                }, onComplete: { ok in if ok { Task { await app.refreshImagesIfStale(force: true) } } })
                 .id(run)
-                .padding(Tokens.Space.l)
+                .padding(Tokens.Space.s)
             } else {
                 ContentUnavailableView {
                     Label("Build an image", systemImage: "hammer")
@@ -53,7 +53,11 @@ struct BuildWorkspaceView: View {
                             .foregroundStyle(contextDir == nil ? .secondary : .primary)
                             .lineLimit(1).truncationMode(.middle)
                         Spacer()
-                        Button("Choose…") { chooseFolder() }
+                        GlassButton(singleItem: true) {
+                            GlassButtonItem(help: "Choose context folder", action: chooseFolder) {
+                                Label("Choose", systemImage: "folder")
+                            }
+                        }
                     }
                 }
                 .fieldInfo("The build context — the folder sent to the builder (usually your project root).")
@@ -71,22 +75,36 @@ struct BuildWorkspaceView: View {
                         TextField("KEY", text: $arg.key)
                         Text("=").foregroundStyle(.secondary)
                         TextField("value", text: $arg.value)
-                        Button { buildArgs.removeAll { $0.id == arg.id } } label: {
-                            Image(systemName: "minus.circle.fill")
-                        }.buttonStyle(.plain).foregroundStyle(.secondary)
+                        GlassButton(singleItem: true) {
+                            GlassButtonItem(systemName: "minus.circle.fill",
+                                            help: "Remove build argument") {
+                                buildArgs.removeAll { $0.id == arg.id }
+                            }
+                        }
                     }
                 }
-                Button { buildArgs.append(KeyValue()) } label: { Label("Add build arg", systemImage: "plus.circle") }
-                    .buttonStyle(.plain).foregroundStyle(.tint)
+                GlassButton(singleItem: true) {
+                    GlassButtonItem(help: "Add build argument", action: { buildArgs.append(KeyValue()) }) {
+                        Label("Add build arg", systemImage: "plus.circle")
+                    }
+                }
             }
             Section {
-                HStack {
+                HStack(spacing: Tokens.Space.s) {
                     CommandPreviewBar(command: previewCommand)
+                        .frame(maxWidth: .infinity)
                     if building {
-                        Button("Cancel", role: .destructive) { building = false }.buttonStyle(.glass)
+                        GlassButton(singleItem: true) {
+                            GlassButtonItem(role: .destructive, help: "Cancel build", action: { building = false }) {
+                                Label("Cancel", systemImage: "xmark")
+                            }
+                        }
                     } else {
-                        Button { startBuild() } label: { Label("Build", systemImage: "hammer.fill") }
-                            .buttonStyle(.glassProminent)
+                        GlassButton(singleItem: true) {
+                            GlassButtonItem(help: "Build image", action: startBuild) {
+                                Label("Build", systemImage: "hammer.fill")
+                            }
+                        }
                             .disabled(!canBuild)
                     }
                 }

@@ -30,14 +30,18 @@ struct TerminalTab: View {
                 Text("Start the container to open a shell.")
             }
         } else if let url = app.cliURL {
-            VStack(spacing: 0) {
+            ContainerToolTabScaffold {
                 controls
-                Divider()
+            } content: {
                 ZStack {
                     TerminalSurface(executableURL: url, containerID: snapshot.id, shell: shell) { code in
                         ended = Ended(code: code)
                     }
                     .id(session)        // recreating the view tears down the old exec + starts fresh
+                    .padding(Tokens.Space.s)
+                    .background(.black.opacity(0.22),
+                                in: RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
+                    .padding(Tokens.Space.s)
                     if let ended {
                         endedOverlay(code: ended.code)
                     }
@@ -59,9 +63,10 @@ struct TerminalTab: View {
             .onChange(of: shell) { _, _ in reconnect() }
             Text("exec into \(snapshot.id)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
             Spacer()
-            GlassCircleButton(systemName: "arrow.clockwise", help: "Reconnect") { reconnect() }
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "arrow.clockwise", help: "Reconnect") { reconnect() }
+            }
         }
-        .padding(Tokens.Space.m)
     }
 
     private func endedOverlay(code: Int32?) -> some View {
@@ -69,7 +74,11 @@ struct TerminalTab: View {
             Image(systemName: "bolt.horizontal.circle").font(.largeTitle).foregroundStyle(.secondary)
             Text(code == nil || code == 0 ? "Session ended" : "Session ended (exit \(code!))")
                 .font(.headline)
-            Button("Reconnect") { reconnect() }.buttonStyle(.glassProminent)
+            GlassButton(singleItem: true) {
+                GlassButtonItem(help: "Reconnect terminal", action: reconnect) {
+                    Label("Reconnect", systemImage: "arrow.clockwise")
+                }
+            }
         }
         .padding(Tokens.Space.xl)
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))

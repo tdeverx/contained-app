@@ -12,7 +12,7 @@ struct StatsTab: View {
     private var delta: StatsDelta? { app.containers.statsByID[snapshot.id] }
     private var history: [GraphMetric: SampleBuffer] { app.containers.historyByID[snapshot.id] ?? [:] }
     private var tint: Color {
-        app.personalization.resolved(id: snapshot.id, image: snapshot.image).color
+        app.containerStyle(for: snapshot).color
     }
 
     private let columns = [GridItem(.adaptive(minimum: 200), spacing: Tokens.Space.m)]
@@ -23,7 +23,7 @@ struct StatsTab: View {
                 Label("Not running", systemImage: "chart.xyaxis.line")
             } description: { Text("Start the container to see live resource usage.") }
         } else if let delta {
-            ScrollView {
+            ContainerTabScaffold {
                 LazyVGrid(columns: columns, spacing: Tokens.Space.m) {
                     tile(.cpu, delta, "cpu")
                     memoryTile(delta)
@@ -33,10 +33,8 @@ struct StatsTab: View {
                     tile(.diskWrite, delta, "arrow.up.doc")
                     MetricTile(label: "Processes", value: "\(delta.numProcesses)", systemImage: "gearshape.2", tint: tint)
                 }
-                .padding(Tokens.Space.l)
                 processList
             }
-            .scrollEdgeEffectStyle(.soft, for: .all)
             .task(id: snapshot.id) { await loadProcesses() }
         } else {
             // Running but no sample yet (first tick pending).
@@ -58,11 +56,10 @@ struct StatsTab: View {
                     .font(.system(.caption, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(Tokens.Space.m)
-                    .background(.quaternary.opacity(0.10), in: RoundedRectangle(cornerRadius: Tokens.Radius.control))
             }
-            .padding(.horizontal, Tokens.Space.l)
-            .padding(.bottom, Tokens.Space.l)
+            .padding(Tokens.Space.s)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
         }
     }
 

@@ -19,9 +19,9 @@ struct FilesTab: View {
                 Label("Not running", systemImage: "folder")
             } description: { Text("Start the container to browse its files.") }
         } else {
-            VStack(spacing: 0) {
+            ContainerToolTabScaffold {
                 pathBar
-                Divider()
+            } content: {
                 listing
             }
             .task(id: path) { await load() }
@@ -30,15 +30,22 @@ struct FilesTab: View {
 
     private var pathBar: some View {
         HStack(spacing: Tokens.Space.s) {
-            GlassCircleButton(systemName: "chevron.up", help: "Parent") { goUp() }
-                .disabled(path == "/")
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "chevron.up", help: "Parent") { goUp() }
+                    .disabled(path == "/")
+            }
             Text(path).font(.system(.callout, design: .monospaced)).lineLimit(1).truncationMode(.middle)
             Spacer()
             if loading { ProgressView().controlSize(.small) }
-            GlassCircleButton(systemName: "square.and.arrow.down", help: "Copy a file into this folder") { copyIn() }
-            GlassCircleButton(systemName: "arrow.clockwise", help: "Refresh") { Task { await load() } }
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "square.and.arrow.down", help: "Copy a file into this folder") {
+                    copyIn()
+                }
+            }
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "arrow.clockwise", help: "Refresh") { Task { await load() } }
+            }
         }
-        .padding(Tokens.Space.m)
     }
 
     @ViewBuilder
@@ -52,7 +59,7 @@ struct FilesTab: View {
                 LazyVStack(spacing: 1) {
                     ForEach(entries, id: \.self) { entry in row(entry) }
                 }
-                .padding(Tokens.Space.m)
+                .padding(Tokens.Space.s)
             }
             .scrollEdgeEffectStyle(.soft, for: .all)
         }
@@ -64,7 +71,7 @@ struct FilesTab: View {
         return HStack(spacing: Tokens.Space.s) {
             Image(systemName: isDir ? "folder.fill" : "doc")
                 .foregroundStyle(isDir ? Color.accentColor : Color.secondary)
-                .frame(width: 18)
+                .frame(width: Tokens.IconSize.rowMenu)
             Text(name).font(.system(.callout, design: .monospaced))
             Spacer()
             if isDir {
@@ -74,7 +81,8 @@ struct FilesTab: View {
                     .buttonStyle(.plain).foregroundStyle(.secondary).help("Copy to host")
             }
         }
-        .padding(.vertical, 4).padding(.horizontal, Tokens.Space.s)
+        .padding(.vertical, Tokens.Space.xs)
+        .padding(.horizontal, Tokens.Space.s)
         .contentShape(Rectangle())
         .onTapGesture { if isDir { path = joined(name) + "/" } }
     }

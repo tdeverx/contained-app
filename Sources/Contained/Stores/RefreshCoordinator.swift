@@ -3,13 +3,11 @@ import ContainedCore
 
 /// Drives periodic refresh of the whole app. There is no push API from `container`, so a single
 /// adaptive polling loop fetches system status + containers + stats each tick (and the active
-/// resource section), then runs the `RestartWatchdog`. Cadence speeds up while containers are
+/// resource caches), then runs the `RestartWatchdog`. Cadence speeds up while containers are
 /// transitioning, slows when idle, and pauses when the window is in the background.
 @MainActor
 @Observable
 final class RefreshCoordinator {
-    /// The section currently on screen — its resource list is refreshed alongside containers.
-    var activeSection: AppSection = .containers
     /// False when the window is backgrounded/inactive — pauses polling to save power.
     var isActive = true {
         didSet { if isActive && !oldValue { wake() } }
@@ -36,7 +34,7 @@ final class RefreshCoordinator {
     private func run() async {
         while !Task.isCancelled {
             if isActive, let app {
-                await app.tick(section: activeSection)
+                await app.tick()
             }
             let interval = nextInterval()
             // Interruptible sleep so wake() can cut it short.

@@ -11,7 +11,7 @@ struct CommandPreviewBar: View {
     var body: some View {
         HStack(spacing: Tokens.Space.s) {
             Image(systemName: "terminal")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white)
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(rendered)
                     .font(.system(.caption, design: .monospaced))
@@ -31,8 +31,8 @@ struct CommandPreviewBar: View {
             .help("Copy command")
             .accessibilityLabel(copied ? "Copied" : "Copy command")
         }
-        .padding(.horizontal, Tokens.Space.m)
+        .padding(.horizontal, Tokens.Space.s)
         .padding(.vertical, Tokens.Space.s)
-        .glassSurface(.thin, cornerRadius: Tokens.Radius.control)
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
     }
 }

@@ -2,309 +2,106 @@ import SwiftUI
 import AppKit
 import ContainedCore
 
-/// App preferences. Four tabs, each built from the same grouped-`Form` + `Section` model so spacing,
+/// App preferences. Six sections, each built from the same `PanelSection` glass-card model so spacing,
 /// headers, and explanatory footers stay consistent: Appearance (theme + glass), General (behavior,
-/// data, CLI), Updates (Sparkle), and About.
-struct SettingsView: View {
+/// data, CLI), Runtime, Registries, Updates, and About.
+///
+/// Hosted in the toolbar Settings morph panel via the shared `MorphPanelScaffold`, so the panel hugs
+/// the active section's content height. Sections switch via a header menu rather than a `TabView`.
+struct SettingsContent: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
+    @State private var page: SettingsPage
+    var onClose: (() -> Void)?
+
+    enum SettingsPage: String, CaseIterable, Identifiable {
+        case appearance = "Appearance"
+        case general = "General"
+        case runtime = "Runtime"
+        case registries = "Registries"
+        case experimental = "Experimental"
+        case updates = "Updates"
+        case about = "About"
+
+        var id: String { rawValue }
+
+        var systemImage: String {
+            switch self {
+            case .appearance: "paintpalette"
+            case .general: "gearshape"
+            case .runtime: "cpu"
+            case .registries: "key"
+            case .experimental: "flask"
+            case .updates: "arrow.down.app"
+            case .about: "info.circle"
+            }
+        }
+    }
+
+    init(initialPage: SettingsPage = .appearance, onClose: (() -> Void)? = nil) {
+        self.onClose = onClose
+        _page = State(initialValue: initialPage)
+    }
+
+    private var showsHeader: Bool {
+        onClose != nil || !ui.toolbarUIEnabled
+    }
 
     var body: some View {
         @Bindable var settings = app.settings
-        TabView {
-            AppearanceTab(settings: settings)
-                .tabItem { Label("Appearance", systemImage: "paintpalette") }
-            GeneralTab(settings: settings)
-                .tabItem { Label("General", systemImage: "gearshape") }
-            RegistriesTab()
-                .tabItem { Label("Registries", systemImage: "key") }
-            UpdatesTab()
-                .tabItem { Label("Updates", systemImage: "arrow.down.app") }
-            AboutTab()
-                .tabItem { Label("About", systemImage: "info.circle") }
+        MorphPanelScaffold(width: Tokens.PanelSize.settings.width, placement: .centered) {
+            if showsHeader {
+                VStack(spacing: 0) {
+                    header
+                    Divider()
+                }
+            }
+        } content: {
+            sectionBody(settings: settings)
+                .padding(Tokens.Space.s)
         }
-        .frame(width: 500, height: 460)
-    }
-}
-
-// MARK: - Appearance
-
-private struct AppearanceTab: View {
-    @Bindable var settings: SettingsStore
-
-    var body: some View {
-        Form {
-            Section("Theme") {
-                Picker("Appearance", selection: $settings.appearance) {
-                    ForEach(AppearanceMode.allCases) { Text($0.displayName).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                LabeledContent("Accent tint") {
-                    TintSelector(selection: $settings.accentTint)
-                }
-            }
-
-            Section {
-                Picker("Card size", selection: $settings.density) {
-                    ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                Picker("Main background material", selection: $settings.windowMaterial) {
-                    ForEach(WindowMaterial.allCases) { Text($0.displayName).tag($0) }
-                }
-                Picker("Panel & sheet material", selection: $settings.modalMaterial) {
-                    ForEach(WindowMaterial.allCases) { Text($0.displayName).tag($0) }
-                }
-                Toggle("Reduce translucency", isOn: $settings.reduceTranslucency)
-                Toggle("Show info tips", isOn: $settings.showInfoTips)
-            } header: {
-                Text("Layout & glass")
-            } footer: {
-                Text("Main background material controls the root content backing. Panel & sheet material controls floating detail panels, popovers, and sheets. Reduce translucency switches to solid system surfaces for legibility.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+        .onAppear { consumeRequestedPage() }
+        .onChange(of: ui.settingsPage) { _, requested in
+            guard let requested else { return }
+            consumeRequestedPage(requested)
         }
-        .formStyle(.grouped)
     }
-}
 
-// MARK: - General
+    private func consumeRequestedPage(_ requested: SettingsPage? = nil) {
+        guard let requested = requested ?? ui.settingsPage else { return }
+        page = requested
+        ui.settingsPage = nil
+    }
 
-private struct GeneralTab: View {
-    @Environment(AppModel.self) private var app
-    @Bindable var settings: SettingsStore
-    @State private var confirmingClear = false
-
-    var body: some View {
-        Form {
-            Section("Startup") {
-                Toggle("Launch at login", isOn: $settings.launchAtLogin)
-                Toggle("Keep running in the menu bar", isOn: $settings.keepInMenuBar)
-            }
-
-            Section("Notifications & actions") {
-                Toggle("Notify on container crash / restart", isOn: $settings.notifyOnCrash)
-                Toggle("Show “Reveal CLI” on actions", isOn: $settings.revealCLI)
-                    .fieldInfo("Adds a copyable command and a “Copy as CLI” menu item to destructive or privileged actions, so you can see exactly what runs.")
-            }
-
-            Section {
-                LabeledContent("Refresh interval") {
-                    HStack {
-                        Slider(value: $settings.refreshInterval, in: 1...10, step: 1)
-                        Text("\(Int(settings.refreshInterval))s").monospacedDigit().frame(width: 32, alignment: .trailing)
+    private var header: some View {
+        PanelHeader(symbol: page.systemImage,
+                    title: "Settings",
+                    subtitle: page.rawValue) {
+            GlassButton {
+                ForEach(SettingsPage.allCases) { item in
+                    GlassButtonItem(help: item.rawValue, isIcon: true, action: { page = item }) {
+                        Image(systemName: item.systemImage)
+                            .foregroundStyle(Color.white)
+                            .opacity(page == item ? 1 : 0.62)
                     }
                 }
-                Picker("Keep history for", selection: retentionBinding) {
-                    Text("1 day").tag(1)
-                    Text("7 days").tag(7)
-                    Text("14 days").tag(14)
-                    Text("30 days").tag(30)
+                if let onClose {
+                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
                 }
-                Button("Clear History…", role: .destructive) { confirmingClear = true }
-                ConfigTransferControls()
-            } header: {
-                Text("Data")
-            } footer: {
-                Text("Backups use a versioned JSON envelope, so settings and local data can be exported before rollback or restored after upgrade.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-
-            Section("Advanced") {
-                TextField("Container CLI path", text: $settings.cliPathOverride,
-                          prompt: Text("/usr/local/bin/container"))
-                    .fieldInfo("Override the auto-detected `container` binary location.")
             }
         }
-        .formStyle(.grouped)
-        .confirmationDialog("Clear all history?", isPresented: $confirmingClear) {
-            Button("Clear History", role: .destructive) { app.clearHistory() }
-        } message: {
-            Text("This permanently removes all recorded metrics and events. Saved templates are kept.")
+    }
+
+    @ViewBuilder
+    private func sectionBody(settings: SettingsStore) -> some View {
+        switch page {
+        case .appearance: AppearanceTab(settings: settings)
+        case .general: GeneralTab(settings: settings)
+        case .runtime: RuntimeTab()
+        case .registries: RegistriesTab()
+        case .experimental: ExperimentalTab(settings: settings)
+        case .updates: UpdatesTab()
+        case .about: AboutTab()
         }
-    }
-
-    private var retentionBinding: Binding<Int> {
-        Binding(get: { settings.historyRetentionDays },
-                set: { app.applyHistoryRetention($0) })
-    }
-}
-
-// MARK: - Registries
-
-/// Registry logins live here (not the File menu): list signed-in registries and log in / out. The
-/// Registries sidebar page remains the same data; this is the credential-management home in Settings.
-private struct RegistriesTab: View {
-    @Environment(AppModel.self) private var app
-    @State private var loggingIn = false
-    @State private var loggingOut: RegistryLogin?
-
-    var body: some View {
-        Form {
-            Section {
-                if app.registries.isEmpty {
-                    Text("Not signed in to any registries.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(app.registries) { login in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(login.host)
-                                if let user = login.username {
-                                    Text("as \(user)").font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                            Spacer()
-                            Button("Log Out", role: .destructive) { loggingOut = login }
-                        }
-                    }
-                }
-            } header: {
-                Text("Signed-in registries")
-            } footer: {
-                Text("Credentials are typed by you and piped to the CLI via stdin, so the password never lands in the process list. Contained doesn’t store it.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-
-            Section {
-                Button("Log In to Registry…") { loggingIn = true }
-            }
-        }
-        .formStyle(.grouped)
-        .task { await app.refreshResource(.registries) }
-        .sheet(isPresented: $loggingIn) { RegistryLoginSheet() }
-        .confirmationDialog("Log out of \(loggingOut?.host ?? "")?",
-                            isPresented: logoutBinding, presenting: loggingOut) { login in
-            Button("Log out", role: .destructive) { Task { await logout(login) } }
-        } message: { _ in Text("Removes the stored credentials for this registry.") }
-    }
-
-    private var logoutBinding: Binding<Bool> {
-        Binding(get: { loggingOut != nil }, set: { if !$0 { loggingOut = nil } })
-    }
-
-    private func logout(_ login: RegistryLogin) async {
-        guard let client = app.client else { return }
-        do { _ = try await client.registryLogout(server: login.host); await app.refreshResource(.registries) }
-        catch let error as CommandError { app.flash(error.userMessage) }
-        catch { app.flash(error.localizedDescription) }
-    }
-}
-
-// MARK: - Updates
-
-private struct UpdatesTab: View {
-    @Environment(AppModel.self) private var app
-    @State private var showingAvailableNotes = false
-    @State private var showingCurrentNotes = false
-
-    var body: some View {
-        @Bindable var settings = app.settings
-        Form {
-            Section {
-                LabeledContent("Update channel") {
-                    Menu(app.settings.updateChannel.displayName) {
-                        ForEach(UpdateChannel.allCases) { channel in
-                            Button {
-                                channelBinding.wrappedValue = channel
-                            } label: {
-                                if app.settings.updateChannel == channel {
-                                    Label(channel.displayName, systemImage: "checkmark")
-                                } else {
-                                    Text(channel.displayName)
-                                }
-                            }
-                            .disabled(!app.updater.availableChannels.contains(channel))
-                        }
-                    }
-                    .fixedSize()
-                }
-                Toggle("Automatically check for updates",
-                       isOn: Binding(get: { app.updater.automaticallyChecks },
-                                     set: { app.updater.automaticallyChecks = $0 }))
-                Button("Check for Updates…") { app.updater.checkForUpdates() }
-                    .disabled(!app.updater.canCheckForUpdates)
-                Button("What’s New in This Build") { showingCurrentNotes = true }
-                Button(availableUpdateNotesLabel) { showingAvailableNotes = true }
-                    .disabled(app.updater.availableReleaseNotesHTML == nil)
-            } header: {
-                Text("Updates")
-            } footer: {
-                Text("\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-        }
-        .formStyle(.grouped)
-        .task { app.updater.refreshChannelAvailability() }
-        .sheet(isPresented: $showingCurrentNotes) {
-            ReleaseNotesView(title: "What’s New",
-                             html: app.updater.currentReleaseNotesHTML,
-                             onClose: { showingCurrentNotes = false })
-        }
-        .sheet(isPresented: $showingAvailableNotes) {
-            ReleaseNotesView(title: availableUpdateNotesTitle,
-                             html: app.updater.availableReleaseNotesHTML ?? "<p>No release notes are available.</p>",
-                             onClose: { showingAvailableNotes = false })
-        }
-    }
-
-    private var availableUpdateNotesLabel: String {
-        if let version = app.updater.availableUpdateDisplayVersion {
-            return "What’s New in \(version)"
-        }
-        return "What’s New in Available Update"
-    }
-
-    private var availableUpdateNotesTitle: String {
-        if let version = app.updater.availableUpdateDisplayVersion {
-            return "What’s New in \(version)"
-        }
-        return "Available Update"
-    }
-
-    private var channelBinding: Binding<UpdateChannel> {
-        Binding(get: { app.settings.updateChannel },
-                set: { app.settings.updateChannel = $0; app.updater.channel = $0 })
-    }
-}
-
-// MARK: - About
-
-private struct AboutTab: View {
-    @Environment(AppModel.self) private var app
-
-    var body: some View {
-        Form {
-            Section {
-                HStack(spacing: Tokens.Space.m) {
-                    Image(nsImage: NSApp.applicationIconImage)
-                        .resizable().frame(width: 56, height: 56)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Contained").font(.title3.weight(.semibold))
-                        Text("Version \(appVersion)").font(.callout).foregroundStyle(.secondary)
-                        Text("A native macOS UI for Apple’s container runtime.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
-                .padding(.vertical, Tokens.Space.xs)
-            }
-
-            Section("Runtime") {
-                LabeledContent("Container CLI", value: app.cliVersion ?? "—")
-                LabeledContent("API server", value: app.systemStatus?.apiServerVersion ?? "—")
-            }
-
-            Section {
-                LabeledContent("Copyright", value: "© 2026 Contained")
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    private var appVersion: String {
-        let info = Bundle.main.infoDictionary
-        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = info?["CFBundleVersion"] as? String ?? "1"
-        return "\(short) (\(build))"
     }
 }

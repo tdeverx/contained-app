@@ -1,51 +1,329 @@
 import SwiftUI
+import ContainedCore
 
-/// Cross-cutting UI state shared between the sidebar header menus, the menu-bar commands, and the
-/// content views.
+/// Cross-cutting UI state shared between toolbar panels, menu commands, and content views.
 @MainActor
 @Observable
 final class UIState {
-    /// Filter text applied by the section list views. The in-window search affordance is being
-    /// reworked; until it returns this stays empty (so every filter is a no-op pass-through).
-    var searchText = ""
+    enum CreationEntry: Hashable { case menu, chooser, search, configure, network, volume, build }
+    enum ToolbarMorph: Hashable { case add, palette, updates, activity, templates, system, settings }
+
+    struct CreationPresentation {
+        var entry: CreationEntry = .menu
+        var prefillSpec: RunSpec?
+        var editSnapshot: ContainerSnapshot?
+        var searchQuery = ""
+        var requestToken = 0
+    }
+
+    struct ToolbarPresentation {
+        var activeMorph: ToolbarMorph?
+        var closeRequestToken = 0
+    }
+
+    struct SearchPresentation {
+        /// Filter text applied by the section list views. The in-window search affordance is being
+        /// reworked; until it returns this stays empty (so every filter is a no-op pass-through).
+        var text = ""
+        var pageResultCount: Int?
+        var paletteIndex = 0
+        var focusToken = 0
+        /// The active palette scope. `nil` searches commands; a scope pins a chip to the search field
+        /// and searches in-place (Docker Hub or local images) without leaving the palette.
+        var scope: PaletteScope?
+    }
+
+    struct PrefillPresentation {
+        var showRunSheet = false
+        var currentSpec: RunSpec?
+        var queue: [RunSpec] = []
+    }
+
+    var creation = CreationPresentation()
+    var toolbar = ToolbarPresentation()
+    var search = SearchPresentation()
+    var prefill = PrefillPresentation()
     var runningOnly = false
-    var showRunSheet = false
-    var showPalette = false
-    /// Highlighted row in the global command palette.
-    var paletteIndex = 0
-    /// The selected sidebar section (here, not RootView, so the command palette can navigate).
-    var section: AppSection = .containers
-    /// A spec to prefill the next Create/Run sheet — from "Run" on an image or "Use" on a template.
-    var prefillSpec: RunSpec?
-    /// Remaining specs to step through as prefilled New-Container windows. Compose import enqueues one
-    /// per service; each opens after the previous window closes (Create or Cancel both advance).
-    var prefillQueue: [RunSpec] = []
+    var selectedSection: AppSection = .containers
+    var sidebarVisible = true
+    var toolbarUIEnabled = false
+    var panelNavigationEnabled = false
+    /// How the Containers page groups and orders cards, driven by the page filter control.
+    var grouping: ContainerGrouping = .network
+    var sort: ContainerSort = .name
+    var imageGrouping: ImageGrouping = .none
+    var imageSort: ImageSort = .status
+    var imageFilter: ImageFilter = .all
+    var templateGrouping: TemplateGrouping = .none
+    var templateSort: TemplateSort = .newest
+    var networkGrouping: NetworkGrouping = .none
+    var networkSort: NetworkSort = .name
+    var networkFilter: NetworkFilter = .all
+    var activityFilter: EventKind? = nil
+    var systemPage: SystemContent.SystemPage = .engine
 
-    /// A one-shot action requested from the sidebar header or a menu, addressed to a specific
-    /// section's view. The view consumes it (clearing it) on appear *and* on change, which is
-    /// race-free across the section switch that mounts the view.
+    /// When set, `SettingsContent` will switch to this page as soon as it appears / becomes active.
+    /// Cleared by `SettingsContent` after it consumes the value.
+    var settingsPage: SettingsContent.SettingsPage? = nil
+
+    /// A one-shot action requested by menus or the command palette. `RootView` consumes global
+    /// actions, while toolbar panels and the Containers page handle their local operations directly.
     var pendingAction: PendingAction?
+    var editSheetSnapshot: ContainerSnapshot?
 
-    /// Navigate to the action's section and arm it for the destination view to pick up.
-    func dispatch(_ action: PendingAction) {
-        section = action.section
+    // MARK: Compatibility accessors
+
+    var searchText: String {
+        get { search.text }
+        set { search.text = newValue }
+    }
+
+    var showRunSheet: Bool {
+        get { prefill.showRunSheet }
+        set { prefill.showRunSheet = newValue }
+    }
+
+    var creationEntry: CreationEntry {
+        get { creation.entry }
+        set { creation.entry = newValue }
+    }
+
+    var creationPrefillSpec: RunSpec? {
+        get { creation.prefillSpec }
+        set { creation.prefillSpec = newValue }
+    }
+
+    var creationEditSnapshot: ContainerSnapshot? {
+        get { creation.editSnapshot }
+        set { creation.editSnapshot = newValue }
+    }
+
+    var creationSearchQuery: String {
+        get { creation.searchQuery }
+        set { creation.searchQuery = newValue }
+    }
+
+    private(set) var creationRequestToken: Int {
+        get { creation.requestToken }
+        set { creation.requestToken = newValue }
+    }
+
+    var activeMorph: ToolbarMorph? {
+        get { toolbar.activeMorph }
+        set { toolbar.activeMorph = newValue }
+    }
+
+    private(set) var morphCloseRequestToken: Int {
+        get { toolbar.closeRequestToken }
+        set { toolbar.closeRequestToken = newValue }
+    }
+
+    var pageResultCount: Int? {
+        get { search.pageResultCount }
+        set { search.pageResultCount = newValue }
+    }
+
+    var paletteIndex: Int {
+        get { search.paletteIndex }
+        set { search.paletteIndex = newValue }
+    }
+
+    var paletteScope: PaletteScope? {
+        get { search.scope }
+        set { search.scope = newValue }
+    }
+
+    var prefillSpec: RunSpec? {
+        get { prefill.currentSpec }
+        set { prefill.currentSpec = newValue }
+    }
+
+    var prefillQueue: [RunSpec] {
+        get { prefill.queue }
+        set { prefill.queue = newValue }
+    }
+
+    private(set) var searchFocusToken: Int {
+        get { search.focusToken }
+        set { search.focusToken = newValue }
+    }
+
+    // MARK: Actions
+
+    /// Open the Settings panel and navigate to a specific page in one call.
+    func openSettings(to page: SettingsContent.SettingsPage) {
+        settingsPage = page
+        guard panelNavigationEnabled else {
+            navigate(to: .settings)
+            return
+        }
+        if activeMorph != .settings { activeMorph = .settings }
+    }
+
+    func navigate(to section: AppSection) {
+        selectedSection = section
+        if activeMorph != nil { requestMorphClose() }
+    }
+
+    func ensureSelectedSectionIsNavigable() {
+        if !selectedSection.isNavigable(panelNavigationEnabled: panelNavigationEnabled) {
+            selectedSection = .containers
+        }
+    }
+
+    func setSidebarVisible(_ visible: Bool) {
+        withAnimation(.easeInOut(duration: 0.24)) {
+            sidebarVisible = visible
+        }
+    }
+
+    func navigateForClassicFallback(_ action: PendingAction) {
         switch action {
-        case .runContainer: showRunSheet = true       // RootView is always mounted — no handoff needed
-        case .build: break                            // navigate only; Build has its own UI
-        default: pendingAction = action
+        case .runContainer:
+            navigate(to: .containers)
+        case .pullImage, .loadImage, .pruneImages, .build:
+            navigate(to: .images)
+        case .createVolume:
+            navigate(to: .volumes)
+        case .createNetwork:
+            navigate(to: .networks)
+        case .registryLogin:
+            openSettings(to: .registries)
+        case .activityHistory:
+            navigate(to: .activity)
+        case .systemLogs:
+            navigate(to: .system)
+        }
+    }
+
+    /// Toggle a toolbar morph panel (open it, or close it if already open).
+    func toggleMorph(_ morph: ToolbarMorph) {
+        if activeMorph == morph {
+            requestMorphClose(morph)
+        } else {
+            activeMorph = morph
+        }
+    }
+
+    func requestMorphClose(_ morph: ToolbarMorph? = nil) {
+        guard let activeMorph, morph == nil || activeMorph == morph else { return }
+        morphCloseRequestToken &+= 1
+    }
+
+    /// Run an action by opening the right creation page, morph panel, or global sheet.
+    func dispatch(_ action: PendingAction) {
+        if action == .registryLogin {
+            openSettings(to: .registries)
+            return
+        }
+        if !panelNavigationEnabled {
+            switch action {
+            case .runContainer:
+                presentCreate(RunSpec())
+                return
+            case .pullImage, .createVolume, .createNetwork, .build, .activityHistory:
+                navigateForClassicFallback(action)
+                return
+            case .loadImage, .pruneImages, .systemLogs:
+                pendingAction = action
+                return
+            case .registryLogin:
+                return
+            }
+        }
+        switch action {
+        case .runContainer:
+            openCreationPanel(entry: .chooser)
+        case .pullImage:
+            openCreationPanel(entry: .search)
+        case .createVolume:
+            openCreationPanel(entry: .volume)
+        case .createNetwork:
+            openCreationPanel(entry: .network)
+        case .build:
+            openCreationPanel(entry: .build)
+        case .activityHistory:
+            activeMorph = .activity
+        case .loadImage, .pruneImages, .systemLogs:
+            pendingAction = action
+        case .registryLogin:
+            break
+        }
+    }
+
+    /// Open the creation flow in the toolbar add morph at a specific page.
+    func openCreationPanel(entry: CreationEntry = .menu, prefill spec: RunSpec? = nil, searchQuery: String = "") {
+        guard panelNavigationEnabled else {
+            switch entry {
+            case .menu, .chooser, .configure:
+                presentCreate(spec ?? RunSpec())
+            case .network:
+                navigate(to: .networks)
+            case .volume:
+                navigate(to: .volumes)
+            case .search, .build:
+                navigate(to: .images)
+            }
+            return
+        }
+        creationEntry = entry
+        creationPrefillSpec = spec
+        creationEditSnapshot = nil
+        creationSearchQuery = searchQuery
+        creationRequestToken &+= 1
+        activeMorph = .add
+    }
+
+    func openCreationPanel(prefill spec: RunSpec) {
+        guard panelNavigationEnabled else {
+            presentCreate(spec)
+            return
+        }
+        openCreationPanel(entry: .configure, prefill: spec)
+    }
+
+    func openCreationPanel(editing snapshot: ContainerSnapshot) {
+        guard panelNavigationEnabled else {
+            editSheetSnapshot = snapshot
+            return
+        }
+        creationEntry = .configure
+        creationPrefillSpec = nil
+        creationEditSnapshot = snapshot
+        creationRequestToken &+= 1
+        activeMorph = .add
+    }
+
+    /// Bumped by Cmd-F to focus the toolbar page-search field (without opening the command palette).
+    func focusSearch() {
+        if activeMorph != nil {
+            requestMorphClose()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { [weak self] in
+                self?.searchFocusToken &+= 1
+            }
+        } else {
+            searchFocusToken &+= 1
         }
     }
 
     func runImage(_ reference: String) {
         var spec = RunSpec()
         spec.image = reference
+        guard panelNavigationEnabled else {
+            presentCreate(spec)
+            return
+        }
         prefillQueue = []
-        presentCreate(spec)
+        openCreationPanel(prefill: spec)
     }
 
     func useTemplate(_ spec: RunSpec) {
+        guard panelNavigationEnabled else {
+            presentCreate(spec)
+            return
+        }
         prefillQueue = []
-        presentCreate(spec)
+        openCreationPanel(prefill: spec)
     }
 
     /// Open the New-Container window prefilled with `spec`.
@@ -74,8 +352,7 @@ final class UIState {
     }
 }
 
-/// A one-shot, section-targeted action requested from the sidebar header (or a menu). Each knows
-/// which sidebar section owns it, so `UIState.dispatch` can navigate there first.
+/// One-shot commands that may come from menus, the command palette, or toolbar panels.
 enum PendingAction: Equatable {
     case runContainer
     case pullImage, loadImage, pruneImages
@@ -84,16 +361,144 @@ enum PendingAction: Equatable {
     case registryLogin
     case build
     case activityHistory, systemLogs
+}
 
-    var section: AppSection {
+enum ImageGrouping: String, CaseIterable, Identifiable {
+    case none, registry, status
+    var id: String { rawValue }
+    var title: String {
         switch self {
-        case .runContainer:                       return .containers
-        case .pullImage, .loadImage, .pruneImages: return .images
-        case .createVolume:                       return .volumes
-        case .createNetwork:                      return .containers   // networks fold into Containers
-        case .registryLogin:                      return .registries
-        case .build:                              return .build
-        case .activityHistory, .systemLogs:       return .system
+        case .none: return "None"
+        case .registry: return "Registry"
+        case .status: return "Status"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .none: return "square.stack.3d.up"
+        case .registry: return "globe"
+        case .status: return "arrow.triangle.2.circlepath"
+        }
+    }
+}
+
+enum ImageSort: String, CaseIterable, Identifiable {
+    case status, name, tags
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .status: return "Status"
+        case .name: return "Name"
+        case .tags: return "Tags"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .status: return "bolt"
+        case .name: return "textformat"
+        case .tags: return "tag"
+        }
+    }
+}
+
+enum ImageFilter: String, CaseIterable, Identifiable {
+    case all, updates, errors
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .all: return "All images"
+        case .updates: return "Updates only"
+        case .errors: return "Errors only"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .all: return "tray.full"
+        case .updates: return "arrow.down.circle"
+        case .errors: return "exclamationmark.triangle"
+        }
+    }
+}
+
+enum TemplateGrouping: String, CaseIterable, Identifiable {
+    case none, image
+    var id: String { rawValue }
+    var title: String { self == .none ? "None" : "Image" }
+    var symbol: String { self == .none ? "bookmark" : "shippingbox" }
+}
+
+enum TemplateSort: String, CaseIterable, Identifiable {
+    case newest, name, image
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .newest: return "Newest"
+        case .name: return "Name"
+        case .image: return "Image"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .newest: return "clock"
+        case .name: return "textformat"
+        case .image: return "shippingbox"
+        }
+    }
+}
+
+enum NetworkGrouping: String, CaseIterable, Identifiable {
+    case none, kind, mode
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .none: return "None"
+        case .kind: return "Kind"
+        case .mode: return "Mode"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .none: return "network"
+        case .kind: return "square.stack"
+        case .mode: return "switch.2"
+        }
+    }
+}
+
+enum NetworkSort: String, CaseIterable, Identifiable {
+    case name, mode, plugin
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .name: return "Name"
+        case .mode: return "Mode"
+        case .plugin: return "Plugin"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .name: return "textformat"
+        case .mode: return "switch.2"
+        case .plugin: return "puzzlepiece"
+        }
+    }
+}
+
+enum NetworkFilter: String, CaseIterable, Identifiable {
+    case all, custom, builtin
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .all: return "All networks"
+        case .custom: return "Custom only"
+        case .builtin: return "Built-in only"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .all: return "tray.full"
+        case .custom: return "network"
+        case .builtin: return "network.badge.shield.half.filled"
         }
     }
 }

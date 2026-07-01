@@ -3,14 +3,14 @@ import AppKit
 import ContainedCore
 
 /// The Containers screen: a responsive grid of personalized glass cards. Density and the running
-/// filter live in the sidebar header's ⋯ menu; tapping a card grows it in place into a centered
-/// detail panel.
+/// filter live in the background context menu and menu commands; tapping a card grows it in place
+/// into a centered detail panel.
 struct ContainersGridView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
+    @Environment(\.appSafeAreas) private var safeAreas
 
     @State private var detail: ContainerSnapshot?
-    @State private var editing: ContainerSnapshot?
     @State private var deleting: ContainerSnapshot?
     @State private var selecting = false
     @State private var selection: Set<String> = []
@@ -21,10 +21,8 @@ struct ContainersGridView: View {
     /// can start from the exact slot it was tapped in.
     @State private var cardFrames: [String: CGRect] = [:]
 
-    // Network grouping is folded into this page: each network is a collapsible section of the
-    // containers attached to it. These drive the network-level CRUD (no separate Networks page).
+    // Each network is a collapsible section of the containers attached to it.
     @State private var collapsedNetworks: Set<String> = []
-    @State private var creatingNetwork = false
     @State private var inspectingNetwork: NetworkResource?
     @State private var deletingNetwork: NetworkResource?
 
@@ -32,14 +30,15 @@ struct ContainersGridView: View {
 
     private var store: ContainersStore { app.containers }
 
-    /// A network and the (filtered) containers attached to it. `resource` is nil for the synthetic
-    /// "default" bucket when the runtime has no builtin network of its own.
-    private struct NetworkGroup: Identifiable {
+    /// A bucket of containers under one heading. `resource` is set only for network grouping (so the
+    /// section keeps its network context menu); `symbol` drives the section header glyph.
+    private struct ContainerGroup: Identifiable {
         let name: String
+        let symbol: String
         let resource: NetworkResource?
         let containers: [ContainerSnapshot]
+        let isBuiltin: Bool
         var id: String { name }
-        var isBuiltin: Bool { resource?.isBuiltin ?? true }
     }
 
     /// The network names a container is attached to (requested config ∪ runtime status).
@@ -48,9 +47,19 @@ struct ContainersGridView: View {
         return Array(Set(names)).sorted()
     }
 
-    /// Containers grouped by network. Every known network gets a section (empty ones included);
-    /// containers on multiple networks appear under each; unattached containers fall to "default".
-    private var groups: [NetworkGroup] {
+    /// Containers bucketed according to the toolbar grouping choice, each bucket sorted by the chosen
+    /// sort. Network grouping keeps every known network as a section (empty ones included).
+    private var groups: [ContainerGroup] {
+        switch ui.grouping {
+        case .network: return networkGroups
+        case .volume:  return volumeGroups
+        case .image:   return imageGroups
+        case .flat:    return [ContainerGroup(name: "All containers", symbol: "square.grid.2x2",
+                                              resource: nil, containers: sorted(filtered), isBuiltin: false)]
+        }
+    }
+
+    private var networkGroups: [ContainerGroup] {
         let byNetworkName = Dictionary(app.networks.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
         let defaultName = app.networks.first { $0.isBuiltin }?.name ?? "default"
 
@@ -68,19 +77,74 @@ struct ContainersGridView: View {
         }
 
         return buckets.keys.sorted { lhs, rhs in
-            // The default / builtin network sorts first, then alphabetical.
             if lhs == defaultName { return true }
             if rhs == defaultName { return false }
             return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
         }.map { name in
-            NetworkGroup(name: name, resource: byNetworkName[name], containers: buckets[name] ?? [])
+            ContainerGroup(name: name, symbol: "network", resource: byNetworkName[name],
+                           containers: sorted(buckets[name] ?? []),
+                           isBuiltin: byNetworkName[name]?.isBuiltin ?? true)
+        }
+    }
+
+    private var volumeGroups: [ContainerGroup] {
+        let noVolume = "No volume"
+        var buckets: [String: [ContainerSnapshot]] = [:]
+        for snapshot in filtered {
+            let volumes = Set(snapshot.configuration.mounts.compactMap { mount -> String? in
+                guard let source = mount.source, !source.isEmpty else { return nil }
+                return source
+            })
+            if volumes.isEmpty {
+                buckets[noVolume, default: []].append(snapshot)
+            } else {
+                for volume in volumes { buckets[volume, default: []].append(snapshot) }
+            }
+        }
+        return buckets.keys.sorted { lhs, rhs in
+            if lhs == noVolume { return false }
+            if rhs == noVolume { return true }
+            return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
+        }.map { name in
+            ContainerGroup(name: name, symbol: "externaldrive", resource: nil,
+                           containers: sorted(buckets[name] ?? []), isBuiltin: false)
+        }
+    }
+
+    private var imageGroups: [ContainerGroup] {
+        var buckets: [String: [ContainerSnapshot]] = [:]
+        for snapshot in filtered {
+            buckets[Format.shortImage(snapshot.image), default: []].append(snapshot)
+        }
+        return buckets.keys.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+            .map { name in
+                ContainerGroup(name: name, symbol: "shippingbox", resource: nil,
+                               containers: sorted(buckets[name] ?? []), isBuiltin: false)
+            }
+    }
+
+    /// Order a bucket of containers by the chosen sort.
+    private func sorted(_ containers: [ContainerSnapshot]) -> [ContainerSnapshot] {
+        switch ui.sort {
+        case .name:
+            return containers.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        case .status:
+            return containers.sorted { lhs, rhs in
+                let lhsRunning = lhs.state == .running, rhsRunning = rhs.state == .running
+                if lhsRunning != rhsRunning { return lhsRunning }
+                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+            }
+        case .image:
+            return containers.sorted { lhs, rhs in
+                let cmp = lhs.image.localizedCaseInsensitiveCompare(rhs.image)
+                if cmp != .orderedSame { return cmp == .orderedAscending }
+                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+            }
         }
     }
 
     private var columns: [GridItem] {
-        // Both densities share the same width band — only the card height differs (compact drops the
-        // graph), so the grid columns line up regardless of density.
-        [GridItem(.adaptive(minimum: Tokens.CardSize.largeMin, maximum: Tokens.CardSize.largeMax),
+        return [GridItem(.adaptive(minimum: Tokens.CardSize.largeMin, maximum: Tokens.CardSize.largeMax),
                   spacing: Tokens.Space.m)]
     }
 
@@ -96,6 +160,7 @@ struct ContainersGridView: View {
     var body: some View {
         @Bindable var ui = ui
         return GeometryReader { viewport in
+            let scrollBounds = safeAreas.bounds(in: viewport.size, policy: .content)
             ZStack {
                 ScrollView {
                     ZStack(alignment: .top) {
@@ -103,41 +168,37 @@ struct ContainersGridView: View {
                         // window. As a sibling — not an ancestor — of the cards, it never delays or
                         // intercepts their taps; only clicks that fall through the gaps reach it.
                         Color.clear
-                            .frame(maxWidth: .infinity, minHeight: viewport.size.height)
+                            .frame(maxWidth: .infinity, minHeight: scrollBounds.height)
                             .contentShape(Rectangle())
                             .onTapGesture(count: 2) { zoomFrontWindow() }
                         LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
                             ForEach(groups) { group in
-                                networkSection(group)
+                                groupSection(group)
                             }
+                            Color.clear
+                                .frame(height: Tokens.Toolbar.band)
                         }
-                        .padding(Tokens.Space.l)
+                        .padding(.horizontal, Tokens.Space.l)
                     }
                 }
-                .scrollEdgeEffectStyle(.soft, for: .all)
-                .disabled(detail != nil)
-                .blur(radius: expanded ? 8 : 0)
+                .contentMargins(.top, ui.toolbarUIEnabled ? 0 : Tokens.Toolbar.band, for: .scrollContent)
 
                 if detail != nil {
-                    Rectangle()
-                        .fill(.black.opacity(expanded ? 0.28 : 0))
-                        .ignoresSafeArea()
+                    Color.clear
+                        .globalBackdrop(style: .blur, progress: expanded ? 1 : 0)
                         .contentShape(Rectangle())
                         .onTapGesture { closeDetail() }
                         .zIndex(5)
                 }
 
                 if let detail {
-                    let target = panelRect(in: viewport.size)
-                    let rect = expanded ? target : (cardFrames[detail.id] ?? target)
+                    let target = cardDetailTarget.rect(origin: .zero,
+                                                       in: viewport.size,
+                                                       safeAreas: cardDetailSafeAreas)
+                    let source = cardFrames[detail.id].flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
+                    let rect = expanded ? target : source
                     expandedCard(detail)
-                        .frame(width: rect.width, height: rect.height)
-                        .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
-                        // Constant elevation — softer, lighter, larger. Not gated by `expanded`, so it
-                        // doesn't pop out and back in during the close.
-                        // KNOWN ISSUE: a small shadow pop remains as the card reaches the closed slot
-                        // (the overlay is swapped for the real grid card). Tracked separately.
-                        .shadow(color: .black.opacity(0.16), radius: 60, y: 26)
+                        .frame(width: rect.width, height: rect.height, alignment: .top)
                         .position(x: rect.midX, y: rect.midY)
                         .zIndex(10)
                 }
@@ -151,9 +212,6 @@ struct ContainersGridView: View {
         .overlay {
             if store.snapshots.isEmpty && app.networks.isEmpty { emptyState }
         }
-        .sheet(item: $editing) { snapshot in
-            ContainerEditSheet(mode: .edit(snapshot, onComplete: { editing = nil }))
-        }
         .confirmationDialog(
             "Delete \(customizeName(deleting))?",
             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })
@@ -166,37 +224,33 @@ struct ContainersGridView: View {
         } message: {
             Text("This removes the container. This can't be undone.")
         }
-        // Network-level actions (formerly the Networks page).
+        // Network-level actions.
         .task { await app.refreshNetworks() }
-        .onAppear { if ui.pendingAction == .createNetwork { ui.pendingAction = nil; creatingNetwork = true } }
-        .onChange(of: ui.pendingAction) { _, _ in if ui.pendingAction == .createNetwork { ui.pendingAction = nil; creatingNetwork = true } }
-        .sheet(isPresented: $creatingNetwork) {
-            CreateNetworkSheet { name, subnet, internalOnly in
-                await createNetwork(name: name, subnet: subnet, internalOnly: internalOnly)
-            }
-        }
         .sheet(item: $inspectingNetwork) { JSONInspectorSheet(title: $0.name, value: $0) }
         .confirmationDialog("Delete network \(deletingNetwork?.name ?? "")?",
                             isPresented: deleteNetworkBinding, presenting: deletingNetwork) { network in
             Button("Delete", role: .destructive) { Task { await deleteNetwork(network) } }
         } message: { _ in Text("This removes the network. Containers must be detached first.") }
         .refreshable { await store.refresh() }
+        // Report the in-page search count so the toolbar can escalate an empty search into the palette.
+        .onAppear { ui.pageResultCount = filtered.count }
+        .onChange(of: filtered.count) { _, count in ui.pageResultCount = count }
     }
 
     // MARK: - Network sections
 
     @ViewBuilder
-    private func networkSection(_ group: NetworkGroup) -> some View {
+    private func groupSection(_ group: ContainerGroup) -> some View {
         let collapsed = collapsedNetworks.contains(group.name)
         VStack(alignment: .leading, spacing: Tokens.Space.s) {
             sectionHeader(group, collapsed: collapsed)
             if !collapsed {
                 if group.containers.isEmpty {
-                    Text("No containers on this network.")
+                    Text(ui.grouping == .network ? "No containers on this network." : "No containers.")
                         .font(.callout)
                         .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, Tokens.Space.s)
-                        .padding(.leading, Tokens.Space.xs)
                 } else {
                     LazyVGrid(columns: columns, spacing: Tokens.Space.m) {
                         ForEach(group.containers) { snapshot in
@@ -208,61 +262,28 @@ struct ContainersGridView: View {
         }
     }
 
-    private func sectionHeader(_ group: NetworkGroup, collapsed: Bool) -> some View {
+    private func sectionHeader(_ group: ContainerGroup, collapsed: Bool) -> some View {
         HStack(spacing: Tokens.Space.s) {
             Button {
                 toggleCollapsed(group.name)
             } label: {
-                HStack(spacing: Tokens.Space.s) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(collapsed ? 0 : 90))
-                    Image(systemName: "network").font(.system(size: 12)).foregroundStyle(.secondary)
-                    Text(group.name).font(.headline)
-                    Text("\(group.containers.count)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 7).padding(.vertical, 2)
-                        .background(.quaternary, in: Capsule())
-                    if group.isBuiltin {
-                        Text("builtin").font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(.quaternary, in: Capsule())
-                    }
-                }
-                .contentShape(Rectangle())
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(collapsed ? 0 : 90))
             }
             .buttonStyle(.plain)
-            Spacer(minLength: 0)
-            if let resource = group.resource {
-                networkOptionsMenu(resource)
+            Image(systemName: group.symbol).font(.callout).foregroundStyle(.secondary)
+            Text(group.name).font(.headline)
+            ResourceBadgeText(text: "\(group.containers.count)")
+            if group.isBuiltin {
+                ResourceBadgeText(text: "builtin", font: .caption2.weight(.medium))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Tokens.Space.xs)
         .padding(.vertical, Tokens.Space.xs)
         .contextMenu { if let resource = group.resource { networkMenu(resource) } }
-    }
-
-    /// The header's ⋯ menu, styled to match the cards' non-prominent round glass buttons (a neutral
-    /// glass circle — not the accent-tinted resource-row menu).
-    private func networkOptionsMenu(_ resource: NetworkResource) -> some View {
-        Menu {
-            networkMenu(resource)
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 13, weight: .medium))
-                .frame(width: Tokens.IconSize.rowMenu, height: Tokens.IconSize.rowMenu)
-        }
-        .menuStyle(.button)
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .tint(.secondary)
-        .help("Network options")
-        .accessibilityLabel("Network options")
     }
 
     @ViewBuilder
@@ -286,15 +307,6 @@ struct ContainersGridView: View {
 
     private var deleteNetworkBinding: Binding<Bool> {
         Binding(get: { deletingNetwork != nil }, set: { if !$0 { deletingNetwork = nil } })
-    }
-
-    private func createNetwork(name: String, subnet: String?, internalOnly: Bool) async {
-        guard let client = app.client else { return }
-        do {
-            _ = try await client.createNetwork(name: name, subnet: subnet, internalOnly: internalOnly)
-            await app.refreshNetworks()
-        } catch let error as CommandError { app.flash(error.userMessage) }
-        catch { app.flash(error.localizedDescription) }
     }
 
     private func deleteNetwork(_ network: NetworkResource) async {
@@ -336,7 +348,7 @@ struct ContainersGridView: View {
 
     private func containerCard(_ snapshot: ContainerSnapshot, isExpanded: Bool,
                                controlsVisible: Bool = true, onTap: @escaping () -> Void) -> some View {
-        let style = app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+        let style = app.containerStyle(for: snapshot)
         return ContainerCard(
             snapshot: snapshot,
             style: style,
@@ -345,13 +357,15 @@ struct ContainersGridView: View {
             history: store.historyByID[snapshot.id]?[style.graphMetric]?.values ?? [],
             histories: (store.historyByID[snapshot.id] ?? [:]).mapValues(\.values),
             isBusy: store.busyIDs.contains(snapshot.id),
+            hasImageUpdate: app.imageUpdateStatus(for: snapshot.image).state == .updateAvailable,
             isExpanded: isExpanded,
             controlsVisible: controlsVisible,
             onTap: onTap,
             onStart: { Task { await store.start(snapshot.id) } },
             onStop: { Task { await store.stop(snapshot.id) } },
             onRestart: { Task { await store.restart(snapshot.id) } },
-            onEdit: { editing = snapshot },
+            onEdit: { ui.openCreationPanel(editing: snapshot) },
+            onUpdate: { updateContainer(snapshot) },
             onDelete: { deleting = snapshot },
             onClose: closeDetail,
             onSelectMultiple: { beginSelecting(snapshot.id) },
@@ -364,18 +378,32 @@ struct ContainersGridView: View {
         )
     }
 
-    private func panelSize(in viewport: CGSize) -> CGSize {
-        let width = min(max(viewport.width * 0.62, 680), max(680, viewport.width - Tokens.Space.xxl * 2))
-        let height = min(620, max(520, viewport.height - Tokens.Space.xxl * 2))
-        return CGSize(width: width, height: height)
+    private var cardDetailTarget: AppMorphTarget {
+        .centered(safeArea: cardDetailSafeAreaPolicy, margin: 0) { bounds in
+            panelSize(in: bounds.size)
+        }
     }
 
-    /// The centered final frame the promoted card grows into.
-    private func panelRect(in viewport: CGSize) -> CGRect {
-        let size = panelSize(in: viewport)
-        return CGRect(x: (viewport.width - size.width) / 2,
-                      y: (viewport.height - size.height) / 2,
-                      width: size.width, height: size.height)
+    private var cardDetailSafeAreaPolicy: AppSafeAreaPolicy {
+        AppSafeAreaPolicy(excluding: .both, padding: .none, includesSystemInsets: false)
+    }
+
+    private var cardDetailSafeAreas: AppSafeAreaManager {
+        guard ui.toolbarUIEnabled else { return safeAreas }
+        return AppSafeAreaManager(system: safeAreas.system,
+                                  topToolbarHeight: AppToolbar.bandHeight,
+                                  bottomToolbarHeight: AppToolbar.bandHeight)
+    }
+
+    private func panelSize(in available: CGSize) -> CGSize {
+        let fitted = MorphGeometry.fittedSize(
+            CGSize(width: max(available.width * 0.62, 680), height: 620),
+            in: available,
+            margin: 0
+        )
+        let width = max(min(fitted.width, available.width), min(360, fitted.width))
+        let height = fitted.height
+        return CGSize(width: width, height: height)
     }
 
     private func openDetail(_ snapshot: ContainerSnapshot) {
@@ -434,9 +462,17 @@ struct ContainersGridView: View {
         }
     }
 
+    private func updateContainer(_ snapshot: ContainerSnapshot) {
+        Task {
+            if await app.pullImageUpdate(snapshot.image) {
+                ui.openCreationPanel(editing: snapshot)
+            }
+        }
+    }
+
     private func customizeName(_ snapshot: ContainerSnapshot?) -> String {
         guard let snapshot else { return "" }
-        return app.personalization.resolved(id: snapshot.id, image: snapshot.image)
+        return app.containerStyle(for: snapshot)
             .displayName(fallback: snapshot.id)
     }
 
@@ -447,7 +483,7 @@ struct ContainersGridView: View {
         } description: {
             Text(ui.runningOnly ? "No running containers." : "Run a container to see it here.")
         } actions: {
-            Button("Run a container") { ui.showRunSheet = true }
+            Button("Run a container") { ui.openCreationPanel(entry: .chooser) }
         }
     }
 }
@@ -461,17 +497,8 @@ private struct CardFrameKey: PreferenceKey {
     }
 }
 
-struct ErrorToast: View {
-    let message: String
-    var body: some View {
-        HStack(spacing: Tokens.Space.s) {
-            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
-            Text(message).font(.callout).lineLimit(2)
-        }
-        .padding(.horizontal, Tokens.Space.l)
-        .padding(.vertical, Tokens.Space.m)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.control)
-        .padding(Tokens.Space.l)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+private extension CGRect {
+    var isUsableForMorph: Bool {
+        width.isFinite && height.isFinite && minX.isFinite && minY.isFinite && width > 1 && height > 1
     }
 }

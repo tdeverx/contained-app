@@ -22,26 +22,53 @@ enum ComposeImport {
         do {
             let text = try String(contentsOf: url, encoding: .utf8)
             let projectName = url.deletingLastPathComponent().lastPathComponent
-            let parsed = try ComposeParser.parse(text, projectName: projectName.isEmpty ? "stack" : projectName)
-            let baseDirectory = url.deletingLastPathComponent()
-            var specs: [RunSpec] = []
-            for service in parsed.services where service.image != nil {
-                var spec = RunSpec(service: service, projectName: parsed.name)
-                spec.volumes = spec.volumes.map { resolveRelativeVolume($0, baseDirectory: baseDirectory) }
-                specs.append(spec)
-            }
-            guard !specs.isEmpty else {
-                app.flash("No services with an image to import.")
-                return
-            }
-            if !parsed.warnings.isEmpty {
-                app.flash("Some compose keys weren't translated — review each container before creating.")
-            }
-            ui.beginPrefillQueue(specs, using: app)
+            importText(text, projectName: projectName.isEmpty ? "stack" : projectName,
+                       baseDirectory: url.deletingLastPathComponent(), app: app, ui: ui)
         } catch let error as ComposeError {
             app.flash({ if case .invalid(let message) = error { return message }; return "Invalid compose file." }())
         } catch {
             app.flash(error.localizedDescription)
+        }
+    }
+
+    /// Parse pasted compose text and feed its services into the prefill queue.
+    static func importText(_ text: String, projectName: String = "pasted",
+                           baseDirectory: URL? = nil, app: AppModel, ui: UIState) {
+        do {
+            let parsed = try ComposeParser.parse(text, projectName: projectName)
+            var specs: [RunSpec] = []
+            for service in parsed.services where service.image != nil {
+                var spec = RunSpec(service: service, projectName: parsed.name)
+                if let baseDirectory {
+                    spec.volumes = spec.volumes.map { resolveRelativeVolume($0, baseDirectory: baseDirectory) }
+                }
+                specs.append(spec)
+            }
+            guard !specs.isEmpty else {
+                app.flash("No services with an image to import.")
+                app.logger.record("Compose import \(parsed.name) had no services with images",
+                                  category: .compose,
+                                  severity: .warning)
+                return
+            }
+            if !parsed.warnings.isEmpty {
+                app.flash("Some compose keys weren't translated — review each container before creating.")
+                app.logger.record("Compose import \(parsed.name) produced \(parsed.warnings.count) warning\(parsed.warnings.count == 1 ? "" : "s")",
+                                  category: .compose,
+                                  severity: .warning)
+            }
+            app.logger.record("Imported compose project \(parsed.name) with \(specs.count) service\(specs.count == 1 ? "" : "s")",
+                              category: .compose)
+            ui.beginPrefillQueue(specs, using: app)
+        } catch let error as ComposeError {
+            let message = { if case .invalid(let message) = error { return message }; return "Invalid compose file." }()
+            app.flash(message)
+            app.logger.record("Compose import failed: \(message)", category: .compose, severity: .error)
+        } catch {
+            app.flash(error.localizedDescription)
+            app.logger.record("Compose import failed: \(error.localizedDescription)",
+                              category: .compose,
+                              severity: .error)
         }
     }
 

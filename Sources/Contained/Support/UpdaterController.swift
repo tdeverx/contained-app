@@ -21,7 +21,7 @@ final class UpdaterController {
     var availableUpdateDisplayVersion: String?
     var showWhatsNew = false
 
-    init(channel: UpdateChannel = .stable, defaults: UserDefaults = .standard) {
+    init(channel: UpdateChannel = .nightly, defaults: UserDefaults = .standard) {
         self.defaults = defaults
         channelDelegate.channel = channel
         channelDelegate.onUpdateFound = { [weak self] item in
@@ -64,12 +64,12 @@ final class UpdaterController {
     }
 
     var automaticallyChecks: Bool {
-        get { controller?.updater.automaticallyChecksForUpdates ?? false }
+        get { controller?.updater.automaticallyChecksForUpdates ?? true }
         set { controller?.updater.automaticallyChecksForUpdates = newValue }
     }
 
     /// Switch the channel; a background information check re-queries the new feed immediately.
-    var channel: UpdateChannel = .stable {
+    var channel: UpdateChannel = .nightly {
         didSet {
             channelDelegate.channel = channel
             controller?.updater.checkForUpdateInformation()
@@ -154,7 +154,7 @@ final class UpdaterController {
     /// (overriding `SUFeedURL`) and reports the allowed channel set (empty — feed selection *is* the
     /// channel with per-branch feeds).
     private final class ChannelDelegate: NSObject, SPUUpdaterDelegate {
-        var channel: UpdateChannel = .stable
+        var channel: UpdateChannel = .nightly
         var onUpdateFound: ((SUAppcastItem) -> Void)?
         var onNoUpdateFound: (() -> Void)?
         func feedURLString(for updater: SPUUpdater) -> String? { channel.feedURL }

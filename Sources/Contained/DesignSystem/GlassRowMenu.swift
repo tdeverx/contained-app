@@ -13,7 +13,7 @@ struct GlassRowMenu<Content: View>: View {
             content()
         } label: {
             Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .medium))
+                .font(.body.weight(.medium))
                 .frame(width: Tokens.IconSize.rowMenu, height: Tokens.IconSize.rowMenu)
         }
         .menuStyle(.button)

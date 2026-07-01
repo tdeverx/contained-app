@@ -1,10 +1,42 @@
 import SwiftUI
 
-/// Sidebar destinations, grouped Workloads / Infra / System.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case containers, images, build
-    case volumes, registries
-    case system, templates
+    case containers
+    case images
+    case volumes
+    case networks
+    case system
+    case registries
+    case templates
+    case activity
+    case settings
+
+    static let allCases: [AppSection] = [
+        .containers,
+        .images,
+        .volumes,
+        .networks,
+        .system,
+        .templates,
+        .activity,
+        .settings,
+    ]
+
+    static func navigableSections(panelNavigationEnabled: Bool) -> [AppSection] {
+        allCases.filter { section in
+            section.isNavigable(panelNavigationEnabled: panelNavigationEnabled)
+        }
+    }
+
+    func isNavigable(panelNavigationEnabled: Bool) -> Bool {
+        guard panelNavigationEnabled else { return true }
+        switch self {
+        case .system, .activity, .settings:
+            return false
+        default:
+            return true
+        }
+    }
 
     var id: String { rawValue }
 
@@ -12,37 +44,46 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .containers: return "Containers"
         case .images: return "Images"
-        case .build: return "Build"
         case .volumes: return "Volumes"
-        case .registries: return "Registries"
+        case .networks: return "Networks"
         case .system: return "System"
+        case .registries: return "Registries"
         case .templates: return "Templates"
+        case .activity: return "Activity"
+        case .settings: return "Settings"
         }
     }
 
-    var systemImage: String {
+    var symbol: String {
         switch self {
         case .containers: return "shippingbox"
         case .images: return "square.stack.3d.up"
-        case .build: return "hammer"
         case .volumes: return "externaldrive"
-        case .registries: return "key"
+        case .networks: return "network"
         case .system: return "gearshape.2"
-        case .templates: return "square.on.square"
+        case .registries: return "key"
+        case .templates: return "bookmark"
+        case .activity: return "bell"
+        case .settings: return "gearshape"
         }
     }
 
-    enum Group: String, CaseIterable, Identifiable {
-        case workloads = "Workloads"
-        case infra = "Infra"
-        case system = "System"
-        var id: String { rawValue }
-        var sections: [AppSection] {
-            switch self {
-            case .workloads: return [.containers, .images, .build]
-            case .infra: return [.volumes, .registries]
-            case .system: return [.system, .templates]
-            }
+    var group: AppSectionGroup {
+        switch self {
+        case .containers, .images, .templates:
+            return .workloads
+        case .volumes, .networks, .registries:
+            return .infra
+        case .system, .activity, .settings:
+            return .system
         }
     }
+}
+
+enum AppSectionGroup: String, CaseIterable, Identifiable {
+    case workloads = "Workloads"
+    case infra = "Infra"
+    case system = "System"
+
+    var id: String { rawValue }
 }

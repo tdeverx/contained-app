@@ -17,9 +17,9 @@ struct LogsTab: View {
     private let bottomID = "logs-bottom"
 
     var body: some View {
-        VStack(spacing: 0) {
+        ContainerToolTabScaffold {
             controls
-            Divider()
+        } content: {
             logBody
         }
         // Stream is tied to the view's lifetime and the container id: switching tabs or containers
@@ -41,12 +41,18 @@ struct LogsTab: View {
             }
             Spacer()
             Text("\(lines.count) lines").font(.caption).foregroundStyle(.secondary).monospacedDigit()
-            GlassCircleButton(systemName: "doc.on.doc", help: "Copy all") {
-                copyToPasteboard(lines.joined(separator: "\n"))
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "doc.on.doc", help: "Copy all") {
+                    copyToPasteboard(lines.joined(separator: "\n"))
+                }
             }
-            GlassCircleButton(systemName: "trash", help: "Clear") { lines.removeAll(); carry = "" }
+            GlassButton(singleItem: true) {
+                GlassButtonItem(systemName: "trash", role: .destructive, help: "Clear") {
+                    lines.removeAll(); carry = ""
+                }
+                .disabled(lines.isEmpty)
+            }
         }
-        .padding(Tokens.Space.m)
     }
 
     @ViewBuilder
@@ -76,7 +82,7 @@ struct LogsTab: View {
                         }
                         Color.clear.frame(height: 1).id(bottomID)
                     }
-                    .padding(Tokens.Space.m)
+                    .padding(Tokens.Space.s)
                 }
                 .scrollEdgeEffectStyle(.soft, for: .all)
                 .onChange(of: lines.count) { _, _ in

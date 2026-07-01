@@ -8,9 +8,9 @@ struct ContainerOverviewTab: View {
     private var config: ContainerConfiguration { snapshot.configuration }
 
     var body: some View {
-        ScrollView {
+        ContainerTabScaffold {
             VStack(alignment: .leading, spacing: Tokens.Space.m) {
-                group("General") {
+                section("General") {
                     row("Image", snapshot.image)
                     row("Platform", config.platform.display)
                     if let exec = config.initProcess.executable {
@@ -18,26 +18,26 @@ struct ContainerOverviewTab: View {
                     }
                     row("Working dir", config.initProcess.workingDirectory ?? "—")
                 }
-                group("Resources") {
+                section("Resources") {
                     row("CPUs", "\(config.resources.cpus)")
                     row("Memory", Format.bytes(config.resources.memoryInBytes))
                 }
                 if !config.publishedPorts.isEmpty {
-                    group("Ports") {
+                    section("Ports") {
                         ForEach(config.publishedPorts, id: \.containerPort) { port in
                             row(port.proto?.uppercased() ?? "TCP", "\(port.hostAddress ?? "0.0.0.0"):\(port.display)")
                         }
                     }
                 }
                 if !config.mounts.isEmpty {
-                    group("Mounts") {
+                    section("Mounts") {
                         ForEach(config.mounts, id: \.effectiveDestination) { mount in
                             row(mount.effectiveDestination ?? "—", "\(mount.source ?? "—") (\(mount.type ?? "?"))")
                         }
                     }
                 }
                 if !config.initProcess.environment.isEmpty {
-                    group("Environment") {
+                    section("Environment") {
                         ForEach(config.initProcess.environment, id: \.self) { env in
                             Text(env).font(.system(.caption, design: .monospaced))
                                 .frame(maxWidth: .infinity, alignment: .leading).lineLimit(1)
@@ -45,26 +45,20 @@ struct ContainerOverviewTab: View {
                     }
                 }
                 if !config.labels.isEmpty {
-                    group("Labels") {
+                    section("Labels") {
                         ForEach(config.labels.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
                             row(key, value)
                         }
                     }
                 }
             }
-            .padding(Tokens.Space.l)
         }
-        .scrollEdgeEffectStyle(.soft, for: .all)
     }
 
-    private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
-            Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+    private func section<Content: View>(_ title: String, @ViewBuilder content: @escaping () -> Content) -> some View {
+        ContainerTabSection(title: title) {
             content()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Tokens.Space.m)
-        .background(.quaternary.opacity(0.10), in: RoundedRectangle(cornerRadius: Tokens.Radius.control, style: .continuous))
     }
 
     private func row(_ label: String, _ value: String) -> some View {

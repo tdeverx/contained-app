@@ -4,6 +4,11 @@ import SwiftData
 /// Categories of events recorded to the persistent history/timeline.
 enum EventKind: String, Codable, CaseIterable, Sendable {
     case lifecycle      // start / stop / remove
+    case image          // image load / update / maintenance
+    case compose        // compose import / translation
+    case system         // runtime service / volumes / networks
+    case registry       // registry login state
+    case ui             // user-facing app messages
     case pull           // image pull
     case build          // image build
     case watchdog       // app-managed restart / unexpected exit
@@ -13,6 +18,11 @@ enum EventKind: String, Codable, CaseIterable, Sendable {
     var symbol: String {
         switch self {
         case .lifecycle: return "play.circle"
+        case .image: return "square.stack.3d.up"
+        case .compose: return "shippingbox.and.arrow.backward"
+        case .system: return "gearshape.2"
+        case .registry: return "key"
+        case .ui: return "bubble"
         case .pull: return "arrow.down.circle"
         case .build: return "hammer"
         case .watchdog: return "arrow.clockwise.circle"
@@ -29,12 +39,17 @@ final class EventRecord {
     var containerID: String?
     var kindRaw: String
     var message: String
+    /// Whether the user has seen this event in the Activity panel. New events start unread so the
+    /// toolbar bell can surface a badge; opening (and dismissing) the panel marks them read. Defaulted
+    /// so the SwiftData schema migrates in place for stores written before this column existed.
+    var isRead: Bool = false
 
-    init(timestamp: Date, containerID: String?, kind: EventKind, message: String) {
+    init(timestamp: Date, containerID: String?, kind: EventKind, message: String, isRead: Bool = false) {
         self.timestamp = timestamp
         self.containerID = containerID
         self.kindRaw = kind.rawValue
         self.message = message
+        self.isRead = isRead
     }
 
     init(snapshot: EventRecordSnapshot) {

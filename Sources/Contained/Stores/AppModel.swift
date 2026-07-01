@@ -26,6 +26,9 @@ final class AppModel {
     let historyStore = HistoryStore()
     let updater = UpdaterController()
     let migrator = StateMigrator()
+    let logger: AppLogger
+    /// Shared with `AppModel+ImageUpdates.swift` (Swift extensions in other files need ≥ internal).
+    let manifestClient = RegistryManifestClient()
 
     private(set) var bootstrap: Bootstrap = .checking
     private(set) var client: ContainerClient?
@@ -35,19 +38,113 @@ final class AppModel {
     private(set) var diskUsage: DiskUsage?
     private(set) var cliVersion: String?
 
-    // Resource caches for the Images/Volumes/Networks pages, refreshed by the coordinator.
-    private(set) var images: [ContainedCore.ImageResource] = []
+    // Resource caches shared by toolbar panels, creation pages, and the container grid.
     private(set) var volumes: [VolumeResource] = []
     private(set) var networks: [NetworkResource] = []
     private(set) var registries: [RegistryLogin] = []
     private(set) var properties: SystemProperties?
-    private(set) var imagesError: String?
+    // `images`/`imagesError`/`imageUpdates` are written by both this file and the image-update sweep
+    // in `AppModel+ImageUpdates.swift`, so their setters can't be `private(set)`.
+    var images: [ContainedCore.ImageResource] = []
+    var imagesError: String?
+    var imageUpdates: [String: ImageUpdateStatus] = [:] {
+        didSet { Self.saveImageUpdates(imageUpdates) }
+    }
     /// Transient watchdog/crash banner text (auto-cleared).
     var banner: String?
     /// A long-running operation surfaced as a floating progress bar (e.g. pulling an image before a
     /// run). `nil` when idle.
     var activity: ActivityState?
     var downgradeSchemaVersion: Int?
+    /// The most recent create/pull failure, surfaced inline by the create form so the user can fix the
+    /// problem without losing their spec. Cleared at the start of each attempt.
+    var createError: String?
+    // The image-update sweep state below is driven from `AppModel+ImageUpdates.swift`.
+    var lastImageUpdateSweep: Date? {
+        didSet { Self.saveLastImageUpdateSweep(lastImageUpdateSweep) }
+    }
+    static let imageUpdatesKey = "imageUpdateStatuses"
+    static let imageUpdateLastSweepKey = "imageUpdateLastSweep"
+    var imageUpdateInterval: TimeInterval { TimeInterval(settings.imageUpdateIntervalHours) * 60 * 60 }
+    var imageUpdateLastRunDate: Date? { lastImageUpdateSweep }
+    var imageUpdateNextRunDate: Date {
+        lastImageUpdateSweep?.addingTimeInterval(imageUpdateInterval) ?? Date()
+    }
+    var imageUpdateIntervalDescription: String {
+        "Every \(settings.imageUpdateIntervalHours) hour\(settings.imageUpdateIntervalHours == 1 ? "" : "s")"
+    }
+
+    var defaultImageStyle: Personalization {
+        settings.imageDefaultStyleEnabled ? personalization.defaultImageStyle : Personalization()
+    }
+
+    func imageStyle(for reference: String) -> Personalization {
+        let groupID = LocalImageTagGroup.groups(for: images).first { group in
+            group.references.contains(reference)
+        }?.id
+        return personalization.imageDefault(for: reference, groupID: groupID) ?? defaultImageStyle
+    }
+
+    func imageGroupStyle(for group: LocalImageTagGroup) -> Personalization {
+        personalization.imageGroupDefault(for: group.id) ?? defaultImageStyle
+    }
+
+    /// The group's style by id (used where only the id is known, e.g. a tag resolving its parent).
+    func imageGroupStyle(forID id: String) -> Personalization {
+        personalization.imageGroupDefault(for: id) ?? defaultImageStyle
+    }
+
+    func volumeStyle(for name: String) -> Personalization {
+        var style = personalization.volumeStyle(for: name) ?? Personalization()
+        style.normalizeVolumeWidgets()
+        return style
+    }
+
+    // MARK: Per-volume I/O (aggregated from the containers that mount the volume)
+
+    /// Containers that mount the named volume (matches a named-volume mount source).
+    func containersMounting(volume name: String) -> [ContainerSnapshot] {
+        containers.snapshots.filter { snapshot in
+            snapshot.configuration.mounts.contains { $0.source == name }
+        }
+    }
+
+    /// The current block read/write rate for a volume — summed across every container mounting it.
+    func volumeIORate(for name: String, metric: GraphMetric) -> Double {
+        containersMounting(volume: name).reduce(0) { total, snapshot in
+            total + (containers.statsByID[snapshot.id].map { metric.value(from: $0) } ?? 0)
+        }
+    }
+
+    /// A read/write sparkline series for a volume — the element-wise sum of the mounting containers'
+    /// block-I/O history, right-aligned so the most recent samples line up.
+    func volumeIOHistory(for name: String, metric: GraphMetric) -> [Double] {
+        let series = containersMounting(volume: name).compactMap {
+            containers.historyByID[$0.id]?[metric]?.values
+        }
+        return Self.sumRightAligned(series)
+    }
+
+    private static func sumRightAligned(_ series: [[Double]]) -> [Double] {
+        let maxLen = series.map(\.count).max() ?? 0
+        guard maxLen > 0 else { return [] }
+        var result = [Double](repeating: 0, count: maxLen)
+        for s in series {
+            let offset = maxLen - s.count
+            for (i, value) in s.enumerated() { result[offset + i] += value }
+        }
+        return result
+    }
+
+    func containerStyle(for snapshot: ContainerSnapshot) -> Personalization {
+        let groupID = LocalImageTagGroup.groups(for: images).first { group in
+            group.references.contains(snapshot.image)
+        }?.id
+        return personalization.resolved(id: snapshot.id,
+                                        image: snapshot.image,
+                                        groupID: groupID,
+                                        fallback: defaultImageStyle)
+    }
 
     /// One in-flight operation shown in the bottom progress bar.
     struct ActivityState: Equatable {
@@ -58,32 +155,46 @@ final class AppModel {
 
     init(settings: SettingsStore = SettingsStore()) {
         self.settings = settings
+        self.logger = AppLogger(settings: settings, history: historyStore)
+        self.containers.logger = logger
+        imageUpdates = Self.loadImageUpdates()
+        lastImageUpdateSweep = Self.loadLastImageUpdateSweep()
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
+        updater.automaticallyChecks = settings.appUpdateChecksEnabled
         if case .newerOnDisk(let version) = migrator.reconcile() {
             downgradeSchemaVersion = version
         }
         watchdog.onRestart = { [weak self] snapshot, attempt in
             guard let self else { return }
-            let name = self.personalization.resolved(id: snapshot.id, image: snapshot.image)
+            let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             self.flash("Restarted \(name) (attempt \(attempt))")
-            self.historyStore.record(.watchdog, containerID: snapshot.id, message: "Restarted \(name) (attempt \(attempt))")
+            self.logger.record("Restarted \(name) (attempt \(attempt))",
+                               category: .health,
+                               severity: .warning,
+                               containerID: snapshot.id)
             self.notifier.containerRestarted(name: name, attempt: attempt, enabled: settings.notifyOnCrash)
         }
         watchdog.onUnexpectedExit = { [weak self] snapshot in
             guard let self else { return }
-            let name = self.personalization.resolved(id: snapshot.id, image: snapshot.image)
+            let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
-            self.historyStore.record(.watchdog, containerID: snapshot.id, message: "\(name) exited unexpectedly")
+            self.logger.record("\(name) exited unexpectedly",
+                               category: .health,
+                               severity: .warning,
+                               containerID: snapshot.id)
             self.notifier.containerExited(name: name, enabled: settings.notifyOnCrash)
         }
         health.onUnhealthy = { [weak self] snapshot in
             guard let self else { return }
-            let name = self.personalization.resolved(id: snapshot.id, image: snapshot.image)
+            let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             self.flash("\(name) is unhealthy")
-            self.historyStore.record(.healthcheck, containerID: snapshot.id, message: "\(name) failed its healthcheck")
+            self.logger.record("\(name) failed its healthcheck",
+                               category: .health,
+                               severity: .warning,
+                               containerID: snapshot.id)
             self.notifier.containerUnhealthy(name: name, enabled: settings.notifyOnCrash)
             // Hand off to the restart policy (once per unhealthy transition, so it can't spin).
             let policy = RestartPolicy(label: snapshot.configuration.labels["contained.restart"])
@@ -92,8 +203,10 @@ final class AppModel {
     }
 
     func bootstrapIfNeeded() async {
+        logger.record("Checking container CLI", category: .system, severity: .debug)
         guard let url = CLILocator.locate(override: settings.cliPathOverride) else {
             bootstrap = .cliMissing
+            logger.record("Container CLI missing", category: .system, severity: .error)
             return
         }
         let runner = CommandRunner(executableURL: url)
@@ -108,6 +221,7 @@ final class AppModel {
             cliVersion = CLILocator.parseVersion(raw)
             if let v = cliVersion, !CLILocator.isSupported(v) {
                 bootstrap = .unsupported(version: v)
+                logger.record("Unsupported container CLI version \(v)", category: .system, severity: .error)
                 return
             }
         }
@@ -140,31 +254,47 @@ final class AppModel {
             systemStatus = status
             if status.isRunning {
                 bootstrap = .ready
-                await refreshDiskUsage()        // throttled — only the sidebar badge needs it off-page
+                logger.record("Container service is running", category: .system, severity: .debug)
+                await refreshDiskUsage()        // throttled; the System panel can force a fresh read
                 await containers.refresh()
                 // One-time: import legacy contained.* card styles into the local store, now that we
                 // no longer write personalization labels.
                 personalization.migrateLegacyLabelsIfNeeded(containers.snapshots)
             } else {
                 bootstrap = .serviceStopped
+                logger.record("Container service is stopped", category: .system, severity: .warning)
             }
         } catch {
             // `system status` exits non-zero when the service isn't running/registered.
             bootstrap = .serviceStopped
+            logger.record("Couldn't read container service status: \(error.localizedDescription)",
+                          category: .system,
+                          severity: .error)
         }
     }
 
-    /// `system df` is throttled off the System page (sidebar badge only); the banner self-clears.
+    /// `system df` is throttled during background refresh; the System panel can force a fresh read.
     private static let diskUsageThrottle: TimeInterval = 8
     private static let bannerDuration: TimeInterval = 4
 
     private var lastDiskUsageDate: Date?
-    /// Fetch `system df`. It's only needed for the sidebar badge off the System page, so throttle it
-    /// to avoid spawning a process every tick; `force` (used by the System page) bypasses the throttle.
+    /// Fetch `system df`. Throttle background ticks to avoid spawning a process every poll; `force`
+    /// bypasses the throttle for explicit System-panel refreshes.
     private func refreshDiskUsage(force: Bool = false) async {
         guard let client else { return }
         if !force, let last = lastDiskUsageDate, Date().timeIntervalSince(last) < Self.diskUsageThrottle { return }
         if let usage = try? await client.diskUsage() { diskUsage = usage; lastDiskUsageDate = Date() }
+    }
+
+    /// `images list` backs the toolbar Images panel, creation local-image choices, and update badges.
+    /// Keep it warm app-wide, but throttle background ticks to avoid spawning a process each poll.
+    private static let imagesThrottle: TimeInterval = 15
+    private var lastImagesDate: Date?
+    func refreshImagesIfStale(force: Bool = false) async {
+        guard let client, bootstrap == .ready else { return }
+        if !force, let last = lastImagesDate, Date().timeIntervalSince(last) < Self.imagesThrottle { return }
+        imagesError = await captured { self.images = try await client.images() }
+        lastImagesDate = Date()
     }
 
     /// Run a throwing CLI action, returning a user-facing error string on failure (nil on success).
@@ -175,39 +305,58 @@ final class AppModel {
         catch { return error.localizedDescription }
     }
 
-    /// One polling tick: refresh system + containers, run the restart watchdog, and refresh the
-    /// resource list for whichever section is on screen. Called by `RefreshCoordinator`.
-    func tick(section: AppSection) async {
+    /// One polling tick: refresh system + containers, run the restart watchdog, and keep the cached
+    /// resources warm. Called by `RefreshCoordinator`.
+    func tick() async {
         await refreshSystem()
         guard bootstrap == .ready, let client else { return }
-        await watchdog.evaluate(snapshots: containers.snapshots, store: containers, client: client)
+        if settings.autoRestartEnabled {
+            await watchdog.evaluate(snapshots: containers.snapshots, store: containers, client: client)
+        }
         await health.evaluate(snapshots: containers.snapshots, store: healthChecks, client: client)
         historyStore.recordMetrics(containers.statsByID)
-        await refreshResource(section)
+        await refreshNetworks()
+        // Keep the image list warm app-wide (throttled), so the toolbar Images panel and the
+        // update badges populate without first opening the Images panel.
+        await refreshImagesIfStale()
+        await checkImageUpdatesIfNeeded()
     }
 
-    /// Refresh the cached list backing a resource page. Failures keep the last good data.
-    func refreshResource(_ section: AppSection) async {
+    /// Refresh the data behind the System toolbar panel (volumes + a forced `system df`). Called from
+    /// the panel's `.task` since System is no longer a standing page refreshed by the tick.
+    func refreshSystemResources() async {
+        guard client != nil, bootstrap == .ready else { return }
+        await refreshDiskUsage(force: true)
+        await refreshVolumes()
+    }
+
+    /// Refresh the registry-login list for Settings.
+    func refreshRegistries() async {
         guard let client, bootstrap == .ready else { return }
-        switch section {
-        case .images:
-            imagesError = await captured { self.images = try await client.images() }
-        case .volumes:
-            if let v = try? await client.volumes() { volumes = v }
-        case .containers:
-            await refreshNetworks()   // networks are grouped into the Containers page now
-        case .registries:
-            if let r = try? await client.registries() { registries = r }
-        case .system:
-            await refreshDiskUsage(force: true)   // System page wants fresh numbers each tick
-            if properties == nil, let p = try? await client.systemProperties() { properties = p }
-        default:
-            break
-        }
+        if let r = try? await client.registries() { registries = r }
     }
 
-    /// Refresh the cached network list. Networks back the collapsible groups on the Containers page
-    /// (there's no standalone Networks section), so this is exposed directly rather than via a key.
+    /// Load the daemon's system properties once (the read-only Defaults shown in Settings). Cheap and
+    /// idempotent — skips the call when already loaded.
+    func loadPropertiesIfNeeded() async {
+        guard properties == nil else { return }
+        await reloadProperties()
+    }
+
+    /// Force-reload the daemon's system properties (e.g. after a kernel change).
+    func reloadProperties() async {
+        guard let client, bootstrap == .ready else { return }
+        if let p = try? await client.systemProperties() { properties = p }
+    }
+
+    /// Refresh the cached volume list. Volumes live in the System panel, so this is exposed directly
+    /// and called when that panel opens.
+    func refreshVolumes() async {
+        guard let client, bootstrap == .ready else { return }
+        if let v = try? await client.volumes() { volumes = v }
+    }
+
+    /// Refresh the cached network list. Networks back the collapsible groups on the Containers page.
     func refreshNetworks() async {
         guard let client, bootstrap == .ready else { return }
         if let n = try? await client.networks() { networks = n }
@@ -215,27 +364,27 @@ final class AppModel {
 
     // MARK: Create (pull-aware)
 
-    /// Kick off a container create without blocking the caller (the Create sheet dismisses
-    /// immediately and progress shows in the floating bar).
-    func beginCreate(_ spec: RunSpec) {
-        Task { await createContainer(spec) }
-    }
-
     /// Create a container from the form. If its image isn't present locally, pull it first with a
     /// visible progress bar — so a fresh template or image "just works" instead of appearing to do
     /// nothing while the image silently downloads. Attaches local style + healthcheck on success.
     @discardableResult
     func createContainer(_ spec: RunSpec) async -> String? {
         guard client != nil else { return nil }
+        createError = nil
         if !(await imageIsLocal(spec.image)) {
-            guard await pullImage(spec.image) else { return nil }   // pull failed; error surfaced
+            guard await pullImage(spec.image) else {
+                // pullImage already flashed; mirror it inline so the form can show it without dismissing.
+                createError = banner ?? "Couldn't pull \(Format.shortImage(spec.image))."
+                return nil
+            }
         }
         let newID = await containers.run(spec)
-        if newID == nil, let error = containers.errorMessage { flash(error) }
+        if newID == nil { createError = containers.errorMessage ?? "Couldn't create the container." }
         if let newID {
             if !spec.personalization.isDefault { personalization.setOverride(spec.personalization, for: newID) }
             healthChecks.setCheck(spec.healthCheck, for: newID)
-            historyStore.record(.lifecycle, containerID: newID, message: "Created \(newID)")
+            logger.record("Created \(newID)", category: .lifecycle, containerID: newID)
+            flash("Created \(newID)")
         }
         return newID
     }
@@ -260,8 +409,60 @@ final class AppModel {
             personalization.setOverride(spec.personalization, for: newID)
         }
         healthChecks.setCheck(spec.healthCheck, for: newID)
-        historyStore.record(.lifecycle, containerID: newID, message: "Recreated \(newID)")
+        logger.record("Recreated \(newID)", category: .lifecycle, containerID: newID)
         return newID
+    }
+
+    /// Load images from an OCI `.tar` archive into the local store. Shared by app-wide drop, menu
+    /// commands, and the add panel's image-archive path.
+    func loadImageTar(at url: URL) {
+        guard let client else { return }
+        Task {
+            if let error = await captured({ _ = try await client.loadImages(from: url.path) }) {
+                flash(error)
+                logger.record("Failed loading image archive \(url.lastPathComponent): \(error)",
+                              category: .image,
+                              severity: .error)
+            } else {
+                await refreshImagesIfStale(force: true)
+                flash("Loaded \(url.lastPathComponent)")
+                logger.record("Loaded image archive \(url.lastPathComponent)", category: .image)
+            }
+        }
+    }
+
+    @discardableResult
+    func createVolume(name: String, size: String?) async -> Bool {
+        guard let client else { return false }
+        let error = await captured {
+            _ = try await client.createVolume(name: name, size: size)
+            await refreshVolumes()
+        }
+        if let error {
+            flash(error)
+            logger.record("Failed creating volume \(name): \(error)", category: .system, severity: .error)
+            return false
+        }
+        flash("Created volume \(name)")
+        logger.record("Created volume \(name)", category: .system)
+        return true
+    }
+
+    @discardableResult
+    func createNetwork(name: String, subnet: String?, internalOnly: Bool) async -> Bool {
+        guard let client else { return false }
+        let error = await captured {
+            _ = try await client.createNetwork(name: name, subnet: subnet, internalOnly: internalOnly)
+            await refreshNetworks()
+        }
+        if let error {
+            flash(error)
+            logger.record("Failed creating network \(name): \(error)", category: .system, severity: .error)
+            return false
+        }
+        flash("Created network \(name)")
+        logger.record("Created network \(name)", category: .system)
+        return true
     }
 
     /// Ensure an image is present locally, pulling it (with the progress bar) only if missing.
@@ -274,7 +475,7 @@ final class AppModel {
     }
 
     /// Pull an image, streaming `--progress` lines into the floating activity bar. Returns true on
-    /// success. Used both by the create flow and as a standalone progress surface.
+    /// success.
     @discardableResult
     func pullImage(_ reference: String) async -> Bool {
         guard let client else { return false }
@@ -285,10 +486,22 @@ final class AppModel {
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty { activity?.detail = trimmed }
             }
-            await refreshResource(.images)
+            await refreshImagesIfStale(force: true)
+            logger.record("Pulled \(Format.shortImage(reference))", category: .image)
             return true
-        } catch let error as CommandError { flash(error.userMessage); return false }
-        catch { flash(error.localizedDescription); return false }
+        } catch let error as CommandError {
+            flash(error.userMessage)
+            logger.record("Failed pulling \(Format.shortImage(reference)): \(error.userMessage)",
+                          category: .image,
+                          severity: .error)
+            return false
+        } catch {
+            flash(error.localizedDescription)
+            logger.record("Failed pulling \(Format.shortImage(reference)): \(error.localizedDescription)",
+                          category: .image,
+                          severity: .error)
+            return false
+        }
     }
 
     /// Whether an image reference is already in the local store (tag-normalized compare so
@@ -313,6 +526,7 @@ final class AppModel {
     /// Show a transient banner for ~4s.
     func flash(_ message: String) {
         banner = message
+        logger.record(message, category: .ui, severity: .warning)
         bannerClear?.cancel()
         bannerClear = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Self.bannerDuration))
@@ -331,6 +545,7 @@ final class AppModel {
     func clearHistory() {
         historyStore.clearAll()
         flash("History cleared")
+        logger.record("History cleared", category: .system, severity: .warning)
     }
 
     func exportConfiguration(to url: URL, sections: Set<AppStateSection> = Set(AppStateSection.allCases)) throws {
@@ -408,26 +623,31 @@ final class AppModel {
 
     /// Start the container system service, then re-bootstrap.
     func startService() async {
-        guard let client else { return }
-        bootstrap = .checking
-        _ = try? await client.runner.run(["system", "start"])
-        await refreshSystem()
+        await runServiceLifecycle(["start"], resetWatchdog: false)
+        logger.record("Started container service", category: .system)
     }
 
+    /// Stop the container system service, then re-bootstrap.
     func stopService() async {
-        guard let client else { return }
-        bootstrap = .checking
-        watchdog.reset()
-        _ = try? await client.runner.run(["system", "stop"])
-        await refreshSystem()
+        await runServiceLifecycle(["stop"], resetWatchdog: true)
+        logger.record("Stopped container service", category: .system, severity: .warning)
     }
 
+    /// Stop then start the container system service, then re-bootstrap.
     func restartService() async {
+        await runServiceLifecycle(["stop", "start"], resetWatchdog: true)
+        logger.record("Restarted container service", category: .system, severity: .warning)
+    }
+
+    /// Shared driver for the service lifecycle commands. Marks the app `.checking` for immediate UI
+    /// feedback, optionally resets the restart watchdog (so a deliberate stop isn't fought), runs each
+    /// `system <action>` in order, then re-reads service status. Failures are intentionally ignored —
+    /// `refreshSystem` reports the resulting state regardless.
+    private func runServiceLifecycle(_ actions: [String], resetWatchdog: Bool) async {
         guard let client else { return }
         bootstrap = .checking
-        watchdog.reset()
-        _ = try? await client.runner.run(["system", "stop"])
-        _ = try? await client.runner.run(["system", "start"])
+        if resetWatchdog { watchdog.reset() }
+        for action in actions { _ = try? await client.runner.run(["system", action]) }
         await refreshSystem()
     }
 
