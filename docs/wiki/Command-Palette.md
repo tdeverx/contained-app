@@ -1,11 +1,12 @@
 # Command Palette
 
 > **Experimental (off by default).** The palette is gated behind Settings →
-> Experimental → "Command palette (⌘K)". While disabled, the toolbar search field
-> stays a plain page filter (no ⌘K hint, no escalation), the menu commands are
-> hidden, and `AppToolbar` refuses to render the palette morph even if some path
-> sets `activeMorph = .palette`. The Docker Hub search scope has its own
-> experimental flag (`hubSearchEnabled`).
+> Experimental → "Command palette (⌘K)" and needs toolbar panel navigation to
+> render as a morph. While disabled, the toolbar search field stays a plain page
+> filter (no ⌘K hint, no escalation), menu commands are hidden, and `AppToolbar`
+> refuses to render the palette morph even if some path sets `activeMorph =
+> .palette`. The Docker Hub search scope has its own experimental flag
+> (`hubSearchEnabled`).
 
 The command palette is the app-wide action index. If a user can do something
 from a toolbar panel, menu command, container card, image card, settings page, or
@@ -14,6 +15,8 @@ resource panel, it should be discoverable from `CommandPalette.swift`.
 ## Interaction model
 
 - `Command-K` opens the palette from the toolbar search morph.
+- If toolbar panel navigation is disabled, actions route through the same classic
+  pages and sheets as toolbar buttons and menu commands.
 - The search bar is the panel header. Do not add a second title header above it.
 - The text field autofocuses when the palette opens.
 - Arrow keys move the selected result; Return runs it; Escape closes the panel.

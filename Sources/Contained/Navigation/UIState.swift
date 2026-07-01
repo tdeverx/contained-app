@@ -48,8 +48,7 @@ final class UIState {
     var sidebarVisible = true
     var toolbarUIEnabled = false
     var panelNavigationEnabled = false
-    /// How the Containers page groups its cards (Network / Volume / Image / Flat) and orders them —
-    /// driven by the top-left toolbar view-options control.
+    /// How the Containers page groups and orders cards, driven by the page filter control.
     var grouping: ContainerGrouping = .network
     var sort: ContainerSort = .name
     var activityFilter: EventKind? = nil

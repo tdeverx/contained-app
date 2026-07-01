@@ -29,6 +29,20 @@ Guidelines:
   Command Palette search field
 - keep footer hints compact and secondary
 
+## Toolbar shell
+
+The floating toolbar and toolbar-panel navigation are separate experimental
+settings. `experimentalToolbarUI` turns on the custom top/bottom toolbar chrome;
+`experimentalPanelNavigation` decides whether eligible routes open morph panels
+or fall back to classic pages and sheets.
+
+`AppToolbar` is mounted inside the `NavigationSplitView` detail column by
+`ClassicShell`, not across the whole split view. The detail body receives top and
+bottom padding from `AppSafeAreaManager`, while the sidebar keeps native split
+view layout. Toolbar page actions live in the top row to the left of search;
+page filters live in the bottom row next to System and hide on pages without
+filters.
+
 ## Resource cards
 
 Use `ResourceGlassCard` for containers, images, tags, volumes, networks, and

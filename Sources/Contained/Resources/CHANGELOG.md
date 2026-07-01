@@ -9,6 +9,7 @@
 - Sparkle release notes from `CHANGELOG.md`, with appcast-embedded HTML and in-app “What’s New” views for current and available builds.
 - Classic sidebar navigation as the default shell, covering Containers, Images, Volumes, Networks, System, Registries, Templates, Activity, and Settings.
 - `Toolbar-first UI` experimental flag, off by default, to restore the floating morph toolbar shell when enabled.
+- `Toolbar panel navigation` experimental flag, off by default, to choose whether access points open toolbar morph panels or classic pages/sheets.
 - Menu and menu-bar navigation fallback that routes plus/menu actions directly to the relevant full page instead of opening creation-flow sheets.
 
 ### Changed
@@ -22,6 +23,7 @@
 - Added `AppStateEnvelope`, `JSONValue`, `MigrationStep`, and `StateMigrator` as the baseline for forward migration and downgrade handling from schema version 1 onward.
 - Added SwiftData history schema/migration scaffolding and purge-dead-row cleanup hooks for history, personalization, health checks, and image update records.
 - Added `AppSection`, `ClassicShell`, and `PageScaffold` so sidebar pages and toolbar panels can share content without duplicating layouts.
+- Moved custom toolbar safe-area measurement into the detail column so the sidebar is never padded or covered by toolbar chrome.
 
 ## [Unreleased] - Creation Workflow 10
 
@@ -30,6 +32,7 @@
 #### Toolbar & Navigation Redesign
 - **Classic sidebar fallback**: The default app shell is a native sidebar with full-page destinations for Containers, Images, Volumes, Networks, System, Registries, Templates, Activity, and Settings.
 - **Toolbar-first architecture**: The floating custom toolbar is now an experimental UI, off by default, while still available from Settings → Experimental.
+- **Split toolbar/panel navigation**: toolbar visibility and morph-panel routing are separate experimental toggles, so users can try the custom toolbar while keeping classic page/sheet presentation.
 - **Morphing panel system**: When the toolbar UI is enabled, toolbar buttons morph into resizing panels for Images, Templates, Activity, and System resources.
 - **Visual command palette**: Integrated `⌘K` search and command palette into the toolbar's expandable search field, with the search bar acting as the panel header
 - **Palette action index**: Added global commands for app update checks, all-image update checks, pulling available image updates, checking container-image updates, pulling available container-image updates, local image search, Docker Hub search, and app tint changes
@@ -38,7 +41,8 @@
 - **App-wide toolbar band**: Custom Liquid Glass toolbar proportions (52pt band height, 36pt controls) matching macOS 26 design standards
 - **Semantic toolbar sizing**: Button glyphs use Dynamic-Type-scalable `.headline + .imageScale(.large)` for accessibility
 - **Toolbar keyboard shortcuts**: `⌘N` (New), `⌘S` (Search), `⌘U` (Updates), `⌘I` (Activity)
-- **Container view options**: Top-left toolbar control (icon + title/subtitle + down chevron) to group the Containers page by Network / Volume / Image / Flat, sort by Name / Status / Image, and toggle running-only
+- **Container view options**: Bottom toolbar filter control to group the Containers page by Network / Volume / Image / Flat, sort by Name / Status / Image, and toggle running-only.
+- **Page actions in the top toolbar**: page-specific actions sit left of search; filters stay in the bottom toolbar when a page has useful filtering.
 - **Activity unread badge**: The toolbar Activity bell fills and gains an accent + red dot when there are unread events; the panel adds Mark-all-read and Clear controls and highlights unread rows; events mark read on dismiss
 - **Reusable activity/status asset** (`ActivityStatusView`): long-running operations (image pulls, etc.) now morph the bottom-left system-status capsule in place instead of a separate floating progress bar
 
@@ -51,7 +55,8 @@
 
 #### Experimental features (Settings → Experimental, all off by default)
 - **Opt-in gating**: A new Settings → Experimental section gates surfaces that are still being refined. Each defaults **off**; enabling one reveals its menu commands, toolbar affordances, and creation options app-wide
-- **Toolbar-first UI**: Gated behind `experimentalToolbarUI` (off by default). When disabled, the app uses the sidebar shell and menu actions navigate directly to full pages.
+- **Toolbar-first UI**: Gated behind `experimentalToolbarUI` (off by default). When disabled, the app uses the sidebar shell.
+- **Toolbar panel navigation**: Gated behind `experimentalPanelNavigation` and effective only when toolbar-first UI is enabled. When disabled, access points use classic pages and sheets.
 - **Command palette (⌘K)**: Gated behind `commandPaletteEnabled` (off by default). A render-level backstop in `AppToolbar` keeps it fully hidden regardless of activation path; page search and menu commands are unaffected
 - **Docker Hub search**: Gated behind `hubSearchEnabled` — the creation "Search" path, the "Pull Image…" menu commands, and the palette's Hub scope
 - **Compose import**: Gated behind `composeImportEnabled` — paste, file pick, drag-and-drop, menu command, and palette entry
@@ -72,7 +77,7 @@
 - **GlassOptionTile**: New design-system tile for creation menu options with optional matched geometry
 - **MorphingExpander primitive**: Reusable panel grow/collapse animation from origin slot to full screen
 - **ExteriorShadow component**: Precise shadow rendering for elevated panels (shadow before blur for correct layering)
-- **AppSafeAreaManager**: Intelligent safe area management distinguishing between toolbar-inclusive and toolbar-exclusive layouts
+- **AppSafeAreaManager**: Intelligent safe area management distinguishing between toolbar-inclusive and toolbar-exclusive layouts, scoped to the detail body so sidebar navigation is unaffected.
 - **ToolbarControls**: Centralized toolbar button and cluster components (ToolbarIconButton, ToolbarButtonCluster)
 
 #### Container Customization & Styling
@@ -102,7 +107,7 @@
 - **Palette expansion**: Taller header (48pt) and roomier padding when search palette expands
 - **ContainerCard refactor**: Extracted form logic into shared `ContainerConfigureView` (used by both sheet and paged flow)
 - **Container grid backdrop**: Replaced manual blur/dim with `globalBackdrop` system
-- **Palette links avoid sheets**: Registry login and System logs commands now open the Settings/System morph panels instead of modal sheets
+- **Palette links respect presentation mode**: commands route through the shared presentation layer, opening morph panels only when toolbar panel navigation is enabled and falling back to pages/sheets otherwise.
 - **Activity progress relocated**: the floating activity/progress bar was removed in favour of the morphing bottom-left status capsule
 
 #### API & Architecture
@@ -119,7 +124,7 @@
 ### Fixed
 
 - **Container card animations**: Fixed grow/shrink spring timing for smoother detail panel transitions
-- **Safe area calculation**: Proper top inset accounting for both native and custom toolbar heights
+- **Safe area calculation**: Custom toolbar bands are measured in the detail column only, with body content padded independently from the sidebar.
 - **Search palette sizing**: Correct max-width constraints and dynamic field scaling
 - **Start/stop UI hang**: Container refreshes are now serialized so a user action and the background
   polling tick no longer run `list`+`stats` concurrently (decoding JSON on the main actor and
@@ -137,7 +142,7 @@
 ### Technical
 
 - **New components**: `MorphingExpander`, `ResourceGlassCard`, `GlassOptionTile`, `CreationFlow`, `ContainerConfigureView`, `ToolbarControls`, `ExteriorShadow`, `ActivityStatusView`, `ToolbarViewOptions`, `InlineJSONView`
-- **New models/state**: `ContainerGrouping`, `ContainerSort`, `PaletteScope`, `EventRecord.isRead`
+- **New models/state**: `ContainerGrouping`, `ContainerSort`, `PaletteScope`, `EventRecord.isRead`, `SettingsStore.experimentalPanelNavigation`
 - **Design tokens**: Added `Tokens.Toolbar` enum for all toolbar sizing and spacing
 - **Geometry helpers**: `MorphGeometry` utilities for panel sizing, clamping, and target rect calculation
 - **Optional matched geometry**: Helper for conditional `.matchedGeometryEffect()` in tiles

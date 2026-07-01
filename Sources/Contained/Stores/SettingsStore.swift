@@ -63,9 +63,10 @@ final class SettingsStore {
     var imageBuildEnabled: Bool { didSet { defaults.set(imageBuildEnabled, forKey: Keys.imageBuildEnabled) } }
     /// Menu keyboard shortcuts and command shortcuts. Disabled by default.
     var keyboardShortcutsEnabled: Bool { didSet { defaults.set(keyboardShortcutsEnabled, forKey: Keys.keyboardShortcutsEnabled) } }
-    /// Toolbar-first morph UI. Off by default so the sidebar shell is the stable fresh-install path.
+    /// Floating toolbar chrome. Off by default so the sidebar shell is the stable fresh-install path.
     var experimentalToolbarUI: Bool { didSet { defaults.set(experimentalToolbarUI, forKey: Keys.experimentalToolbarUI) } }
-    /// Route page/panel actions through toolbar morph panels instead of classic pages/sheets.
+    /// Route eligible actions through toolbar morph panels instead of classic pages/sheets. Depends on
+    /// the floating toolbar so page routing never targets panels without visible toolbar origins.
     var experimentalPanelNavigation: Bool { didSet { defaults.set(experimentalPanelNavigation, forKey: Keys.experimentalPanelNavigation) } }
     var usesPanelNavigation: Bool { experimentalToolbarUI && experimentalPanelNavigation }
     /// Classic-shell sidebar visibility. Separate from the toolbar toggle so users can keep the

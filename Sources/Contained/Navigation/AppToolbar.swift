@@ -6,8 +6,9 @@ import ContainedCore
 /// window. Search stays in the top-right titlebar band; the add/images/templates/activity cluster and
 /// system status control float in a bottom toolbar area.
 ///
-/// Mounted as a top overlay in `RootView`: the band sits in the title-bar region, and the rest of the
-/// area is hit-transparent until a control opens.
+/// Mounted inside the split-view detail column by `ClassicShell`: the top band sits in the title-bar
+/// region, the bottom band floats above the detail body, and the sidebar stays outside the custom
+/// toolbar safe-area contract.
 /// The add `+`, search field, and bottom toolbar controls all grow through the same
 /// `MorphingExpander` shell from their measured toolbar slots. Control sizing and source radius come
 /// from `Tokens.Toolbar` / `ToolbarControls`.
@@ -373,9 +374,9 @@ struct AppToolbar: View {
         }
     }
 
-    /// Safe area for a morph panel. Bottom-row panels clear the top toolbar; top-row panels (palette)
-    /// clear the bottom. Settings is special: it grows from the top-left slot (behind traffic lights)
-    /// and must clear *both* bands so the panel starts fully below the native titlebar chrome.
+    /// Safe area for a morph panel. Bottom-row panels clear the top toolbar; top-row panels clear the
+    /// bottom. Settings is special: it grows from the vanity slot behind the traffic lights and must
+    /// clear *both* bands so the panel starts fully below the native titlebar chrome.
     private func toolbarMorphSafeArea(for morph: UIState.ToolbarMorph) -> AppSafeAreaPolicy {
         switch morph {
         case .settings: AppSafeAreaPolicy(excluding: .both, padding: .small)

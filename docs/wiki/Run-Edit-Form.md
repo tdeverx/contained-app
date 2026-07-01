@@ -41,6 +41,11 @@ The common sections stay visible. Compose import and Edit open Advanced Options
 when they contain advanced values, so imported settings are not lost just because
 they live behind the toggle.
 
+The presentation path is shared. With toolbar panel navigation enabled, run and
+edit open in the creation morph from their measured toolbar origin. With it
+disabled, the same form state opens as a classic sheet so card buttons, menus,
+keyboard shortcuts, and palette actions keep one routing model.
+
 ## UI abstractions over CLI flags
 
 These controls deliberately do not mirror the CLI one-to-one:

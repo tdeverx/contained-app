@@ -1,6 +1,6 @@
 import Foundation
 
-/// How the Containers page buckets its cards. Driven by the top-left toolbar "view options" control.
+/// How the Containers page buckets its cards. Driven by the page filter control.
 enum ContainerGrouping: String, CaseIterable, Identifiable, Codable, Sendable {
     case network, volume, image, flat
 

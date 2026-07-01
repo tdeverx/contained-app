@@ -47,6 +47,7 @@ struct ToolbarPageSwitcher: View {
         } labelContent: {
             labelContent
         }
+        .help("Switch page")
     }
 
     private var labelContent: some View {
@@ -101,6 +102,7 @@ struct ToolbarViewOptions: View {
         } labelContent: {
             labelContent
         }
+        .help("Container filters")
     }
 
     private var labelContent: some View {
@@ -273,6 +275,7 @@ struct ToolbarPageFilterOptions: View {
                 .menuStyle(.button)
                 .menuIndicator(.hidden)
             }
+            .help(ui.activityFilter == nil ? "Filter Activity" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
         default:
             EmptyView()
         }

@@ -17,9 +17,7 @@ struct ClassicShell: View {
             AppSidebar(selection: $ui.selectedSection)
                 .toolbar(removing: .sidebarToggle)
         } detail: {
-            ClassicSectionPage(section: ui.selectedSection)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .ignoresSafeArea(.container, edges: .vertical)
+            detailColumn
         }
         .navigationSplitViewStyle(.balanced)
         .onAppear {
@@ -30,6 +28,38 @@ struct ClassicShell: View {
                 ui.sidebarVisible = enabled
             }
         }
+    }
+
+    private var detailColumn: some View {
+        ZStack {
+            detailPage
+        }
+        .overlay {
+            if ui.toolbarUIEnabled {
+                // The custom toolbar belongs to the detail column, not the whole split view. Mounting
+                // it here keeps the sidebar outside the toolbar safe-area bands.
+                AppToolbar()
+                    .environment(\.appSafeAreas, toolbarSafeAreas)
+                    .ignoresSafeArea(.container, edges: .vertical)
+            }
+        }
+        .environment(\.appSafeAreas, AppSafeAreaManager(system: EdgeInsets()))
+    }
+
+    private var detailPage: some View {
+        let insets = toolbarSafeAreas.insets(AppSafeAreaPolicy(excluding: .both, padding: .none))
+        return ClassicSectionPage(section: ui.selectedSection)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Body-only padding from the same custom safe-area measurer used by morph panels.
+            .padding(.top, ui.toolbarUIEnabled ? insets.top : 0)
+            .padding(.bottom, ui.toolbarUIEnabled ? insets.bottom : 0)
+            .ignoresSafeArea(.container, edges: .vertical)
+    }
+
+    private var toolbarSafeAreas: AppSafeAreaManager {
+        AppSafeAreaManager(system: EdgeInsets(),
+                           topToolbarHeight: AppToolbar.bandHeight,
+                           bottomToolbarHeight: AppToolbar.bandHeight)
     }
 
     private var sidebarColumnVisibility: Binding<NavigationSplitViewVisibility> {
