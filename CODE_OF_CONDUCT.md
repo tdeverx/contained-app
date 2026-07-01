@@ -59,8 +59,10 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-.
+reported to the maintainer through the contact links on
+[tdeverx's GitHub profile](https://github.com/tdeverx). If the behavior also
+violates GitHub's platform rules, use
+[GitHub's abuse reporting flow](https://github.com/contact/report-abuse).
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the

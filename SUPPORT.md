@@ -11,16 +11,19 @@ place that fits what you need.
 
 ## Where To Go
 
-- Use Discussions Q&A for setup help, "how do I..." questions, and unclear
-  behavior.
-- Use Ideas for early feature thoughts that are not ready to become tracked
-  work.
-- Use the Development and architecture starter thread in General for package,
-  backend, release-process, and automation design.
-- Use Issues for actionable bugs, crashes, regressions, accepted feature work,
-  architecture tasks, and implementation checklists.
-- Use private security reporting for vulnerabilities. Do not post security
-  details publicly.
+- Use [Discussions Q&A](https://github.com/tdeverx/contained-app/discussions/categories/q-a)
+  for setup help, "how do I..." questions, and unclear behavior.
+- Use [Ideas](https://github.com/tdeverx/contained-app/discussions/categories/ideas)
+  for early feature thoughts that are not ready to become tracked work.
+- Use the
+  [Development and architecture discussion](https://github.com/tdeverx/contained-app/discussions/30)
+  for package, backend, release-process, and automation design.
+- Use [Issues](https://github.com/tdeverx/contained-app/issues/new/choose) for
+  actionable bugs, crashes, regressions, accepted feature work, architecture
+  tasks, and implementation checklists.
+- Use
+  [private vulnerability reporting](https://github.com/tdeverx/contained-app/security/advisories/new)
+  for vulnerabilities. Do not post security details publicly.
 
 If you are unsure, start in Discussions. Maintainers can turn a discussion into
 an issue when it becomes a concrete task.
