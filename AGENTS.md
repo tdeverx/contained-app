@@ -19,8 +19,13 @@ This file is the working contract for coding agents in this repository. Follow i
 - Appcast-only bot commits must not trigger release loops. Keep `appcast.xml` path-ignored in workflows and use `[skip ci]` for appcast bot commits.
 - CodeQL uses the checked-in advanced setup at `.github/workflows/codeql.yml`. Actions workflow analysis runs on PRs, pushes, and the weekly baseline; Swift analysis is scheduled/manual because Swift CodeQL currently takes too long to be a healthy per-PR gate. Keep appcast, docs, and release-note-only paths ignored there too.
 - PR/release workflows run `scripts/ci-validate.sh`; keep that script fast and focused on repository invariants before expensive Swift builds.
-- PR CI enforces release-note coverage for material changes. Add a changelog/change fragment, or use the `no-release-note` label only for docs/meta-only work.
+- PR CI enforces release-note coverage for material changes. Add a changelog/change fragment, or use the `no-release-note` label only for docs/meta/dependency-only maintenance.
 - Release workflows validate built bundles and generated appcasts before publishing or committing feed changes.
+
+## GitHub Issues
+
+- Follow `docs/wiki/Issues-and-Discussions.md` for issue routing, naming, labels, milestones, native parent/sub-issue links, and blocked-by/blocking links.
+- Use area labels for ownership only; do not treat area labels as workflow state.
 
 ## Release Notes
 
@@ -29,6 +34,8 @@ This file is the working contract for coding agents in this repository. Follow i
 - Nightly ships `Changes Since Last Nightly` plus `Full Release Notes`.
 - Keep `CHANGELOG.md` ordered with `Unreleased` above released version sections; in-app What's New
   and generated Sparkle notes should both show channel/build changes before full version notes.
+- Keep `CHANGELOG.md` curated and version-level. Put PR/build deltas in change fragments, not as
+  a running implementation inventory.
 - Prefer one committed change fragment per PR or user-facing change, not one file per commit.
 - Use `changes/unreleased/YYYYMMDD-short-slug.md` for normal fragments. Use `changes/beta/` or `changes/nightly/` only for channel-specific notes.
 - `scripts/collect-changes.sh` can compile fragments from a directory or git range.

@@ -59,7 +59,7 @@ if $has_material_change && ! $has_note; then
   echo "  - changes/unreleased/YYYYMMDD-short-slug.md" >&2
   echo "  - RELEASE_NOTES.md / CHANGES.md when the release train uses split files" >&2
   echo >&2
-  echo "For docs/meta-only work, apply the 'no-release-note' PR label so CI sets NO_RELEASE_NOTE=1." >&2
+  echo "For docs/meta/dependency-only maintenance, apply the 'no-release-note' PR label so CI sets NO_RELEASE_NOTE=1." >&2
   exit 1
 fi
 

@@ -42,6 +42,11 @@ Milestones are target buckets: `beta` for work expected before the next beta,
 `stable` for the first stable-release bar, and `future` for accepted but
 unscheduled or post-beta work.
 
+Issue titles should be concise sentence-case summaries without `[Type]` or
+area prefixes. PR titles should use conventional-commit style when practical,
+such as `fix: handle missing container stats`, `docs: update support links`, or
+`chore(deps): bump yams`. See [[Issues-and-Discussions]] for examples.
+
 Release branches (`nightly`, `beta`, and `stable`) are protected against
 deletion and force-pushes. Normal work should move through pull requests. A full
 required-PR/check rule still needs a release-bot-safe bypass before it can be
@@ -76,9 +81,9 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Sync docs with behavior.** If behavior, settings, routes, or user-facing wording changes, update the matching page under `docs/wiki` and keep README links current.
 - **Preserve update build numbers.** `scripts/version-info.sh` is the single build-number source of truth; beta/stable workflows must pass the retained `BUILD` into `scripts/bundle.sh` and merge promoted appcast items into the nightly feed.
 - **Keep code scanning intentional.** `.github/workflows/codeql.yml` is the repository-owned CodeQL setup. GitHub Actions workflow analysis runs on PRs and pushes that touch source, scripts, workflows, package files, or tests, plus a weekly scheduled baseline. Swift analysis is scheduled/manual because Swift CodeQL currently takes too long to be a healthy per-PR gate. Appcast-only, docs-only, changelog-resource-only, and change-fragment-only commits are ignored so generated release feed commits do not burn macOS scan minutes.
-- **Write release notes at the right level.** Put version-wide notes under the base version section, such as `## [1.0.0]`. Put channel/build changes under `Unreleased`, `## [nightly]`, `## [beta]`, or split them into `CHANGES_DIR` fragments. Prefer one fragment per PR/user-facing change under `changes/unreleased/` over one file per commit. `scripts/collect-changes.sh` can compile those fragments for a directory or git range. When no explicit `CHANGES`/`CHANGES_DIR` source is provided, Beta/Nightly notes first try the previous matching appcast item plus the changelog/change-fragment git delta, then fall back to channel sections. Stable ships full notes only; Beta/Nightly ship channel changes plus full notes.
+- **Write release notes at the right level.** Keep `CHANGELOG.md` curated and version-level: use the base version section, such as `## [1.0.0]`, for durable user-facing release notes. Put PR/build deltas in `changes/unreleased/` fragments by default, not in `CHANGELOG.md` as a running implementation inventory. Use `changes/beta/` or `changes/nightly/` only for channel-specific notes. `scripts/collect-changes.sh` can compile those fragments for a directory or git range. When no explicit `CHANGES`/`CHANGES_DIR` source is provided, Beta/Nightly notes first try the previous matching appcast item plus the changelog/change-fragment git delta, then fall back to channel sections and `Unreleased` only as compatibility fallbacks. Stable ships full notes only; Beta/Nightly ship channel changes plus full notes.
 - **Let CI check invariants, not fix them.** `scripts/ci-validate.sh` checks bundled changelog sync, shell syntax, workflow YAML syntax, Stable/Beta/Nightly release-note ordering, and PR release-note coverage when given a base ref. If `CHANGELOG.md` changes, run `./scripts/sync-changelog-resource.sh` locally and commit the bundled resource; CI uses `--check` so drift fails loudly.
-- **Use `no-release-note` narrowly.** PR CI accepts the label only through `NO_RELEASE_NOTE=1`; reserve it for docs/meta-only work that does not change shipped behavior, scripts, workflows, tests, or source.
+- **Use `no-release-note` narrowly.** PR CI accepts the label only through `NO_RELEASE_NOTE=1`; reserve it for docs/meta/dependency-only maintenance that does not change shipped behavior, scripts, workflows, tests, or source. Dependabot applies it automatically to grouped dependency update PRs.
 - **Use `wiki-approved` for direct wiki-impacting changes only when a maintainer has reviewed the docs impact.** The wiki sync automation prototype is tracked separately in issue #26 and should not be assumed to exist until that issue is resolved.
 
 ## Before a PR

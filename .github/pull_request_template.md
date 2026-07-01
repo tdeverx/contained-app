@@ -8,6 +8,10 @@
 - No linked issue because:
 - [ ] This PR links an issue, or explains why one is not needed
 
+## Naming
+
+- [ ] PR title follows `type(scope): summary` when practical, for example `fix: handle missing container stats` or `chore(deps): bump yams`
+
 ## Change Type
 
 - [ ] App/UI behavior
@@ -26,7 +30,7 @@
 
 ## Release Notes And Docs
 
-- [ ] Added or updated a release/change note, or applied the `no-release-note` label for docs/meta-only work
+- [ ] Added or updated a release/change note, or applied the `no-release-note` label for docs/meta/dependency-only maintenance
 - [ ] Updated `docs/wiki` for user-facing behavior or workflow changes, or this PR does not need docs
 - [ ] Synced `Sources/Contained/Resources/CHANGELOG.md` when `CHANGELOG.md` changed (`./scripts/sync-changelog-resource.sh --check` passes)
 

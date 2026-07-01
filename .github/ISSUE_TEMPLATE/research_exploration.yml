@@ -1,6 +1,5 @@
 name: Exploration or decision
 description: Investigate an idea, technical option, API, or design direction
-title: "[Explore]: "
 labels: ["other", "needs-design"]
 body:
   - type: textarea

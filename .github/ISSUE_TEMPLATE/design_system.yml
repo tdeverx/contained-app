@@ -1,6 +1,5 @@
 name: Design system work
 description: Shared controls, cards, scaffolds, materials, or visual primitives
-title: "[Design System]: "
 labels: ["feature", "design", "needs-design"]
 body:
   - type: textarea

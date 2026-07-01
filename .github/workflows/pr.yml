@@ -44,7 +44,7 @@ jobs:
 
       - name: Repository validation
         env:
-          NO_RELEASE_NOTE: ${{ contains(github.event.pull_request.labels.*.name, 'no-release-note') && '1' || '' }}
+          NO_RELEASE_NOTE: ${{ (contains(github.event.pull_request.labels.*.name, 'no-release-note') || github.actor == 'dependabot[bot]') && '1' || '' }}
         run: |
           set -euo pipefail
           git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"

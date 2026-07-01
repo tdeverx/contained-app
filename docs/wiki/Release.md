@@ -32,7 +32,9 @@ notes do not drift.
 - Beta ships `Changes Since Last Beta` followed by `Full Release Notes`.
 - Nightly ships `Changes Since Last Nightly` followed by `Full Release Notes`.
 
-The current repo can keep using `CHANGELOG.md` as both sources. The scripts are also ready for split files:
+Keep `CHANGELOG.md` curated and version-level. It should describe durable
+user-facing release notes for a version, not every PR, internal refactor, or
+build-specific detail. Use change fragments for channel/build deltas:
 
 - `RELEASE_NOTES.md` or `RELEASE_NOTES=/path/to/file` — durable, version-wide notes that can be built up while a release is in progress.
 - `CHANGES.md` or `CHANGES=/path/to/file` — channel/build-level changes since the last comparable release.
@@ -48,11 +50,18 @@ Prefer one committed fragment per PR or user-facing change, not one file per com
 CHANGES=updates/changes.md CHANNEL=beta VERSION_VALUE="$VERSION" ./scripts/release-body.sh
 ```
 
-When using a single `CHANGELOG.md`, keep `Unreleased` above released version sections, put version-wide notes under the base version section, and put current channel/build changes under `Unreleased` or a channel section such as `## [beta]` / `## [nightly]`. If no explicit `CHANGES` or `CHANGES_DIR` source is supplied, `scripts/changes-since-release.sh` first reads the previous matching appcast item, extracts its commit SHA, and emits only the changelog/change-fragment lines added since that Beta/Nightly build. If no previous channel item exists, the scripts fall back to channel sections and then `Unreleased`. That prevents the "Changes Since Last ..." section from expanding to the full `Unreleased` changelog after the first channel build.
+Keep `Unreleased` above released version sections for compatibility, but prefer
+`changes/unreleased/` fragments for current PR/build notes. If no explicit
+`CHANGES` or `CHANGES_DIR` source is supplied, `scripts/changes-since-release.sh`
+first reads the previous matching appcast item, extracts its commit SHA, and
+emits only the changelog/change-fragment lines added since that Beta/Nightly
+build. If no previous channel item exists, the scripts fall back to channel
+sections and then `Unreleased`. That fallback should stay small so "Changes
+Since Last ..." does not expand into a full working inventory.
 
 Generated release-note files should be written under `updates/`, `.release/`, or `.release-notes/`. Do not commit generated notes from release workflows. The workflows only commit `appcast.xml`, and appcast-only commits are path-ignored and marked `[skip ci]` so they do not start another release build.
 
-Run `./scripts/ci-validate.sh` before opening release/workflow PRs. It checks bundled changelog sync, shell syntax, workflow YAML syntax, and the expected Stable/Beta/Nightly release-note shape. PR CI also passes a base ref so material source/script/workflow changes must include a release note or change fragment unless the PR carries the `no-release-note` label.
+Run `./scripts/ci-validate.sh` before opening release/workflow PRs. It checks bundled changelog sync, shell syntax, workflow YAML syntax, and the expected Stable/Beta/Nightly release-note shape. PR CI also passes a base ref so material source/script/workflow changes must include a release note or change fragment unless the PR carries the `no-release-note` label for docs/meta/dependency-only maintenance.
 
 Release helper behavior is covered by `./scripts/test-release-scripts.sh`. CI also runs:
 

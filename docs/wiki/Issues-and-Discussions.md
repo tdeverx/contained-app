@@ -31,6 +31,20 @@ Use issues for work that can be triaged, labeled, and completed:
 
 Blank issues are disabled so each report starts with enough structure.
 
+## Naming
+
+Issue titles should be short, descriptive, and sentence case. Do not add type or
+area prefixes such as `[Bug]`, `[Feature]`, or `[Backend]`; labels carry that
+metadata. Good titles name the symptom, outcome, or task directly:
+
+- `Container cards crash when opening details`
+- `Add persistent Compose stack management`
+- `Decide backend capability model for Docker support`
+
+Pull request titles should use conventional-commit style when practical:
+`type(scope): summary`. Common types are `fix`, `feat`, `docs`, `ci`, `chore`,
+`chore(deps)`, `refactor`, and `test`.
+
 ## Good Bug Reports
 
 Helpful bug reports usually include:

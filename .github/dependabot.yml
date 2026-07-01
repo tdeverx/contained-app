@@ -15,6 +15,7 @@ updates:
     labels:
       - other
       - repo
+      - no-release-note
 
   - package-ecosystem: swift
     directory: /
@@ -31,3 +32,4 @@ updates:
     labels:
       - other
       - core
+      - no-release-note

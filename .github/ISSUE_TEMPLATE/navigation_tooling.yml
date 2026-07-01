@@ -1,6 +1,5 @@
 name: Navigation, toolbar, or panel work
 description: Page routing, toolbars, panels, morphs, measurements, or shell behavior
-title: "[Navigation]: "
 labels: ["feature", "navigation", "triage"]
 body:
   - type: textarea
