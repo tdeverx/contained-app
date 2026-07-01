@@ -12,11 +12,23 @@ struct VolumeCard: View {
 
     private static let metrics: [GraphMetric] = [.diskRead, .diskWrite]
     private var style: Personalization { app.volumeStyle(for: volume.name) }
+    private var activeWidget: WidgetConfiguration {
+        style.widgets.first { $0.enabled } ?? style.widget(at: 0)
+    }
     private var metric: GraphMetric {
         let stored = Self.metrics.contains(style.graphMetric) ? style.graphMetric : .diskRead
         return localMetric ?? stored
     }
+    private var comparisonMetric: GraphMetric? {
+        return style.graphStyle.resolvedSecondaryMetric(primary: metric,
+                                                        requested: activeWidget.secondaryMetric,
+                                                        options: Self.metrics)
+    }
+    private var graphColor: Color { activeWidget.tint?.color ?? style.color }
     private var samples: [Double] { app.volumeIOHistory(for: volume.name, metric: metric) }
+    private var comparisonSamples: [Double] {
+        comparisonMetric.map { app.volumeIOHistory(for: volume.name, metric: $0) } ?? []
+    }
 
     private var subtitle: String {
         let config = volume.configuration
@@ -50,7 +62,15 @@ struct VolumeCard: View {
             action("doc.on.doc", help: "Copy name") { copyToPasteboard(volume.name) }
             action("trash", help: "Delete", tint: .red, action: onDelete)
         } widget: {
-            LiveSparkline(samples: samples, color: style.color, style: style.graphStyle)
+            LiveSparkline(samples: samples,
+                          comparisonSamples: comparisonSamples,
+                          color: graphColor,
+                          lineWidth: activeWidget.lineWidth,
+                          style: style.graphStyle,
+                          areaUsesGradient: activeWidget.areaUsesGradient,
+                          interpolation: activeWidget.interpolation,
+                          pointSize: activeWidget.pointSize,
+                          barWidth: activeWidget.barWidth)
                 .frame(height: 58)
         }
         .contextMenu { menu }

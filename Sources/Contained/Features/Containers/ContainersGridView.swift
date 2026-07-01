@@ -390,7 +390,8 @@ struct ContainersGridView: View {
     }
 
     private var cardDetailSafeAreaPolicy: AppSafeAreaPolicy {
-        AppSafeAreaPolicy(excluding: .both, padding: .none, includesSystemInsets: false)
+        let toolbarExclusion: AppToolbarSafeAreaExclusion = ui.toolbarUIEnabled ? .bottom : .both
+        return AppSafeAreaPolicy(excluding: toolbarExclusion, padding: .none, includesSystemInsets: false)
     }
 
     private var cardDetailSafeAreas: AppSafeAreaManager {

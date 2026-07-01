@@ -1,53 +1,184 @@
 import SwiftUI
+import Charts
 
-/// A plain lightweight line graph of recent samples (CPU/mem/etc.), drawn with a Canvas.
-/// The graph scales to the current sample set and keeps its own size/color only.
+/// A compact Swift Charts renderer for card widgets. Each series is normalized independently so
+/// paired metrics with different units still make useful visual comparisons at card scale.
 struct LiveSparkline: View {
-    /// Samples in 0...1-ish range (already normalized by the caller).
     var samples: [Double]
+    var comparisonSamples: [Double] = []
     var color: Color = .accentColor
     var lineWidth: CGFloat = 1.5
     var style: GraphStyle = .area
+    var areaUsesGradient = true
+    var interpolation: WidgetInterpolation = .catmullRom
+    var pointSize: CGFloat = 18
+    var barWidth: CGFloat = 4
 
     var body: some View {
-        Canvas { context, size in
-            guard samples.count > 1 else {
-                var baseline = Path()
-                baseline.move(to: CGPoint(x: 0, y: size.height - lineWidth))
-                baseline.addLine(to: CGPoint(x: size.width, y: size.height - lineWidth))
-                context.stroke(baseline, with: .color(color.opacity(0.35)), lineWidth: lineWidth)
-                return
+        Group {
+            if samples.count > 1 {
+                chart
+            } else {
+                baseline
             }
-
-            let maxValue = max(samples.max() ?? 1, 0.0001)
-            let stepX = size.width / CGFloat(samples.count - 1)
-            let plotted: [CGPoint] = samples.enumerated().map { index, value in
-                let x = CGFloat(index) * stepX
-                let normalized = min(max(value / maxValue, 0), 1)
-                let y = size.height - (CGFloat(normalized) * (size.height - lineWidth)) - lineWidth
-                return CGPoint(x: x, y: y)
-            }
-
-            var path = Path()
-            path.move(to: plotted[0])
-            for point in plotted.dropFirst() {
-                path.addLine(to: point)
-            }
-
-            var fill = path
-            if style == .area {
-                fill.addLine(to: CGPoint(x: size.width, y: size.height))
-                fill.addLine(to: CGPoint(x: 0, y: size.height))
-                fill.closeSubpath()
-                context.fill(fill, with: .linearGradient(
-                    Gradient(colors: [color.opacity(0.25), color.opacity(0.02)]),
-                    startPoint: CGPoint(x: 0, y: 0),
-                    endPoint: CGPoint(x: 0, y: size.height)))
-            }
-
-            context.stroke(path, with: .color(color), lineWidth: lineWidth)
         }
         .accessibilityHidden(true)
+    }
+
+    private var chart: some View {
+        Chart {
+            switch style {
+            case .area:
+                ForEach(primaryPoints) { point in
+                    AreaMark(x: .value("Sample", point.index), y: .value("Value", point.value))
+                        .foregroundStyle(areaFillStyle)
+                        .interpolationMethod(interpolation.method)
+                    LineMark(x: .value("Sample", point.index), y: .value("Value", point.value))
+                        .foregroundStyle(color)
+                        .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+                        .interpolationMethod(interpolation.method)
+                }
+            case .line:
+                ForEach(primaryPoints) { point in
+                    LineMark(x: .value("Sample", point.index), y: .value("Value", point.value))
+                        .foregroundStyle(color)
+                        .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+                        .interpolationMethod(interpolation.method)
+                }
+            case .bar:
+                ForEach(primaryPoints) { point in
+                    BarMark(x: .value("Sample", point.index), y: .value("Value", point.value), width: .fixed(barWidth))
+                        .clipShape(Capsule())
+                        .foregroundStyle(color.opacity(0.76).gradient)
+                }
+            case .points:
+                ForEach(primaryPoints) { point in
+                    PointMark(x: .value("Sample", point.index), y: .value("Value", point.value))
+                        .foregroundStyle(color)
+                        .symbolSize(pointSize)
+                }
+            case .multiLine:
+                ForEach(primaryPoints) { point in
+                    LineMark(x: .value("Sample", point.index), y: .value("Value", point.value), series: .value("Metric", "Primary"))
+                        .foregroundStyle(color)
+                        .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+                        .interpolationMethod(interpolation.method)
+                }
+                ForEach(secondaryPoints) { point in
+                    LineMark(x: .value("Sample", point.index), y: .value("Value", point.value), series: .value("Metric", "Secondary"))
+                        .foregroundStyle(color.opacity(0.55))
+                        .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round, dash: [3, 3]))
+                        .interpolationMethod(interpolation.method)
+                }
+            case .range:
+                ForEach(rangePoints) { point in
+                    BarMark(x: .value("Sample", point.index),
+                            yStart: .value("Low", point.low),
+                            yEnd: .value("High", point.high),
+                            width: .fixed(barWidth))
+                    .clipShape(Capsule())
+                    .foregroundStyle(color.opacity(0.72).gradient)
+                }
+            case .scatter:
+                ForEach(scatterPoints) { point in
+                    PointMark(x: .value("Primary", point.x), y: .value("Secondary", point.y))
+                        .foregroundStyle(color)
+                        .symbolSize(pointSize)
+                }
+            }
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartLegend(.hidden)
+        .chartYScale(domain: 0...1)
+        .chartPlotStyle { plot in
+            plot.background(.clear)
+        }
+    }
+
+    private var baseline: some View {
+        Canvas { context, size in
+            var path = Path()
+            path.move(to: CGPoint(x: 0, y: size.height - lineWidth))
+            path.addLine(to: CGPoint(x: size.width, y: size.height - lineWidth))
+            context.stroke(path, with: .color(color.opacity(0.35)), lineWidth: lineWidth)
+        }
+    }
+
+    private var areaFillStyle: AnyShapeStyle {
+        if areaUsesGradient {
+            return AnyShapeStyle(
+                LinearGradient(colors: [color.opacity(0.25), color.opacity(0.02)],
+                               startPoint: .top,
+                               endPoint: .bottom)
+            )
+        }
+        return AnyShapeStyle(color.opacity(0.22))
+    }
+
+    private var primaryPoints: [ChartPoint] {
+        normalized(samples).enumerated().map { ChartPoint(index: $0.offset, value: $0.element) }
+    }
+
+    private var secondaryPoints: [ChartPoint] {
+        normalized(comparisonSamples).enumerated().map { ChartPoint(index: $0.offset, value: $0.element) }
+    }
+
+    private var rangePoints: [ChartRangePoint] {
+        let count = min(primaryPoints.count, secondaryPoints.count)
+        guard count > 0 else { return [] }
+        return (0..<count).map { index in
+            let first = primaryPoints[index].value
+            let second = secondaryPoints[index].value
+            return ChartRangePoint(index: index, low: min(first, second), high: max(first, second))
+        }
+    }
+
+    private var scatterPoints: [ChartScatterPoint] {
+        let count = min(primaryPoints.count, secondaryPoints.count)
+        guard count > 0 else { return [] }
+        return (0..<count).map { index in
+            ChartScatterPoint(index: index, x: primaryPoints[index].value, y: secondaryPoints[index].value)
+        }
+    }
+
+    private func normalized(_ values: [Double]) -> [Double] {
+        let maxValue = max(values.max() ?? 1, 0.0001)
+        return values.map { min(max($0 / maxValue, 0), 1) }
+    }
+}
+
+private struct ChartPoint: Identifiable {
+    let index: Int
+    let value: Double
+    var id: Int { index }
+}
+
+private struct ChartRangePoint: Identifiable {
+    let index: Int
+    let low: Double
+    let high: Double
+    var id: Int { index }
+}
+
+private struct ChartScatterPoint: Identifiable {
+    let index: Int
+    let x: Double
+    let y: Double
+    var id: Int { index }
+}
+
+private extension WidgetInterpolation {
+    var method: InterpolationMethod {
+        switch self {
+        case .linear: return .linear
+        case .catmullRom: return .catmullRom
+        case .cardinal: return .cardinal
+        case .monotone: return .monotone
+        case .stepStart: return .stepStart
+        case .stepCenter: return .stepCenter
+        case .stepEnd: return .stepEnd
+        }
     }
 }
 

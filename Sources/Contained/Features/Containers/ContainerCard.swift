@@ -80,6 +80,12 @@ struct ContainerCard: View {
         return enabled.contains(selectedWidgetIndex) ? selectedWidgetIndex : (enabled.first ?? 0)
     }
     private var activeWidget: WidgetConfiguration { styleForDisplay.widget(at: activeWidgetIndex) }
+    private var activeWidgetColor: Color { activeWidget.tint?.color ?? tint }
+    private var activeWidgetComparisonMetric: GraphMetric? {
+        activeWidget.style.resolvedSecondaryMetric(primary: activeWidget.metric,
+                                                   requested: activeWidget.secondaryMetric,
+                                                   options: GraphMetric.allCases)
+    }
     private var cardSize: ResourceCardSize { density.resourceSize }
 
     var body: some View {
@@ -142,8 +148,14 @@ struct ContainerCard: View {
             footerActions
         } widget: {
             LiveSparkline(samples: histories[activeWidget.metric] ?? history,
-                          color: tint,
-                          style: activeWidget.style)
+                          comparisonSamples: activeWidgetComparisonMetric.flatMap { histories[$0] } ?? [],
+                          color: activeWidgetColor,
+                          lineWidth: activeWidget.lineWidth,
+                          style: activeWidget.style,
+                          areaUsesGradient: activeWidget.areaUsesGradient,
+                          interpolation: activeWidget.interpolation,
+                          pointSize: activeWidget.pointSize,
+                          barWidth: activeWidget.barWidth)
                 .frame(maxWidth: .infinity)
                 .frame(height: 58)
         }
@@ -355,14 +367,14 @@ struct ContainerCard: View {
         } label: {
             ResourceCardFooterMini {
                 if widget.showIcon {
-                    Image(systemName: widget.metric.systemImage).font(.caption2)
+                    Image(systemName: widget.resolvedSystemImage).font(.caption2)
                 }
             } text: {
                 if widget.showText {
                     ResourceCardMetricText(text: stats.map(widget.metric.chipCaption(from:)) ?? "—")
                 }
             }
-            .foregroundStyle(active ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
+            .foregroundStyle(active ? AnyShapeStyle(widget.tint?.color ?? tint) : AnyShapeStyle(.secondary))
         }
         .buttonStyle(.plain)
         .help(widget.metric.displayName)

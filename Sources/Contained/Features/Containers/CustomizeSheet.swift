@@ -153,25 +153,25 @@ struct CustomizeSheet: View {
                 if target.isImage {
                     EmptyView()
                 } else {
-                    ForEach(0..<Personalization.widgetSlotCount, id: \.self) { index in
-                        Section("Widget \(index + 1)") {
-                            Toggle("Enabled", isOn: widgetEnabledBinding(index))
-                            if widgetEnabled(index) {
-                                Toggle("Show icon", isOn: widgetShowIconBinding(index))
-                                Toggle("Show text", isOn: widgetShowTextBinding(index))
-                                Picker("Graph Metric", selection: widgetMetricBinding(index)) {
-                                    ForEach(graphOptions) {
-                                        Label(graphLabel($0), systemImage: $0.systemImage).tag($0)
-                                    }
-                                }
-                                Picker("Graph Type", selection: widgetStyleBinding(index)) {
-                                    ForEach(GraphStyle.allCases) { Text($0.displayName).tag($0) }
-                                }
-                            }
+                    ForEach(activeWidgetIndices, id: \.self) { index in
+                        Section {
+                            widgetEditor(index)
+                        } header: {
+                            Text(widgetTitle(for: index))
                         }
                         .disabled(settingsDisabled)
                         .opacity(settingsDisabled ? 0.48 : 1)
                     }
+
+                    Section {
+                        addWidgetButton
+                    } header: {
+                        Text("Widgets")
+                    } footer: {
+                        Text("\(activeWidgetIndices.count) of \(Personalization.widgetSlotCount) widgets")
+                    }
+                    .disabled(settingsDisabled)
+                    .opacity(settingsDisabled ? 0.48 : 1)
                 }
 
                 Section("Background") {
@@ -322,8 +322,201 @@ struct CustomizeSheet: View {
         target.supportsInheritance && !overrideContainerStyle
     }
 
+    private var activeWidgetIndices: [Int] {
+        style.widgets.indices.filter { style.widget(at: $0).enabled }
+    }
+
+    private var canAddWidget: Bool {
+        activeWidgetIndices.count < Personalization.widgetSlotCount
+    }
+
+    private var addWidgetButton: some View {
+        Button { addWidget() } label: {
+            Label("Add widget", systemImage: "plus")
+        }
+        .disabled(!canAddWidget)
+        .foregroundStyle(canAddWidget ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+    }
+
+    private func widgetTitle(for index: Int) -> String {
+        let position = activeWidgetIndices.firstIndex(of: index) ?? 0
+        return "Widget \(position + 1)"
+    }
+
+    @ViewBuilder
+    private func widgetEditor(_ index: Int) -> some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            HStack(spacing: Tokens.Space.s) {
+                let position = activeWidgetIndices.firstIndex(of: index) ?? 0
+                Label(widgetTitle(for: index), systemImage: style.widget(at: index).resolvedSystemImage)
+                    .font(.callout.weight(.medium))
+                Spacer()
+                Button { moveWidget(index, by: -1) } label: {
+                    Label("Move widget up", systemImage: "chevron.up")
+                        .labelStyle(.iconOnly)
+                }
+                .buttonStyle(.borderless)
+                .disabled(position == 0)
+                .help("Move widget up")
+                Button { moveWidget(index, by: 1) } label: {
+                    Label("Move widget down", systemImage: "chevron.down")
+                        .labelStyle(.iconOnly)
+                }
+                .buttonStyle(.borderless)
+                .disabled(position >= activeWidgetIndices.count - 1)
+                .help("Move widget down")
+                Button(role: .destructive) { removeWidget(index) } label: {
+                    Label("Remove widget", systemImage: "minus.circle")
+                        .labelStyle(.iconOnly)
+                }
+                .buttonStyle(.borderless)
+                .help("Remove widget")
+            }
+
+            widgetDisplayOptions(index)
+            widgetDataOptions(index)
+            widgetChartOptions(index)
+        }
+        .padding(.vertical, Tokens.Space.xs)
+    }
+
+    private func widgetGroupLabel(_ title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+    }
+
+    @ViewBuilder
+    private func widgetDisplayOptions(_ index: Int) -> some View {
+        widgetGroupLabel("Display", systemImage: "paintpalette")
+        Toggle("Show icon", isOn: widgetShowIconBinding(index))
+        if style.widget(at: index).showIcon {
+            TextField("Icon", text: widgetIconBinding(index),
+                      prompt: Text(style.widget(at: index).metric.systemImage))
+        }
+        Toggle("Show text", isOn: widgetShowTextBinding(index))
+        LabeledContent("Color") {
+            TintSelector(optionalSelection: widgetTintBinding(index), automaticLabel: "Card Color")
+        }
+    }
+
+    @ViewBuilder
+    private func widgetDataOptions(_ index: Int) -> some View {
+        widgetGroupLabel("Data", systemImage: "waveform.path.ecg")
+        Picker("Metric", selection: widgetMetricBinding(index)) {
+            ForEach(graphOptions) {
+                Label(graphLabel($0), systemImage: $0.systemImage).tag($0)
+            }
+        }
+        if widgetStyle(index).requiresSecondaryMetric {
+            if let fallback = secondaryMetricFallback(for: index) {
+                Picker("Compare", selection: widgetSecondaryMetricBinding(index, fallback: fallback)) {
+                    ForEach(graphOptions.filter { $0 != style.widget(at: index).metric }) {
+                        Label(graphLabel($0), systemImage: $0.systemImage).tag($0)
+                    }
+                }
+            } else {
+                Text("This graph needs a second metric.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func widgetChartOptions(_ index: Int) -> some View {
+        let chartStyle = widgetStyle(index)
+        widgetGroupLabel("Chart", systemImage: "chart.xyaxis.line")
+        Picker("Type", selection: widgetStyleBinding(index)) {
+            ForEach(GraphStyle.allCases) { Text($0.displayName).tag($0) }
+        }
+        if chartStyle == .area {
+            Toggle("Gradient fill", isOn: widgetAreaGradientBinding(index))
+        }
+        if chartStyle.usesLineOptions {
+            Picker("Interpolation", selection: widgetInterpolationBinding(index)) {
+                ForEach(WidgetInterpolation.allCases) { Text($0.displayName).tag($0) }
+            }
+            sliderRow("Line Width",
+                      value: widgetLineWidthBinding(index),
+                      range: 0.75...4,
+                      step: 0.25,
+                      readout: widgetLineWidthReadout(index))
+        }
+        if chartStyle.usesPointOptions {
+            sliderRow("Point Size",
+                      value: widgetPointSizeBinding(index),
+                      range: 8...44,
+                      step: 1,
+                      readout: widgetWholeNumberReadout(style.widget(at: index).pointSize))
+        }
+        if chartStyle.usesBarOptions {
+            sliderRow("Bar Width",
+                      value: widgetBarWidthBinding(index),
+                      range: 2...14,
+                      step: 1,
+                      readout: widgetWholeNumberReadout(style.widget(at: index).barWidth))
+        }
+    }
+
+    private func sliderRow(_ title: String,
+                           value: Binding<Double>,
+                           range: ClosedRange<Double>,
+                           step: Double,
+                           readout: String) -> some View {
+        LabeledContent(title) {
+            Slider(value: value, in: range, step: step)
+            Text(readout)
+                .monospacedDigit()
+                .frame(width: Tokens.FormWidth.shortReadout)
+        }
+    }
+
     private func widgetEnabled(_ index: Int) -> Bool {
         style.widget(at: index).enabled
+    }
+
+    private func addWidget() {
+        guard canAddWidget,
+              let index = style.widgets.indices.first(where: { !style.widget(at: $0).enabled }) else { return }
+        var widget = style.widget(at: index)
+        widget.enabled = true
+        widget.metric = nextWidgetMetric()
+        widget.secondaryMetric = widget.style.resolvedSecondaryMetric(primary: widget.metric,
+                                                                      requested: widget.secondaryMetric,
+                                                                      options: graphOptions)
+        style.setWidget(widget, at: index)
+    }
+
+    private func removeWidget(_ index: Int) {
+        var widget = style.widget(at: index)
+        widget.enabled = false
+        style.setWidget(widget, at: index)
+    }
+
+    private func moveWidget(_ index: Int, by offset: Int) {
+        let indices = activeWidgetIndices
+        guard let position = indices.firstIndex(of: index) else { return }
+        let targetPosition = position + offset
+        guard indices.indices.contains(targetPosition) else { return }
+        let targetIndex = indices[targetPosition]
+        style.widgets.swapAt(index, targetIndex)
+    }
+
+    private func nextWidgetMetric() -> GraphMetric {
+        let activeMetrics = Set(activeWidgetIndices.map { style.widget(at: $0).metric })
+        return graphOptions.first { !activeMetrics.contains($0) } ?? graphOptions.first ?? .cpu
+    }
+
+    private func widgetStyle(_ index: Int) -> GraphStyle {
+        style.widget(at: index).style
+    }
+
+    private func secondaryMetricFallback(for index: Int) -> GraphMetric? {
+        let widget = style.widget(at: index)
+        return widget.style.resolvedSecondaryMetric(primary: widget.metric,
+                                                    requested: widget.secondaryMetric,
+                                                    options: graphOptions)
     }
 
     private func widgetEnabledBinding(_ index: Int) -> Binding<Bool> {
@@ -343,6 +536,33 @@ struct CustomizeSheet: View {
             set: { newValue in
                 var widget = style.widget(at: index)
                 widget.metric = newValue
+                if widget.secondaryMetric == newValue {
+                    widget.secondaryMetric = widget.style.resolvedSecondaryMetric(primary: newValue,
+                                                                                  requested: nil,
+                                                                                  options: graphOptions)
+                }
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetTintBinding(_ index: Int) -> Binding<AppTint?> {
+        Binding(
+            get: { style.widget(at: index).tint },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.tint = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetIconBinding(_ index: Int) -> Binding<String> {
+        Binding(
+            get: { style.widget(at: index).icon },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.icon = newValue
                 style.setWidget(widget, at: index)
             }
         )
@@ -354,6 +574,88 @@ struct CustomizeSheet: View {
             set: { newValue in
                 var widget = style.widget(at: index)
                 widget.style = newValue
+                widget.secondaryMetric = newValue.resolvedSecondaryMetric(primary: widget.metric,
+                                                                          requested: widget.secondaryMetric,
+                                                                          options: graphOptions)
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetAreaGradientBinding(_ index: Int) -> Binding<Bool> {
+        Binding(
+            get: { style.widget(at: index).areaUsesGradient },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.areaUsesGradient = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetInterpolationBinding(_ index: Int) -> Binding<WidgetInterpolation> {
+        Binding(
+            get: { style.widget(at: index).interpolation },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.interpolation = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetLineWidthBinding(_ index: Int) -> Binding<Double> {
+        Binding(
+            get: { style.widget(at: index).lineWidth },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.lineWidth = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetPointSizeBinding(_ index: Int) -> Binding<Double> {
+        Binding(
+            get: { style.widget(at: index).pointSize },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.pointSize = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetBarWidthBinding(_ index: Int) -> Binding<Double> {
+        Binding(
+            get: { style.widget(at: index).barWidth },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.barWidth = newValue
+                style.setWidget(widget, at: index)
+            }
+        )
+    }
+
+    private func widgetLineWidthReadout(_ index: Int) -> String {
+        String(format: "%.1f", style.widget(at: index).lineWidth)
+    }
+
+    private func widgetWholeNumberReadout(_ value: Double) -> String {
+        "\(Int(value.rounded()))"
+    }
+
+    private func widgetSecondaryMetricBinding(_ index: Int, fallback: GraphMetric) -> Binding<GraphMetric> {
+        Binding(
+            get: {
+                let widget = style.widget(at: index)
+                return widget.style.resolvedSecondaryMetric(primary: widget.metric,
+                                                            requested: widget.secondaryMetric,
+                                                            options: graphOptions) ?? fallback
+            },
+            set: { newValue in
+                var widget = style.widget(at: index)
+                widget.secondaryMetric = newValue == widget.metric ? fallback : newValue
                 style.setWidget(widget, at: index)
             }
         )

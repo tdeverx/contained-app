@@ -126,8 +126,6 @@ struct PanelRow<Trailing: View>: View {
                         Text(title).foregroundStyle(labelColor)
                         if let info { InfoButton(info, visible: labelHovering) }
                     }
-                    .contentShape(Rectangle())
-                    .onHover { labelHovering = $0 }
                     if let subtitle {
                         Text(subtitle).font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -136,6 +134,8 @@ struct PanelRow<Trailing: View>: View {
                 Spacer(minLength: Tokens.Space.m)
                 trailing()
             }
+            .contentShape(Rectangle())
+            .onHover { labelHovering = $0 }
             if let error {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
@@ -192,11 +192,11 @@ struct PanelField<Control: View>: View {
                         .foregroundStyle(labelColor)
                     if let info { InfoButton(info, visible: labelHovering) }
                 }
-                .contentShape(Rectangle())
-                .onHover { labelHovering = $0 }
                 .frame(width: labelWidth, alignment: .leading)
                 control().frame(maxWidth: .infinity)
             }
+            .contentShape(Rectangle())
+            .onHover { labelHovering = $0 }
             if let error {
                 Text(error).font(.caption).foregroundStyle(.red)
                     .padding(.leading, labelWidth + Tokens.Space.m)

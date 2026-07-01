@@ -3,18 +3,53 @@ import SwiftUI
 /// A row of colored swatches for picking an `AppTint` — each shows its actual color, the selected
 /// one gets a ring.
 struct TintSelector: View {
-    @Binding var selection: AppTint
+    private let selection: Binding<AppTint?>
+    private let automaticLabel: String?
+
+    init(selection: Binding<AppTint>) {
+        self.selection = Binding<AppTint?>(
+            get: { selection.wrappedValue },
+            set: { if let newValue = $0 { selection.wrappedValue = newValue } }
+        )
+        self.automaticLabel = nil
+    }
+
+    init(optionalSelection: Binding<AppTint?>, automaticLabel: String) {
+        self.selection = optionalSelection
+        self.automaticLabel = automaticLabel
+    }
 
     var body: some View {
         HStack(spacing: Tokens.Space.s) {
+            if let automaticLabel {
+                Button { selection.wrappedValue = nil } label: { automaticSwatch }
+                    .buttonStyle(.plain)
+                    .help(automaticLabel)
+                    .accessibilityLabel(automaticLabel)
+                    .accessibilityAddTraits(selection.wrappedValue == nil ? .isSelected : [])
+            }
             ForEach(AppTint.allCases) { tint in
-                Button { selection = tint } label: { swatch(tint) }
+                Button { selection.wrappedValue = tint } label: { swatch(tint) }
                     .buttonStyle(.plain)
                     .help(tint.displayName)
                     .accessibilityLabel(tint.displayName)
-                    .accessibilityAddTraits(selection == tint ? .isSelected : [])
+                    .accessibilityAddTraits(selection.wrappedValue == tint ? .isSelected : [])
             }
         }
+    }
+
+    private var automaticSwatch: some View {
+        ZStack {
+            Circle().fill(Color.secondary.opacity(0.18)).frame(width: 22, height: 22)
+            Image(systemName: "rectangle.on.rectangle")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.secondary)
+            Circle()
+                .strokeBorder(selection.wrappedValue == nil ? Color.primary : Color.secondary.opacity(0.35),
+                              lineWidth: selection.wrappedValue == nil ? 2 : 1)
+                .frame(width: 24, height: 24)
+        }
+        .frame(width: 26, height: 26)
     }
 
     private func swatch(_ tint: AppTint) -> some View {
@@ -27,8 +62,8 @@ struct TintSelector: View {
                     .foregroundStyle(.white)
             }
             Circle()
-                .strokeBorder(selection == tint ? Color.primary : Color.secondary.opacity(0.35),
-                              lineWidth: selection == tint ? 2 : 1)
+                .strokeBorder(selection.wrappedValue == tint ? Color.primary : Color.secondary.opacity(0.35),
+                              lineWidth: selection.wrappedValue == tint ? 2 : 1)
                 .frame(width: 24, height: 24)
         }
         .frame(width: 26, height: 26)
