@@ -3,198 +3,16 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.84+293b593</title>
-            <pubDate>Wed, 01 Jul 2026 17:43:45 +0000</pubDate>
-            <sparkle:version>84</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.84+293b593</sparkle:shortVersionString>
+            <title>1.0.0-nightly.86+2aeb714</title>
+            <pubDate>Wed, 01 Jul 2026 18:02:07 +0000</pubDate>
+            <sparkle:version>86</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.86+2aeb714</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
-<h3>Added</h3>
-<h4>Toolbar & Navigation Redesign</h4>
-<ul>
-<li>**Classic sidebar fallback**: The default app shell is a native sidebar with full-page destinations for Containers, Images, Volumes, Networks, System, Registries, Templates, Activity, and Settings.</li>
-<li>**Toolbar-first architecture**: The floating custom toolbar is now an experimental UI, off by default, while still available from Settings → Experimental.</li>
-<li>**Split toolbar/panel navigation**: toolbar visibility and morph-panel routing are separate experimental toggles, so users can try the custom toolbar while keeping classic page/sheet presentation.</li>
-<li>**Morphing panel system**: When the toolbar UI is enabled, toolbar buttons morph into resizing panels for Images, Templates, Activity, and System resources.</li>
-<li>**Visual command palette**: Integrated `⌘K` search and command palette into the toolbar's expandable search field, with the search bar acting as the panel header</li>
-<li>**Palette action index**: Added global commands for app update checks, all-image update checks, pulling available image updates, checking container-image updates, pulling available container-image updates, local image search, Docker Hub search, and app tint changes</li>
-<li>**Inline palette results**: Container, image group, tag, volume, network, and tint matches render as compact design-system cards instead of generic rows</li>
-<li>**Palette fuzzy search**: Field-aware scoring now handles exact keywords, word initials, separated partials, and small typo/transposition mistakes</li>
-<li>**App-wide toolbar band**: Custom Liquid Glass toolbar proportions (52pt band height, 36pt controls) matching macOS 26 design standards</li>
-<li>**Semantic toolbar sizing**: Button glyphs use Dynamic-Type-scalable `.headline + .imageScale(.large)` for accessibility</li>
-<li>**Toolbar keyboard shortcuts**: `⌘N` (New), `⌘S` (Search), `⌘U` (Updates), `⌘I` (Activity)</li>
-<li>**Container view options**: Bottom toolbar filter control to group the Containers page by Network / Volume / Image / Flat, sort by Name / Status / Image, and toggle running-only.</li>
-<li>**Page actions in the top toolbar**: page-specific actions sit left of search; filters stay in the bottom toolbar when a page has useful filtering.</li>
-<li>**Expanded page filters**: Images, Templates, and Networks now expose bottom-toolbar grouping, sorting, and filtering controls alongside Containers.</li>
-<li>**Toolbar page chrome polish**: the page switcher hides with the sidebar, contextual page actions sit after the page switcher, and creation/image cards use full-card hit targets.</li>
-<li>**Activity unread badge**: The toolbar Activity bell fills and gains an accent + red dot when there are unread events; the panel adds Mark-all-read and Clear controls and highlights unread rows; events mark read on dismiss</li>
-<li>**Reusable activity/status asset** (`ActivityStatusView`): long-running operations (image pulls, etc.) now morph the bottom-left system-status capsule in place instead of a separate floating progress bar</li>
-</ul>
-<h4>Palette search scopes & inline registry search</h4>
-<ul>
-<li>**Palette scopes**: Docker Hub and Local-images scope chips pin to the search field and search in-place within the palette (backspace/✕ removes the scope)</li>
-<li>**Inline Docker Hub search**: live, debounced registry results rendered directly in the palette; selecting one opens the prefilled configure flow (pulls on create)</li>
-<li>**Sectioned browse view**: with no query, palette entries are grouped under labelled headings (Navigate, Create & Search, Containers, Images, Volumes & Networks, Settings, Actions)</li>
-<li>**Deduplicated entries**: removed overlapping commands (e.g. "Pull an image" / "Activity history") in favour of scopes and the navigation entries</li>
-<li>**Color name aliases**: tint search matches everyday color names (e.g. "purple" → Indigo, "blue" → Azure, "grey" → Graphite)</li>
-</ul>
-<h4>Experimental features (Settings → Experimental, all off by default)</h4>
-<ul>
-<li>**Opt-in gating**: A new Settings → Experimental section gates surfaces that are still being refined. Each defaults **off**; enabling one reveals its menu commands, toolbar affordances, and creation options app-wide</li>
-<li>**Toolbar-first UI**: Gated behind `experimentalToolbarUI` (off by default). When disabled, the app uses the sidebar shell.</li>
-<li>**Toolbar panel navigation**: Gated behind `experimentalPanelNavigation` and effective only when toolbar-first UI is enabled. When disabled, access points use classic pages and sheets.</li>
-<li>**Command palette (⌘K)**: Gated behind `commandPaletteEnabled` (off by default). A render-level backstop in `AppToolbar` keeps it fully hidden regardless of activation path; page search and menu commands are unaffected</li>
-<li>**Docker Hub search**: Gated behind `hubSearchEnabled` — the creation "Search" path, the "Pull Image…" menu commands, and the palette's Hub scope</li>
-<li>**Compose import**: Gated behind `composeImportEnabled` — paste, file pick, drag-and-drop, menu command, and palette entry</li>
-<li>**Image build workspace**: Gated behind `imageBuildEnabled` — the Dockerfile build flow and its menu command</li>
-</ul>
-<h4>Creation & Resource Management</h4>
-<ul>
-<li>**Paged creation flow**: Multi-step flow for creating containers, networks, volumes, and building images</li>
-<li>**Unified creation entry point**: File/menu shortcuts, command palette actions, and empty states open the same toolbar add panel at the relevant creation page</li>
-<li>**Compose import UI**: Paste YAML or select compose files; services with images auto-populate the prefill queue</li>
-<li>**Image archive support**: Load OCI image `.tar` files directly into the local store</li>
-<li>**Local image filtering**: Searchable local image list with architecture and size info</li>
-<li>**Template management**: Save and reuse container configurations from anywhere in the creation flow</li>
-<li>**Network & volume creation**: Dedicated creation flows with form validation and inline feedback</li>
-<li>**Image build integration**: Build workspace for Dockerfile-based image creation</li>
-</ul>
-<h4>Design System & Cards</h4>
-<ul>
-<li>**ResourceGlassCard component**: Unified card component supporting small/medium/large sizes with configurable elevation</li>
-<li>**GlassOptionTile**: New design-system tile for creation menu options with optional matched geometry</li>
-<li>**MorphingExpander primitive**: Reusable panel grow/collapse animation from origin slot to full screen</li>
-<li>**ExteriorShadow component**: Precise shadow rendering for elevated panels (shadow before blur for correct layering)</li>
-<li>**AppSafeAreaManager**: Intelligent safe area management distinguishing between toolbar-inclusive and toolbar-exclusive layouts, scoped to the detail body so sidebar navigation is unaffected.</li>
-<li>**ToolbarControls**: Centralized toolbar button and cluster components (ToolbarIconButton, ToolbarButtonCluster)</li>
-</ul>
-<h4>Container Customization & Styling</h4>
-<ul>
-<li>**Image detail sub-pages**: Inspect, History, Add Tag, and Push grow the image detail morph into in-place sub-pages (back chevron returns to the card) instead of opening modal sheets</li>
-<li>**Image update detection**: Display "Update Container" option when a newer image version is available</li>
-<li>**Enhanced card styling**: Elevated cards with improved glass effects and optional shadows for nested layouts</li>
-<li>**Multi-level personalization**:</li>
-<li>App-wide default image card design from Settings</li>
-<li>Image group styling (local image collections)</li>
-<li>Per-image-tag styling with group inheritance</li>
-<li>Volume styling with disk read/write metrics</li>
-<li>Container-level overrides</li>
-</ul>
-<h4>Settings & System Management</h4>
-<ul>
-<li>**Runtime settings tab**: View/edit Kernel and DNS settings; read-only Defaults display</li>
-<li>**System resource surfaces**: System info is shared by the sidebar System/Volumes pages and the toolbar morph panel when the experimental toolbar UI is enabled.</li>
-<li>**Registries management**: Credential management consolidated in Settings; global command for registry login</li>
-<li>**Streamlined activity history**: Activity view accessible via toolbar morph and `⌘I`</li>
-</ul>
-<h3>Changed</h3>
-<h4>UI/UX Improvements</h4>
-<ul>
-<li>**Font consistency**: Migrated fixed-point fonts to semantic Dynamic-Type styles (`.headline`, `.body`, `.caption`, etc.)</li>
-<li>**Card density options**: Added `.small`, `.medium`, `.large` (replaced `compact` variant)</li>
-<li>**Window chrome alignment**: Toolbar traffic lights centered with leading inset (80pt) to clear system controls</li>
-<li>**Glass button styling**: Updated icon scales and weights for toolbar cohesion</li>
-<li>**Palette expansion**: Taller header (48pt) and roomier padding when search palette expands</li>
-<li>**ContainerCard refactor**: Extracted form logic into shared `ContainerConfigureView` (used by both sheet and paged flow)</li>
-<li>**Container grid backdrop**: Replaced manual blur/dim with `globalBackdrop` system</li>
-<li>**Palette links respect presentation mode**: commands route through the shared presentation layer, opening morph panels only when toolbar panel navigation is enabled and falling back to pages/sheets otherwise.</li>
-<li>**Contextual toolbar controls**: page-specific toolbar buttons now switch page/subpage state directly instead of opening morph panels.</li>
-<li>**Panel navigation pages**: when toolbar panel navigation is enabled, panel-owned destinations such as System, Activity, and Settings are hidden from page/sidebar navigation.</li>
-<li>**Activity progress relocated**: the floating activity/progress bar was removed in favour of the morphing bottom-left status capsule</li>
-</ul>
-<h4>API & Architecture</h4>
-<ul>
-<li>**AppModel methods**: Added `containerStyle(for:)`, `imageStyle(for:)`, `imageGroupStyle(forID:)` for personalization lookup</li>
-<li>**Compose import**: Split into file and text variants (`ComposeImport.importFile()`, `importText()`)</li>
-<li>**Resource refresh**: Added `refreshImagesIfStale(force:)` for lazy image list updates</li>
-<li>**Image update tracking**: New `imageUpdateStatus(for:)` to check available updates</li>
-</ul>
-<h4>Settings & Personalization</h4>
-<ul>
-<li>**Personalization storage**: New methods for image group and volume styling</li>
-<li>**Card size persistence**: Migration helper for legacy `compact` → `medium` mapping</li>
-<li>**Activity read state**: `EventRecord` gains an `isRead` flag (lightweight SwiftData migration); events start unread and are marked read when the Activity panel is dismissed</li>
-</ul>
 <h3>Fixed</h3>
 <ul>
-<li>**Container card animations**: Fixed grow/shrink spring timing for smoother detail panel transitions</li>
-<li>**Safe area calculation**: Custom toolbar bands are measured in the detail column only, with body content padded independently from the sidebar.</li>
-<li>**Page scroll clearance**: Sidebar pages keep native bottom layout while scrollable content gets real interior bottom breathing room for the floating toolbar.</li>
-<li>**Volumes page routing**: the Volumes sidebar page now opens the Volumes view instead of inheriting the System panel's Engine selection.</li>
-<li>**Network page spacing**: Networks now uses the same page interior padding as the other toolbar-era pages.</li>
-<li>**Expanded resource safe areas**: container and image detail expansion now respects both toolbar bands when opened from full pages.</li>
-<li>**Registry navigation**: Registries now live only under Settings → Registries instead of appearing as a standalone app page.</li>
-<li>**Search palette sizing**: Correct max-width constraints and dynamic field scaling</li>
-<li>**Start/stop UI hang**: Container refreshes are now serialized so a user action and the background</li>
-</ul>
-<p>  polling tick no longer run `list`+`stats` concurrently (decoding JSON on the main actor and</p>
-<p>  stomping the shared stats dictionaries). The grid also only re-renders when the container list</p>
-<p>  actually changes, eliminating the per-tick re-render storm during a `.stopping` transition</p>
-<h3>Removed</h3>
-<ul>
-<li>**Old sidebar implementation**: Replaced with the new `ClassicShell`/`AppSection` sidebar fallback.</li>
-<li>**Old System/Registries/Runtime pages**: Rebuilt as shared page/panel content for the sidebar shell, Settings tabs, and toolbar morphs.</li>
-<li>**Old Network creation**: Previously on a dedicated Networks page; now a creation flow option</li>
-<li>**Legacy card sizes**: Removed `CardDensity.compact` (migrated to `.medium`)</li>
-<li>**Image action sheets**: Removed `TagImageSheet`, `PushImageSheet`, and `ImageHistorySheet` (replaced by image-detail morph sub-pages)</li>
-</ul>
-<h3>Technical</h3>
-<ul>
-<li>**New components**: `MorphingExpander`, `ResourceGlassCard`, `GlassOptionTile`, `CreationFlow`, `ContainerConfigureView`, `ToolbarControls`, `ExteriorShadow`, `ActivityStatusView`, `ToolbarViewOptions`, `InlineJSONView`</li>
-<li>**New models/state**: `ContainerGrouping`, `ContainerSort`, `PaletteScope`, `EventRecord.isRead`, `SettingsStore.experimentalPanelNavigation`</li>
-<li>**Design tokens**: Added `Tokens.Toolbar` enum for all toolbar sizing and spacing</li>
-<li>**Geometry helpers**: `MorphGeometry` utilities for panel sizing, clamping, and target rect calculation</li>
-<li>**Optional matched geometry**: Helper for conditional `.matchedGeometryEffect()` in tiles</li>
-<li>**Housekeeping pass**: Normalized Customize, registry login, and image build editor surfaces onto</li>
-</ul>
-<p>  `PanelSection`/`PanelRow`/`PanelField`; split `CustomizeWidgetsPanel`, `SystemVolumeInventory`,</p>
-<p>  `PanelHeader`, `GlassSurface`, `WidgetConfiguration`, `PersonalizationStore`, `SettingsBackup`,</p>
-<p>  and toolbar filter/action option files into focused ownership; moved resource-style lookup and</p>
-<p>  configuration import/export into `AppModel` extensions; centralized Docker Hub search fetching in</p>
-<p>  `HubSearch`.</p>
-<ul>
-<li>**Release workflow hardening**: Centralized version/build derivation in `scripts/version-info.sh`,</li>
-</ul>
-<p>  retained promoted nightly build numbers for beta/stable bundles, kept the nightly appcast as a</p>
-<p>  superset of nightly plus promoted release items, and composed generated release notes from full</p>
-<p>  version notes plus channel-specific change notes for beta/nightly builds.</p>
-<ul>
-<li>**Release-note display alignment**: The bundled in-app What's New view now uses the same composed</li>
-</ul>
-<p>  build-changes-first, full-version-notes-second structure as generated Sparkle release notes.</p>
-<ul>
-<li>**1.0 release-note inventory**: Expanded the working `1.0.0` release notes from the full</li>
-</ul>
-<p>  app/docs/source scan so Stable, Beta, Nightly, Sparkle, and in-app notes describe the complete</p>
-<p>  product surface instead of only the latest infrastructure work.</p>
-<ul>
-<li>**CI validation guardrail**: Added `scripts/ci-validate.sh` for bundled changelog drift, shell</li>
-</ul>
-<p>  syntax, workflow YAML syntax, and Stable/Beta/Nightly release-note ordering; PR and release</p>
-<p>  workflows now fail on drift instead of rewriting tracked resources in CI.</p>
-<ul>
-<li>**CI strengthening pass**: Added PR release-note enforcement, release-script fixture coverage,</li>
-</ul>
-<p>  generated-file drift checks, bundle validation, appcast validation, and the</p>
-<p>  `CONTAINED_DEBUG_TOOLS` debug-only compile flag so diagnostics can stay out of release bundles.</p>
-<ul>
-<li>**Release workflow rerun safety**: Beta and Stable workflows now update existing GitHub releases</li>
-</ul>
-<p>  on reruns, and local `scripts/release.sh` defaults to the Stable channel to avoid accidentally</p>
-<p>  cutting a stable version with nightly assets.</p>
-<ul>
-<li>**Polish pass**: Extracted the image-update subsystem into `AppModel+ImageUpdates.swift` (core</li>
-</ul>
-<p>  `AppModel` 774 → 586 lines) and collapsed the four sweep/pull methods into two shared helpers; split</p>
-<p>  the 771-line `ToolbarSearchPalette.swift` into `ToolbarSearchSource`, `ToolbarCommandPalette`, and</p>
-<p>  `PaletteResultCard`; combined the three service-lifecycle methods; removed the unused `isLoading` flag</p>
-<h3>Migration Notes</h3>
-<ul>
-<li>Saved card density preferences using `compact` will auto-migrate to `medium`</li>
-<li>The legacy sidebar toggle setting is obsolete; sidebar is now the default shell and the toolbar UI has its own experimental flag.</li>
-<li>Existing container and image styles are preserved</li>
-<li>Activity events recorded before this version are treated as unread on first launch (the `isRead` column defaults to false); opening and dismissing the Activity panel clears the badge</li>
+<li>**Release-note deltas**: Nightly and Beta release notes now derive `Changes Since Last ...` from the previous channel appcast item instead of falling back to the full `Unreleased` changelog.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -302,7 +120,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.84+293b593.dmg" length="7848888" type="application/octet-stream" sparkle:edSignature="62187CWRwqSNsqeXIHfXjlhyWVXroaSu0C9cVws4cgQMmPnU3Shig/bzO2215XMgifj1BTgNUYfofDQm18DIDA=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.86+2aeb714.dmg" length="7849122" type="application/octet-stream" sparkle:edSignature="DRUpLha8qEMWHEpcfgEKtBZLpL9zvn1iei9YiT+G69WDl4NAVW8T7B4Nu9SkbAZJ4h+Hd4Whpy0eZU98W9D2Cw=="/>
         </item>
     </channel>
 </rss>
