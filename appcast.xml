@@ -3,10 +3,10 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.60+067a267</title>
-            <pubDate>Wed, 01 Jul 2026 01:50:49 +0000</pubDate>
-            <sparkle:version>60</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.60+067a267</sparkle:shortVersionString>
+            <title>1.0.0-nightly.63+7ac66bd</title>
+            <pubDate>Wed, 01 Jul 2026 05:07:04 +0000</pubDate>
+            <sparkle:version>63</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.63+7ac66bd</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h3>Added</h3>
@@ -33,7 +33,7 @@
 <li>Moved custom toolbar safe-area measurement into the detail column so the sidebar is never padded or covered by toolbar chrome.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.60+067a267.dmg" length="7742780" type="application/octet-stream" sparkle:edSignature="YZuojWOkVXPOX8PHA6XpX2FdF89dDuyUKtS5ovIQDRqJ520DuKGxFS1TG6edvTsqRJA1CzYlJsEdDSw7dGgVBA=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.63+7ac66bd.dmg" length="7742775" type="application/octet-stream" sparkle:edSignature="es5azeHyuUS4F2whcuWe88xRO3NKLoWUxcfMELSW9QG+s2UtTxfULDuHh5dENUYHNEo16gP37VY2AQPwqCwmCg=="/>
         </item>
     </channel>
 </rss>
