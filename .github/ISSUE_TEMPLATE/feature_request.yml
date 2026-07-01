@@ -1,6 +1,5 @@
 name: Feature proposal
 description: Suggest a product improvement that is ready to become tracked work
-title: "[Feature]: "
 labels: ["feature", "triage"]
 body:
   - type: markdown

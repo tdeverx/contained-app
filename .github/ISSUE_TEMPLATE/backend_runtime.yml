@@ -1,6 +1,5 @@
 name: Backend or runtime work
 description: Apple container, Docker compatibility, command abstraction, compose, or runtime behavior
-title: "[Backend]: "
 labels: ["feature", "backend", "triage"]
 body:
   - type: textarea

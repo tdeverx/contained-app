@@ -19,8 +19,15 @@ This file is the working contract for coding agents in this repository. Follow i
 - Appcast-only bot commits must not trigger release loops. Keep `appcast.xml` path-ignored in workflows and use `[skip ci]` for appcast bot commits.
 - CodeQL uses the checked-in advanced setup at `.github/workflows/codeql.yml`. Actions workflow analysis runs on PRs, pushes, and the weekly baseline; Swift analysis is scheduled/manual because Swift CodeQL currently takes too long to be a healthy per-PR gate. Keep appcast, docs, and release-note-only paths ignored there too.
 - PR/release workflows run `scripts/ci-validate.sh`; keep that script fast and focused on repository invariants before expensive Swift builds.
-- PR CI enforces release-note coverage for material changes. Add a changelog/change fragment, or use the `no-release-note` label only for docs/meta-only work.
+- PR CI enforces release-note coverage for material changes. Add a changelog/change fragment, or use the `no-release-note` label only for docs/meta/dependency-only maintenance.
 - Release workflows validate built bundles and generated appcasts before publishing or committing feed changes.
+
+## GitHub Issues And Projects
+
+- Follow `docs/wiki/Issues-and-Discussions.md` for issue routing, naming, labels, milestones, native parent/sub-issue links, and blocked-by/blocking links.
+- Keep issue labels, milestones, and GitHub Project fields aligned with the documented workflow.
+- Use area labels for ownership only; do not treat area labels as workflow state.
+- GitHub Projects reads/writes require project-scoped GitHub CLI auth. If project commands fail, ask the maintainer to refresh auth before attempting project setup.
 
 ## Release Notes
 

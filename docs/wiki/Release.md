@@ -52,7 +52,7 @@ When using a single `CHANGELOG.md`, keep `Unreleased` above released version sec
 
 Generated release-note files should be written under `updates/`, `.release/`, or `.release-notes/`. Do not commit generated notes from release workflows. The workflows only commit `appcast.xml`, and appcast-only commits are path-ignored and marked `[skip ci]` so they do not start another release build.
 
-Run `./scripts/ci-validate.sh` before opening release/workflow PRs. It checks bundled changelog sync, shell syntax, workflow YAML syntax, and the expected Stable/Beta/Nightly release-note shape. PR CI also passes a base ref so material source/script/workflow changes must include a release note or change fragment unless the PR carries the `no-release-note` label.
+Run `./scripts/ci-validate.sh` before opening release/workflow PRs. It checks bundled changelog sync, shell syntax, workflow YAML syntax, and the expected Stable/Beta/Nightly release-note shape. PR CI also passes a base ref so material source/script/workflow changes must include a release note or change fragment unless the PR carries the `no-release-note` label for docs/meta/dependency-only maintenance.
 
 Release helper behavior is covered by `./scripts/test-release-scripts.sh`. CI also runs:
 

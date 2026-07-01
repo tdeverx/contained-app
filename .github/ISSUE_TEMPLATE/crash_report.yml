@@ -1,6 +1,5 @@
 name: Crash report
 description: Contained quits, freezes, or shows a crash report
-title: "[Crash]: "
 labels: ["bug", "high", "triage"]
 body:
   - type: markdown

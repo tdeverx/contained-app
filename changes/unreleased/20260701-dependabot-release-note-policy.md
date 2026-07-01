@@ -1,0 +1,1 @@
+- Allowed dependency-only maintenance PRs to use the `no-release-note` path so grouped Dependabot updates can pass repository validation without manual changelog fragments.
