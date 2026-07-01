@@ -3,18 +3,15 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.88+c26d7b3</title>
-            <pubDate>Wed, 01 Jul 2026 19:13:55 +0000</pubDate>
-            <sparkle:version>88</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.88+c26d7b3</sparkle:shortVersionString>
+            <title>1.0.0-nightly.90+04a223d</title>
+            <pubDate>Wed, 01 Jul 2026 21:03:54 +0000</pubDate>
+            <sparkle:version>90</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.90+04a223d</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
 <ul>
-<li>Improved GitHub CodeQL scanning so workflow checks run on relevant source, script, workflow, package, and test changes without rerunning for generated appcast-only update feed commits.</li>
-<li>Kept Swift CodeQL enabled as a scheduled/manual scan while avoiding a slow per-PR Swift gate.</li>
-<li>Kept release-note fixture and custom changelog generation isolated from the repository's default change-fragment directory unless `CHANGES_DIR` is explicitly supplied.</li>
-<li>Fixed empty channel-delta generation so "since last nightly/beta" notes fall back deliberately instead of treating a blank normalized diff as content.</li>
+<li>Improved GitHub contributor setup with expanded issue templates, support/security files, discussion guidance, Dependabot configuration, and a PR workflow that still reports the required check for docs-only changes.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -122,7 +119,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.88+c26d7b3.dmg" length="7849194" type="application/octet-stream" sparkle:edSignature="OfRzOcv84Y1BkYN+LAW0D1xkMBMeuKSAlahv/QzMF5J+x4kZgJvZWmZ1EdgZHCdDyfsSxdPqdGnOWlbddJDwBA=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.90+04a223d.dmg" length="7849090" type="application/octet-stream" sparkle:edSignature="DkapMzM4/YvCDu5wToKMdvZoLBrtFpqPXlLbUfuh1sHDghRHajm15XtL77BbLuZKLm6MWzhz9W2doOrfst5VAA=="/>
         </item>
     </channel>
 </rss>
