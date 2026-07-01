@@ -1,0 +1,105 @@
+name: Wiki PR
+
+on:
+  pull_request:
+    branches: [main, nightly, beta, stable]
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
+
+concurrency:
+  group: wiki-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  wiki-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base
+        run: git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+
+      - name: Wiki check
+        id: wiki_check
+        continue-on-error: true
+        env:
+          WIKI_APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'wiki-approved') && '1' || '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p .release/wiki-pr
+          args=(
+            --base-ref "origin/${{ github.base_ref }}"
+            --head-ref HEAD
+            --summary-file .release/wiki-pr/summary.md
+            --require-approval
+          )
+          if [ "$WIKI_APPROVED" = "1" ]; then
+            args+=(--approved)
+          fi
+          ./scripts/wiki-check.sh "${args[@]}"
+
+      - name: Render preview
+        if: always()
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          mkdir -p .release/wiki-pr/base-src
+          ./scripts/wiki-render.sh --source docs/wiki --output .release/wiki-pr/rendered --channel nightly
+          git archive "origin/${{ github.base_ref }}" docs/wiki | tar -x -C .release/wiki-pr/base-src
+          ./scripts/wiki-render.sh --source .release/wiki-pr/base-src/docs/wiki --output .release/wiki-pr/rendered-base --channel nightly
+          diff -ru .release/wiki-pr/rendered-base .release/wiki-pr/rendered > .release/wiki-pr/wiki.diff || true
+
+      - name: Upload preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiki-preview
+          path: .release/wiki-pr
+          if-no-files-found: ignore
+
+      - name: Comment summary
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          body_file=.release/wiki-pr/summary.md
+          if [ ! -f "$body_file" ]; then
+            mkdir -p .release/wiki-pr
+            {
+              echo "<!-- contained-wiki-pr -->"
+              echo "## Wiki Review"
+              echo
+              echo "Status: wiki summary was not generated."
+            } > "$body_file"
+          fi
+          {
+            echo
+            echo "Preview artifact: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } >> "$body_file"
+          comment_id="$(
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate \
+              --jq '.[] | select(.body | contains("<!-- contained-wiki-pr -->")) | .id' \
+              | head -n 1
+          )"
+          if [ -n "$comment_id" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" \
+              -f body="$(cat "$body_file")" >/dev/null
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+              -f body="$(cat "$body_file")" >/dev/null
+          fi
+
+      - name: Enforce wiki gate
+        if: always()
+        run: |
+          if [ "${{ steps.wiki_check.outcome }}" != "success" ]; then
+            exit 1
+          fi

@@ -7,7 +7,7 @@ This file is the working contract for coding agents in this repository. Follow i
 - This is a SwiftPM-first macOS 26 SwiftUI app.
 - `Sources/ContainedCore` is pure/testable logic. Keep SwiftUI, app state, Sparkle, and persistence out of it.
 - `Sources/Contained` is the app: SwiftUI screens, design system, navigation, stores, history, settings, and update support.
-- `docs/wiki` mirrors the GitHub wiki. User-facing behavior or workflow changes should update the matching page.
+- `docs/wiki` is the canonical GitHub wiki source. User-facing behavior or workflow changes should update the matching page; CI publishes the rendered wiki after merge.
 - Keep directory names intentional: SwiftPM-owned folders stay `Sources` and `Tests`, Swift source domain folders use PascalCase, and repo infrastructure uses lowercase names such as `docs` and `scripts`.
 
 ## Branches And Updates
@@ -20,6 +20,7 @@ This file is the working contract for coding agents in this repository. Follow i
 - CodeQL uses the checked-in advanced setup at `.github/workflows/codeql.yml`. Actions workflow analysis runs on PRs, pushes, and the weekly baseline; Swift analysis is scheduled/manual because Swift CodeQL currently takes too long to be a healthy per-PR gate. Keep appcast, docs, and release-note-only paths ignored there too.
 - PR/release workflows run `scripts/ci-validate.sh`; keep that script fast and focused on repository invariants before expensive Swift builds.
 - PR CI enforces release-note coverage for material changes. Add a changelog/change fragment, or use the `no-release-note` label only for docs/meta-only work.
+- Wiki-impacting PRs require the `wiki-approved` label. The PR wiki guard renders previews, posts a sticky review comment, and fails until that label is present.
 - Release workflows validate built bundles and generated appcasts before publishing or committing feed changes.
 
 ## Release Notes
@@ -67,6 +68,7 @@ For release scripts/workflows:
 ```sh
 ./scripts/ci-validate.sh
 ./scripts/test-release-scripts.sh
+./scripts/test-wiki-scripts.sh
 swift test --filter UpdaterControllerTests
 ```
 

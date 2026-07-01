@@ -42,8 +42,10 @@ jobs:
           git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
           ./scripts/ci-validate.sh --base-ref "origin/${{ github.base_ref }}" --require-release-note
 
-      - name: Release script fixtures
-        run: ./scripts/test-release-scripts.sh
+      - name: Script fixtures
+        run: |
+          ./scripts/test-release-scripts.sh
+          ./scripts/test-wiki-scripts.sh
 
       - name: Build & test
         run: |

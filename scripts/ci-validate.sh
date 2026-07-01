@@ -50,6 +50,10 @@ bash -n scripts/*.sh
 echo "▸ Checking workflow YAML syntax…"
 ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path) }' .github/workflows/*.yml
 
+echo "▸ Checking wiki docs…"
+ruby -c scripts/wiki-tool.rb >/dev/null
+./scripts/wiki-check.sh
+
 echo "▸ Checking release-note composition…"
 base="$(./scripts/version-info.sh base)"
 build="$(./scripts/version-info.sh build)"

@@ -1,0 +1,71 @@
+name: Wiki Sync
+
+on:
+  push:
+    branches: [nightly]
+    paths:
+      - 'docs/wiki/**'
+      - 'scripts/wiki-*.sh'
+      - 'scripts/wiki-tool.rb'
+      - '.github/workflows/wiki-sync.yml'
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Render channel
+        required: true
+        default: nightly
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+      force:
+        description: Create a wiki commit even when rendered output is unchanged
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: wiki-sync-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      WIKI_SYNC_TOKEN: ${{ secrets.WIKI_SYNC_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Render wiki
+        env:
+          WIKI_CHANNEL: ${{ inputs.channel || 'nightly' }}
+        run: ./scripts/wiki-render.sh --source docs/wiki --output .release/wiki-sync/rendered --channel "$WIKI_CHANNEL"
+
+      - name: Publish wiki
+        env:
+          FORCE_SYNC: ${{ inputs.force || false }}
+        run: |
+          set -euo pipefail
+          token="${WIKI_SYNC_TOKEN:-$GH_TOKEN}"
+          wiki_dir=.release/wiki-sync/wiki
+          git clone "https://x-access-token:${token}@github.com/${GITHUB_REPOSITORY}.wiki.git" "$wiki_dir"
+          rsync -a --delete --exclude='.git/' --exclude='_Footer.md' .release/wiki-sync/rendered/ "$wiki_dir/"
+          cd "$wiki_dir"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet && [ "$FORCE_SYNC" != "true" ]; then
+            echo "wiki unchanged - nothing to publish."
+            exit 0
+          fi
+          if git diff --cached --quiet; then
+            git commit --allow-empty -m "docs: republish wiki"
+          else
+            git commit -m "docs: sync wiki"
+          fi
+          git push origin HEAD
