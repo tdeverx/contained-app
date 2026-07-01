@@ -99,10 +99,30 @@ cat > "$delta_appcast" <<'XML'
   </channel>
 </rss>
 XML
-auto_notes="$(APPCAST="$delta_appcast" CHANNEL=nightly VERSION_VALUE=1.0.0-nightly.84+293b593 ./scripts/release-body.sh)"
+auto_notes="$(APPCAST="$delta_appcast" HEAD_REF=293b593 CHANNEL=nightly VERSION_VALUE=1.0.0-nightly.84+293b593 ./scripts/release-body.sh)"
 assert_contains "$auto_notes" "## Changes Since Last Nightly" "automatic nightly notes"
 assert_contains "$auto_notes" "CI strengthening pass" "automatic nightly notes"
 assert_not_contains "$auto_notes" "Toolbar & Navigation Redesign" "automatic nightly notes"
+
+no_delta_appcast="$tmp/no-delta-nightly.xml"
+head_sha="$(git rev-parse --short HEAD)"
+cat > "$no_delta_appcast" <<XML
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>Contained</title>
+    <item>
+      <title>1.0.0-nightly.999+${head_sha}</title>
+      <sparkle:version>999</sparkle:version>
+      <sparkle:shortVersionString>1.0.0-nightly.999+${head_sha}</sparkle:shortVersionString>
+      <description>Current nightly notes.</description>
+      <enclosure url="https://example.com/Contained.dmg" length="1" type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
+XML
+no_delta_notes="$(APPCAST="$no_delta_appcast" CHANNEL=nightly ./scripts/changes-since-release.sh)"
+assert_contains "$no_delta_notes" "No channel-specific changes were recorded for this build." "empty automatic nightly notes"
 
 echo "▸ Checking appcast promotion and validation..."
 promoted="$tmp/promoted.xml"

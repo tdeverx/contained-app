@@ -20,6 +20,9 @@ concurrency:
   group: pr-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   pr:
     runs-on: macos-26
