@@ -333,10 +333,15 @@ extension View {
     }
 }
 
-private struct FloatingPanelMaterial: ViewModifier {
+private struct FloatingPanelMaterial: AnimatableModifier {
     @Environment(\.modalMaterial) private var material
     var cornerRadius = Tokens.Radius.sheet
     var showsShadow = true
+
+    nonisolated var animatableData: CGFloat {
+        get { cornerRadius }
+        set { cornerRadius = newValue }
+    }
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

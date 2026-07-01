@@ -71,7 +71,7 @@ struct PaletteResultCard: View {
     private func containerCard(_ snapshot: ContainerSnapshot) -> some View {
         let style = app.containerStyle(for: snapshot)
         let name = style.displayName(fallback: snapshot.id)
-        return ResourceGlassCard(size: .small,
+        return ResourceGlassCard(size: .medium,
                                  isSelected: selected,
                                  fill: style.fillBackground ? style.color : nil,
                                  fillOpacity: selected ? 0.14 : style.backgroundOpacity,
@@ -92,47 +92,32 @@ struct PaletteResultCard: View {
                     ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
                 }
             } trailing: {
-                accessory
+                EmptyView()
             }
+        } footerLeading: {
+            containerStatus(snapshot)
+        } footerActions: {
+            accessory
         }
         .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func imageGroupCard(_ group: LocalImageTagGroup) -> some View {
-        let style = app.imageGroupStyle(for: group)
-        let status = app.imageUpdateStatus(for: group.primaryReference)
-        return ResourceGlassCard(size: .small,
-                                 isSelected: selected,
-                                 fill: style.fillBackground ? style.color : nil,
-                                 fillOpacity: selected ? 0.14 : style.backgroundOpacity,
-                                 gradient: style.gradient,
-                                 gradientAngle: style.gradientAngle,
-                                 elevated: false,
-                                 onTap: action) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: style.symbol, tint: style.color, backgroundOpacity: selected ? 0.24 : 0.16)
-            } content: {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: Tokens.Space.s) {
-                        ResourceCardTitleText(text: repositoryTitle(group.primaryReference))
-                        ResourceBadgeText(text: "\(group.references.count) tag\(group.references.count == 1 ? "" : "s")",
-                                          font: .caption2.weight(.semibold))
-                    }
-                    ResourceCardMonospacedSubtitleText(text: Format.shortImage(group.primaryReference))
-                    ResourceCardSubtitleText(text: imageUpdateText(status))
+        ToolbarImageGroupCard(group: group, isExpanded: false, onTap: action, onClose: {})
+            .overlay {
+                if selected {
+                    RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+                        .fill(AppMaterial.toolbarHoverFill)
+                        .allowsHitTesting(false)
                 }
-            } trailing: {
-                accessory
             }
-        }
-        .selectionFill()
-        .accessibilityAddTraits(selected ? .isSelected : [])
+            .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func imageTagCard(_ reference: String, groupID: String) -> some View {
         let style = app.imageGroupStyle(forID: groupID)
-        return ResourceGlassCard(size: .small,
+        return ResourceGlassCard(size: .medium,
                                  isSelected: selected,
                                  fill: style.fillBackground ? style.color : nil,
                                  fillOpacity: selected ? 0.14 : style.backgroundOpacity,
@@ -151,8 +136,19 @@ struct PaletteResultCard: View {
                     ResourceCardSubtitleText(text: repositoryTitle(reference))
                 }
             } trailing: {
-                accessory
+                EmptyView()
             }
+        } footerLeading: {
+            ResourceCardFooterMini {
+                Image(systemName: style.symbol)
+                    .font(.caption2)
+                    .foregroundStyle(style.color)
+            } text: {
+                ResourceCardMetricText(text: "Image")
+                    .foregroundStyle(.secondary)
+            }
+        } footerActions: {
+            accessory
         }
         .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -258,6 +254,17 @@ struct PaletteResultCard: View {
         case .current: return "Up to date"
         case .updateAvailable: return "Update available"
         case .error: return "Update check failed"
+        }
+    }
+
+    private func containerStatus(_ snapshot: ContainerSnapshot) -> some View {
+        ResourceCardFooterMini {
+            Image(systemName: snapshot.state == .running ? "circle.fill" : "circle")
+                .font(.caption2)
+                .foregroundStyle(snapshot.state == .running ? .green : .secondary)
+        } text: {
+            ResourceCardMetricText(text: snapshot.state.rawValue.capitalized)
+                .foregroundStyle(.secondary)
         }
     }
 }

@@ -51,20 +51,13 @@ struct PaletteItem: Identifiable {
     @MainActor
     static func all(app: AppModel, ui: UIState) -> [PaletteItem] {
         var items: [PaletteItem] = []
-        items.append(PaletteItem(title: "Containers", subtitle: "navigate",
-                                 kind: .navigation,
-                                 icon: "shippingbox", tint: .secondary) { ui.activeMorph = nil })
-        // Toolbar panels open the matching morph.
-        let panels: [(String, String, UIState.ToolbarMorph)] = [
-            ("Images", "shippingbox.fill", .updates),
-            ("Templates", "bookmark", .templates),
-            ("Activity", "bell", .activity),
-            ("System", "gearshape.2", .system),
-            ("Settings", "gearshape", .settings),
-        ]
-        for (title, icon, morph) in panels {
-            items.append(PaletteItem(title: title, subtitle: "navigate", kind: .navigation, icon: icon, tint: .secondary) {
-                ui.toggleMorph(morph)
+        for section in AppSection.allCases {
+            items.append(PaletteItem(title: section.title,
+                                     subtitle: section.group.rawValue,
+                                     kind: .navigation,
+                                     icon: section.symbol,
+                                     tint: .secondary) {
+                ui.navigate(to: section)
             })
         }
         // Add anything, from anywhere. (Pulling an image is covered by the Docker Hub search scope
@@ -194,7 +187,14 @@ struct PaletteItem: Identifiable {
                 })
             }
         }
-        return items
+        return deduplicated(items)
+    }
+
+    private static func deduplicated(_ items: [PaletteItem]) -> [PaletteItem] {
+        var seen = Set<String>()
+        return items.filter { item in
+            seen.insert("\(item.kind.rawValue)|\(item.title)|\(item.subtitle ?? "")").inserted
+        }
     }
 
     @MainActor

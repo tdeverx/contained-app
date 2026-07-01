@@ -161,16 +161,24 @@ struct SystemContent: View {
 
     private var engineControls: some View {
         GlassButton {
-            GlassButtonItem(systemName: "play.fill", help: "Start service") {
-                run { await app.startService() }
-            }
-            .disabled(app.serviceHealthy || working)
-            GlassButtonItem(systemName: "stop.fill", help: "Stop service") {
-                run { await app.stopService() }
-            }
-            .disabled(!app.serviceHealthy || working)
+            servicePowerButton
             GlassButtonItem(systemName: "arrow.clockwise", help: "Restart service") {
                 run { await app.restartService() }
+            }
+            .disabled(working)
+        }
+    }
+
+    @ViewBuilder
+    private var servicePowerButton: some View {
+        if app.serviceHealthy {
+            GlassButtonItem(systemName: "stop.fill", role: .destructive, help: "Stop service") {
+                run { await app.stopService() }
+            }
+            .disabled(working)
+        } else {
+            GlassButtonItem(systemName: "play.fill", help: "Start service") {
+                run { await app.startService() }
             }
             .disabled(working)
         }

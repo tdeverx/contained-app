@@ -57,7 +57,7 @@ struct CreationFlow: View {
     @Namespace private var tileNamespace
 
     private var springAnim: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
-    private var optionPageHeight: CGFloat { GlassOptionTile.defaultHeight + (Tokens.Space.m * 2) }
+    private var optionPageHeight: CGFloat { GlassOptionTile.defaultHeight + (Tokens.Space.s * 2) }
     private var twoRowOptionPageHeight: CGFloat { optionPageHeight + GlassOptionTile.defaultHeight + Tokens.Space.s }
     private var menuSize: CGSize { CGSize(width: 760, height: optionPageHeight) }
     private var chooserSize: CGSize { CGSize(width: 640, height: twoRowOptionPageHeight) }
@@ -293,8 +293,8 @@ struct CreationFlow: View {
     }
 
     private var configureLeading: ContainerConfigureView.Leading {
-        if editSnapshot != nil { return .back { onClose() } }
-        return .back { go(.chooser) }
+        if editSnapshot != nil { return .cancel(onClose) }
+        return start == .menu ? .back { go(.chooser) } : .cancel(onClose)
     }
 
     private func pageScaffold<C: View>(symbol: String,
@@ -382,7 +382,10 @@ struct CreationFlow: View {
         case .pasteCompose:
             go(.compose)
         case .search, .localImages, .imageArchive, .templates, .configure:
-            go(.chooser)
+            switch start {
+            case .menu: go(.chooser)
+            default: onClose()
+            }
         }
     }
 

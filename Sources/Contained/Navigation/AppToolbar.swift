@@ -63,7 +63,7 @@ struct AppToolbar: View {
             settingsMorphLayer
                 .zIndex(ui.activeMorph == .settings ? 150 : 0)
             toolbarImageDetailLayer
-                .zIndex(toolbarImageDetail == nil ? 0 : 170)
+                .zIndex(toolbarImageDetail == nil ? 0 : 90)
         }
         .coordinateSpace(.named(Self.space))
         .onPreferenceChange(ToolbarSlotKey.self) { slots = $0 }
@@ -86,7 +86,7 @@ struct AppToolbar: View {
     private var topToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             settingsZone
-            ToolbarViewOptions()
+            ToolbarPageSwitcher()
             Spacer(minLength: Tokens.Space.m)
             searchZone
         }
@@ -142,6 +142,7 @@ struct AppToolbar: View {
     private var bottomToolbarRow: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             systemStatusButton
+            ToolbarViewOptions()
             Spacer(minLength: Tokens.Space.m)
             bottomActionGroup
         }
@@ -237,7 +238,7 @@ struct AppToolbar: View {
                              target: .anchored(size: toolbarImageDetailSize,
                                                safeArea: toolbarMorphSafeArea(for: .updates),
                                                margin: 16),
-                             backdropStyle: .blurAndDim,
+                             backdropStyle: .dim,
                              showsBackdrop: true,
                              closeRequestToken: toolbarImageCloseRequestToken,
                              onBackdropTap: closeToolbarImageDetail) {
