@@ -3,15 +3,15 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.80+ae80857</title>
-            <pubDate>Wed, 01 Jul 2026 16:43:08 +0000</pubDate>
-            <sparkle:version>80</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.80+ae80857</sparkle:shortVersionString>
+            <title>1.0.0-nightly.82+98e9cd2</title>
+            <pubDate>Wed, 01 Jul 2026 17:23:34 +0000</pubDate>
+            <sparkle:version>82</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.82+98e9cd2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
 <h3>Added</h3>
-<p>#### Toolbar & Navigation Redesign</p>
+<h4>Toolbar & Navigation Redesign</h4>
 <ul>
 <li>**Classic sidebar fallback**: The default app shell is a native sidebar with full-page destinations for Containers, Images, Volumes, Networks, System, Registries, Templates, Activity, and Settings.</li>
 <li>**Toolbar-first architecture**: The floating custom toolbar is now an experimental UI, off by default, while still available from Settings → Experimental.</li>
@@ -31,7 +31,7 @@
 <li>**Activity unread badge**: The toolbar Activity bell fills and gains an accent + red dot when there are unread events; the panel adds Mark-all-read and Clear controls and highlights unread rows; events mark read on dismiss</li>
 <li>**Reusable activity/status asset** (`ActivityStatusView`): long-running operations (image pulls, etc.) now morph the bottom-left system-status capsule in place instead of a separate floating progress bar</li>
 </ul>
-<p>#### Palette search scopes & inline registry search</p>
+<h4>Palette search scopes & inline registry search</h4>
 <ul>
 <li>**Palette scopes**: Docker Hub and Local-images scope chips pin to the search field and search in-place within the palette (backspace/✕ removes the scope)</li>
 <li>**Inline Docker Hub search**: live, debounced registry results rendered directly in the palette; selecting one opens the prefilled configure flow (pulls on create)</li>
@@ -39,7 +39,7 @@
 <li>**Deduplicated entries**: removed overlapping commands (e.g. "Pull an image" / "Activity history") in favour of scopes and the navigation entries</li>
 <li>**Color name aliases**: tint search matches everyday color names (e.g. "purple" → Indigo, "blue" → Azure, "grey" → Graphite)</li>
 </ul>
-<p>#### Experimental features (Settings → Experimental, all off by default)</p>
+<h4>Experimental features (Settings → Experimental, all off by default)</h4>
 <ul>
 <li>**Opt-in gating**: A new Settings → Experimental section gates surfaces that are still being refined. Each defaults **off**; enabling one reveals its menu commands, toolbar affordances, and creation options app-wide</li>
 <li>**Toolbar-first UI**: Gated behind `experimentalToolbarUI` (off by default). When disabled, the app uses the sidebar shell.</li>
@@ -49,7 +49,7 @@
 <li>**Compose import**: Gated behind `composeImportEnabled` — paste, file pick, drag-and-drop, menu command, and palette entry</li>
 <li>**Image build workspace**: Gated behind `imageBuildEnabled` — the Dockerfile build flow and its menu command</li>
 </ul>
-<p>#### Creation & Resource Management</p>
+<h4>Creation & Resource Management</h4>
 <ul>
 <li>**Paged creation flow**: Multi-step flow for creating containers, networks, volumes, and building images</li>
 <li>**Unified creation entry point**: File/menu shortcuts, command palette actions, and empty states open the same toolbar add panel at the relevant creation page</li>
@@ -60,7 +60,7 @@
 <li>**Network & volume creation**: Dedicated creation flows with form validation and inline feedback</li>
 <li>**Image build integration**: Build workspace for Dockerfile-based image creation</li>
 </ul>
-<p>#### Design System & Cards</p>
+<h4>Design System & Cards</h4>
 <ul>
 <li>**ResourceGlassCard component**: Unified card component supporting small/medium/large sizes with configurable elevation</li>
 <li>**GlassOptionTile**: New design-system tile for creation menu options with optional matched geometry</li>
@@ -69,19 +69,19 @@
 <li>**AppSafeAreaManager**: Intelligent safe area management distinguishing between toolbar-inclusive and toolbar-exclusive layouts, scoped to the detail body so sidebar navigation is unaffected.</li>
 <li>**ToolbarControls**: Centralized toolbar button and cluster components (ToolbarIconButton, ToolbarButtonCluster)</li>
 </ul>
-<p>#### Container Customization & Styling</p>
+<h4>Container Customization & Styling</h4>
 <ul>
 <li>**Image detail sub-pages**: Inspect, History, Add Tag, and Push grow the image detail morph into in-place sub-pages (back chevron returns to the card) instead of opening modal sheets</li>
 <li>**Image update detection**: Display "Update Container" option when a newer image version is available</li>
 <li>**Enhanced card styling**: Elevated cards with improved glass effects and optional shadows for nested layouts</li>
 <li>**Multi-level personalization**:</li>
+<li>App-wide default image card design from Settings</li>
+<li>Image group styling (local image collections)</li>
+<li>Per-image-tag styling with group inheritance</li>
+<li>Volume styling with disk read/write metrics</li>
+<li>Container-level overrides</li>
 </ul>
-<p>  - App-wide default image card design from Settings</p>
-<p>  - Image group styling (local image collections)</p>
-<p>  - Per-image-tag styling with group inheritance</p>
-<p>  - Volume styling with disk read/write metrics</p>
-<p>  - Container-level overrides</p>
-<p>#### Settings & System Management</p>
+<h4>Settings & System Management</h4>
 <ul>
 <li>**Runtime settings tab**: View/edit Kernel and DNS settings; read-only Defaults display</li>
 <li>**System resource surfaces**: System info is shared by the sidebar System/Volumes pages and the toolbar morph panel when the experimental toolbar UI is enabled.</li>
@@ -89,7 +89,7 @@
 <li>**Streamlined activity history**: Activity view accessible via toolbar morph and `⌘I`</li>
 </ul>
 <h3>Changed</h3>
-<p>#### UI/UX Improvements</p>
+<h4>UI/UX Improvements</h4>
 <ul>
 <li>**Font consistency**: Migrated fixed-point fonts to semantic Dynamic-Type styles (`.headline`, `.body`, `.caption`, etc.)</li>
 <li>**Card density options**: Added `.small`, `.medium`, `.large` (replaced `compact` variant)</li>
@@ -103,14 +103,14 @@
 <li>**Panel navigation pages**: when toolbar panel navigation is enabled, panel-owned destinations such as System, Activity, and Settings are hidden from page/sidebar navigation.</li>
 <li>**Activity progress relocated**: the floating activity/progress bar was removed in favour of the morphing bottom-left status capsule</li>
 </ul>
-<p>#### API & Architecture</p>
+<h4>API & Architecture</h4>
 <ul>
 <li>**AppModel methods**: Added `containerStyle(for:)`, `imageStyle(for:)`, `imageGroupStyle(forID:)` for personalization lookup</li>
 <li>**Compose import**: Split into file and text variants (`ComposeImport.importFile()`, `importText()`)</li>
 <li>**Resource refresh**: Added `refreshImagesIfStale(force:)` for lazy image list updates</li>
 <li>**Image update tracking**: New `imageUpdateStatus(for:)` to check available updates</li>
 </ul>
-<p>#### Settings & Personalization</p>
+<h4>Settings & Personalization</h4>
 <ul>
 <li>**Personalization storage**: New methods for image group and volume styling</li>
 <li>**Card size persistence**: Migration helper for legacy `compact` → `medium` mapping</li>
@@ -160,6 +160,25 @@
 <p>  superset of nightly plus promoted release items, and composed generated release notes from full</p>
 <p>  version notes plus channel-specific change notes for beta/nightly builds.</p>
 <ul>
+<li>**Release-note display alignment**: The bundled in-app What's New view now uses the same composed</li>
+</ul>
+<p>  build-changes-first, full-version-notes-second structure as generated Sparkle release notes.</p>
+<ul>
+<li>**1.0 release-note inventory**: Expanded the working `1.0.0` release notes from the full</li>
+</ul>
+<p>  app/docs/source scan so Stable, Beta, Nightly, Sparkle, and in-app notes describe the complete</p>
+<p>  product surface instead of only the latest infrastructure work.</p>
+<ul>
+<li>**CI validation guardrail**: Added `scripts/ci-validate.sh` for bundled changelog drift, shell</li>
+</ul>
+<p>  syntax, workflow YAML syntax, and Stable/Beta/Nightly release-note ordering; PR and release</p>
+<p>  workflows now fail on drift instead of rewriting tracked resources in CI.</p>
+<ul>
+<li>**Release workflow rerun safety**: Beta and Stable workflows now update existing GitHub releases</li>
+</ul>
+<p>  on reruns, and local `scripts/release.sh` defaults to the Stable channel to avoid accidentally</p>
+<p>  cutting a stable version with nightly assets.</p>
+<ul>
 <li>**Polish pass**: Extracted the image-update subsystem into `AppModel+ImageUpdates.swift` (core</li>
 </ul>
 <p>  `AppModel` 774 → 586 lines) and collapsed the four sweep/pull methods into two shared helpers; split</p>
@@ -173,31 +192,112 @@
 <li>Activity events recorded before this version are treated as unread on first launch (the `isRead` column defaults to false); opening and dismissing the Activity panel clears the badge</li>
 </ul>
 <h2>Full Release Notes</h2>
-<h3>Added</h3>
+<h3>Highlights</h3>
 <ul>
+<li>First complete Contained release: a native macOS 26 SwiftUI control surface for Apple's `container` CLI, built around local containers, images, volumes, networks, registries, system status, templates, activity history, and app-managed workflow state.</li>
+<li>The default experience is a classic macOS sidebar shell; the floating Liquid Glass toolbar, morph panels, command palette, Docker Hub search, Compose import, image build workspace, and keyboard shortcuts are available behind explicit experimental gates.</li>
+<li>Contained stays CLI-first: privileged runtime operations are handled by Apple's `container` command, generated `container ...` arguments can be revealed before run/edit operations, and local app metadata is kept out of container resources unless it is required for behavior.</li>
+</ul>
+<h3>Added</h3>
+<h4>App Shell & Navigation</h4>
+<ul>
+<li>Classic sidebar navigation with full-page destinations for Containers, Images, Build, Volumes, Networks, System, Templates, Activity, and Settings.</li>
+<li>Optional menu-bar app with service health, unread Activity count, quick actions, update checks, and navigation into the main app.</li>
+<li>Menu and menu-bar navigation fallback that routes create, image, system, activity, registry, and settings actions through the same presentation model as the sidebar.</li>
+<li>Experimental toolbar-first UI with top/bottom Liquid Glass toolbar bands, measured detail-column safe areas, morph panels, contextual page actions, and bottom page filters.</li>
+<li>Experimental toolbar panel navigation setting so toolbar actions can open morph panels or fall back to classic pages and sheets.</li>
+<li>Experimental keyboard shortcuts for sidebar/search/settings/create/update/activity/palette actions.</li>
+</ul>
+<h4>Containers</h4>
+<ul>
+<li>Container grid with personalized Liquid Glass cards, lifecycle actions, status, image, command, resource highlights, full-card hit targets, and context menus.</li>
+<li>Container grouping by Network, Volume, Image, or Flat list, with sort and running-only filtering in shared toolbar controls.</li>
+<li>Expanded container detail tabs for Overview, Logs, Terminal, Stats, History, Files, and Inspect.</li>
+<li>Live logs, one-shot and follow modes, terminal access through SwiftTerm, file browsing/copy workflows, JSON inspect views, and per-container metrics history.</li>
+<li>Shared Run/Edit form for new containers and recreate/edit flows, with validation, image pre-pull, inline errors, and an exact CLI preview.</li>
+<li>App-managed restart policies and health checks for behavior Apple's `container` CLI does not provide natively.</li>
+<li>Container image update checks that can pull newer image tags and reopen the edit flow without automatically replacing the running container.</li>
+</ul>
+<h4>Images</h4>
+<ul>
+<li>Local image and tag browsing with grouped references, run actions, inspect/history views, tagging, pushing, saving archives, loading OCI `.tar` archives, pruning, and update status.</li>
+<li>Registry image search flow for Docker Hub, gated behind Settings -> Experimental, with selected results handed into the run configuration flow.</li>
+<li>Image update detection based on local and remote digests, surfaced on image cards, container cards, toolbar panels, System, and command palette entries.</li>
+<li>Manual and scheduled image update checks, including "check all", "pull all available image updates", and container-image specific sweeps.</li>
+<li>Experimental image build workspace for Dockerfile/context builds with streamed BuildKit output.</li>
+</ul>
+<h4>Creation, Compose & Templates</h4>
+<ul>
+<li>Shared creation flow for running containers, editing containers, choosing local images, searching registry images, importing Compose, loading image archives, creating networks, creating volumes, and building images.</li>
+<li>Run/Edit form organized as native macOS sections for Essentials, Resources, Networking, Storage, Environment, App Managed, Appearance, and Advanced Options.</li>
+<li>Structured controls for bounded CLI flags, repeatable rows for lists, and free-form fields where the CLI accepts arbitrary values.</li>
+<li>Compose import from paste, file picker, drag-and-drop, menu command, or command palette action, translating services into editable run forms instead of launching opaque stacks.</li>
+<li>Compose translations for image, platform, command, entrypoint, ports, volumes, env files, network mode, restart policy, health checks, working directory, user, capabilities, DNS, tmpfs, and ulimits, with warnings for unsupported shapes.</li>
+<li>Template storage for reusable run configurations, using the same Run/Edit form as other creation paths.</li>
+</ul>
+<h4>Resources & Registries</h4>
+<ul>
+<li>Volume browsing, creation, inspection, deletion, prune actions, local card styling, and mount-aware container grouping.</li>
+<li>Network browsing, creation, inspection, deletion, prune actions, and network-aware container grouping.</li>
+<li>Registry credential management in Settings -> Registries, including login/logout with passwords piped through `--password-stdin` rather than process arguments.</li>
+<li>Activity history for lifecycle, image, compose, system, registry, pull, build, watchdog, healthcheck, alert, and UI events, including unread state, filtering, copy/delete actions, and clear controls.</li>
+</ul>
+<h4>System & Settings</h4>
+<ul>
+<li>Onboarding/bootstrap states for missing CLI, unsupported CLI version, stopped service, and ready service.</li>
+<li>System page covering engine/service state, resource usage, background work, volumes, runtime defaults, system logs, and prune/service lifecycle actions.</li>
+<li>Settings tabs for General, Appearance, Runtime, Registries, Experimental, Updates, and About.</li>
+<li>Configurable appearance, tint, materials, card density, card material, panel material, button tint, menu-bar behavior, CLI previews, info tips, logging, update cadence, image update cadence, and experimental feature gates.</li>
 <li>Versioned `.containedbackup` export/import for settings, personalization, health checks, templates, and activity history, with per-category selection and merge/replace import behavior.</li>
-<li>Rollback guard for data created by newer app schemas, including an export-before-reset path and a best-effort keep-readable-data option.</li>
-<li>Sparkle release notes from `CHANGELOG.md`, with appcast-embedded HTML and in-app “What’s New” views for current and available builds.</li>
-<li>Classic sidebar navigation as the default shell, covering Containers, Images, Volumes, Networks, System, Registries, Templates, Activity, and Settings.</li>
-<li>`Toolbar-first UI` experimental flag, off by default, to restore the floating morph toolbar shell when enabled.</li>
-<li>`Toolbar panel navigation` experimental flag, off by default, to choose whether access points open toolbar morph panels or classic pages/sheets.</li>
-<li>Menu and menu-bar navigation fallback that routes plus/menu actions directly to the relevant full page instead of opening creation-flow sheets.</li>
+<li>Rollback guard for local data created by newer app schemas, including export-before-reset and best-effort keep-readable-data paths.</li>
+<li>Sparkle app updates with Stable, Beta, and Nightly channels plus in-app "What's New" views for current and available builds.</li>
+</ul>
+<h4>Personalization & Design System</h4>
+<ul>
+<li>Local-only personalization for containers, image groups, image tags, and volumes, including nickname, icon, tint, background, graph/widget choices, and inheritance from image or app defaults.</li>
+<li>Shared Liquid Glass design system primitives: `ResourceGlassCard`, `GlassSurface`, `GlassButton`, `GlassOptionTile`, `MorphPanelScaffold`, `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `CommandPreviewBar`, `InfoButton`, `TintSelector`, `StreamConsole`, `ActivityStatusView`, and toolbar controls.</li>
+<li>Accessibility-aware custom visual effects and motion handling, including Reduce Transparency and Reduce Motion support where the app supplies custom glass or animation.</li>
+<li>Shared page and panel scaffolds so sidebar pages, sheets, and toolbar morphs can reuse content without duplicate layouts.</li>
 </ul>
 <h3>Changed</h3>
 <ul>
-<li>Fresh installs default to the Nightly update channel and automatically check for app updates.</li>
-<li>Each release workflow now publishes GitHub release notes and Sparkle appcast notes from the same changelog section.</li>
-<li>Pre-release build versions such as `1.0.0-nightly.N+sha` resolve release notes from the matching base `1.0.0` changelog section.</li>
+<li>Fresh installs default to the Nightly update channel and automatically check for app updates during pre-1.0 development.</li>
+<li>Registries live under Settings instead of a standalone app page, while registry actions remain discoverable through menus and the command palette.</li>
+<li>Local card personalization is stored in Contained's own state instead of being written back as decorative container labels.</li>
+<li>Container refresh, lifecycle actions, image list refreshes, disk usage refreshes, and image-update checks are throttled or serialized to avoid unnecessary CLI process churn and UI re-render storms.</li>
+<li>Background work uses a shared refresh coordinator, restart watchdog, health monitor, history store, and logger instead of page-local polling.</li>
+<li>Each release workflow publishes GitHub release notes and Sparkle appcast notes from the same release-note source.</li>
+<li>Pre-release build versions such as `1.0.0-nightly.N+sha` resolve full release notes from the matching base `1.0.0` section.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Sidebar layouts are no longer padded or covered by custom toolbar chrome because toolbar safe-area measurement is scoped to the detail column.</li>
+<li>Page and expanded-card layouts account for toolbar bands only where the experimental toolbar is visible.</li>
+<li>Container lifecycle actions and background polling no longer race the shared container list/stats dictionaries during start/stop/restart transitions.</li>
+<li>Compose import preserves user control by opening editable run forms and reporting unsupported values rather than silently guessing.</li>
+<li>App-managed restart and health flows suppress user-initiated stops where appropriate and avoid uncontrolled restart loops.</li>
+<li>Registry login avoids leaking passwords in argv.</li>
 </ul>
 <h3>Technical</h3>
 <ul>
-<li>Added `AppStateEnvelope`, `JSONValue`, `MigrationStep`, and `StateMigrator` as the baseline for forward migration and downgrade handling from schema version 1 onward.</li>
-<li>Added SwiftData history schema/migration scaffolding and purge-dead-row cleanup hooks for history, personalization, health checks, and image update records.</li>
-<li>Added `AppSection`, `ClassicShell`, and `PageScaffold` so sidebar pages and toolbar panels can share content without duplicating layouts.</li>
-<li>Moved custom toolbar safe-area measurement into the detail column so the sidebar is never padded or covered by toolbar chrome.</li>
+<li>Swift Package layout with a pure `ContainedCore` library for CLI command builders, JSON models, compose parsing, decision helpers, and service logic, plus a `Contained` SwiftUI executable for UI, stores, Sparkle, SwiftData, and migration.</li>
+<li>`ContainerCommands` is the single source of truth for `container` argv construction and is covered by golden tests.</li>
+<li>`CommandRunner` supports one-shot commands and streamed output; `ContainerClient` exposes typed async methods over real `container --format json` output.</li>
+<li>`RunSpec` is the single source of truth for Run/Edit form state, validation, CLI preview, and actual execution.</li>
+<li>`AppModel` owns bootstrap, client wiring, stores, refresh coordination, image updates, service lifecycle, config transfer, and resource-style lookup through focused extensions.</li>
+<li>`UIState`, `AppSection`, toolbar option enums, and pending actions centralize navigation, filters, morph routing, and classic fallback routing.</li>
+<li>SwiftData-backed `HistoryStore` records events, metric samples, and templates with bounded retention and backup/import support.</li>
+<li>`AppStateEnvelope`, `JSONValue`, `MigrationStep`, and `StateMigrator` provide the baseline for forward migration and downgrade handling from schema version 1 onward.</li>
+<li>Release scripts centralize version/build derivation, retain promoted nightly build numbers for beta/stable, compose channel-specific and full-version release notes, generate Sparkle appcast HTML, and keep the bundled changelog resource in sync.</li>
+</ul>
+<h3>Migration Notes</h3>
+<ul>
+<li>Saved local container, image, and volume styles are preserved and migrated away from legacy decorative `contained.*` labels where possible.</li>
+<li>Local settings, personalization, health checks, templates, and activity history can be exported before resetting data created by a newer app schema.</li>
+<li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.80+ae80857.dmg" length="7843155" type="application/octet-stream" sparkle:edSignature="YsjxK11UQ0SVWb7PJ8tz+g9+Qr2iMcHUeNHwRD9rusJzVSHXMdflDQm3erGAZxt4Er56hHrCsV1cc4PiInHjCw=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.82+98e9cd2.dmg" length="7848741" type="application/octet-stream" sparkle:edSignature="HDTu1G7ddPhL6W6rWNvg59pTbTSwTmr8I+CVIxsyApFkGPVxhfhcELjXqd5EW9nq2vZVbGII/lTywFZDhgFODw=="/>
         </item>
     </channel>
 </rss>
