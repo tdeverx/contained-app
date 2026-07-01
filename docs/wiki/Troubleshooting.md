@@ -31,7 +31,7 @@ Switch **Settings → Updates → Update channel** to **Beta** or **Nightly**. N
 
 ## Stats look choppy / not real-time
 
-The `container stats --format json` command emits one frame and then blocks, so Contained **polls** on an interval rather than streaming. This is expected — adjust the cadence in **Settings → General → Refresh interval**.
+The `container stats --format json` command emits one frame and then blocks, so Contained **polls** on an interval rather than streaming. This is expected — adjust the cadence in **Settings → General → Data → Refresh interval**.
 
 ## A container keeps restarting
 

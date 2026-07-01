@@ -1,9 +1,9 @@
 import Foundation
 
 /// Canonical external URLs (repo, docs, issues), built from one owner/repo pair so the Help menu and
-/// any "open on GitHub" affordance stay in sync. `owner` is filled in when the repo is published.
+/// any "open on GitHub" affordance stay in sync.
 enum Links {
-    static let owner = "tdeverx"            // replaced with the GitHub login at publish time
+    static let owner = "tdeverx"
     static let repo = "contained-app"
 
     static var repoURL: URL { URL(string: "https://github.com/\(owner)/\(repo)")! }

@@ -10,7 +10,7 @@
 
 Download the latest `Contained.dmg` from [Releases](https://github.com/tdeverx/contained-app/releases), open it, and drag **Contained** to Applications.
 
-On first launch, the [[onboarding|Features#onboarding]] screen checks for the `container` CLI and the runtime service, and helps you start it.
+On first launch, the bootstrap screen checks for the `container` CLI and the runtime service, and helps you start it.
 
 > If the CLI isn't found, set its path in **Settings → General → Container CLI path**, or install it from the [container releases](https://github.com/apple/container).
 

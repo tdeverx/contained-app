@@ -3,8 +3,8 @@ import OSLog
 import ContainedCore
 
 /// Owns the container list and derived live stats. Lifecycle actions run through the client and
-/// trigger a refresh. (Full streaming + adaptive polling arrives in Phase 4; this does a simple
-/// per-refresh stats sample and computes deltas, which is enough to drive the cards now.)
+/// trigger a refresh. Stats are sampled per refresh and converted into deltas for cards, expanded
+/// panels, history, and restart/health context.
 @MainActor
 @Observable
 final class ContainersStore {

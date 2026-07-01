@@ -12,7 +12,7 @@ let package = Package(
         // The in-container terminal (Phase 5): a mature VT100/xterm emulator + PTY host, far safer
         // than re-implementing one. AppKit-backed, bridged via NSViewRepresentable.
         .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.2.0"),
-        // Compose (Stacks, Phase 9): a real YAML parser beats a fragile hand-rolled one. Pure Swift.
+        // Compose import: a real YAML parser beats a fragile hand-rolled one. Pure Swift.
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.0.0"),
         // Auto-update (release): Sparkle, the de-facto macOS updater. Inert until a signed build
         // points SUFeedURL at a hosted appcast (see scripts/appcast.sh).
@@ -25,7 +25,7 @@ let package = Package(
             dependencies: [.product(name: "Yams", package: "Yams")],
             path: "Sources/ContainedCore"
         ),
-        // The SwiftUI app. (Sparkle for updates is added in the release phase.)
+        // The SwiftUI app, including Sparkle wiring for signed release builds.
         .executableTarget(
             name: "Contained",
             dependencies: [

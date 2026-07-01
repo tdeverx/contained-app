@@ -26,8 +26,8 @@ private struct ToolbarGlassMenuButton<LabelContent: View, MenuContent: View>: Vi
     }
 }
 
-/// The page switcher seated in the titlebar. It replaces the old sidebar as the primary way to jump
-/// between app pages while using the same toolbar button language as the filter control.
+/// The toolbar page switcher. In the experimental toolbar shell it complements the sidebar, and when
+/// the sidebar is hidden it becomes the compact page-jump control.
 struct ToolbarPageSwitcher: View {
     @Environment(UIState.self) private var ui
 

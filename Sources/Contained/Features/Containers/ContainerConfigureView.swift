@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 import ContainedCore
 
-/// The container create/edit form body — hosted by the paged `CreationFlow` and legacy direct-prefill
-/// sheets. Owns the spec, validation, pre-flight
+/// The container create/edit form body — hosted by the paged `CreationFlow` and classic sheets.
+/// Owns the spec, validation, pre-flight
 /// warnings, create/recreate, and save-as-template. The host supplies a leading control (cancel for a
 /// sheet, back for a page) and is told when to close via `onFinished` (success) — the form never
 /// dismisses itself.
