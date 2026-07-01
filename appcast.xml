@@ -3,16 +3,15 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.93+45ed39a</title>
-            <pubDate>Wed, 01 Jul 2026 22:03:13 +0000</pubDate>
-            <sparkle:version>93</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.93+45ed39a</sparkle:shortVersionString>
+            <title>1.0.0-nightly.95+c4f52a5</title>
+            <pubDate>Wed, 01 Jul 2026 22:11:20 +0000</pubDate>
+            <sparkle:version>95</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.95+c4f52a5</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
 <ul>
-<li>Allowed dependency-only maintenance PRs to use the `no-release-note` path so grouped Dependabot updates can pass repository validation without manual changelog fragments.</li>
-<li>Clarified that `CHANGELOG.md` is curated version-level release notes, while PR/build deltas should live in change fragments.</li>
+<li>No channel-specific changes were recorded for this build.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -120,7 +119,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.93+45ed39a.dmg" length="7842879" type="application/octet-stream" sparkle:edSignature="dSfc3rxRHX40I81xPkBy4CQxKXJp/LnBVP4exidwGVbIZ6c+S5C+nzr1Ioa4o/jnmNs6Q7Lp9nmXJJedsl1SCw=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/Contained-1.0.0-nightly.95+c4f52a5.dmg" length="7848013" type="application/octet-stream" sparkle:edSignature="scDLjBtQRZgeQP05v1rH2GJVqbtnkwv4k6XuelfehGx9zyczwQg6zLMWUIWahPaJoCng7E3hfOFz3BAUrHmDAw=="/>
         </item>
     </channel>
 </rss>
