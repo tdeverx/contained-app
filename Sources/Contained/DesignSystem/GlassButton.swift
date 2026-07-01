@@ -25,6 +25,7 @@ struct GlassButtonItem<Label: View>: View {
 
     @State private var hovering = false
     @Environment(\.glassButtonItemHoverEnabled) private var hoverEnabled
+    @Environment(\.colorScheme) private var colorScheme
 
     private var itemForegroundStyle: AnyShapeStyle {
         if role == .destructive { return AnyShapeStyle(Color.red) }
@@ -55,7 +56,11 @@ struct GlassButtonItem<Label: View>: View {
             .contentShape(Rectangle())
             .background {
                 Capsule(style: .continuous)
-                    .fill(hoverEnabled && hovering && !isLabel ? AppMaterial.toolbarHoverFill : .clear)
+                    .fill(
+                        hoverEnabled && hovering && !isLabel
+                            ? AppMaterial.toolbarInteractiveHoverFill(for: colorScheme)
+                            : .clear
+                    )
             }
             .onHover { hovering = isLabel ? false : $0 }
             .animation(.easeOut(duration: 0.15), value: hovering)
@@ -121,6 +126,7 @@ struct GlassButton<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     @State private var hovering = false
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: spacing) { content() }
@@ -130,7 +136,11 @@ struct GlassButton<Content: View>: View {
             .background {
                 if singleItem && interactive {
                     Capsule(style: .continuous)
-                        .fill(hovering ? AppMaterial.toolbarHoverFill : .clear)
+                        .fill(
+                            hovering
+                                ? AppMaterial.toolbarInteractiveHoverFill(for: colorScheme)
+                                : .clear
+                        )
                 }
             }
             .environment(\.glassButtonItemHoverEnabled, !singleItem && interactive)

@@ -311,7 +311,10 @@ struct ContainerCard: View {
     @ViewBuilder
     private var expandedPageButtons: some View {
         ForEach(Tab.allCases) { item in
-            GlassButtonItem(help: item.rawValue, isIcon: true, action: { tab = item }) {
+            GlassButtonItem(tint: tab == item ? tint : nil,
+                            help: item.rawValue,
+                            isIcon: true,
+                            action: { tab = item }) {
                 Image(systemName: item.systemImage)
                     .opacity(tab == item ? 1 : 0.62)
             }

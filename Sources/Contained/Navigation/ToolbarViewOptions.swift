@@ -199,7 +199,10 @@ struct ToolbarPageContextOptions: View {
                 }
                 GlassButton {
                     ForEach(SystemContent.SystemPage.allCases) { page in
-                        GlassButtonItem(help: page.rawValue, isIcon: true, action: { ui.systemPage = page }) {
+                        GlassButtonItem(tint: ui.systemPage == page ? .accentColor : nil,
+                                        help: page.rawValue,
+                                        isIcon: true,
+                                        action: { ui.systemPage = page }) {
                             Image(systemName: page.systemImage)
                                 .opacity(ui.systemPage == page ? 1 : 0.62)
                         }
@@ -223,7 +226,10 @@ struct ToolbarPageContextOptions: View {
         case .settings:
             GlassButton {
                 ForEach(SettingsContent.SettingsPage.allCases) { page in
-                    GlassButtonItem(help: page.rawValue, isIcon: true, action: {
+                    GlassButtonItem(tint: ui.settingsPage == page ? .accentColor : nil,
+                                    help: page.rawValue,
+                                    isIcon: true,
+                                    action: {
                         ui.settingsPage = page
                         ui.navigate(to: .settings)
                     }) {

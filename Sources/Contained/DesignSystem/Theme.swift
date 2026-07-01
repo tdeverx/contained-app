@@ -124,6 +124,9 @@ extension View {
 /// here so collapsed controls and expanded panels do not drift into near-duplicates.
 enum AppMaterial {
     static let toolbarHoverFill = Color.white.opacity(0.1)
+    static func toolbarInteractiveHoverFill(for colorScheme: ColorScheme) -> Color {
+        Color.white.opacity(colorScheme == .light ? 0.2 : 0.1)
+    }
     static let floatingPanelStroke = Color.white.opacity(0.18)
     static let floatingPanelShadow = Color.black.opacity(0.24)
     static let floatingPanelShadowRadius: CGFloat = 24
