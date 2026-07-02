@@ -87,6 +87,15 @@ enum AppText {
             defaultValue: "Some compose keys were not translated; review each container before creating."
         )
     }
+    static var chooseComposeFile: String {
+        string("compose.chooseFile", defaultValue: "Choose a compose.yaml")
+    }
+    static var composeInvalid: String {
+        string("error.compose.invalid", defaultValue: "Invalid compose file.")
+    }
+    static func composeInvalid(reason: String) -> String {
+        string("error.compose.invalidWithReason", defaultValue: "Invalid compose file: \(reason)")
+    }
 
     static var reconnectTerminal: String {
         string("terminal.reconnectTerminal", defaultValue: "Reconnect terminal")

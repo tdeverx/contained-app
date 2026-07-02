@@ -14,7 +14,7 @@ enum ComposeImport {
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.yaml]
-        panel.message = "Choose a compose.yaml"
+        panel.message = AppText.chooseComposeFile
         guard panel.runModal() == .OK, let url = panel.url else { return }
         importFile(at: url, app: app, ui: ui)
     }
@@ -26,8 +26,6 @@ enum ComposeImport {
             let projectName = url.deletingLastPathComponent().lastPathComponent
             importText(text, projectName: projectName.isEmpty ? "stack" : projectName,
                        baseDirectory: url.deletingLastPathComponent(), app: app, ui: ui)
-        } catch let error as ComposeError {
-            app.flash({ if case .invalid(let message) = error { return message }; return "Invalid compose file." }())
         } catch {
             app.flash(error.appDisplayMessage)
         }

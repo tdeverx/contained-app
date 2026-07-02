@@ -451,7 +451,7 @@ struct CreationFlow: View {
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.yaml]
-        panel.message = "Choose a compose.yaml"
+        panel.message = AppText.chooseComposeFile
         guard panel.runModal() == .OK, let url = panel.url else { return }
         onClose()
         ComposeImport.importFile(at: url, app: app, ui: ui)
