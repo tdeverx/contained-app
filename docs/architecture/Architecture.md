@@ -20,7 +20,7 @@ Contained is a SwiftUI-native macOS app that wraps Apple's `container` CLI. It s
 - **`ContainedApp`** — the shared SwiftUI app implementation: views, `@Observable` stores, app-specific presentation mappings, localization, navigation, and the SwiftData history stack. Depends on `ContainedCore`, `ContainedRuntime`, `AppleContainerRuntime`, `ContainedDesignSystem`, `ContainedNavigation`, `ContainedPreviewSupport`, SwiftTerm, and Sparkle.
 - **`Contained`** — the tiny SwiftPM executable launcher used by command-line builds and bundle scripts.
 
-The executable target owns localization. Reusable packages do not ship localized
+`ContainedApp` owns localization. Reusable packages do not ship localized
 resources or English UI defaults; app code supplies user-facing text through
 package parameters and routes reusable enum labels/dynamic templates through
 `AppText`. `ContainedCore`, `ContainedRuntime`, and adapter targets stay

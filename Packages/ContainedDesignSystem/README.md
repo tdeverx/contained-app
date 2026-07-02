@@ -15,7 +15,7 @@ plain values into package views instead.
 This package also does not own localized resources or English UI defaults. When
 a primitive needs visible text, accessibility copy, help, display names, or
 error/failure messages, the app supplies those strings through parameters. The
-executable target owns localization keys and English fallbacks.
+app target owns localization keys and English fallbacks.
 
 ## Importing
 
