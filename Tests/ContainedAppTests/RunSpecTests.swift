@@ -4,7 +4,7 @@ import ContainedCore
 import AppleContainerRuntime
 @testable import Contained
 
-@Suite("RunSpec argv + compose mapping")
+@Suite("RunSpec create requests + runtime mapping")
 @MainActor
 struct RunSpecTests {
 
