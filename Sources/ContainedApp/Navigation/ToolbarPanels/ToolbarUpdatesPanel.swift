@@ -75,8 +75,8 @@ struct ToolbarUpdatesPanel: View {
 
     private var header: some View {
         PanelHeader(symbol: "square.stack.3d.up",
-                    title: "Images",
-                    subtitle: "\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")") {
+                    title: AppText.sectionImages,
+                    subtitle: AppText.string("image.updates.subtitle", defaultValue: "\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")")) {
             DesignActionGroup(imageHeaderActions)
         }
     }
@@ -104,8 +104,8 @@ struct ToolbarUpdatesPanel: View {
     private var emptyCard: some View {
         DesignCard(size: .small,
                      elevated: false,
-                     title: "No images",
-                     subtitle: "Pull or build an image to see it here") {
+                     title: AppText.string("image.empty", defaultValue: "No images"),
+                     subtitle: AppText.string("image.empty.subtitle", defaultValue: "Pull or build an image to see it here")) {
             DesignCardIconChip(symbol: "checkmark.circle.fill", tint: .green)
         } titleAccessory: {
             EmptyView()

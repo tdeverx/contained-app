@@ -147,10 +147,11 @@ struct ToolbarImageGroupCard: View {
         let image = group.images.first { $0.reference == reference } ?? primaryImage(group)
         let variant = image?.variants.first(where: \.isRunnable) ?? image?.variants.first
         let history = variant?.config?.history ?? []
-        return imagePageBody(title: "History", subtitle: Format.shortImage(reference)) {
+        return imagePageBody(title: AppText.string("image.history", defaultValue: "History"), subtitle: Format.shortImage(reference)) {
             if history.isEmpty {
-                ContentUnavailableView("No history", systemImage: "clock",
-                                       description: Text("This image records no layer history."))
+                ContentUnavailableView(AppText.string("image.history.empty", defaultValue: "No history"),
+                                       systemImage: "clock",
+                                       description: Text(AppText.string("image.history.empty.description", defaultValue: "This image records no layer history.")))
                     .frame(maxWidth: .infinity, minHeight: 220)
             } else {
                 DesignCardInsetSection {
@@ -176,12 +177,12 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func tagPage(_ source: String) -> some View {
-        imagePageBody(title: "Add tag", subtitle: Format.shortImage(source)) {
+        imagePageBody(title: AppText.addTag, subtitle: Format.shortImage(source)) {
             DesignCardInsetSection {
-                PanelField(label: "Source") {
+                PanelField(label: AppText.string("image.tag.source", defaultValue: "Source")) {
                     Text(Format.shortImage(source)).foregroundStyle(.secondary)
                 }
-                PanelField(label: "New reference") {
+                PanelField(label: AppText.string("image.tag.newReference", defaultValue: "New reference")) {
                     TextField("", text: $tagTarget, prompt: Text("e.g. ghcr.io/me/app:v1"))
                         .textFieldStyle(.roundedBorder)
                         .onSubmit { submitTag(source: source) }
@@ -201,7 +202,7 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func pushPage(_ reference: String) -> some View {
-        imagePageBody(title: "Push image", subtitle: Format.shortImage(reference)) {
+        imagePageBody(title: AppText.string("image.pushImage", defaultValue: "Push image"), subtitle: Format.shortImage(reference)) {
             if pushStartedReference == reference, let client = app.client {
                 StreamConsole(stream: { client.streamPush(reference) },
                               workingLabel: AppText.working,
@@ -273,13 +274,13 @@ struct ToolbarImageGroupCard: View {
                         onClose()
                         ui.openSettings(to: .registries)
                     } label: {
-                        Label("Open Registries", systemImage: "key")
+                        Label(AppText.string("registry.openRegistries", defaultValue: "Open Registries"), systemImage: "key")
                     }
                 case .tag:
                     Button {
                         withAnimation(spring) { page = .tag(reference) }
                     } label: {
-                        Label("Add Tag", systemImage: "tag")
+                        Label(AppText.addTag, systemImage: "tag")
                     }
                 case .none:
                     EmptyView()
@@ -290,8 +291,8 @@ struct ToolbarImageGroupCard: View {
 
     private func pushState(for reference: String) -> PushState {
         guard app.client != nil else {
-            return PushState(title: "Runtime unavailable",
-                             message: "Start the container service before pushing images.",
+            return PushState(title: AppText.string("image.push.runtimeUnavailable", defaultValue: "Runtime unavailable"),
+                             message: AppText.string("image.push.runtimeUnavailable.message", defaultValue: "Start the container service before pushing images."),
                              detail: nil,
                              symbol: "exclamationmark.triangle",
                              tint: .orange,
@@ -302,9 +303,9 @@ struct ToolbarImageGroupCard: View {
         let registry = displayRegistry(parsed.registry)
 
         guard !parsed.isDigestReference else {
-            return PushState(title: "Tag required",
-                             message: "Digest references cannot be pushed directly.",
-                             detail: "Add a writable tag such as ghcr.io/me/app:v1, then push that tag.",
+            return PushState(title: AppText.string("image.push.tagRequired", defaultValue: "Tag required"),
+                             message: AppText.string("image.push.tagRequired.message", defaultValue: "Digest references cannot be pushed directly."),
+                             detail: AppText.string("image.push.tagRequired.detail", defaultValue: "Add a writable tag such as ghcr.io/me/app:v1, then push that tag."),
                              symbol: "tag",
                              tint: .orange,
                              action: .tag)
@@ -312,26 +313,26 @@ struct ToolbarImageGroupCard: View {
 
         if normalizedRegistryHost(parsed.registry) == "docker.io",
            parsed.repository.hasPrefix("library/") {
-            return PushState(title: "Writable namespace required",
-                             message: "This tag points at Docker Hub's library namespace.",
-                             detail: "Add a tag under a namespace you control before pushing.",
+            return PushState(title: AppText.string("image.push.namespaceRequired", defaultValue: "Writable namespace required"),
+                             message: AppText.string("image.push.namespaceRequired.message", defaultValue: "This tag points at Docker Hub's library namespace."),
+                             detail: AppText.string("image.push.namespaceRequired.detail", defaultValue: "Add a tag under a namespace you control before pushing."),
                              symbol: "tag",
                              tint: .orange,
                              action: .tag)
         }
 
         guard let login = matchingRegistryLogin(for: parsed.registry) else {
-            return PushState(title: "Registry sign-in required",
-                             message: "Sign in to \(registry) before pushing this image.",
-                             detail: "Contained checks for a saved container registry login before starting a push.",
+            return PushState(title: AppText.string("image.push.signInRequired", defaultValue: "Registry sign-in required"),
+                             message: AppText.string("image.push.signInRequired.message", defaultValue: "Sign in to \(registry) before pushing this image."),
+                             detail: AppText.string("image.push.signInRequired.detail", defaultValue: "Contained checks for a saved container registry login before starting a push."),
                              symbol: "key",
                              tint: .orange,
                              action: .openRegistries)
         }
 
-        return PushState(title: "Ready to push",
-                         message: "Signed in to \(registry)\(login.username.map { " as \($0)" } ?? "").",
-                         detail: "The registry will still enforce write permission for \(parsed.repository).",
+        return PushState(title: AppText.string("image.push.ready", defaultValue: "Ready to push"),
+                         message: AppText.string("image.push.ready.message", defaultValue: "Signed in to \(registry)\(login.username.map { " as \($0)" } ?? "")."),
+                         detail: AppText.string("image.push.ready.detail", defaultValue: "The registry will still enforce write permission for \(parsed.repository)."),
                          symbol: "checkmark.circle.fill",
                          tint: .green,
                          action: .push)
@@ -361,16 +362,16 @@ struct ToolbarImageGroupCard: View {
         let reference = primaryImage(group)?.reference ?? group.primaryReference
         return [
             DesignCardPageControlItem(id: .tags,
-                                        title: "Tags",
+                                        title: AppText.string("image.tags", defaultValue: "Tags"),
                                         systemImage: "tag"),
             DesignCardPageControlItem(id: .history(reference),
-                                        title: "History",
+                                        title: AppText.string("image.history", defaultValue: "History"),
                                         systemImage: "clock.arrow.circlepath"),
             DesignCardPageControlItem(id: .tag(reference),
-                                        title: "Add Tag",
+                                        title: AppText.addTag,
                                         systemImage: "plus.circle"),
             DesignCardPageControlItem(id: .push(reference),
-                                        title: "Push",
+                                        title: AppText.push,
                                         systemImage: "arrow.up.circle")
         ]
     }

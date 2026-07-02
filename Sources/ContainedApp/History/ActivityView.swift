@@ -41,9 +41,11 @@ struct ActivityContent: View {
     private var unreadCount: Int { events.lazy.filter { !$0.isRead }.count }
 
     private var subtitle: String {
-        let base = "\(filtered.count) event\(filtered.count == 1 ? "" : "s")"
+        let base = AppText.string("activity.subtitle.events", defaultValue: "\(filtered.count) event\(filtered.count == 1 ? "" : "s")")
         let scoped = ui.activityFilter == nil ? base : "\(base) · \(ui.activityFilter!.rawValue.capitalized)"
-        return unreadCount > 0 ? "\(scoped) · \(unreadCount) unread" : scoped
+        return unreadCount > 0
+            ? AppText.string("activity.subtitle.unread", defaultValue: "\(scoped) · \(unreadCount) unread")
+            : scoped
     }
 
     /// Event kinds that actually appear in the current events — the only kinds worth offering as a
@@ -60,8 +62,8 @@ struct ActivityContent: View {
     private var filterMenu: some View {
         @Bindable var ui = ui
         return Menu {
-            Picker("Filter", selection: $ui.activityFilter) {
-                Label("All events", systemImage: "tray.full").tag(EventKind?.none)
+            Picker(AppText.string("activity.filter", defaultValue: "Filter"), selection: $ui.activityFilter) {
+                Label(AppText.string("activity.filter.allEvents", defaultValue: "All events"), systemImage: "tray.full").tag(EventKind?.none)
                 if !presentKinds.isEmpty { Divider() }
                 ForEach(presentKinds, id: \.self) { kind in
                     Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
@@ -71,8 +73,9 @@ struct ActivityContent: View {
         } label: {
             DesignMenuActionLabel(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
                                                                         : "line.3.horizontal.decrease.circle.fill",
-                                  help: ui.activityFilter == nil ? "Filter"
-                                                                 : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
+                                  help: ui.activityFilter == nil
+                                      ? AppText.string("activity.filter", defaultValue: "Filter")
+                                      : AppText.string("activity.filter.current", defaultValue: "Filter: \(ui.activityFilter!.rawValue.capitalized)"))
         }
         .buttonStyle(.plain)
         .disabled(presentKinds.isEmpty)
@@ -87,7 +90,7 @@ struct ActivityContent: View {
             if showsHeader {
                 VStack(spacing: 0) {
                     PanelHeader(symbol: "bell",
-                                title: "Activity",
+                                title: AppText.sectionActivity,
                                 subtitle: subtitle) {
                         DesignActionCluster {
                             filterMenu
@@ -99,8 +102,9 @@ struct ActivityContent: View {
             }
         } content: {
             if filtered.isEmpty {
-                ContentUnavailableView("No activity", systemImage: "bell",
-                                       description: Text("Events from container lifecycle, the watchdog, and healthchecks land here."))
+                ContentUnavailableView(AppText.string("activity.empty", defaultValue: "No activity"),
+                                       systemImage: "bell",
+                                       description: Text(AppText.string("activity.empty.description", defaultValue: "Events from container lifecycle, the watchdog, and healthchecks land here.")))
                     .padding(.vertical, DesignTokens.Space.xl)
             } else {
                 LazyVStack(alignment: .leading, spacing: DesignTokens.Space.s) {
@@ -118,13 +122,15 @@ struct ActivityContent: View {
     private var activityHeaderActions: [DesignAction] {
         var actions = [
             DesignAction(systemName: "checkmark.circle",
-                         help: ui.activityFilter == nil ? "Mark all as read"
-                                                       : "Mark \(ui.activityFilter!.rawValue.capitalized) as read",
+                         help: ui.activityFilter == nil
+                             ? AppText.string("activity.markAllRead.help", defaultValue: "Mark all as read")
+                             : AppText.string("activity.markFilteredRead.help", defaultValue: "Mark \(ui.activityFilter!.rawValue.capitalized) as read"),
                          isEnabled: filteredUnreadCount > 0,
                          action: markFilteredRead),
             DesignAction(systemName: "trash",
-                         help: ui.activityFilter == nil ? "Clear activity"
-                                                       : "Clear \(ui.activityFilter!.rawValue.capitalized) events",
+                         help: ui.activityFilter == nil
+                             ? AppText.clearActivity
+                             : AppText.string("activity.clearFiltered.help", defaultValue: "Clear \(ui.activityFilter!.rawValue.capitalized) events"),
                          role: .destructive,
                          isEnabled: !filtered.isEmpty,
                          action: clearFiltered)

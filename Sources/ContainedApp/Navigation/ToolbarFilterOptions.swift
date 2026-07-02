@@ -3,9 +3,9 @@ enum ImageGrouping: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .none: return "None"
-        case .registry: return "Registry"
-        case .status: return "Status"
+        case .none: return AppText.string("filter.none", defaultValue: "None")
+        case .registry: return AppText.string("filter.registry", defaultValue: "Registry")
+        case .status: return AppText.string("filter.status", defaultValue: "Status")
         }
     }
     var symbol: String {
@@ -22,9 +22,9 @@ enum ImageSort: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .status: return "Status"
-        case .name: return "Name"
-        case .tags: return "Tags"
+        case .status: return AppText.string("filter.status", defaultValue: "Status")
+        case .name: return AppText.string("filter.name", defaultValue: "Name")
+        case .tags: return AppText.string("image.tags", defaultValue: "Tags")
         }
     }
     var symbol: String {
@@ -41,9 +41,9 @@ enum ImageFilter: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .all: return "All images"
-        case .updates: return "Updates only"
-        case .errors: return "Errors only"
+        case .all: return AppText.string("filter.allImages", defaultValue: "All images")
+        case .updates: return AppText.string("filter.updatesOnly", defaultValue: "Updates only")
+        case .errors: return AppText.string("filter.errorsOnly", defaultValue: "Errors only")
         }
     }
     var symbol: String {
@@ -58,7 +58,7 @@ enum ImageFilter: String, CaseIterable, Identifiable {
 enum TemplateGrouping: String, CaseIterable, Identifiable {
     case none, image
     var id: String { rawValue }
-    var title: String { self == .none ? "None" : "Image" }
+    var title: String { self == .none ? AppText.string("filter.none", defaultValue: "None") : AppText.string("filter.image", defaultValue: "Image") }
     var symbol: String { self == .none ? "bookmark" : "shippingbox" }
 }
 
@@ -67,9 +67,9 @@ enum TemplateSort: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .newest: return "Newest"
-        case .name: return "Name"
-        case .image: return "Image"
+        case .newest: return AppText.string("filter.newest", defaultValue: "Newest")
+        case .name: return AppText.string("filter.name", defaultValue: "Name")
+        case .image: return AppText.string("filter.image", defaultValue: "Image")
         }
     }
     var symbol: String {
@@ -86,9 +86,9 @@ enum NetworkGrouping: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .none: return "None"
-        case .kind: return "Kind"
-        case .mode: return "Mode"
+        case .none: return AppText.string("filter.none", defaultValue: "None")
+        case .kind: return AppText.string("filter.kind", defaultValue: "Kind")
+        case .mode: return AppText.string("filter.mode", defaultValue: "Mode")
         }
     }
     var symbol: String {
@@ -105,9 +105,9 @@ enum NetworkSort: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .name: return "Name"
-        case .mode: return "Mode"
-        case .plugin: return "Plugin"
+        case .name: return AppText.string("filter.name", defaultValue: "Name")
+        case .mode: return AppText.string("filter.mode", defaultValue: "Mode")
+        case .plugin: return AppText.string("filter.plugin", defaultValue: "Plugin")
         }
     }
     var symbol: String {
@@ -124,9 +124,9 @@ enum NetworkFilter: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .all: return "All networks"
-        case .custom: return "Custom only"
-        case .builtin: return "Built-in only"
+        case .all: return AppText.string("filter.allNetworks", defaultValue: "All networks")
+        case .custom: return AppText.string("filter.customOnly", defaultValue: "Custom only")
+        case .builtin: return AppText.string("filter.builtInOnly", defaultValue: "Built-in only")
         }
     }
     var symbol: String {

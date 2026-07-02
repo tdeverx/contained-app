@@ -16,7 +16,9 @@ struct RegistryLoginSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SheetHeader(title: "Registry login", cancelHelp: AppText.close, onCancel: { dismiss() }) {
+            SheetHeader(title: AppText.string("registry.login.title", defaultValue: "Registry login"),
+                        cancelHelp: AppText.close,
+                        onCancel: { dismiss() }) {
                 if busy {
                     ProgressView().controlSize(.small).frame(width: DesignTokens.IconSize.control, height: DesignTokens.IconSize.control)
                 } else {
@@ -30,18 +32,18 @@ struct RegistryLoginSheet: View {
                 }
             }
             VStack(spacing: DesignTokens.Space.l) {
-                PanelSection(header: "Credentials") {
-                    PanelField(label: "Server") {
+                PanelSection(header: AppText.string("registry.credentials", defaultValue: "Credentials")) {
+                    PanelField(label: AppText.string("registry.server", defaultValue: "Server")) {
                         TextField("", text: $server, prompt: Text("e.g. ghcr.io, docker.io"))
                             .textContentType(.URL)
                             .textFieldStyle(.roundedBorder)
                     }
-                    PanelField(label: "Username") {
+                    PanelField(label: AppText.string("registry.username", defaultValue: "Username")) {
                         TextField("", text: $username, prompt: Text("registry username"))
                             .textContentType(.username)
                             .textFieldStyle(.roundedBorder)
                     }
-                    PanelField(label: "Password") {
+                    PanelField(label: AppText.string("registry.password", defaultValue: "Password")) {
                         SecureField("", text: $password, prompt: Text("password or access token"))
                             .textFieldStyle(.roundedBorder)
                     }

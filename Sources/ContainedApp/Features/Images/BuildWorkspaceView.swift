@@ -43,9 +43,9 @@ struct BuildWorkspaceView: View {
                 .padding(DesignTokens.Space.s)
             } else {
                 ContentUnavailableView {
-                    Label("Build an image", systemImage: "hammer")
+                    Label(AppText.string("build.empty.title", defaultValue: "Build an image"), systemImage: "hammer")
                 } description: {
-                    Text("Choose a context folder and a tag, then Build. Output streams here.")
+                    Text(AppText.string("build.empty.description", defaultValue: "Choose a context folder and a tag, then Build. Output streams here."))
                 }
             }
         }
@@ -65,28 +65,28 @@ struct BuildWorkspaceView: View {
     }
 
     private var sourceSection: some View {
-        PanelSection(header: "Source") {
-            PanelField(label: "Context",
-                       info: "The build context: the folder sent to the builder, usually your project root.") {
+        PanelSection(header: AppText.string("build.source", defaultValue: "Source")) {
+            PanelField(label: AppText.string("build.context", defaultValue: "Context"),
+                       info: AppText.string("build.context.info", defaultValue: "The build context: the folder sent to the builder, usually your project root.")) {
                 HStack {
-                    Text(contextDir?.path ?? "Choose a folder...")
+                    Text(contextDir?.path ?? AppText.string("build.chooseFolderPlaceholder", defaultValue: "Choose a folder..."))
                         .foregroundStyle(contextDir == nil ? .secondary : .primary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                     Spacer()
                     DesignActionGroup(DesignAction(systemName: "folder",
-                                                   title: "Choose",
+                                                   title: AppText.choose,
                                                    help: AppText.chooseContextFolder,
                                                    action: chooseFolder))
                 }
             }
-            PanelField(label: "Dockerfile",
-                       info: "Path to the Dockerfile (-f). Relative to the context if not absolute.") {
+            PanelField(label: AppText.string("build.dockerfile", defaultValue: "Dockerfile"),
+                       info: AppText.string("build.dockerfile.info", defaultValue: "Path to the Dockerfile (-f). Relative to the context if not absolute.")) {
                 TextField("", text: $dockerfile, prompt: Text("optional, defaults to <context>/Dockerfile"))
                     .textFieldStyle(.roundedBorder)
             }
-            PanelField(label: "Tag",
-                       info: "The resulting image reference (-t).") {
+            PanelField(label: AppText.string("build.tag", defaultValue: "Tag"),
+                       info: AppText.string("build.tag.info", defaultValue: "The resulting image reference (-t).")) {
                 TextField("", text: $tag, prompt: Text("name for the built image, e.g. myapp:latest"))
                     .textFieldStyle(.roundedBorder)
             }
@@ -94,16 +94,16 @@ struct BuildWorkspaceView: View {
     }
 
     private var optionsSection: some View {
-        PanelSection(header: "Options") {
-            PanelField(label: "Platform") {
+        PanelSection(header: AppText.string("build.options", defaultValue: "Options")) {
+            PanelField(label: AppText.string("build.platform", defaultValue: "Platform")) {
                 TextField("", text: $platform, prompt: Text("optional, e.g. linux/arm64"))
                     .textFieldStyle(.roundedBorder)
             }
-            PanelToggleRow(title: "No cache",
-                           info: "Build every layer from scratch (--no-cache).",
+            PanelToggleRow(title: AppText.string("build.noCache", defaultValue: "No cache"),
+                           info: AppText.string("build.noCache.info", defaultValue: "Build every layer from scratch (--no-cache)."),
                            isOn: $noCache)
             ForEach($buildArgs) { $arg in
-                PanelField(label: "Build arg") {
+                PanelField(label: AppText.string("build.arg", defaultValue: "Build arg")) {
                     HStack {
                         TextField("KEY", text: $arg.key)
                             .textFieldStyle(.roundedBorder)
@@ -117,10 +117,12 @@ struct BuildWorkspaceView: View {
                     }
                 }
             }
-            PanelRow(title: "Build arguments",
-                     subtitle: buildArgs.isEmpty ? "No build-time variables added." : "\(buildArgs.count) argument(s)") {
+            PanelRow(title: AppText.string("build.arguments", defaultValue: "Build arguments"),
+                     subtitle: buildArgs.isEmpty
+                         ? AppText.string("build.arguments.empty", defaultValue: "No build-time variables added.")
+                         : AppText.string("build.arguments.count", defaultValue: "\(buildArgs.count) argument(s)")) {
                 DesignActionGroup(DesignAction(systemName: "plus.circle",
-                                               title: "Add build arg",
+                                               title: AppText.string("build.addBuildArg.short", defaultValue: "Add build arg"),
                                                help: AppText.addBuildArgument) {
                     buildArgs.append(KeyValue())
                 })
@@ -137,14 +139,14 @@ struct BuildWorkspaceView: View {
                     .frame(maxWidth: .infinity)
                 if building {
                     DesignActionGroup(DesignAction(systemName: "xmark",
-                                                   title: "Cancel",
+                                                   title: AppText.cancel,
                                                    help: AppText.cancelBuild,
                                                    role: .destructive) {
                         building = false
                     })
                 } else {
                     DesignActionGroup(DesignAction(systemName: "hammer.fill",
-                                                   title: "Build",
+                                                   title: AppText.string("build.build", defaultValue: "Build"),
                                                    help: AppText.buildImage,
                                                    isEnabled: canBuild,
                                                    action: startBuild))

@@ -42,12 +42,14 @@ struct CustomizeWidgetsPanel: View {
     }
 
     private var addWidgetSection: some View {
-        PanelSection(header: "Widgets",
-                     footer: "\(activeWidgetIndices.count) of \(Personalization.widgetSlotCount) widgets") {
-            PanelRow(title: "Add widget",
-                     subtitle: canAddWidget ? "Add another metric chip or chart to this card." : "All widget slots are in use.") {
+        PanelSection(header: AppText.string("customize.widgets", defaultValue: "Widgets"),
+                     footer: AppText.string("customize.widgets.footer", defaultValue: "\(activeWidgetIndices.count) of \(Personalization.widgetSlotCount) widgets")) {
+            PanelRow(title: AppText.string("customize.addWidget", defaultValue: "Add widget"),
+                     subtitle: canAddWidget
+                         ? AppText.string("customize.addWidget.subtitle", defaultValue: "Add another metric chip or chart to this card.")
+                         : AppText.string("customize.addWidget.slotsFull", defaultValue: "All widget slots are in use.")) {
                 Button { addWidget() } label: {
-                    Label("Add", systemImage: "plus")
+                    Label(AppText.add, systemImage: "plus")
                 }
                 .disabled(!canAddWidget)
             }
@@ -58,44 +60,45 @@ struct CustomizeWidgetsPanel: View {
 
     private func widgetOrderControls(_ index: Int) -> some View {
         let position = activeWidgetIndices.firstIndex(of: index) ?? 0
-        return PanelRow(title: "Order", subtitle: "Move or remove this widget.") {
+        return PanelRow(title: AppText.string("customize.widget.order", defaultValue: "Order"),
+                        subtitle: AppText.string("customize.widget.order.subtitle", defaultValue: "Move or remove this widget.")) {
             HStack(spacing: DesignTokens.Space.xs) {
                 Button { moveWidget(index, by: -1) } label: {
-                    Label("Move up", systemImage: "chevron.up").labelStyle(.iconOnly)
+                    Label(AppText.string("customize.widget.moveUp", defaultValue: "Move up"), systemImage: "chevron.up").labelStyle(.iconOnly)
                 }
                 .buttonStyle(.borderless)
                 .disabled(position == 0)
-                .help("Move widget up")
+                .help(AppText.string("customize.widget.moveUp.help", defaultValue: "Move widget up"))
 
                 Button { moveWidget(index, by: 1) } label: {
-                    Label("Move down", systemImage: "chevron.down").labelStyle(.iconOnly)
+                    Label(AppText.string("customize.widget.moveDown", defaultValue: "Move down"), systemImage: "chevron.down").labelStyle(.iconOnly)
                 }
                 .buttonStyle(.borderless)
                 .disabled(position >= activeWidgetIndices.count - 1)
-                .help("Move widget down")
+                .help(AppText.string("customize.widget.moveDown.help", defaultValue: "Move widget down"))
 
                 Button(role: .destructive) { removeWidget(index) } label: {
-                    Label("Remove", systemImage: "minus.circle").labelStyle(.iconOnly)
+                    Label(AppText.string("common.remove", defaultValue: "Remove"), systemImage: "minus.circle").labelStyle(.iconOnly)
                 }
                 .buttonStyle(.borderless)
-                .help("Remove widget")
+                .help(AppText.string("customize.widget.remove.help", defaultValue: "Remove widget"))
             }
         }
     }
 
     @ViewBuilder
     private func widgetDisplayOptions(_ index: Int) -> some View {
-        widgetGroupLabel("Display", systemImage: "paintpalette")
-        PanelToggleRow(title: "Show icon", isOn: widgetBinding(index, \.showIcon))
+        widgetGroupLabel(AppText.string("customize.widget.display", defaultValue: "Display"), systemImage: "paintpalette")
+        PanelToggleRow(title: AppText.string("customize.widget.showIcon", defaultValue: "Show icon"), isOn: widgetBinding(index, \.showIcon))
         if style.widget(at: index).showIcon {
-            PanelField(label: "Icon") {
+            PanelField(label: AppText.string("customize.icon", defaultValue: "Icon")) {
                 TextField("", text: widgetBinding(index, \.icon),
                           prompt: Text(style.widget(at: index).metric.systemImage))
                     .textFieldStyle(.roundedBorder)
             }
         }
-        PanelToggleRow(title: "Show text", isOn: widgetBinding(index, \.showText))
-        PanelRow(title: "Color") {
+        PanelToggleRow(title: AppText.string("customize.widget.showText", defaultValue: "Show text"), isOn: widgetBinding(index, \.showText))
+        PanelRow(title: AppText.string("customize.color", defaultValue: "Color")) {
             TintSelector(optionalSelection: widgetBinding(index, \.tint),
                          automaticLabel: AppText.cardColor) { $0.localizedDisplayName }
         }
@@ -103,8 +106,8 @@ struct CustomizeWidgetsPanel: View {
 
     @ViewBuilder
     private func widgetDataOptions(_ index: Int) -> some View {
-        widgetGroupLabel("Data", systemImage: "waveform.path.ecg")
-        PanelRow(title: "Metric") {
+        widgetGroupLabel(AppText.string("customize.widget.data", defaultValue: "Data"), systemImage: "waveform.path.ecg")
+        PanelRow(title: AppText.string("customize.widget.metric", defaultValue: "Metric")) {
             Picker("", selection: widgetMetricBinding(index)) {
                 ForEach(graphOptions) {
                     Label(graphLabel($0), systemImage: $0.systemImage).tag($0)
@@ -115,7 +118,7 @@ struct CustomizeWidgetsPanel: View {
         }
         if widgetStyle(index).requiresSecondaryMetric {
             if let fallback = secondaryMetricFallback(for: index) {
-                PanelRow(title: "Compare") {
+                PanelRow(title: AppText.string("customize.widget.compare", defaultValue: "Compare")) {
                     Picker("", selection: widgetSecondaryMetricBinding(index, fallback: fallback)) {
                         ForEach(graphOptions.filter { $0 != style.widget(at: index).metric }) {
                             Label(graphLabel($0), systemImage: $0.systemImage).tag($0)
@@ -125,7 +128,8 @@ struct CustomizeWidgetsPanel: View {
                     .fixedSize()
                 }
             } else {
-                PanelRow(title: "Compare", subtitle: "This graph needs a second metric.")
+                PanelRow(title: AppText.string("customize.widget.compare", defaultValue: "Compare"),
+                         subtitle: AppText.string("customize.widget.compare.subtitle", defaultValue: "This graph needs a second metric."))
             }
         }
     }
@@ -133,8 +137,8 @@ struct CustomizeWidgetsPanel: View {
     @ViewBuilder
     private func widgetChartOptions(_ index: Int) -> some View {
         let chartStyle = widgetStyle(index)
-        widgetGroupLabel("Chart", systemImage: "chart.xyaxis.line")
-        PanelRow(title: "Type") {
+        widgetGroupLabel(AppText.string("customize.widget.chart", defaultValue: "Chart"), systemImage: "chart.xyaxis.line")
+        PanelRow(title: AppText.string("customize.widget.type", defaultValue: "Type")) {
             Picker("", selection: widgetStyleBinding(index)) {
                 ForEach(GraphStyle.allCases) { Text($0.localizedDisplayName).tag($0) }
             }
@@ -142,31 +146,31 @@ struct CustomizeWidgetsPanel: View {
             .fixedSize()
         }
         if chartStyle == .area {
-            PanelToggleRow(title: "Gradient fill", isOn: widgetBinding(index, \.areaUsesGradient))
+            PanelToggleRow(title: AppText.string("customize.widget.gradientFill", defaultValue: "Gradient fill"), isOn: widgetBinding(index, \.areaUsesGradient))
         }
         if chartStyle.usesLineOptions {
-            PanelRow(title: "Interpolation") {
+            PanelRow(title: AppText.string("customize.widget.interpolation", defaultValue: "Interpolation")) {
                 Picker("", selection: widgetBinding(index, \.interpolation)) {
                     ForEach(WidgetInterpolation.allCases) { Text($0.localizedDisplayName).tag($0) }
                 }
                 .labelsHidden()
                 .fixedSize()
             }
-            sliderRow("Line width",
+            sliderRow(AppText.string("customize.widget.lineWidth", defaultValue: "Line width"),
                       value: widgetBinding(index, \.lineWidth),
                       range: 0.75...4,
                       step: 0.25,
                       readout: String(format: "%.1f", style.widget(at: index).lineWidth))
         }
         if chartStyle.usesPointOptions {
-            sliderRow("Point size",
+            sliderRow(AppText.string("customize.widget.pointSize", defaultValue: "Point size"),
                       value: widgetBinding(index, \.pointSize),
                       range: 8...44,
                       step: 1,
                       readout: wholeNumberReadout(style.widget(at: index).pointSize))
         }
         if chartStyle.usesBarOptions {
-            sliderRow("Bar width",
+            sliderRow(AppText.string("customize.widget.barWidth", defaultValue: "Bar width"),
                       value: widgetBinding(index, \.barWidth),
                       range: 2...14,
                       step: 1,
@@ -197,7 +201,7 @@ struct CustomizeWidgetsPanel: View {
 
     private func widgetTitle(for index: Int) -> String {
         let position = activeWidgetIndices.firstIndex(of: index) ?? 0
-        return "Widget \(position + 1)"
+        return AppText.string("customize.widget.title", defaultValue: "Widget \(position + 1)")
     }
 
     private func graphLabel(_ metric: GraphMetric) -> String {
@@ -205,8 +209,8 @@ struct CustomizeWidgetsPanel: View {
             return metric.displayName
         }
         switch metric {
-        case .diskRead: return "Read"
-        case .diskWrite: return "Write"
+        case .diskRead: return AppText.string("customize.widget.metric.read", defaultValue: "Read")
+        case .diskWrite: return AppText.string("customize.widget.metric.write", defaultValue: "Write")
         default: return metric.displayName
         }
     }

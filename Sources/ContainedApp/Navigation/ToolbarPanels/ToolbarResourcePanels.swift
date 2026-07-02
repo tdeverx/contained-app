@@ -110,8 +110,8 @@ struct ToolbarTemplatesPanel: View {
 
     private var header: some View {
         PanelHeader(symbol: "bookmark",
-                    title: "Templates",
-                    subtitle: "\(saved.count) saved") {
+                    title: AppText.sectionTemplates,
+                    subtitle: AppText.string("template.savedCount", defaultValue: "\(saved.count) saved")) {
             if showClose {
                 DesignActionGroup(DesignAction(systemName: "xmark",
                                                help: AppText.close,
@@ -124,8 +124,8 @@ struct ToolbarTemplatesPanel: View {
     private var emptyCard: some View {
         DesignCard(size: .small,
                      elevated: false,
-                     title: "No templates",
-                     subtitle: "Save a container's settings as a template from the create form.") {
+                     title: AppText.string("template.empty", defaultValue: "No templates"),
+                     subtitle: AppText.string("template.empty.subtitle", defaultValue: "Save a container's settings as a template from the create form.")) {
             DesignCardIconChip(symbol: "bookmark",
                                  tint: .secondary,
                                  backgroundOpacity: DesignTokens.DesignCard.iconEmphasisBackgroundOpacity)

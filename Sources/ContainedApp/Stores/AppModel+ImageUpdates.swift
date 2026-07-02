@@ -97,7 +97,8 @@ extension AppModel {
         do {
             let remoteDigest = try await manifestClient.remoteDigest(for: reference)
             guard let localDigest, !localDigest.isEmpty else {
-                imageUpdates[key] = .failed(localDigest: nil, message: "Local digest unavailable")
+                imageUpdates[key] = .failed(localDigest: nil,
+                                            message: AppText.string("updates.localDigestUnavailable.short", defaultValue: "Local digest unavailable"))
                 if notify { flash(AppText.imageLocalDigestUnavailable(Format.shortImage(reference))) }
                 return
             }

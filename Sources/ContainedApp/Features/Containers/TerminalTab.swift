@@ -62,7 +62,10 @@ struct TerminalTab: View {
             .labelsHidden()
             .frame(width: DesignTokens.FormWidth.shellPicker)
             .onChange(of: shell) { _, _ in reconnect() }
-            Text("exec into \(snapshot.id)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            Text(AppText.string("terminal.execInto", defaultValue: "exec into \(snapshot.id)"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
             Spacer()
             DesignActionGroup(DesignAction(systemName: "arrow.clockwise", help: AppText.reconnect) { reconnect() })
         }
@@ -71,10 +74,12 @@ struct TerminalTab: View {
     private func endedOverlay(code: Int32?) -> some View {
         DesignCardInsetSection(alignment: .center, padding: DesignTokens.Space.xl) {
             Image(systemName: "bolt.horizontal.circle").font(.largeTitle).foregroundStyle(.secondary)
-            Text(code == nil || code == 0 ? "Session ended" : "Session ended (exit \(code!))")
+            Text(code == nil || code == 0
+                 ? AppText.string("terminal.sessionEnded", defaultValue: "Session ended")
+                 : AppText.string("terminal.sessionEndedWithExit", defaultValue: "Session ended (exit \(code!))"))
                 .font(.headline)
             DesignActionGroup(DesignAction(systemName: "arrow.clockwise",
-                                           title: "Reconnect",
+                                           title: AppText.reconnect,
                                            help: AppText.reconnectTerminal,
                                            action: reconnect))
         }

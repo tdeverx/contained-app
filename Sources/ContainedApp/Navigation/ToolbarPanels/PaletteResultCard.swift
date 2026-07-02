@@ -24,13 +24,15 @@ struct PaletteResultCard: View {
         case .volume(let volume):
             designCard(symbol: "externaldrive",
                          title: volume.name,
-                         subtitle: "Volume",
-                         footer: "Use in a new run")
+                         subtitle: AppText.string("palette.volume", defaultValue: "Volume"),
+                         footer: AppText.string("palette.volume.footer", defaultValue: "Use in a new run"))
         case .network(let network):
             designCard(symbol: "network",
                          title: network.name,
-                         subtitle: network.isBuiltin ? "Built-in network" : "Network",
-                         footer: "Run a container on this network")
+                         subtitle: network.isBuiltin
+                             ? AppText.string("palette.network.builtIn", defaultValue: "Built-in network")
+                             : AppText.string("palette.network", defaultValue: "Network"),
+                         footer: AppText.string("palette.network.footer", defaultValue: "Run a container on this network"))
         case .tint(let tint):
             tintCard(tint)
         }

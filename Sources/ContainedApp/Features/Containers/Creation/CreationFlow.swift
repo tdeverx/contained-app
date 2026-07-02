@@ -152,21 +152,21 @@ struct CreationFlow: View {
         gridScaffold {
             optionStack {
                 optionRow {
-                    box(symbol: "shippingbox", title: "Container",
-                        subtitle: "Configure and run an image",
+                    box(symbol: "shippingbox", title: AppText.string("creation.option.container", defaultValue: "Container"),
+                        subtitle: AppText.string("creation.option.container.subtitle", defaultValue: "Configure and run an image"),
                         matchedID: "creation-option-0") { go(.chooser) }
-                    box(symbol: "hammer", title: "Build",
-                        subtitle: "Build an image from a Dockerfile",
+                    box(symbol: "hammer", title: AppText.sectionBuild,
+                        subtitle: AppText.string("creation.option.build.subtitle", defaultValue: "Build an image from a Dockerfile"),
                         matchedID: "creation-option-1",
                         enabled: app.settings.imageBuildEnabled) {
                         guard app.settings.imageBuildEnabled else { return }
                         go(.build)
                     }
-                    box(symbol: "network", title: "Network",
-                        subtitle: "Create a container network",
+                    box(symbol: "network", title: AppText.string("filter.network", defaultValue: "Network"),
+                        subtitle: AppText.string("creation.option.network.subtitle", defaultValue: "Create a container network"),
                         matchedID: "creation-option-2") { go(.network) }
-                    box(symbol: "externaldrive", title: "Volume",
-                        subtitle: "Create persistent storage",
+                    box(symbol: "externaldrive", title: AppText.string("filter.volume", defaultValue: "Volume"),
+                        subtitle: AppText.string("creation.option.volume.subtitle", defaultValue: "Create persistent storage"),
                         matchedID: "creation-option-3") { go(.volume) }
                 }
             }
@@ -178,31 +178,35 @@ struct CreationFlow: View {
             optionStack {
                 optionRow {
                     if app.settings.hubSearchEnabled {
-                        box(symbol: "magnifyingglass", title: "Search",
-                            subtitle: "Find an image on Docker Hub",
+                        box(symbol: "magnifyingglass", title: AppText.string("common.search", defaultValue: "Search"),
+                            subtitle: AppText.string("creation.option.search.subtitle", defaultValue: "Find an image on Docker Hub"),
                             matchedID: "creation-option-0") { go(.search) }
                     }
-                    box(symbol: "square.stack.3d.up", title: "Local image",
-                        subtitle: app.images.isEmpty ? "Choose from pulled images" : "Use an image already pulled",
+                    box(symbol: "square.stack.3d.up", title: AppText.string("creation.option.localImage", defaultValue: "Local image"),
+                        subtitle: app.images.isEmpty
+                            ? AppText.string("creation.option.localImage.emptySubtitle", defaultValue: "Choose from pulled images")
+                            : AppText.string("creation.option.localImage.subtitle", defaultValue: "Use an image already pulled"),
                         matchedID: "creation-option-1") {
                         go(.localImages)
                     }
-                    box(symbol: "slider.horizontal.3", title: "Start from scratch",
-                        subtitle: "Configure manually",
+                    box(symbol: "slider.horizontal.3", title: AppText.string("creation.option.scratch", defaultValue: "Start from scratch"),
+                        subtitle: AppText.string("creation.option.scratch.subtitle", defaultValue: "Configure manually"),
                         matchedID: "creation-option-2") { configure(with: RunSpec()) }
                 }
                 optionRow {
-                    box(symbol: "shippingbox.and.arrow.backward", title: "Compose",
-                        subtitle: "Paste YAML or choose a file",
+                    box(symbol: "shippingbox.and.arrow.backward", title: AppText.string("creation.option.compose", defaultValue: "Compose"),
+                        subtitle: AppText.string("creation.option.compose.subtitle", defaultValue: "Paste YAML or choose a file"),
                         matchedID: "compose-option-0",
                         enabled: app.settings.composeImportEnabled) {
                         guard app.settings.composeImportEnabled else { return }
                         go(.compose)
                     }
-                    box(symbol: "archivebox", title: "Image archive",
-                        subtitle: "Load an image .tar") { selectImageArchive() }
-                    box(symbol: "bookmark", title: "Templates",
-                        subtitle: saved.isEmpty ? "None saved yet" : "Reuse a saved recipe",
+                    box(symbol: "archivebox", title: AppText.string("creation.option.imageArchive", defaultValue: "Image archive"),
+                        subtitle: AppText.string("creation.option.imageArchive.subtitle", defaultValue: "Load an image .tar")) { selectImageArchive() }
+                    box(symbol: "bookmark", title: AppText.sectionTemplates,
+                        subtitle: saved.isEmpty
+                            ? AppText.string("creation.option.templates.emptySubtitle", defaultValue: "None saved yet")
+                            : AppText.string("creation.option.templates.subtitle", defaultValue: "Reuse a saved recipe"),
                         enabled: !saved.isEmpty) { go(.templates) }
                 }
             }
@@ -210,7 +214,7 @@ struct CreationFlow: View {
     }
 
     private var networkPage: some View {
-        pageScaffold(symbol: "network", title: "New network", subtitle: nil,
+        pageScaffold(symbol: "network", title: AppText.string("creation.network.new", defaultValue: "New network"), subtitle: nil,
                      leading: resourceLeading, contentAlignment: .top) {
             CreationNetworkFields(name: $networkName,
                                   subnet: $networkSubnet,
@@ -221,7 +225,7 @@ struct CreationFlow: View {
     }
 
     private var volumePage: some View {
-        pageScaffold(symbol: "externaldrive", title: "New volume", subtitle: nil,
+        pageScaffold(symbol: "externaldrive", title: AppText.string("creation.volume.new", defaultValue: "New volume"), subtitle: nil,
                      leading: resourceLeading, contentAlignment: .top) {
             CreationVolumeFields(name: $volumeName,
                                  size: $volumeSize,
@@ -231,7 +235,9 @@ struct CreationFlow: View {
     }
 
     private var buildPage: some View {
-        pageScaffold(symbol: "hammer", title: "Build an image", subtitle: "From a Dockerfile + build context",
+        pageScaffold(symbol: "hammer",
+                     title: AppText.string("build.empty.title", defaultValue: "Build an image"),
+                     subtitle: AppText.string("build.subtitle.context", defaultValue: "From a Dockerfile + build context"),
                      leading: resourceLeading) {
             BuildWorkspaceView()
         }
@@ -246,7 +252,9 @@ struct CreationFlow: View {
     }
 
     private var localImagesPage: some View {
-        pageScaffold(symbol: "square.stack.3d.up", title: "Choose a local image", subtitle: "Use an image already pulled",
+        pageScaffold(symbol: "square.stack.3d.up",
+                     title: AppText.string("creation.localImages.choose", defaultValue: "Choose a local image"),
+                     subtitle: AppText.string("creation.option.localImage.subtitle", defaultValue: "Use an image already pulled"),
                      leading: .back { go(.chooser) }) {
             CreationLocalImagesContent(query: $localImageQuery) { picked in
                 configure(with: picked)
@@ -258,11 +266,11 @@ struct CreationFlow: View {
         gridScaffold {
             optionStack {
                 optionRow {
-                    box(symbol: "doc.plaintext", title: "Paste YAML",
-                        subtitle: "Paste compose content",
+                    box(symbol: "doc.plaintext", title: AppText.string("creation.compose.pasteYAML", defaultValue: "Paste YAML"),
+                        subtitle: AppText.string("creation.compose.pasteYAML.subtitle", defaultValue: "Paste compose content"),
                         matchedID: "compose-option-0") { go(.pasteCompose) }
-                    box(symbol: "folder", title: "Select file",
-                        subtitle: "Choose compose.yaml",
+                    box(symbol: "folder", title: AppText.string("creation.compose.selectFile", defaultValue: "Select file"),
+                        subtitle: AppText.string("creation.compose.selectFile.subtitle", defaultValue: "Choose compose.yaml"),
                         matchedID: "compose-option-1") { selectComposeFile() }
                 }
             }
@@ -270,7 +278,9 @@ struct CreationFlow: View {
     }
 
     private var pasteComposePage: some View {
-        pageScaffold(symbol: "doc.plaintext", title: "Paste Compose", subtitle: "Services with images become prefilled containers",
+        pageScaffold(symbol: "doc.plaintext",
+                     title: AppText.string("creation.compose.paste", defaultValue: "Paste Compose"),
+                     subtitle: AppText.string("creation.compose.paste.subtitle", defaultValue: "Services with images become prefilled containers"),
                      leading: .back { go(.compose) }) {
             CreationPastedComposeContent(text: $composeText, onImport: importPastedCompose)
         }
