@@ -40,7 +40,7 @@ while IFS= read -r file; do
   esac
 
   case "$file" in
-    Package.swift|Package.resolved|VERSION|Sources/**|Tests/**|Resources/**|scripts/**|.github/workflows/**)
+    Package.swift|Package.resolved|VERSION|Sources/**|Tests/**|Packages/**|Resources/**|scripts/**|.github/workflows/**)
       has_material_change=true
       ;;
   esac

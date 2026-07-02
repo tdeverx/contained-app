@@ -13,7 +13,7 @@ private extension EnvironmentValues {
 
 /// A grouped settings-style section for hugging panels — the intrinsic-height replacement for a Form
 /// `Section`. Renders an optional header label, a flat glass card holding its rows, and an optional
-/// caption footer, matching the app's glass-card language instead of Form's solid grouped backing.
+/// caption footer, matching the package's glass-card language instead of Form's solid grouped backing.
 ///
 /// Supports two header affordances: `collapsible` (a chevron that folds the card away) and an `enabled`
 /// binding (a switch in the header that disables/hides the body — used for opt-in sections like the
