@@ -92,6 +92,8 @@ struct FilesTab: View {
 
     private func load() async {
         guard let client = app.client else { return }
+        try? await Task.sleep(for: .milliseconds(140))
+        guard !Task.isCancelled else { return }
         loading = true; error = nil
         defer { loading = false }
         do {

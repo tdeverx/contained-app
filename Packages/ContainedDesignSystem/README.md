@@ -42,11 +42,20 @@ This package currently depends only on platform frameworks available to a macOS
   `PageScaffold` for app-neutral scaffolding.
 - `GlassButton`, `GlassButtonItem`, `GlassButtonInputItem`, `GlassRowMenu`, and
   toolbar control helpers.
-- `ResourceGlassCard` and `ResourceCard*` pieces for repeated card layouts.
+- `ResourceGlassCard`, `ResourceCardPageControls`, `ResourceCardFooterChip`,
+  `ResourceCardFooterButton`, `ResourceCardInsetSection`, and other
+  `ResourceCard*` pieces for repeated card layouts and card-local controls.
+  Use `resourceCardFloatingControls` and `resourceCardProgressOverlay` for
+  card overlays instead of app-local `.overlay` recipes.
 - `ActivityStatusView` with `ActivityStatusPresentation`, where callers provide
   plain status text/progress instead of app model objects.
-- `LiveSparkline`, `GraphStyle`, and `WidgetInterpolation` for lightweight,
-  Canvas-backed live graph widgets.
+- `DesignContentSurface` and `DesignInputSurface` for non-card content and
+  input surfaces. Feature code should use these named routes instead of calling
+  the lower-level surface modifiers directly.
+- `LiveSparkline`, `GraphStyle`, `WidgetInterpolation`, and `SparklineScale`
+  for Swift Charts-backed live graph widgets. Use `.fraction` for values that
+  already live on a 0...1 scale, and `.normalized` for byte/rate series that
+  should fill the compact chart.
 - Micro-primitives such as `DesignStatusDot`, `DesignStatusBadge`,
   `DesignKeyCap`, `DesignKeyboardHint`, `DesignTintSwatch`, and
   `DesignMetricTile`.
@@ -124,6 +133,86 @@ struct DesignSystemExample: View {
         .environment(\.cardMaterial, .glassRegular)
         .environment(\.buttonMaterial, .glassClear)
         .environment(\.designSystemShowsInfoTips, true)
+    }
+}
+```
+
+## Resource Card Controls
+
+Keep card-local controls in the package. Feature views should provide plain
+values and actions instead of restyling footer chips or expanded-card page rails:
+
+```swift
+struct CardControlsExample: View {
+    @State private var page = "overview"
+    @State private var metric = "cpu"
+
+    private let pages = [
+        ResourceCardPageControlItem(id: "overview",
+                                    title: "Overview",
+                                    systemImage: "rectangle.grid.1x2"),
+        ResourceCardPageControlItem(id: "logs",
+                                    title: "Logs",
+                                    systemImage: "text.alignleft")
+    ]
+
+    var body: some View {
+        ResourceGlassCard(size: .large) {
+            ResourceCardHeader {
+                ResourceCardIconChip(symbol: "shippingbox.fill")
+            } content: {
+                ResourceCardTitleText(text: "web")
+            } trailing: {
+                EmptyView()
+            }
+        } bodyContent: {
+            ResourceCardInsetSection(title: "Details") {
+                ResourceCardSubtitleText(text: "Ready")
+            }
+        } footerLeading: {
+            ResourceCardFooterChip(isSelected: metric == "cpu",
+                                   tint: .accentColor,
+                                   help: "CPU",
+                                   action: { metric = "cpu" }) {
+                Image(systemName: "cpu")
+            } text: {
+                ResourceCardMetricText(text: "12%")
+            }
+        } footerActions: {
+            ResourceCardFooterButton(systemName: "play.fill",
+                                     help: "Start",
+                                     tint: .accentColor) {}
+        } widget: {
+            LiveSparkline(samples: [0, 0.12, 0.18],
+                          color: .accentColor,
+                          scale: .fraction)
+                .frame(height: Tokens.ResourceCard.sparklineHeight)
+        }
+        .overlay(alignment: .topTrailing) {
+            ResourceCardPageControls(items: pages,
+                                     selection: page,
+                                     tint: .accentColor,
+                                     onSelect: { page = $0 },
+                                     onClose: {})
+                .padding(Tokens.Space.s)
+        }
+    }
+}
+```
+
+For standalone empty states or input chrome, keep the surface choice in this
+package too:
+
+```swift
+DesignContentSurface(minHeight: 220) {
+    ContentUnavailableView("No matches", systemImage: "magnifyingglass")
+}
+
+DesignInputSurface {
+    HStack {
+        Image(systemName: "magnifyingglass")
+        TextField("Search", text: $query)
+            .textFieldStyle(.plain)
     }
 }
 ```

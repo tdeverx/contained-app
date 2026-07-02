@@ -7,17 +7,20 @@ public struct MetricTile: View {
     public var systemImage: String? = nil
     public var tint: Color = .accentColor
     public var samples: [Double]? = nil
+    public var sparklineScale: SparklineScale = .normalized
 
     public init(label: String,
                 value: String,
                 systemImage: String? = nil,
                 tint: Color = .accentColor,
-                samples: [Double]? = nil) {
+                samples: [Double]? = nil,
+                sparklineScale: SparklineScale = .normalized) {
         self.label = label
         self.value = value
         self.systemImage = systemImage
         self.tint = tint
         self.samples = samples
+        self.sparklineScale = sparklineScale
     }
 
     public var body: some View {
@@ -37,7 +40,7 @@ public struct MetricTile: View {
                 .font(.title.weight(.semibold))
                 .contentTransition(.numericText())
             if let samples {
-                LiveSparkline(samples: samples, color: tint)
+                LiveSparkline(samples: samples, color: tint, scale: sparklineScale)
                     .frame(height: 22)
             }
         }

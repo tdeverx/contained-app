@@ -435,6 +435,6 @@ private struct ImagesPage: View {
     }
 
     private func currentGroup(_ group: LocalImageTagGroup) -> LocalImageTagGroup {
-        LocalImageTagGroup.groups(for: app.images).first { $0.id == group.id } ?? group
+        app.localImageGroups().first { $0.id == group.id } ?? group
     }
 }

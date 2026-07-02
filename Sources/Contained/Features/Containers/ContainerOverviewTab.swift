@@ -10,7 +10,7 @@ struct ContainerOverviewTab: View {
 
     var body: some View {
         ContainerTabScaffold {
-            VStack(alignment: .leading, spacing: Tokens.Space.m) {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.m) {
                 section("General") {
                     row("Image", snapshot.image)
                     row("Platform", config.platform.display)

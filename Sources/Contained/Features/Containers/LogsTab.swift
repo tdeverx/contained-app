@@ -95,6 +95,8 @@ struct LogsTab: View {
 
     private func stream() async {
         guard let client = app.client else { return }
+        try? await Task.sleep(for: .milliseconds(140))
+        guard !Task.isCancelled else { return }
         lines.removeAll(); carry = ""; failed = nil
         streaming = true
         defer { streaming = false }

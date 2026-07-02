@@ -21,6 +21,7 @@ struct SettingsBackup: Codable, Equatable {
     var keepInMenuBar: Bool
     var cliPathOverride: String
     var refreshInterval: Double
+    var statsNormalizationMode: StatsNormalizationMode
     var imageUpdateIntervalHours: Int
     var imageUpdateChecksEnabled: Bool
     var appUpdateChecksEnabled: Bool
@@ -47,7 +48,7 @@ struct SettingsBackup: Codable, Equatable {
         case buttonTintBlendMode
         case cardMaterial
         case showInfoTips, imageDefaultStyleEnabled, keepInMenuBar, cliPathOverride, refreshInterval
-        case imageUpdateIntervalHours, imageUpdateChecksEnabled, appUpdateChecksEnabled, autoRestartEnabled
+        case statsNormalizationMode, imageUpdateIntervalHours, imageUpdateChecksEnabled, appUpdateChecksEnabled, autoRestartEnabled
         case notifyOnCrash, revealCLI, historyRetentionDays, loggingLevel, enabledLogDestinations
         case enabledLogCategories, updateChannel, commandPaletteEnabled, hubSearchEnabled
         case composeImportEnabled, imageBuildEnabled, keyboardShortcutsEnabled, experimentalToolbarUI
@@ -69,10 +70,11 @@ struct SettingsBackup: Codable, Equatable {
          cardMaterial: WindowMaterial,
          showInfoTips: Bool,
          imageDefaultStyleEnabled: Bool,
-         keepInMenuBar: Bool,
-         cliPathOverride: String,
-         refreshInterval: Double,
-         imageUpdateIntervalHours: Int,
+	         keepInMenuBar: Bool,
+	         cliPathOverride: String,
+	         refreshInterval: Double,
+	         statsNormalizationMode: StatsNormalizationMode = .container,
+	         imageUpdateIntervalHours: Int,
          imageUpdateChecksEnabled: Bool,
          appUpdateChecksEnabled: Bool,
          autoRestartEnabled: Bool,
@@ -109,6 +111,7 @@ struct SettingsBackup: Codable, Equatable {
         self.keepInMenuBar = keepInMenuBar
         self.cliPathOverride = cliPathOverride
         self.refreshInterval = refreshInterval
+        self.statsNormalizationMode = statsNormalizationMode
         self.imageUpdateIntervalHours = imageUpdateIntervalHours
         self.imageUpdateChecksEnabled = imageUpdateChecksEnabled
         self.appUpdateChecksEnabled = appUpdateChecksEnabled
@@ -152,6 +155,7 @@ struct SettingsBackup: Codable, Equatable {
         keepInMenuBar = try container.decodeIfPresent(Bool.self, forKey: .keepInMenuBar) ?? true
         cliPathOverride = try container.decodeIfPresent(String.self, forKey: .cliPathOverride) ?? ""
         refreshInterval = try container.decodeIfPresent(Double.self, forKey: .refreshInterval) ?? 2
+        statsNormalizationMode = try container.decodeIfPresent(StatsNormalizationMode.self, forKey: .statsNormalizationMode) ?? .container
         imageUpdateIntervalHours = try container.decodeIfPresent(Int.self, forKey: .imageUpdateIntervalHours) ?? 6
         imageUpdateChecksEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageUpdateChecksEnabled) ?? true
         appUpdateChecksEnabled = try container.decodeIfPresent(Bool.self, forKey: .appUpdateChecksEnabled) ?? true
@@ -196,6 +200,7 @@ struct SettingsBackup: Codable, Equatable {
         try container.encode(keepInMenuBar, forKey: .keepInMenuBar)
         try container.encode(cliPathOverride, forKey: .cliPathOverride)
         try container.encode(refreshInterval, forKey: .refreshInterval)
+        try container.encode(statsNormalizationMode, forKey: .statsNormalizationMode)
         try container.encode(imageUpdateIntervalHours, forKey: .imageUpdateIntervalHours)
         try container.encode(imageUpdateChecksEnabled, forKey: .imageUpdateChecksEnabled)
         try container.encode(appUpdateChecksEnabled, forKey: .appUpdateChecksEnabled)

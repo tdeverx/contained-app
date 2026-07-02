@@ -30,6 +30,8 @@ import ContainedNavigation
 - `MorphGeometry`, `AppMorphTarget`, and `MorphPanelPlacement` for target rects
   that clamp to a safe area.
 - `MorphingExpander` for the reusable grow/shrink panel shell.
+- `MorphingSingleSurface` for card-like overlays that grow from one existing
+  source slot into one target rect without a handoff panel.
 - `MorphPanelScaffold` for generic fixed chrome, scrollable content, and pinned
   footer layout inside a morph panel.
 
@@ -102,6 +104,18 @@ struct NavigationPackageExample: View {
                       AppSafeAreaManager(topToolbarHeight: Tokens.Toolbar.band,
                                          bottomToolbarHeight: Tokens.Toolbar.band))
     }
+}
+```
+
+For a card-like detail surface, keep the compact source laid out in its grid
+slot, hide that source while selected, and render one promoted overlay through
+`MorphingSingleSurface`:
+
+```swift
+MorphingSingleSurface(source: sourceFrame,
+                      target: detailFrame,
+                      progress: isExpanded ? 1 : 0) {
+    DetailCard()
 }
 ```
 

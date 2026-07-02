@@ -2,7 +2,7 @@ import AppKit
 import ContainedDesignSystem
 
 struct WidgetConfiguration: Codable, Hashable, Sendable {
-    static let schemaVersion = 4
+    static let schemaVersion = 5
 
     var schemaVersion: Int = Self.schemaVersion
     var enabled: Bool = true
@@ -12,7 +12,7 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
     var icon: String = ""
     var style: GraphStyle = .area
     var areaUsesGradient = true
-    var interpolation: WidgetInterpolation = .catmullRom
+    var interpolation: WidgetInterpolation = .linear
     var lineWidth: Double = 1.5
     var pointSize: Double = 18
     var barWidth: Double = 4
@@ -33,7 +33,7 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
          icon: String = "",
          style: GraphStyle = .area,
          areaUsesGradient: Bool = true,
-         interpolation: WidgetInterpolation = .catmullRom,
+         interpolation: WidgetInterpolation = .linear,
          lineWidth: Double = 1.5,
          pointSize: Double = 18,
          barWidth: Double = 4,
@@ -57,7 +57,8 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 0
+        let decodedSchemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 0
+        schemaVersion = decodedSchemaVersion
         enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
         metric = try container.decodeIfPresent(GraphMetric.self, forKey: .metric) ?? .cpu
         secondaryMetric = try container.decodeIfPresent(GraphMetric.self, forKey: .secondaryMetric)
@@ -65,7 +66,11 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
         icon = try container.decodeIfPresent(String.self, forKey: .icon) ?? ""
         style = try container.decodeIfPresent(GraphStyle.self, forKey: .style) ?? .area
         areaUsesGradient = try container.decodeIfPresent(Bool.self, forKey: .areaUsesGradient) ?? true
-        interpolation = try container.decodeIfPresent(WidgetInterpolation.self, forKey: .interpolation) ?? .catmullRom
+        let decodedInterpolation = try container.decodeIfPresent(WidgetInterpolation.self, forKey: .interpolation)
+        interpolation = decodedInterpolation ?? .linear
+        if decodedSchemaVersion < 5, interpolation == .catmullRom {
+            interpolation = .linear
+        }
         lineWidth = try container.decodeIfPresent(Double.self, forKey: .lineWidth) ?? 1.5
         pointSize = try container.decodeIfPresent(Double.self, forKey: .pointSize) ?? 18
         barWidth = try container.decodeIfPresent(Double.self, forKey: .barWidth) ?? 4

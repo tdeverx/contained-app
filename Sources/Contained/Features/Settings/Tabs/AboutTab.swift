@@ -9,7 +9,7 @@ struct AboutTab: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        VStack(spacing: Tokens.Space.l) {
+        LazyVStack(spacing: Tokens.Space.l) {
             PanelSection {
                 HStack(spacing: Tokens.Space.m) {
                     Image(nsImage: NSApp.applicationIconImage)

@@ -21,7 +21,7 @@ struct ConfigTransferControls: View {
     @State private var importMode: ConfigImportMode = .merge
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
             ForEach(AppStateSection.allCases) { section in
                 Toggle(section.displayName, isOn: binding(for: section))
                     .toggleStyle(.checkbox)

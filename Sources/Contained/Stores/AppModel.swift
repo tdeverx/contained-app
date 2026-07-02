@@ -51,7 +51,14 @@ final class AppModel {
     private(set) var properties: SystemProperties?
     // `images`/`imagesError`/`imageUpdates` are written by both this file and the image-update sweep
     // in `AppModel+ImageUpdates.swift`, so their setters can't be `private(set)`.
-    var images: [ContainedCore.ImageResource] = []
+    var images: [ContainedCore.ImageResource] = [] {
+        didSet {
+            imageGroupsCache = nil
+            imageGroupIDByReferenceCache.removeAll(keepingCapacity: true)
+        }
+    }
+    @ObservationIgnored var imageGroupsCache: [LocalImageTagGroup]?
+    @ObservationIgnored var imageGroupIDByReferenceCache: [String: String] = [:]
     var imagesError: String?
     var imageUpdates: [String: ImageUpdateStatus] = [:] {
         didSet { Self.saveImageUpdates(imageUpdates) }
@@ -79,6 +86,14 @@ final class AppModel {
     var imageUpdateIntervalDescription: String {
         "Every \(settings.imageUpdateIntervalHours) hour\(settings.imageUpdateIntervalHours == 1 ? "" : "s")"
     }
+    var statsNormalizationContext: StatsNormalizationContext {
+        StatsNormalizationContext(
+            mode: settings.statsNormalizationMode,
+            machineCPUs: properties?.machine?.cpus ?? ProcessInfo.processInfo.activeProcessorCount,
+            machineMemoryBytes: Format.memoryBytes(fromSpec: properties?.machine?.memory)
+                ?? ProcessInfo.processInfo.physicalMemory
+        )
+    }
 
     /// One in-flight operation shown in the bottom progress bar.
     struct ActivityState: Equatable {
@@ -96,6 +111,7 @@ final class AppModel {
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
         updater.automaticallyChecks = settings.appUpdateChecksEnabled
+        applyStatsNormalizationContext()
         if case .newerOnDisk(let version) = migrator.reconcile() {
             downgradeSchemaVersion = version
         }
@@ -187,6 +203,21 @@ final class AppModel {
         if visible { coordinator.wake() }
     }
 
+    func setStatsNormalizationMode(_ mode: StatsNormalizationMode) {
+        guard settings.statsNormalizationMode != mode else { return }
+        settings.statsNormalizationMode = mode
+        applyStatsNormalizationContext()
+        guard mode == .machine else { return }
+        Task {
+            await self.loadPropertiesIfNeeded()
+            self.applyStatsNormalizationContext()
+        }
+    }
+
+    func applyStatsNormalizationContext() {
+        containers.configureStatsNormalization(statsNormalizationContext)
+    }
+
     func refreshSystem() async {
         guard let client else { return }
         let started = Date()
@@ -196,6 +227,8 @@ final class AppModel {
             if status.isRunning {
                 bootstrap = .ready
                 logger.record("Container service is running", category: .system, severity: .debug)
+                if settings.statsNormalizationMode == .machine { await loadPropertiesIfNeeded() }
+                applyStatsNormalizationContext()
                 await refreshDiskUsage()        // throttled; the System panel can force a fresh read
                 await containers.refresh()
                 updateContainerStatsStream()
@@ -284,12 +317,6 @@ final class AppModel {
         }
     }
 
-    func refreshContainerStatsNow() async {
-        await containers.refresh()
-        updateContainerStatsStream()
-        recordFreshMetricsIfNeeded()
-    }
-
     private func updateContainerStatsStream() {
         guard bootstrap == .ready, let client else {
             stopContainerStatsStream()
@@ -376,7 +403,10 @@ final class AppModel {
     /// Force-reload the daemon's system properties (e.g. after a kernel change).
     func reloadProperties() async {
         guard let client, bootstrap == .ready else { return }
-        if let p = try? await client.systemProperties() { properties = p }
+        if let p = try? await client.systemProperties() {
+            properties = p
+            applyStatsNormalizationContext()
+        }
     }
 
     /// Refresh the cached volume list. Volumes live in the System panel, so this is exposed directly

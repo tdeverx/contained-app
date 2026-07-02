@@ -11,7 +11,7 @@ struct ExperimentalTab: View {
     @Bindable var settings: SettingsStore
 
     var body: some View {
-        VStack(spacing: Tokens.Space.l) {
+        LazyVStack(spacing: Tokens.Space.l) {
             PanelSection(header: "Experimental",
                          footer: "These features are still being refined. They're off by default; enable any you want to try. You can turn them back off at any time.") {
                 PanelToggleRow(title: "Toolbar-first UI",

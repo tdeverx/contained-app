@@ -1,8 +1,19 @@
 - Reduced idle UI churn by decoupling container stats from the main refresh tick: metrics now use one app-wide low-priority `container stats --format table` stream for all running containers.
 - Lifecycle actions now relist containers without forcing vanity stats, so start/stop/run/recreate flows do not wait on Apple container's two-second stats sampling path.
-- Narrowed stats-driven SwiftUI invalidation by moving per-container metric reads into each card renderer instead of the grid parent.
-- Kept long-form History/Stats charts on Swift Charts while moving always-live card sparklines to a lightweight native Canvas renderer.
+- Narrowed stats-driven SwiftUI invalidation with per-container metric state, so one streamed sample no longer dirties the whole container grid through shared stats dictionaries.
+- Retested always-live card sparklines on Swift Charts after reducing stats update fan-out and per-card history churn.
+- Made live sparkline data read chronologically by plotting a full-width, zero-padded window of latest contiguous samples with linear defaults, while keeping user-selectable smoothing available and preventing one noisy sample from rescaling the whole graph.
+- Anchored CPU and memory sparklines to the real 0...100% scale, while keeping network and disk widgets auto-scaled for readable throughput shapes.
 - Stopped materializing every metric history array for every card frame; cards now pull only the active widget series from shared sample buffers.
+- Tightened card metric binding so each widget renders only its own per-container series instead of falling back to another graph's samples when a buffer is missing.
+- Normalized card and stats-page CPU/memory values against each container's configured CPU and memory limits while leaving network and disk throughput as raw bytes-per-second rates.
+- Added a metric normalization setting, letting users switch CPU/memory percentages between per-container limits and Apple container's machine CPU/memory resources.
+- Made scrollable and resource-sized app panels lazy by default, including container tabs, settings pages, image/tag panels, system/activity/history views, and package scaffolds that can host long content.
+- Warmed container/image customizer sheets from the already-rendered style state and cached local image tag grouping so opening style popovers no longer rebuilds large resource views first.
+- Deferred heavyweight expanded-card pages until their tab selection settles, avoiding transient Logs/Terminal/Stats/Inspect work while users rapidly switch pages.
+- Kept lightweight History/Files expanded-card pages immediate and shortened heavyweight page deferral so page switching feels snappier without eagerly loading Logs/Terminal/Stats/Inspect.
+- Made mini CPU/memory chip percentages preserve tiny sub-1% values so real streamed CPU changes do not disappear behind whole-percent rounding.
+- Made CPU/memory percentage readouts consistent across cards, live stats, history charts, and mini chips: whole percentages stay clean, while only sub-1% values show the decimals needed.
 - Hardened embedded terminal teardown so rapid card/tab switching does not leave stale `container exec --tty` children behind.
 - Coalesced image-panel appearance refreshes so page/panel navigation does not force duplicate image-list reloads while users click through the UI.
 - Reduced runtime layout churn by replacing the container grid's bound card-frame preference with coalesced frame tracking and clamping morph panel geometry before it reaches SwiftUI frames.

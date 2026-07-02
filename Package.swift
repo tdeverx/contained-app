@@ -56,5 +56,15 @@ let package = Package(
             dependencies: ["Contained", "ContainedCore"],
             path: "Tests/ContainedAppTests"
         ),
+        .testTarget(
+            name: "ContainedDesignSystemTests",
+            dependencies: [.product(name: "ContainedDesignSystem", package: "ContainedDesignSystem")],
+            path: "Tests/ContainedDesignSystemTests"
+        ),
+        .testTarget(
+            name: "ContainedNavigationTests",
+            dependencies: [.product(name: "ContainedNavigation", package: "ContainedNavigation")],
+            path: "Tests/ContainedNavigationTests"
+        ),
     ]
 )

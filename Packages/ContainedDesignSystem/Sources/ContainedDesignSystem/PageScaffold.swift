@@ -39,7 +39,7 @@ public struct PageScaffold<Actions: View, Content: View>: View {
             }
             if scrolls {
                 ScrollView {
-                    VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
                         content()
                             .frame(maxWidth: .infinity, alignment: .topLeading)
                             .padding(usesToolbarChrome ? Tokens.Space.s : Tokens.Space.l)

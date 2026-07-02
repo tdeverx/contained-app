@@ -81,6 +81,85 @@ struct DesignSystemExample: View {
 }
 ```
 
+## Resource Card Controls
+
+Use the packaged card controls for page rails, widget chips, and icon actions.
+Feature views should pass plain IDs, labels, metric strings, and actions:
+
+```swift
+struct CardControlsExample: View {
+    @State private var page = "overview"
+    @State private var metric = "cpu"
+
+    private let pages = [
+        ResourceCardPageControlItem(id: "overview",
+                                    title: "Overview",
+                                    systemImage: "rectangle.grid.1x2"),
+        ResourceCardPageControlItem(id: "logs",
+                                    title: "Logs",
+                                    systemImage: "text.alignleft")
+    ]
+
+    var body: some View {
+        ResourceGlassCard(size: .large) {
+            ResourceCardHeader {
+                ResourceCardIconChip(symbol: "shippingbox.fill")
+            } content: {
+                ResourceCardTitleText(text: "web")
+            } trailing: {
+                EmptyView()
+            }
+        } bodyContent: {
+            ResourceCardInsetSection(title: "Details") {
+                ResourceCardSubtitleText(text: "Ready")
+            }
+        } footerLeading: {
+            ResourceCardFooterChip(isSelected: metric == "cpu",
+                                   tint: .accentColor,
+                                   help: "CPU",
+                                   action: { metric = "cpu" }) {
+                Image(systemName: "cpu")
+            } text: {
+                ResourceCardMetricText(text: "12%")
+            }
+        } footerActions: {
+            ResourceCardFooterButton(systemName: "play.fill",
+                                     help: "Start",
+                                     tint: .accentColor) {}
+        } widget: {
+            LiveSparkline(samples: [0, 0.12, 0.18],
+                          color: .accentColor,
+                          scale: .fraction)
+                .frame(height: Tokens.ResourceCard.sparklineHeight)
+        }
+        .overlay(alignment: .topTrailing) {
+            ResourceCardPageControls(items: pages,
+                                     selection: page,
+                                     tint: .accentColor,
+                                     onSelect: { page = $0 },
+                                     onClose: {})
+                .padding(Tokens.Space.s)
+        }
+    }
+}
+```
+
+Use package-owned surfaces for standalone empty states and input chrome:
+
+```swift
+DesignContentSurface(minHeight: 220) {
+    ContentUnavailableView("No matches", systemImage: "magnifyingglass")
+}
+
+DesignInputSurface {
+    HStack {
+        Image(systemName: "magnifyingglass")
+        TextField("Search", text: $query)
+            .textFieldStyle(.plain)
+    }
+}
+```
+
 ## Topics
 
 ### Tokens and Theme
@@ -117,6 +196,13 @@ struct DesignSystemExample: View {
 - ``ResourceCardIconChip``
 - ``ResourceBadgeText``
 - ``ResourceCardFooterMini``
+- ``ResourceCardFooterChip``
+- ``ResourceCardFooterButton``
+- ``ResourceCardInsetSection``
+- ``ResourceCardPageControls``
+- ``ResourceCardPageControlItem``
+- ``View/resourceCardFloatingControls(when:controls:)``
+- ``View/resourceCardProgressOverlay(when:)``
 - ``ResourceCardTitleText``
 - ``ResourceCardSubtitleText``
 - ``ResourceCardMonospacedSubtitleText``
@@ -126,12 +212,15 @@ struct DesignSystemExample: View {
 
 - ``ActivityStatusView``
 - ``ActivityStatusPresentation``
-- ``LiveSparkline`` for lightweight Canvas-backed live graph widgets
+- ``LiveSparkline`` for Swift Charts-backed live graph widgets
 - ``GraphStyle``
 - ``WidgetInterpolation``
+- ``SparklineScale``
 - ``MetricTile``
 - ``DesignStatusDot``
 - ``DesignStatusBadge``
+- ``DesignContentSurface``
+- ``DesignInputSurface``
 - ``DesignKeyCap``
 - ``DesignKeyboardHint``
 - ``DesignTintSwatch``

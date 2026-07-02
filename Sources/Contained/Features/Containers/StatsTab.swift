@@ -10,8 +10,10 @@ struct StatsTab: View {
 
     @State private var processes: String = ""
 
-    private var delta: StatsDelta? { app.containers.statsByID[snapshot.id] }
-    private var history: [GraphMetric: SampleBuffer] { app.containers.historyByID[snapshot.id] ?? [:] }
+    private var metrics: ContainerMetricsState { app.containers.metricsState(for: snapshot.id) }
+    private var delta: StatsDelta? { metrics.stats }
+    private var history: [GraphMetric: SampleBuffer] { metrics.historyByMetric }
+    private var normalization: StatsNormalizationContext { app.statsNormalizationContext }
     private var tint: Color {
         app.containerStyle(for: snapshot).color
     }
@@ -39,20 +41,20 @@ struct StatsTab: View {
                 }
             } else {
                 // Running but no sample yet (first tick pending).
-                VStack(spacing: Tokens.Space.m) {
+                LazyVStack(spacing: Tokens.Space.m) {
                     ProgressView()
                     Text("Collecting stats…").font(.callout).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .task(id: snapshot.id) { await refreshVisibleStatsAndProcesses() }
+        .task(id: snapshot.id) { await refreshVisibleProcesses() }
     }
 
     @ViewBuilder
     private var processList: some View {
         if !processes.isEmpty {
-            VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            ResourceCardInsetSection {
                 Label("Processes", systemImage: "list.bullet.rectangle")
                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 Text(processes)
@@ -60,9 +62,6 @@ struct StatsTab: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(Tokens.Space.s)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
         }
     }
 
@@ -73,20 +72,40 @@ struct StatsTab: View {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
-    private func refreshVisibleStatsAndProcesses() async {
+    private func refreshVisibleProcesses() async {
         guard snapshot.state == .running else { processes = ""; return }
-        await app.refreshContainerStatsNow()
+        try? await Task.sleep(for: .milliseconds(140))
+        guard !Task.isCancelled else { return }
         await loadProcesses()
     }
 
     private func tile(_ metric: GraphMetric, _ delta: StatsDelta, _ symbol: String) -> some View {
-        MetricTile(label: metric.displayName, value: metric.caption(from: delta),
-                   systemImage: symbol, tint: tint, samples: history[metric]?.values)
+        MetricTile(label: metric.displayName,
+                   value: metric.caption(from: delta, snapshot: snapshot, normalization: normalization),
+                   systemImage: symbol,
+                   tint: tint,
+                   samples: history[metric]?.values,
+                   sparklineScale: sparklineScale(for: metric))
     }
 
     private func memoryTile(_ delta: StatsDelta) -> some View {
-        MetricTile(label: "Memory \(Format.bytes(delta.memoryUsageBytes)) / \(Format.bytes(delta.memoryLimitBytes))",
-                   value: Format.percent(delta.memoryFraction),
-                   systemImage: "memorychip", tint: tint, samples: history[.memory]?.values)
+        let memoryLimit = GraphMetric.memoryLimitBytes(for: delta,
+                                                       snapshot: snapshot,
+                                                       normalization: normalization)
+        return MetricTile(label: "Memory \(Format.bytes(delta.memoryUsageBytes)) / \(Format.bytes(memoryLimit))",
+                          value: GraphMetric.memory.caption(from: delta,
+                                                            snapshot: snapshot,
+                                                            normalization: normalization),
+                          systemImage: "memorychip",
+                          tint: tint,
+                          samples: history[.memory]?.values,
+                          sparklineScale: sparklineScale(for: .memory))
+    }
+
+    private func sparklineScale(for metric: GraphMetric) -> SparklineScale {
+        switch metric {
+        case .cpu, .memory: return .fraction
+        case .netRx, .netTx, .diskRead, .diskWrite: return .normalized
+        }
     }
 }

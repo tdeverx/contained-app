@@ -11,7 +11,7 @@ struct UpdatesTab: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        VStack(spacing: Tokens.Space.l) {
+        LazyVStack(spacing: Tokens.Space.l) {
             PanelSection(header: "Updates",
                          footer: "\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.") {
                 PanelRow(title: "Update channel") {

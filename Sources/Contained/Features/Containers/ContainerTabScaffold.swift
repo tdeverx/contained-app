@@ -9,9 +9,11 @@ struct ContainerTabScaffold<Content: View>: View {
 
     var body: some View {
         ScrollView(axes) {
-            content()
-                .padding(Tokens.Space.s)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            LazyVStack(alignment: .leading, spacing: 0) {
+                content()
+                    .padding(Tokens.Space.s)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .scrollEdgeEffectStyle(.soft, for: .all)
     }
@@ -40,19 +42,8 @@ struct ContainerTabSection<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
-            if let title {
-                Text(title)
-                    .font(.headline)
-                    .padding(.leading, Tokens.Space.xs)
-            }
-            VStack(alignment: .leading, spacing: Tokens.Space.s) {
-                content()
-            }
-            .padding(Tokens.Space.s)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
+        ResourceCardInsetSection(title: title) {
+            content()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

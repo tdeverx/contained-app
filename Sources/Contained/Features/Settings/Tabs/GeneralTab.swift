@@ -10,7 +10,7 @@ struct GeneralTab: View {
     @State private var confirmingClear = false
 
     var body: some View {
-        VStack(spacing: Tokens.Space.l) {
+        LazyVStack(spacing: Tokens.Space.l) {
             PanelSection(header: "Startup") {
                 PanelToggleRow(title: "Launch at login", isOn: $settings.launchAtLogin)
                 PanelToggleRow(title: "Keep running in the menu bar", isOn: $settings.keepInMenuBar)
@@ -24,8 +24,8 @@ struct GeneralTab: View {
             }
 
             PanelSection(header: "Data",
-                         footer: "How often the container list refreshes. Live metrics use one low-priority runtime stream independent of this interval.") {
-                PanelRow(title: "Refresh interval") {
+                         footer: "Live metrics use one low-priority runtime stream. The list refresh interval only controls background service, container list, and resource-cache polling. \(settings.statsNormalizationMode.footnote)") {
+                PanelRow(title: "List refresh interval") {
                     HStack(spacing: Tokens.Space.s) {
                         Slider(value: $settings.refreshInterval, in: 1...10, step: 1)
                             .frame(width: Tokens.FormWidth.compactSlider)
@@ -41,7 +41,17 @@ struct GeneralTab: View {
                         Text("14 days").tag(14)
                         Text("30 days").tag(30)
                     }
-                    .labelsHidden().fixedSize()
+                        .labelsHidden().fixedSize()
+                }
+                PanelRow(title: "Normalize stats") {
+                    Picker("", selection: statsNormalizationBinding) {
+                        ForEach(StatsNormalizationMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                 }
                 Button("Clear History…", role: .destructive) { confirmingClear = true }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -60,14 +70,14 @@ struct GeneralTab: View {
                     .labelsHidden()
                     .fixedSize()
                 }
-                VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
                     Text("Write to").font(.caption).foregroundStyle(.secondary)
                     ForEach(AppLogDestination.allCases) { destination in
                         Toggle(destination.displayName, isOn: setBinding(destination, in: \.enabledLogDestinations))
                             .toggleStyle(.checkbox)
                     }
                 }
-                VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
                     Text("Categories").font(.caption).foregroundStyle(.secondary)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), alignment: .leading)],
                               alignment: .leading,
@@ -98,6 +108,11 @@ struct GeneralTab: View {
     private var retentionBinding: Binding<Int> {
         Binding(get: { settings.historyRetentionDays },
                 set: { app.applyHistoryRetention($0) })
+    }
+
+    private var statsNormalizationBinding: Binding<StatsNormalizationMode> {
+        Binding(get: { settings.statsNormalizationMode },
+                set: { app.setStatsNormalizationMode($0) })
     }
 
     private func setBinding<T>(_ value: T, in keyPath: ReferenceWritableKeyPath<SettingsStore, Set<T>>) -> Binding<Bool> where T: Hashable {

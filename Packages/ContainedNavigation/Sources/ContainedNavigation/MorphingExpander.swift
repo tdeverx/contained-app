@@ -114,7 +114,7 @@ public enum MorphGeometry {
                            in: bounds, margin: margin)
         case .anchored:
             let fallback = CGPoint(x: bounds.minX + margin, y: bounds.minY + margin)
-            let originPoint = origin.isUsable ? origin.origin : fallback
+            let originPoint = origin.isUsableForMorph ? origin.origin : fallback
             return clamped(CGRect(origin: originPoint, size: size),
                            in: bounds, margin: margin)
         }
@@ -136,12 +136,6 @@ public enum MorphGeometry {
         let x = min(max(rect.minX.isFinite ? rect.minX : minX, minX), maxX)
         let y = min(max(rect.minY.isFinite ? rect.minY : minY, minY), maxY)
         return CGRect(x: x, y: y, width: width, height: height)
-    }
-}
-
-private extension CGRect {
-    var isUsable: Bool {
-        width.isFinite && height.isFinite && minX.isFinite && minY.isFinite && width > 1 && height > 1
     }
 }
 
@@ -214,8 +208,10 @@ public struct MorphingExpander<Content: View>: View {
     public var body: some View {
         GeometryReader { geo in
             let target = targetRect(in: geo.size)
-            let source = originFrame.isUsable ? originFrame : target
-            let rect = expanded ? target : source
+            let source = originFrame.isUsableForMorph ? originFrame : target
+            let rect = MorphFrame(source: source,
+                                  target: target,
+                                  progress: expanded ? 1 : 0).rect
             let cornerRadius = expanded ? targetCornerRadius : sourceCornerRadius
             ZStack {
                 if showsBackdrop {

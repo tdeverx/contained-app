@@ -8,16 +8,55 @@ import ContainedCore
 /// for cards, expanded panels, history, and restart/health context.
 @MainActor
 @Observable
+final class ContainerMetricsState {
+    let id: String
+    var stats: StatsDelta?
+    var historyByMetric: [GraphMetric: SampleBuffer]
+    private(set) var revision = 0
+
+    init(id: String, stats: StatsDelta? = nil, historyByMetric: [GraphMetric: SampleBuffer] = [:]) {
+        self.id = id
+        self.stats = stats
+        self.historyByMetric = historyByMetric
+    }
+
+    func values(for metric: GraphMetric) -> [Double] {
+        historyByMetric[metric]?.values ?? []
+    }
+
+    func update(stats: StatsDelta?, historyByMetric: [GraphMetric: SampleBuffer]) {
+        var changed = false
+        if self.stats != stats {
+            self.stats = stats
+            changed = true
+        }
+        if self.historyByMetric != historyByMetric {
+            self.historyByMetric = historyByMetric
+            changed = true
+        }
+        if changed { revision &+= 1 }
+    }
+}
+
+@MainActor
+@Observable
 final class ContainersStore {
+    private static let minimumStreamedStatsInterval: TimeInterval = 1
+
     var snapshots: [ContainerSnapshot] = []
+    @ObservationIgnored
     var statsByID: [String: StatsDelta] = [:]
     /// Per-container, per-metric sparkline history.
+    @ObservationIgnored
     var historyByID: [String: [GraphMetric: SampleBuffer]] = [:]
+    @ObservationIgnored
     private(set) var statsRevision = 0
     var errorMessage: String?
     var busyIDs: Set<String> = []
     @ObservationIgnored var logger: AppLogger?
     @ObservationIgnored var now: () -> Date = Date.init
+    @ObservationIgnored private var metricsStates: [String: ContainerMetricsState] = [:]
+    @ObservationIgnored private var statsNormalizationContext: StatsNormalizationContext = .containerSpecific
 
     var client: ContainerClient?
 
@@ -34,6 +73,21 @@ final class ContainersStore {
     private let diagnosticLogger = Logger(subsystem: "app.contained.Contained", category: "diagnostic")
 
     var running: [ContainerSnapshot] { snapshots.filter { $0.state == .running } }
+
+    func metricsState(for id: String) -> ContainerMetricsState {
+        if let state = metricsStates[id] { return state }
+        let state = ContainerMetricsState(id: id,
+                                          stats: statsByID[id],
+                                          historyByMetric: historyByID[id] ?? [:])
+        metricsStates[id] = state
+        return state
+    }
+
+    func configureStatsNormalization(_ context: StatsNormalizationContext) {
+        guard statsNormalizationContext != context else { return }
+        statsNormalizationContext = context
+        rebuildDisplayHistories()
+    }
 
     /// True (consuming the flag) if the given container's last stop was user-initiated.
     func consumeIntentionalStop(_ id: String) -> Bool {
@@ -104,10 +158,21 @@ final class ContainersStore {
     }
 
     private func pruneStatsForCurrentRunningSet() {
+        let currentSet = Set(snapshots.map(\.id))
         let runningSet = Set(running.map(\.id))
         let prunedStats = statsByID.filter { runningSet.contains($0.key) }
         if prunedStats.count != statsByID.count { statsByID = prunedStats }
+        let prunedHistory = historyByID.filter { runningSet.contains($0.key) }
+        if prunedHistory.count != historyByID.count { historyByID = prunedHistory }
         lastStreamedStats = lastStreamedStats.filter { runningSet.contains($0.key) }
+        for (id, state) in metricsStates {
+            if runningSet.contains(id) {
+                state.update(stats: statsByID[id], historyByMetric: historyByID[id] ?? [:])
+            } else {
+                state.update(stats: nil, historyByMetric: [:])
+            }
+        }
+        metricsStates = metricsStates.filter { currentSet.contains($0.key) }
         guard !runningSet.isEmpty else {
             if !historyByID.isEmpty { historyByID.removeAll() }
             lastStreamedStatsDate = nil
@@ -121,14 +186,17 @@ final class ContainersStore {
         guard !samples.isEmpty else { return }
 
         let observedAt = observedAt ?? now()
-        let interval = lastStreamedStatsDate.map { observedAt.timeIntervalSince($0) } ?? 1
+        let rawInterval = lastStreamedStatsDate.map { observedAt.timeIntervalSince($0) }
+        let interval = max(rawInterval ?? Self.minimumStreamedStatsInterval, Self.minimumStreamedStatsInterval)
+        let snapshotsByID = Dictionary(snapshots.map { ($0.id, $0) }, uniquingKeysWith: { current, _ in current })
         var nextStats = statsByID
         var nextHistory = historyByID
         for sample in samples {
             let delta = StatsDelta.from(snapshot: sample,
                                         previous: lastStreamedStats[sample.id],
                                         interval: interval)
-            record(delta, stats: &nextStats, history: &nextHistory)
+            record(delta, snapshot: snapshotsByID[sample.id], stats: &nextStats, history: &nextHistory)
+            metricsStates[sample.id]?.update(stats: delta, historyByMetric: nextHistory[sample.id] ?? [:])
             lastStreamedStats[sample.id] = sample
         }
 
@@ -139,16 +207,42 @@ final class ContainersStore {
     }
 
     private func record(_ delta: StatsDelta,
+                        snapshot: ContainerSnapshot?,
                         stats: inout [String: StatsDelta],
                         history: inout [String: [GraphMetric: SampleBuffer]]) {
         stats[delta.id] = delta
         var metrics = history[delta.id] ?? [:]
         for metric in GraphMetric.allCases {
             var buffer = metrics[metric] ?? SampleBuffer()
-            buffer.append(metric.value(from: delta))
+            buffer.append(metric.value(from: delta, snapshot: snapshot, normalization: statsNormalizationContext))
             metrics[metric] = buffer
         }
         history[delta.id] = metrics
+    }
+
+    private func rebuildDisplayHistories() {
+        let snapshotsByID = Dictionary(snapshots.map { ($0.id, $0) }, uniquingKeysWith: { current, _ in current })
+        let runningSet = Set(running.map(\.id))
+        var rebuilt: [String: [GraphMetric: SampleBuffer]] = [:]
+        for (id, delta) in statsByID where runningSet.contains(id) {
+            var metrics: [GraphMetric: SampleBuffer] = [:]
+            for metric in GraphMetric.allCases {
+                var buffer = SampleBuffer()
+                buffer.append(metric.value(from: delta,
+                                           snapshot: snapshotsByID[id],
+                                           normalization: statsNormalizationContext))
+                metrics[metric] = buffer
+            }
+            rebuilt[id] = metrics
+        }
+        historyByID = rebuilt
+        for (id, state) in metricsStates {
+            if runningSet.contains(id) {
+                state.update(stats: statsByID[id], historyByMetric: rebuilt[id] ?? [:])
+            } else {
+                state.update(stats: nil, historyByMetric: [:])
+            }
+        }
     }
 
     // MARK: Lifecycle

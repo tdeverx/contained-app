@@ -2,14 +2,21 @@ import Foundation
 import ContainedCore
 
 extension AppModel {
+    func localImageGroups() -> [LocalImageTagGroup] {
+        if let imageGroupsCache {
+            return imageGroupsCache
+        }
+        let groups = LocalImageTagGroup.groups(for: images)
+        imageGroupsCache = groups
+        return groups
+    }
+
     var defaultImageStyle: Personalization {
         settings.imageDefaultStyleEnabled ? personalization.defaultImageStyle : Personalization()
     }
 
     func imageStyle(for reference: String) -> Personalization {
-        let groupID = LocalImageTagGroup.groups(for: images).first { group in
-            group.references.contains(reference)
-        }?.id
+        let groupID = imageGroupID(containing: reference)
         return personalization.imageDefault(for: reference, groupID: groupID) ?? defaultImageStyle
     }
 
@@ -29,9 +36,7 @@ extension AppModel {
     }
 
     func containerStyle(for snapshot: ContainerSnapshot) -> Personalization {
-        let groupID = LocalImageTagGroup.groups(for: images).first { group in
-            group.references.contains(snapshot.image)
-        }?.id
+        let groupID = imageGroupID(containing: snapshot.image)
         return personalization.resolved(id: snapshot.id,
                                         image: snapshot.image,
                                         groupID: groupID,
@@ -48,14 +53,16 @@ extension AppModel {
     /// Current block read/write rate for a volume, summed across every container mounting it.
     func volumeIORate(for name: String, metric: GraphMetric) -> Double {
         containersMounting(volume: name).reduce(0) { total, snapshot in
-            total + (containers.statsByID[snapshot.id].map { metric.value(from: $0) } ?? 0)
+            total + (containers.metricsState(for: snapshot.id).stats.map {
+                metric.value(from: $0, snapshot: snapshot, normalization: statsNormalizationContext)
+            } ?? 0)
         }
     }
 
     /// Read/write sparkline series for a volume. Series are right-aligned so recent samples line up.
     func volumeIOHistory(for name: String, metric: GraphMetric) -> [Double] {
-        let series = containersMounting(volume: name).compactMap {
-            containers.historyByID[$0.id]?[metric]?.values
+        let series = containersMounting(volume: name).compactMap { snapshot in
+            containers.metricsState(for: snapshot.id).historyByMetric[metric]?.values
         }
         return Self.sumRightAligned(series)
     }
@@ -71,5 +78,18 @@ extension AppModel {
             }
         }
         return result
+    }
+
+    private func imageGroupID(containing reference: String) -> String? {
+        if let cached = imageGroupIDByReferenceCache[reference] {
+            return cached
+        }
+
+        for group in localImageGroups() {
+            for groupReference in group.references {
+                imageGroupIDByReferenceCache[groupReference] = group.id
+            }
+        }
+        return imageGroupIDByReferenceCache[reference]
     }
 }

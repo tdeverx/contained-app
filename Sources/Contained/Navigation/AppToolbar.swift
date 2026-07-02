@@ -470,7 +470,7 @@ struct AppToolbar: View {
     }
 
     private func currentToolbarImageGroup(_ group: LocalImageTagGroup) -> LocalImageTagGroup {
-        LocalImageTagGroup.groups(for: app.images).first { $0.id == group.id } ?? group
+        app.localImageGroups().first { $0.id == group.id } ?? group
     }
 
     private func openToolbarImageDetail(_ group: LocalImageTagGroup, sourceFrame: CGRect) {

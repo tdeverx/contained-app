@@ -16,7 +16,7 @@ struct RuntimeTab: View {
     @State private var deletingDomain: String?
 
     var body: some View {
-        VStack(spacing: Tokens.Space.l) {
+        LazyVStack(spacing: Tokens.Space.l) {
             PanelSection(header: "Kernel",
                          footer: "Downloads and sets the recommended kernel as the default. May prompt for your administrator password — handled by the container CLI; Contained never sees it.") {
                 PanelRow(title: "Recommended kernel") {
@@ -48,11 +48,15 @@ struct RuntimeTab: View {
             }
 
             if let props = app.properties {
-                PanelSection(header: "Defaults",
-                             footer: "Read-only — the container runtime provides no command to change these. They apply when a container or build doesn’t specify its own resources.") {
+                PanelSection(header: "Runtime resources",
+                             footer: "Read-only — machine resources are the denominator for machine-normalized stats. Defaults apply when a container or build doesn’t specify its own resources.") {
                     if let d = props.container {
                         if let c = d.cpus { PanelRow(title: "Default CPUs") { Text("\(c)").foregroundStyle(.secondary) } }
                         if let m = d.memory { PanelRow(title: "Default memory") { Text(m).foregroundStyle(.secondary) } }
+                    }
+                    if let machine = props.machine {
+                        if let c = machine.cpus { PanelRow(title: "Machine CPUs") { Text("\(c)").foregroundStyle(.secondary) } }
+                        if let m = machine.memory { PanelRow(title: "Machine memory") { Text(m).foregroundStyle(.secondary) } }
                     }
                     if let b = props.build {
                         if let img = b.image { PanelRow(title: "Builder image") { Text(img).foregroundStyle(.secondary) } }
@@ -125,4 +129,3 @@ struct RuntimeTab: View {
         else { await loadDNS() }
     }
 }
-

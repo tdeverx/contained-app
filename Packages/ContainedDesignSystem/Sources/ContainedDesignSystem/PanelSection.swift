@@ -58,7 +58,7 @@ public struct PanelSection<Content: View>: View {
         VStack(alignment: .leading, spacing: Tokens.Space.s) {
             if hasHeader { headerRow }
             if !bodyHidden {
-                VStack(alignment: .leading, spacing: rowSpacing) {
+                LazyVStack(alignment: .leading, spacing: rowSpacing) {
                     content()
                 }
                 .environment(\.panelSectionHighlighted, highlighted)

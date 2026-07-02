@@ -361,7 +361,7 @@ struct CreationFlow: View {
 
     private func optionStack<C: View>(@ViewBuilder content: () -> C) -> some View {
         GlassEffectContainer(spacing: Tokens.Space.s) {
-            VStack(spacing: Tokens.Space.s) { content() }
+            LazyVStack(spacing: Tokens.Space.s) { content() }
         }
     }
 

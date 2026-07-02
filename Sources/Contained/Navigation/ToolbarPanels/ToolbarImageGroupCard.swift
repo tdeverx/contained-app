@@ -149,7 +149,7 @@ struct ToolbarImageGroupCard: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
                         ForEach(Array(history.enumerated()), id: \.offset) { _, entry in
-                            VStack(alignment: .leading, spacing: Tokens.Space.xxs) {
+                            LazyVStack(alignment: .leading, spacing: Tokens.Space.xxs) {
                                 Text(entry.createdBy ?? entry.comment ?? "—")
                                     .font(.system(.caption, design: .monospaced))
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -172,7 +172,7 @@ struct ToolbarImageGroupCard: View {
 
     private func tagPage(_ source: String) -> some View {
         subPageScaffold(symbol: "tag", title: "Add tag", subtitle: Format.shortImage(source)) {
-            VStack(alignment: .leading, spacing: Tokens.Space.l) {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
                 PanelSection {
                     PanelField(label: "Source") {
                         Text(Format.shortImage(source)).foregroundStyle(.secondary)
@@ -292,11 +292,11 @@ struct ToolbarImageGroupCard: View {
             }
             footerAction("arrow.up.doc", help: "Save") { save(image) }
         }
-        footerAction("trash", help: "Prune", tint: .red) { pruning = true }
+        footerAction("trash", help: "Prune", role: .destructive) { pruning = true }
     }
 
     private func tagList(_ group: LocalImageTagGroup) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
             Text("Tags")
                 .font(.headline)
                 .padding(.leading, Tokens.Space.xs)
@@ -347,7 +347,7 @@ struct ToolbarImageGroupCard: View {
             }
             footerAction("doc.on.doc", help: "Copy reference") { copyToPasteboard(reference) }
             footerAction("doc.text.magnifyingglass", help: "Inspect") { inspect(reference, in: group) }
-            footerAction("trash", help: "Delete tag", tint: .red) { deletingReference = reference }
+            footerAction("trash", help: "Delete tag", role: .destructive) { deletingReference = reference }
         }
         .contextMenu { tagMenu(reference, in: group) }
     }
@@ -364,18 +364,13 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,
+                              role: ButtonRole? = nil,
                               action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            ResourceCardFooterMini {
-                Image(systemName: systemName).font(.body)
-            } text: {
-                EmptyView()
-            }
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(tint ?? .secondary)
-        .help(help)
-        .accessibilityLabel(help)
+        ResourceCardFooterButton(systemName: systemName,
+                                 help: help,
+                                 tint: tint,
+                                 role: role,
+                                 action: action)
     }
 
     @ViewBuilder

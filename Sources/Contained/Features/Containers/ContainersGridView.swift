@@ -22,6 +22,7 @@ struct ContainersGridView: View {
     /// Live frames of every visible grid card (in the "grid" coordinate space) so the promoted card
     /// can start from the exact slot it was tapped in.
     @State private var cardFrames: [String: CGRect] = [:]
+    @State private var selectedWidgetIndices: [String: Int] = [:]
 
     // Each network is a collapsible section of the containers attached to it.
     @State private var collapsedNetworks: Set<String> = []
@@ -236,6 +237,9 @@ struct ContainersGridView: View {
         // Report the in-page search count so the toolbar can escalate an empty search into the palette.
         .onAppear { ui.pageResultCount = filtered.count }
         .onChange(of: filtered.count) { _, count in ui.pageResultCount = count }
+        .onChange(of: store.snapshots.map(\.id)) { _, ids in
+            selectedWidgetIndices = selectedWidgetIndices.filter { ids.contains($0.key) }
+        }
     }
 
     // MARK: - Network sections
@@ -243,7 +247,7 @@ struct ContainersGridView: View {
     @ViewBuilder
     private func groupSection(_ group: ContainerGroup) -> some View {
         let collapsed = collapsedNetworks.contains(group.name)
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
             sectionHeader(group, collapsed: collapsed)
             if !collapsed {
                 if group.containers.isEmpty {
@@ -361,13 +365,18 @@ struct ContainersGridView: View {
 
     private func containerCard(_ snapshot: ContainerSnapshot, isExpanded: Bool,
                                cornerRadiusOverride: CGFloat? = nil,
-                               controlsVisible: Bool = true, onTap: @escaping () -> Void) -> some View {
+                               controlsVisible: Bool = true,
+                               onTap: @escaping () -> Void) -> some View {
         let style = app.containerStyle(for: snapshot)
+        let hasStyleOverride = app.personalization.hasOverride(id: snapshot.id)
         return ContainerCardMetricsRenderer(
-            store: store,
+            metrics: store.metricsState(for: snapshot.id),
             snapshot: snapshot,
             style: style,
+            hasStyleOverride: hasStyleOverride,
             density: app.settings.density,
+            statsNormalization: app.statsNormalizationContext,
+            selectedWidgetIndex: selectedWidgetBinding(for: snapshot.id),
             isBusy: store.busyIDs.contains(snapshot.id),
             hasImageUpdate: app.imageUpdateStatus(for: snapshot.image).state == .updateAvailable,
             isExpanded: isExpanded,
@@ -389,6 +398,14 @@ struct ContainersGridView: View {
             selecting: selecting,
             isSelected: selection.contains(snapshot.id)
         )
+    }
+
+    private func selectedWidgetBinding(for id: String) -> Binding<Int> {
+        Binding {
+            selectedWidgetIndices[id] ?? 0
+        } set: { index in
+            selectedWidgetIndices[id] = index
+        }
     }
 
     private var cardDetailTarget: AppMorphTarget {
@@ -503,10 +520,13 @@ struct ContainersGridView: View {
 }
 
 private struct ContainerCardMetricsRenderer: View {
-    let store: ContainersStore
+    let metrics: ContainerMetricsState
     let snapshot: ContainerSnapshot
     let style: Personalization
+    let hasStyleOverride: Bool
     let density: CardDensity
+    let statsNormalization: StatsNormalizationContext
+    let selectedWidgetIndex: Binding<Int>
     let isBusy: Bool
     let hasImageUpdate: Bool
     let isExpanded: Bool
@@ -532,10 +552,11 @@ private struct ContainerCardMetricsRenderer: View {
         ContainerCard(
             snapshot: snapshot,
             style: style,
+            hasStyleOverride: hasStyleOverride,
             density: density,
-            stats: store.statsByID[snapshot.id],
-            history: store.historyByID[snapshot.id]?[style.graphMetric]?.values ?? [],
-            histories: store.historyByID[snapshot.id] ?? [:],
+            stats: metrics.stats,
+            statsNormalization: statsNormalization,
+            histories: metrics.historyByMetric,
             isBusy: isBusy,
             hasImageUpdate: hasImageUpdate,
             isExpanded: isExpanded,
@@ -555,16 +576,13 @@ private struct ContainerCardMetricsRenderer: View {
             revealCLI: revealCLI,
             health: health,
             selecting: selecting,
-            isSelected: isSelected
+            isSelected: isSelected,
+            selectedWidgetIndex: selectedWidgetIndex
         )
     }
 }
 
 private extension CGRect {
-    var isUsableForMorph: Bool {
-        width.isFinite && height.isFinite && minX.isFinite && minY.isFinite && width > 1 && height > 1
-    }
-
     func isClose(to other: CGRect, tolerance: CGFloat = 0.5) -> Bool {
         abs(minX - other.minX) <= tolerance &&
         abs(minY - other.minY) <= tolerance &&

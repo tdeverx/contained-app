@@ -44,7 +44,7 @@ public struct JSONInspectorSheet<Value: Encodable>: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
+        LazyVStack(spacing: 0) {
             HStack {
                 Text(title).font(.headline).lineLimit(1)
                 Spacer()

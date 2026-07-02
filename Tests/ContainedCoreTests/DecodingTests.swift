@@ -76,6 +76,22 @@ struct DecodingTests {
         #expect(status.apiServerVersion?.contains("1.0.0") == true)
     }
 
+    @Test func decodesSystemPropertiesMachineResources() throws {
+        let data = Data("""
+        {
+          "container": { "cpus": 4, "memory": "1gb" },
+          "machine": { "cpus": 5, "memory": "8gb" },
+          "build": { "cpus": 2, "memory": "2048mb" }
+        }
+        """.utf8)
+        let properties = try ContainerJSON.decode(SystemProperties.self, from: data)
+
+        #expect(properties.container?.cpus == 4)
+        #expect(properties.container?.memory == "1gb")
+        #expect(properties.machine?.cpus == 5)
+        #expect(properties.machine?.memory == "8gb")
+    }
+
     @Test func decodesNetworks() throws {
         let nets = try ContainerJSON.decode([NetworkResource].self, from: try Fixture.data("networks"))
         let def = try #require(nets.first)
