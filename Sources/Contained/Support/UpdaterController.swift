@@ -252,7 +252,10 @@ enum ChangelogSection {
         }.first
         guard let start else { return nil }
         let end = lines[(start + 1)...].firstIndex { $0.hasPrefix("## ") } ?? lines.endIndex
-        return lines[(start + 1)..<end].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        let section = lines[(start + 1)..<end]
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return section.isEmpty ? nil : section
     }
 
     static func html(from markdown: String) -> String {

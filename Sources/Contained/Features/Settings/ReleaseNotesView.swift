@@ -8,15 +8,10 @@ struct ReleaseNotesView: View {
     var onClose: (() -> Void)?
 
     var body: some View {
-        LazyVStack(spacing: 0) {
-            HStack {
-                Text(title).font(.headline)
-                Spacer()
-                if let onClose {
-                    Button("Done") { onClose() }
-                }
+        VStack(spacing: 0) {
+            SheetHeader(title: title, cancelHelp: "Done") {
+                onClose?()
             }
-            .padding()
             Divider()
             HTMLView(html: html)
         }
@@ -38,10 +33,18 @@ private struct HTMLView: NSViewRepresentable {
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
-            body { font: -apple-system-body; margin: 24px; color: text; }
-            h2 { font: -apple-system-title2; margin-top: 22px; margin-bottom: 10px; }
-            h3 { font: -apple-system-headline; margin-top: 18px; }
-            h4 { font: -apple-system-subheadline; margin-top: 14px; margin-bottom: 4px; }
+            :root { color-scheme: light dark; }
+            body {
+              font: -apple-system-body;
+              margin: 24px;
+              color: CanvasText;
+              background: Canvas;
+            }
+            h2 { font: -apple-system-title2; margin: 4px 0 12px; }
+            h3 { font: -apple-system-headline; margin: 20px 0 8px; }
+            h4 { font: -apple-system-subheadline; margin: 14px 0 4px; }
+            p { margin: 8px 0 12px; }
+            ul { margin: 8px 0 16px; padding-left: 22px; }
             li { margin: 6px 0; }
           </style>
         </head>
