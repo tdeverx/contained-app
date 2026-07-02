@@ -650,7 +650,7 @@ struct ToolbarImageGroupCard: View {
         do {
             _ = try await client.deleteImages([reference])
             await app.refreshImagesIfStale(force: true)
-            app.flash("Deleted \(Format.shortImage(reference))")
+            app.flash(AppText.deletedImage(Format.shortImage(reference)))
             deletingReference = nil
         } catch let error as CommandError { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
@@ -668,13 +668,13 @@ struct ToolbarImageGroupCard: View {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.init(filenameExtension: "tar") ?? .data]
         panel.nameFieldStringValue = Format.shortImage(image.reference).replacingOccurrences(of: ":", with: "_") + ".tar"
-        panel.message = "Save \(Format.shortImage(image.reference)) to a tar archive"
+        panel.message = AppText.saveImageTarArchive(Format.shortImage(image.reference))
         guard panel.runModal() == .OK, let url = panel.url else { return }
         Task {
             if let error = await app.captured({ _ = try await client.saveImages([image.reference], to: url.path) }) {
                 app.flash(error)
             } else {
-                app.flash("Saved \(url.lastPathComponent)")
+                app.flash(AppText.savedFile(url.lastPathComponent))
             }
         }
     }

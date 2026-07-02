@@ -12,6 +12,7 @@ enum AppText {
     static var back: String { string("common.back", defaultValue: "Back") }
     static var cancel: String { string("common.cancel", defaultValue: "Cancel") }
     static var clearSearch: String { string("common.clearSearch", defaultValue: "Clear search") }
+    static var choose: String { string("common.choose", defaultValue: "Choose") }
     static var close: String { string("common.close", defaultValue: "Close") }
     static var add: String { string("common.add", defaultValue: "Add") }
     static var copied: String { string("common.copied", defaultValue: "Copied") }
@@ -42,6 +43,9 @@ enum AppText {
     static var buildImage: String { string("build.buildImage", defaultValue: "Build image") }
     static var cancelBuild: String { string("build.cancelBuild", defaultValue: "Cancel build") }
     static var chooseContextFolder: String { string("build.chooseContextFolder", defaultValue: "Choose context folder") }
+    static var chooseBuildContextFolder: String {
+        string("build.chooseContextFolderPanel", defaultValue: "Choose the build context folder")
+    }
     static var removeBuildArgument: String { string("build.removeBuildArgument", defaultValue: "Remove build argument") }
     static var cardColor: String { string("customize.cardColor", defaultValue: "Card Color") }
     static var current: String { string("common.current", defaultValue: "Current") }
@@ -50,6 +54,9 @@ enum AppText {
     static var prune: String { string("image.prune", defaultValue: "Prune") }
     static var pruneImages: String { string("image.pruneImages", defaultValue: "Prune Images") }
     static var pullUpdate: String { string("image.pullUpdate", defaultValue: "Pull Update") }
+    static var chooseImageTarArchive: String {
+        string("image.chooseTarArchive", defaultValue: "Choose an image tar archive")
+    }
     static var checkForUpdates: String { string("updates.checkForUpdates", defaultValue: "Check for Updates") }
     static var checkForUpdatesNow: String { string("updates.checkForUpdatesNow", defaultValue: "Check for app updates now") }
     static var runImageUpdateCheckNow: String {
@@ -78,6 +85,9 @@ enum AppText {
     static var containerRuntimeNotReady: String {
         string("runtime.notReady", defaultValue: "Container runtime is not ready.")
     }
+    static var selectContainerBinary: String {
+        string("cli.selectContainerBinary", defaultValue: "Select the `container` binary")
+    }
     static var composeNoServicesWithImages: String {
         string("compose.noServicesWithImages", defaultValue: "No services with an image to import.")
     }
@@ -101,12 +111,194 @@ enum AppText {
         string("terminal.reconnectTerminal", defaultValue: "Reconnect terminal")
     }
 
+    static var appUpdateChecksUnavailable: String {
+        string("updates.unavailable", defaultValue: "App update checks are unavailable in this build")
+    }
+
     static var startService: String { string("service.start", defaultValue: "Start service") }
     static var stopService: String { string("service.stop", defaultValue: "Stop service") }
     static var restartService: String { string("service.restart", defaultValue: "Restart service") }
 
     static func lineCount(_ count: Int) -> String {
         string("streamConsole.lineCount", defaultValue: "\(count) lines")
+    }
+
+    static func restartedContainer(_ name: String, attempt: Int) -> String {
+        string("container.restartedAttempt", defaultValue: "Restarted \(name) (attempt \(attempt))")
+    }
+
+    static func containerUnhealthy(_ name: String) -> String {
+        string("container.unhealthy", defaultValue: "\(name) is unhealthy")
+    }
+
+    static func createdContainer(_ id: String) -> String {
+        string("container.created", defaultValue: "Created \(id)")
+    }
+
+    static func loadedFile(_ name: String) -> String {
+        string("file.loaded", defaultValue: "Loaded \(name)")
+    }
+
+    static func createdVolume(_ name: String) -> String {
+        string("volume.created", defaultValue: "Created volume \(name)")
+    }
+
+    static func createdNetwork(_ name: String) -> String {
+        string("network.created", defaultValue: "Created network \(name)")
+    }
+
+    static func copiedFileToHost(_ name: String) -> String {
+        string("files.copiedToHost", defaultValue: "Copied \(name) to host")
+    }
+
+    static func copiedFileIntoContainer(_ name: String) -> String {
+        string("files.copiedIntoContainer", defaultValue: "Copied \(name) into container")
+    }
+
+    static func copyFileFromContainerPanel(_ name: String) -> String {
+        string("files.copyFromContainerPanel", defaultValue: "Copy \(name) from the container")
+    }
+
+    static func copyFileIntoContainerPanel(_ path: String) -> String {
+        string("files.copyIntoContainerPanel", defaultValue: "Copy a file into \(path)")
+    }
+
+    static var chooseHostFileOrFolder: String {
+        string("files.chooseHostFileOrFolder", defaultValue: "Choose a host file or folder")
+    }
+
+    static var historyCleared: String {
+        string("history.cleared", defaultValue: "History cleared")
+    }
+
+    static var keptReadableLocalData: String {
+        string("backup.keptReadableLocalData", defaultValue: "Kept readable local data")
+    }
+
+    static var exportedBackupAndReset: String {
+        string("backup.exportedAndReset", defaultValue: "Exported backup and reset local state")
+    }
+
+    static var exportedBackup: String {
+        string("backup.exported", defaultValue: "Exported backup")
+    }
+
+    static var importedBackup: String {
+        string("backup.imported", defaultValue: "Imported backup")
+    }
+
+    static func cleanedStaleRows(_ count: Int) -> String {
+        string("cleanup.cleanedStaleRows", defaultValue: "Cleaned \(count) stale row(s)")
+    }
+
+    static func savedTemplate(_ name: String) -> String {
+        string("template.saved", defaultValue: "Saved template \"\(name)\"")
+    }
+
+    static func deletedImage(_ reference: String) -> String {
+        string("image.deleted", defaultValue: "Deleted \(reference)")
+    }
+
+    static func saveImageTarArchive(_ reference: String) -> String {
+        string("image.saveTarArchive", defaultValue: "Save \(reference) to a tar archive")
+    }
+
+    static func savedFile(_ name: String) -> String {
+        string("file.saved", defaultValue: "Saved \(name)")
+    }
+
+    static var recommendedKernelInstalled: String {
+        string("runtime.recommendedKernelInstalled", defaultValue: "Recommended kernel installed")
+    }
+
+    static var runSpecChooseImageToRun: String {
+        string("runSpec.validation.chooseImage", defaultValue: "Choose an image to run.")
+    }
+
+    static var runSpecCompletePortMappings: String {
+        string("runSpec.validation.completePortMappings", defaultValue: "Complete or remove partial port mappings.")
+    }
+
+    static var runSpecCompleteVolumeMounts: String {
+        string("runSpec.validation.completeVolumeMounts", defaultValue: "Complete or remove partial volume mounts.")
+    }
+
+    static var runSpecEnvironmentNeedsNames: String {
+        string("runSpec.validation.environmentNeedsNames", defaultValue: "Environment variables with values need names.")
+    }
+
+    static var runSpecMemoryFormat: String {
+        string("runSpec.validation.memoryFormat", defaultValue: "Memory must use a value like 512M or 2G.")
+    }
+
+    static func adoptedImageDefaults(_ count: Int) -> String {
+        string("imageDefaults.adopted", defaultValue: "Adopted \(count) image default\(count == 1 ? "" : "s")")
+    }
+
+    static var imageDefaultsAlreadyRepresented: String {
+        string("imageDefaults.alreadyRepresented", defaultValue: "Image defaults are already represented")
+    }
+
+    static var noLocalImagesToCheck: String {
+        string("updates.noLocalImagesToCheck", defaultValue: "No local images to check")
+    }
+
+    static var noContainerImagesToCheck: String {
+        string("updates.noContainerImagesToCheck", defaultValue: "No container images to check")
+    }
+
+    static var noImageUpdatesAvailable: String {
+        string("updates.noImageUpdatesAvailable", defaultValue: "No image updates available")
+    }
+
+    static var noContainerImageUpdatesAvailable: String {
+        string("updates.noContainerImageUpdatesAvailable", defaultValue: "No container image updates available")
+    }
+
+    static var imageUpdateImageNoun: String {
+        string("updates.imageNoun", defaultValue: "image")
+    }
+
+    static var imageUpdateContainerImageNoun: String {
+        string("updates.containerImageNoun", defaultValue: "container image")
+    }
+
+    static var imageUpdateImagesTitle: String {
+        string("updates.imagesTitle", defaultValue: "Images")
+    }
+
+    static var imageUpdateContainerImagesTitle: String {
+        string("updates.containerImagesTitle", defaultValue: "Container images")
+    }
+
+    static func imageLocalDigestUnavailable(_ reference: String) -> String {
+        string("updates.localDigestUnavailable", defaultValue: "Couldn't compare \(reference): local digest unavailable")
+    }
+
+    static func imageUpdateAvailable(_ reference: String) -> String {
+        string("updates.imageUpdateAvailable", defaultValue: "Update available for \(reference)")
+    }
+
+    static func imageUpToDate(_ reference: String) -> String {
+        string("updates.imageUpToDate", defaultValue: "\(reference) is up to date")
+    }
+
+    static func updatedImage(_ reference: String) -> String {
+        string("updates.updatedImage", defaultValue: "Updated \(reference)")
+    }
+
+    static func updateSweepResult(available: Int, singular: String, pluralTitle: String) -> String {
+        if available == 0 {
+            return string("updates.sweepUpToDate", defaultValue: "\(pluralTitle) are up to date")
+        }
+        return string(
+            "updates.sweepAvailable",
+            defaultValue: "\(available) \(singular) update\(available == 1 ? "" : "s") available"
+        )
+    }
+
+    static func updatedItems(_ count: Int, singular: String) -> String {
+        string("updates.updatedItems", defaultValue: "Updated \(count) \(singular)\(count == 1 ? "" : "s")")
     }
 
     static func selectedCount(_ count: Int) -> String {

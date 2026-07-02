@@ -112,7 +112,7 @@ struct RuntimeTab: View {
     private func installKernel() async {
         guard let client = app.client else { return }
         if let error = await app.captured({ _ = try await client.setRecommendedKernel() }) { app.flash(error) }
-        else { app.flash("Recommended kernel installed"); await app.reloadProperties() }
+        else { app.flash(AppText.recommendedKernelInstalled); await app.reloadProperties() }
     }
 
     private func addDNS() async {

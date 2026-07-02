@@ -231,7 +231,7 @@ struct RootView: View {
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.init(filenameExtension: "tar") ?? .data]
-        panel.message = "Choose an image tar archive"
+        panel.message = AppText.chooseImageTarArchive
         guard panel.runModal() == .OK, let url = panel.url else { return }
         app.loadImageTar(at: url)
     }

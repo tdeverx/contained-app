@@ -13,7 +13,7 @@ extension AppModel {
     /// Wipe all recorded metrics and events.
     func clearHistory() {
         historyStore.clearAll()
-        flash("History cleared")
+        flash(AppText.historyCleared)
         logger.record("History cleared", category: .system, severity: .warning)
     }
 
@@ -36,7 +36,7 @@ extension AppModel {
     func resolveDowngradeByKeepingReadableData() {
         UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
         downgradeSchemaVersion = nil
-        flash("Kept readable local data")
+        flash(AppText.keptReadableLocalData)
     }
 
     func exportForDowngradeAndReset() {
@@ -49,7 +49,7 @@ extension AppModel {
             try exportConfiguration(to: url)
             resetIncompatibleLocalState()
             downgradeSchemaVersion = nil
-            flash("Exported backup and reset local state")
+            flash(AppText.exportedBackupAndReset)
         } catch {
             flash(error.appDisplayMessage)
         }
@@ -67,7 +67,7 @@ extension AppModel {
                                                             liveImageRefs: liveImageRefs)
         let checks = healthChecks.purgeOrphans(liveContainerIDs: liveContainerIDs)
         let history = historyStore.purgeOrphans(liveContainerIDs: liveContainerIDs)
-        flash("Cleaned \(personalizations + checks + history.events + history.metrics) stale row(s)")
+        flash(AppText.cleanedStaleRows(personalizations + checks + history.events + history.metrics))
     }
 
     private func apply(envelope: AppStateEnvelope, selected: Set<AppStateSection>, replace: Bool) throws {

@@ -113,7 +113,7 @@ struct PaletteItem: Identifiable {
             if app.updater.canCheckForUpdates {
                 app.updater.checkForUpdates()
             } else {
-                app.flash("App update checks are unavailable in this build")
+                app.flash(AppText.appUpdateChecksUnavailable)
             }
         })
         items.append(PaletteItem(title: "Check all image updates", subtitle: app.imageUpdateIntervalDescription,

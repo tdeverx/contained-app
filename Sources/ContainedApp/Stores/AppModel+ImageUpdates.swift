@@ -2,6 +2,25 @@ import SwiftUI
 import ContainedCore
 import ContainedRuntime
 
+private enum ImageUpdateSummaryScope {
+    case localImages
+    case containerImages
+
+    var noun: String {
+        switch self {
+        case .localImages: AppText.imageUpdateImageNoun
+        case .containerImages: AppText.imageUpdateContainerImageNoun
+        }
+    }
+
+    var pluralTitle: String {
+        switch self {
+        case .localImages: AppText.imageUpdateImagesTitle
+        case .containerImages: AppText.imageUpdateContainerImagesTitle
+        }
+    }
+}
+
 /// Image-update tracking: comparing the local digest of each image against the registry's current
 /// manifest digest, on a throttled background sweep and on demand. Split out of `AppModel` because it
 /// is a self-contained subsystem with its own persisted state (`imageUpdates`, `lastImageUpdateSweep`,
@@ -30,8 +49,8 @@ extension AppModel {
     /// background sweep stays quiet).
     func checkAllImageUpdates(manual: Bool = false) async {
         await runUpdateCheck(over: uniqueImageReferences(),
-                             emptyMessage: "No local images to check",
-                             summaryNoun: "image",
+                             emptyMessage: AppText.noLocalImagesToCheck,
+                             summary: .localImages,
                              manual: manual)
         lastImageUpdateSweep = Date()
     }
@@ -44,8 +63,8 @@ extension AppModel {
     /// Check only the images that existing containers were created from.
     func checkContainerImageUpdates(manual: Bool = true) async {
         await runUpdateCheck(over: uniqueContainerImageReferences(),
-                             emptyMessage: "No container images to check",
-                             summaryNoun: "container image",
+                             emptyMessage: AppText.noContainerImagesToCheck,
+                             summary: .containerImages,
                              manual: manual)
     }
 
@@ -53,8 +72,8 @@ extension AppModel {
     @discardableResult
     func pullAvailableImageUpdates(manual: Bool = false) async -> Int {
         await pullUpdates(over: uniqueImageReferences(),
-                          emptyMessage: "No image updates available",
-                          summaryNoun: "image",
+                          emptyMessage: AppText.noImageUpdatesAvailable,
+                          summary: .localImages,
                           manual: manual)
     }
 
@@ -62,8 +81,8 @@ extension AppModel {
     @discardableResult
     func pullAvailableContainerImageUpdates(manual: Bool = true) async -> Int {
         await pullUpdates(over: uniqueContainerImageReferences(),
-                          emptyMessage: "No container image updates available",
-                          summaryNoun: "container image",
+                          emptyMessage: AppText.noContainerImageUpdatesAvailable,
+                          summary: .containerImages,
                           manual: manual)
     }
 
@@ -79,7 +98,7 @@ extension AppModel {
             let remoteDigest = try await manifestClient.remoteDigest(for: reference)
             guard let localDigest, !localDigest.isEmpty else {
                 imageUpdates[key] = .failed(localDigest: nil, message: "Local digest unavailable")
-                if notify { flash("Couldn't compare \(Format.shortImage(reference)): local digest unavailable") }
+                if notify { flash(AppText.imageLocalDigestUnavailable(Format.shortImage(reference))) }
                 return
             }
             let status = ImageUpdateStatus.resolved(localDigest: localDigest, remoteDigest: remoteDigest)
@@ -87,12 +106,12 @@ extension AppModel {
             if notify {
                 switch status.state {
                 case .updateAvailable:
-                    flash("Update available for \(Format.shortImage(reference))")
+                    flash(AppText.imageUpdateAvailable(Format.shortImage(reference)))
                     logger.record("Update available for \(Format.shortImage(reference))",
                                   category: .image,
                                   severity: .warning)
                 case .current:
-                    flash("\(Format.shortImage(reference)) is up to date")
+                    flash(AppText.imageUpToDate(Format.shortImage(reference)))
                 default:
                     break
                 }
@@ -114,7 +133,7 @@ extension AppModel {
         let ok = await pullImage(reference)
         if ok {
             await checkImageUpdate(reference, notify: false)
-            flash("Updated \(Format.shortImage(reference))")
+            flash(AppText.updatedImage(Format.shortImage(reference)))
             logger.record("Updated \(Format.shortImage(reference))", category: .image)
         }
         return ok
@@ -146,14 +165,14 @@ extension AppModel {
     /// Shared sweep body for `checkAllImageUpdates` / `checkContainerImageUpdates`: check each
     /// reference quietly, then (when `manual`) summarize how many have updates.
     private func runUpdateCheck(over references: [String], emptyMessage: String,
-                                summaryNoun: String, manual: Bool) async {
+                                summary: ImageUpdateSummaryScope, manual: Bool) async {
         let started = Date()
         defer {
             let elapsed = Date().timeIntervalSince(started)
             if elapsed >= 0.75 || manual {
                 let mode = manual ? "manual" : "background"
                 diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
-                                     "Image update sweep \(mode, privacy: .public) finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s across \(references.count, privacy: .public) \(summaryNoun, privacy: .public)(s)")
+                                     "Image update sweep \(mode, privacy: .public) finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s across \(references.count, privacy: .public) \(summary.noun, privacy: .public)(s)")
             }
         }
         guard !references.isEmpty else {
@@ -163,16 +182,15 @@ extension AppModel {
         for reference in references { await checkImageUpdate(reference, notify: false) }
         guard manual else { return }
         let available = references.filter { imageUpdateStatus(for: $0).state == .updateAvailable }.count
-        let plural = summaryNoun.prefix(1).uppercased() + summaryNoun.dropFirst() + "s"  // "Images" / "Container images"
-        flash(available == 0
-              ? "\(plural) are up to date"
-              : "\(available) \(summaryNoun) update\(available == 1 ? "" : "s") available")
+        flash(AppText.updateSweepResult(available: available,
+                                        singular: summary.noun,
+                                        pluralTitle: summary.pluralTitle))
     }
 
     /// Shared pull body for `pullAvailableImageUpdates` / `pullAvailableContainerImageUpdates`: pull
     /// every reference with an update available and report the count.
     private func pullUpdates(over references: [String], emptyMessage: String,
-                             summaryNoun: String, manual: Bool) async -> Int {
+                             summary: ImageUpdateSummaryScope, manual: Bool) async -> Int {
         let pending = references.filter { imageUpdateStatus(for: $0).state == .updateAvailable }
         guard !pending.isEmpty else {
             if manual { flash(emptyMessage) }
@@ -180,7 +198,7 @@ extension AppModel {
         }
         var updated = 0
         for reference in pending where await pullImageUpdate(reference) { updated += 1 }
-        if manual { flash("Updated \(updated) \(summaryNoun)\(updated == 1 ? "" : "s")") }
+        if manual { flash(AppText.updatedItems(updated, singular: summary.noun)) }
         return updated
     }
 

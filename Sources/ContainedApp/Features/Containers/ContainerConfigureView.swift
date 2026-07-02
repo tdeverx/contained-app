@@ -170,7 +170,7 @@ struct ContainerConfigureView: View {
         guard !name.isEmpty else { return }
         modelContext.insert(Template(name: name, spec: spec))
         try? modelContext.save()
-        app.flash("Saved template “\(name)”")
+        app.flash(AppText.savedTemplate(name))
     }
 
     /// The id of the container being edited (empty in `.new` mode).
