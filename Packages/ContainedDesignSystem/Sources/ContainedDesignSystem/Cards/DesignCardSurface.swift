@@ -44,7 +44,7 @@ public struct CardSizePicker: View {
     }
 }
 
-public struct DesignCardSurface<Header: View, BodyContent: View, FooterLeading: View,
+struct DesignCardSurface<Header: View, BodyContent: View, FooterLeading: View,
                          FooterActions: View, Widget: View>: View {
     var size: DesignCardSize
     var isExpanded = false
@@ -74,13 +74,13 @@ public struct DesignCardSurface<Header: View, BodyContent: View, FooterLeading: 
     @Environment(\.cardMaterial) private var cardMaterial
 
     /// Render the selected state as a soft fill wash instead of the accent stroke.
-    public func selectionFill(_ on: Bool = true) -> Self {
+    func selectionFill(_ on: Bool = true) -> Self {
         var copy = self
         copy.usesSelectionFill = on
         return copy
     }
 
-    public init(size: DesignCardSize,
+    init(size: DesignCardSize,
          isExpanded: Bool = false,
          cornerRadiusOverride: CGFloat? = nil,
          controlsVisible: Bool = true,
@@ -120,7 +120,7 @@ public struct DesignCardSurface<Header: View, BodyContent: View, FooterLeading: 
         self.widget = widget
     }
 
-    public var body: some View {
+    var body: some View {
         surface
             .contentShape(Rectangle())
             .onTapGesture { if !isExpanded { onTap() } }
@@ -333,7 +333,7 @@ private extension View {
     }
 }
 
-public extension DesignCardSurface where BodyContent == EmptyView, FooterLeading == EmptyView,
+extension DesignCardSurface where BodyContent == EmptyView, FooterLeading == EmptyView,
                                 FooterActions == EmptyView, Widget == EmptyView {
     init(size: DesignCardSize = .small,
          isSelected: Bool = false,
@@ -362,7 +362,7 @@ public extension DesignCardSurface where BodyContent == EmptyView, FooterLeading
     }
 }
 
-public extension DesignCardSurface where BodyContent == EmptyView, Widget == EmptyView {
+extension DesignCardSurface where BodyContent == EmptyView, Widget == EmptyView {
     init(size: DesignCardSize,
          isExpanded: Bool = false,
          controlsVisible: Bool = true,
@@ -396,7 +396,7 @@ public extension DesignCardSurface where BodyContent == EmptyView, Widget == Emp
     }
 }
 
-public extension DesignCardSurface where Widget == EmptyView {
+extension DesignCardSurface where Widget == EmptyView {
     init(size: DesignCardSize,
          isExpanded: Bool = false,
          controlsVisible: Bool = true,

@@ -3,17 +3,17 @@ import AppKit
 
 /// Behind-window vibrancy so the desktop shows through the content area (blurred). No SwiftUI
 /// equivalent for `.behindWindow` blending — flagged AppKit bridge.
-public struct VisualEffectBackground: NSViewRepresentable {
-    public var material: NSVisualEffectView.Material
-    public var blendingMode: NSVisualEffectView.BlendingMode
+struct VisualEffectBackground: NSViewRepresentable {
+    var material: NSVisualEffectView.Material
+    var blendingMode: NSVisualEffectView.BlendingMode
 
-    public init(material: NSVisualEffectView.Material = .fullScreenUI,
-                blendingMode: NSVisualEffectView.BlendingMode = .behindWindow) {
+    init(material: NSVisualEffectView.Material = .fullScreenUI,
+         blendingMode: NSVisualEffectView.BlendingMode = .behindWindow) {
         self.material = material
         self.blendingMode = blendingMode
     }
 
-    public func makeNSView(context: Context) -> NSVisualEffectView {
+    func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         view.blendingMode = blendingMode
         view.state = .active
@@ -21,7 +21,7 @@ public struct VisualEffectBackground: NSViewRepresentable {
         return view
     }
 
-    public func updateNSView(_ view: NSVisualEffectView, context: Context) {
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {
         view.blendingMode = blendingMode
         view.material = material
     }

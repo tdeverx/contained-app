@@ -55,7 +55,7 @@ This file is the working contract for coding agents in this repository. Follow i
 ## Design And UI Rules
 
 - Reuse app-facing design-system routes before adding local styling: `PanelHeader`, `PanelSection`, `PanelField`, `DesignCard`, `DesignActionGroup`, `DesignTextActionButton`, `DesignGlassToggle`, `DesignSelectionActionBar`, `CommandPreviewBar`, `TintSelector`, and `DesignTokens`.
-- Do not add app-local spacing, padding, radius, shadow, material, opacity, glass button styles, or micro-chrome constants. Add or extend a `ContainedDesignSystem` token/primitive first, then consume it from the app. Low-level package composition pieces such as `DesignCardSurface`, `DesignCardHeader`, `GlassButton`, and glass surface modifiers should not be called from `Sources/ContainedApp`.
+- Do not add app-local spacing, padding, radius, shadow, material, opacity, glass button styles, or micro-chrome constants. Add or extend a `ContainedDesignSystem` token/primitive first, then consume it from the app. Low-level package composition pieces such as card shell/header/page-rail assembly, glass button groups, and glass surface modifiers are package-internal and should not be reintroduced in `Sources/ContainedApp`.
 - Keep the classic sidebar fallback working. Toolbar-first UI and toolbar panel navigation are experimental gates, not replacements.
 - Prefer native macOS/Liquid Glass behavior over custom chrome when the system primitive fits.
 - Do not make broad visual changes without a product reason.

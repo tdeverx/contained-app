@@ -41,20 +41,21 @@ This package currently depends only on platform frameworks available to a macOS
   keycap, card, terminal, and menu-bar constants.
 - `WindowMaterial`, `DesignTint`, `ColorLayerBlendMode`, and root environment
   values for shared material/tint policy.
-- `GlassSurface`, `glassSurface`, `glassCapsuleSurface`, and visual-effect
-  helpers for all reusable glass treatment.
+- Named surface routes such as `DesignContentSurface`, `DesignInputSurface`,
+  panel scaffolds, and toolbar controls. Low-level glass modifiers and
+  visual-effect bridges are package implementation details.
 - `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `SheetHeader`, and
   `PageScaffold` for app-neutral scaffolding.
 - `DesignActionGroup`, `DesignActionCluster`, `DesignInputCluster`,
   `DesignTextActionButton`, `DesignGlassToggle`, `DesignSelectionActionBar`,
   `DesignStatusBanner`, and toolbar controls for package-owned command chrome.
-  `GlassButton`, `GlassButtonItem`, and `GlassButtonInputItem` are lower-level
-  package composition pieces.
+  Low-level glass button groups are package implementation details behind these
+  named controls.
 - `DesignCard`, `DesignCardPages`, `DesignCardFooterChip`,
   `DesignCardFooterButton`, `DesignCardWidgetGroup`, `DesignCardInsetSection`,
   and other `DesignCard*` pieces for repeated card layouts and card-local controls.
-  App code should use `DesignCard`; `DesignCardSurface` and header primitives are
-  lower-level package composition pieces.
+  App code should use `DesignCard`; card shell, header, and page-rail assembly is
+  package-owned.
   Use `designCardFloatingControls` and `designCardProgressOverlay` for
   card overlays instead of app-local `.overlay` recipes.
 - `ActivityStatusView` with `ActivityStatusPresentation`, where callers provide
@@ -168,7 +169,7 @@ struct DesignSystemExample: View {
 }
 ```
 
-## Resource Card Controls
+## Design Card Controls
 
 Keep card-local controls in the package. Feature views provide plain values and
 actions instead of assembling headers, footer groups, or expanded-card page rails:

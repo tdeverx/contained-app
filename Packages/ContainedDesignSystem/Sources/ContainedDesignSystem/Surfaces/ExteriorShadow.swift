@@ -1,19 +1,19 @@
 import SwiftUI
 
-public struct ExteriorShadow: View {
-    public var cornerRadius: CGFloat
-    public var color: Color
-    public var radius: CGFloat
-    public var y: CGFloat
+struct ExteriorShadow: View {
+    var cornerRadius: CGFloat
+    var color: Color
+    var radius: CGFloat
+    var y: CGFloat
 
-    public init(cornerRadius: CGFloat, color: Color, radius: CGFloat, y: CGFloat) {
+    init(cornerRadius: CGFloat, color: Color, radius: CGFloat, y: CGFloat) {
         self.cornerRadius = cornerRadius
         self.color = color
         self.radius = radius
         self.y = y
     }
 
-    public var body: some View {
+    var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         ZStack {
             shape

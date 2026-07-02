@@ -50,8 +50,8 @@ public struct MorphingSingleSurface<Content: View>: View {
 /// Hosts one promoted card-like surface with the same lifecycle as `MorphingExpander`, but without
 /// drawing a separate panel shell around the content.
 ///
-/// Use this when the promoted content is already its own visual surface, such as an expanded
-/// `DesignCardSurface`. Panel contents should still use `MorphingExpander`.
+/// Use this when the promoted content is already its own visual surface, such as an expanded design
+/// card. Panel contents should still use `MorphingExpander`.
 public struct MorphingSingleSurfaceExpander<Content: View>: View {
     @Binding var isPresented: Bool
     public var originFrame: CGRect

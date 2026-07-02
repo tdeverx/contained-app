@@ -2,18 +2,18 @@ import SwiftUI
 
 /// A reusable three-part card header: leading accessory, fill/truncate text block, and trailing
 /// button rail. This keeps the container/image cards using the same top-aligned chrome structure.
-public struct DesignCardHeader<Leading: View, Content: View, Trailing: View>: View {
-    public var spacing: CGFloat
-    public var padding: CGFloat
-    @ViewBuilder public var leading: () -> Leading
-    @ViewBuilder public var content: () -> Content
-    @ViewBuilder public var trailing: () -> Trailing
+struct DesignCardHeader<Leading: View, Content: View, Trailing: View>: View {
+    var spacing: CGFloat
+    var padding: CGFloat
+    @ViewBuilder var leading: () -> Leading
+    @ViewBuilder var content: () -> Content
+    @ViewBuilder var trailing: () -> Trailing
 
-    public init(spacing: CGFloat = DesignTokens.DesignCard.padding,
-                padding: CGFloat = DesignTokens.DesignCard.padding,
-                @ViewBuilder leading: @escaping () -> Leading,
-                @ViewBuilder content: @escaping () -> Content,
-                @ViewBuilder trailing: @escaping () -> Trailing) {
+    init(spacing: CGFloat = DesignTokens.DesignCard.padding,
+         padding: CGFloat = DesignTokens.DesignCard.padding,
+         @ViewBuilder leading: @escaping () -> Leading,
+         @ViewBuilder content: @escaping () -> Content,
+         @ViewBuilder trailing: @escaping () -> Trailing) {
         self.spacing = spacing
         self.padding = padding
         self.leading = leading
@@ -21,7 +21,7 @@ public struct DesignCardHeader<Leading: View, Content: View, Trailing: View>: Vi
         self.trailing = trailing
     }
 
-    public var body: some View {
+    var body: some View {
         HStack(alignment: .top, spacing: spacing) {
             leading()
                 .fixedSize(horizontal: true, vertical: false)
@@ -44,20 +44,20 @@ public struct DesignCardHeader<Leading: View, Content: View, Trailing: View>: Vi
 ///
 /// Use this for card header text so the title and metadata stay anchored to the leading chip while
 /// expanded-card controls appear, disappear, or change page selection.
-public struct DesignCardHeaderTextBlock<Title: View, Subtitle: View>: View {
-    public var spacing: CGFloat
-    @ViewBuilder public var title: () -> Title
-    @ViewBuilder public var subtitle: () -> Subtitle
+struct DesignCardHeaderTextBlock<Title: View, Subtitle: View>: View {
+    var spacing: CGFloat
+    @ViewBuilder var title: () -> Title
+    @ViewBuilder var subtitle: () -> Subtitle
 
-    public init(spacing: CGFloat = DesignTokens.DesignCard.compactTextSpacing,
-                @ViewBuilder title: @escaping () -> Title,
-                @ViewBuilder subtitle: @escaping () -> Subtitle) {
+    init(spacing: CGFloat = DesignTokens.DesignCard.compactTextSpacing,
+         @ViewBuilder title: @escaping () -> Title,
+         @ViewBuilder subtitle: @escaping () -> Subtitle) {
         self.spacing = spacing
         self.title = title
         self.subtitle = subtitle
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
             title()
             subtitle()
@@ -71,7 +71,7 @@ public struct DesignCardHeaderTextBlock<Title: View, Subtitle: View>: View {
     }
 }
 
-public extension DesignCardHeaderTextBlock where Subtitle == EmptyView {
+extension DesignCardHeaderTextBlock where Subtitle == EmptyView {
     init(spacing: CGFloat = DesignTokens.DesignCard.compactTextSpacing,
          @ViewBuilder title: @escaping () -> Title) {
         self.init(spacing: spacing, title: title) {
@@ -104,7 +104,7 @@ public struct DesignCardFooterMini<Icon: View, TextContent: View>: View {
     }
 }
 
-/// A flat inset section for content that lives inside an expanded `DesignCardSurface`.
+/// A flat inset section for content that lives inside an expanded `DesignCard`.
 ///
 /// Use this for charts, process lists, read-only fields, and terminal overlays inside a card body.
 /// It intentionally avoids creating a second card-shaped glass surface inside the parent card.
@@ -239,22 +239,22 @@ public struct DesignCardPageControlItem<ID: Hashable>: Identifiable, Hashable {
 }
 
 /// Shared expanded-card page rail with page icons plus a close affordance.
-public struct DesignCardPageControls<ID: Hashable>: View {
-    public var items: [DesignCardPageControlItem<ID>]
-    public var selection: ID
-    public var tint: Color
-    public var controlsReveal: Double
-    public var closeLabel: String
-    public var onSelect: (ID) -> Void
-    public var onClose: () -> Void
+struct DesignCardPageControls<ID: Hashable>: View {
+    var items: [DesignCardPageControlItem<ID>]
+    var selection: ID
+    var tint: Color
+    var controlsReveal: Double
+    var closeLabel: String
+    var onSelect: (ID) -> Void
+    var onClose: () -> Void
 
-    public init(items: [DesignCardPageControlItem<ID>],
-                selection: ID,
-                tint: Color,
-                controlsReveal: Double = 1,
-                closeLabel: String,
-                onSelect: @escaping (ID) -> Void,
-                onClose: @escaping () -> Void) {
+    init(items: [DesignCardPageControlItem<ID>],
+         selection: ID,
+         tint: Color,
+         controlsReveal: Double = 1,
+         closeLabel: String,
+         onSelect: @escaping (ID) -> Void,
+         onClose: @escaping () -> Void) {
         self.items = items
         self.selection = selection
         self.tint = tint
@@ -264,7 +264,7 @@ public struct DesignCardPageControls<ID: Hashable>: View {
         self.onClose = onClose
     }
 
-    public var body: some View {
+    var body: some View {
         GlassButton(singleItem: false) {
             ForEach(items) { item in
                 GlassButtonItem(tint: selection == item.id ? tint : nil,
@@ -329,26 +329,26 @@ public struct DesignCardWidgetGroup<Content: View>: View {
 }
 
 /// A reusable footer band with a left group, right group, and optional widget stacked above them.
-public struct DesignCardFooter<Leading: View, Trailing: View, Widget: View>: View {
-    public var showWidget: Bool
-    public var actionsVisible: Bool
-    public var spacing: CGFloat
-    public var horizontalPadding: CGFloat
-    public var topPadding: CGFloat
-    public var bottomPadding: CGFloat
-    @ViewBuilder public var leading: () -> Leading
-    @ViewBuilder public var trailing: () -> Trailing
-    @ViewBuilder public var widget: () -> Widget
+struct DesignCardFooter<Leading: View, Trailing: View, Widget: View>: View {
+    var showWidget: Bool
+    var actionsVisible: Bool
+    var spacing: CGFloat
+    var horizontalPadding: CGFloat
+    var topPadding: CGFloat
+    var bottomPadding: CGFloat
+    @ViewBuilder var leading: () -> Leading
+    @ViewBuilder var trailing: () -> Trailing
+    @ViewBuilder var widget: () -> Widget
 
-    public init(showWidget: Bool = false,
-                actionsVisible: Bool = true,
-                spacing: CGFloat = DesignTokens.DesignCard.padding,
-                horizontalPadding: CGFloat = DesignTokens.DesignCard.padding,
-                topPadding: CGFloat = 0,
-                bottomPadding: CGFloat = DesignTokens.DesignCard.padding,
-                @ViewBuilder leading: @escaping () -> Leading,
-                @ViewBuilder trailing: @escaping () -> Trailing,
-                @ViewBuilder widget: @escaping () -> Widget) {
+    init(showWidget: Bool = false,
+         actionsVisible: Bool = true,
+         spacing: CGFloat = DesignTokens.DesignCard.padding,
+         horizontalPadding: CGFloat = DesignTokens.DesignCard.padding,
+         topPadding: CGFloat = 0,
+         bottomPadding: CGFloat = DesignTokens.DesignCard.padding,
+         @ViewBuilder leading: @escaping () -> Leading,
+         @ViewBuilder trailing: @escaping () -> Trailing,
+         @ViewBuilder widget: @escaping () -> Widget) {
         self.showWidget = showWidget
         self.actionsVisible = actionsVisible
         self.spacing = spacing
@@ -360,7 +360,7 @@ public struct DesignCardFooter<Leading: View, Trailing: View, Widget: View>: Vie
         self.widget = widget
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if showWidget {
                 widget()
