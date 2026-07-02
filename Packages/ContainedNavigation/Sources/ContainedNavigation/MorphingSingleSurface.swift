@@ -189,10 +189,6 @@ public extension MorphGeometry {
 }
 
 public extension CGRect {
-    var isUsableForMorph: Bool {
-        MorphGeometry.isUsableFrame(self)
-    }
-
     func morphInterpolated(to target: CGRect, progress: CGFloat) -> CGRect {
         MorphGeometry.interpolatedRect(from: self, to: target, progress: progress)
     }

@@ -39,17 +39,15 @@ struct RegistryImageSearch: View {
     // MARK: Search field
 
     private var searchField: some View {
-        GlassButton {
-            GlassButtonInputItem {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search Docker Hub…", text: $query)
-                    .textFieldStyle(.plain)
-                    .onSubmit { searchNow() }
-                if searching { ProgressView().controlSize(.small) }
-                else if !query.isEmpty {
-                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                        .buttonStyle(.plain).foregroundStyle(.secondary)
-                }
+        DesignInputCluster {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("Search Docker Hub…", text: $query)
+                .textFieldStyle(.plain)
+                .onSubmit { searchNow() }
+            if searching { ProgressView().controlSize(.small) }
+            else if !query.isEmpty {
+                Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .buttonStyle(.plain).foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

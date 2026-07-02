@@ -37,6 +37,8 @@ import ContainedNavigation
 - `MorphingSingleSurface` and `MorphingSingleSurfaceExpander` for card-like
   overlays that grow from one existing source slot into one target rect without
   a handoff panel.
+- `MorphSourceFrameReader` and `MorphSourceFramesKey` for measuring source
+  frames in a named coordinate space without app-local preference keys.
 - `MorphPanelScaffold` for generic fixed chrome, scrollable content, and pinned
   footer layout inside a morph panel.
 
@@ -65,11 +67,9 @@ struct NavigationPackageExample: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "plus", help: "Add") {
-                    isPresented = true
-                }
-            }
+            DesignActionGroup(DesignAction(systemName: "plus", help: "Add") {
+                isPresented = true
+            })
             .padding(Tokens.Space.l)
 
             MorphingExpander(isPresented: $isPresented,
@@ -79,13 +79,11 @@ struct NavigationPackageExample: View {
                     PanelHeader(symbol: "plus",
                                 title: "Add",
                                 subtitle: "Choose a starting point") {
-                        GlassButton(singleItem: true) {
-                            GlassButtonItem(systemName: "xmark",
-                                            help: "Close",
-                                            isCancel: true) {
-                                isPresented = false
-                            }
-                        }
+                        DesignActionGroup(DesignAction(systemName: "xmark",
+                                                       help: "Close",
+                                                       isCancel: true) {
+                            isPresented = false
+                        })
                     }
                     Divider()
                 } content: {
@@ -142,6 +140,16 @@ Use `AppMorphTarget.centered(size:)` for modal-like work, such as creation
 details. Use `AppMorphTarget.anchored(size:)` when a panel should grow from and
 stay near its source control. Both paths use `AppSafeAreaManager` to avoid
 toolbar bands and system insets.
+
+For real toolbar sources, measure source controls in the same named coordinate
+space that hosts the morph overlay:
+
+```swift
+Button("Open") { isPresented = true }
+    .background(MorphSourceFrameReader("settings",
+                                       coordinateSpaceName: "toolbar"))
+    .onPreferenceChange(MorphSourceFramesKey<String>.self) { frames = $0 }
+```
 
 ## Documentation
 

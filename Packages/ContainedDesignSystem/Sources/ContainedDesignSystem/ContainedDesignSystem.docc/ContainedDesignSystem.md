@@ -213,6 +213,24 @@ DesignActionGroup([
     }
 ])
 
+DesignActionCluster {
+    Menu {
+        Button("All") {}
+    } label: {
+        DesignMenuActionLabel(systemName: "line.3.horizontal.decrease",
+                              help: "Filter")
+    }
+    DesignActionItems([
+        DesignAction(systemName: "checkmark.circle", help: "Mark read") {}
+    ])
+}
+
+DesignInputCluster {
+    Image(systemName: "magnifyingglass")
+    TextField("Search", text: $query)
+        .textFieldStyle(.plain)
+}
+
 DesignTextActionButton(title: "Import",
                        systemName: "arrow.down.doc",
                        prominence: .prominent,
@@ -234,6 +252,8 @@ DesignGlassToggle(isOn: $following,
 - ``AppTint``
 - ``ColorLayerBlendMode``
 - ``GlassButtonTintStyle``
+- ``DesignActionCluster``
+- ``DesignInputCluster``
 
 ### Surfaces and Scaffolds
 

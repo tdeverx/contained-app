@@ -134,7 +134,7 @@ struct SystemContent: View {
                     subtitle: activePage.subtitle) {
             HStack(spacing: Tokens.Toolbar.groupSpacing) {
                 engineControls
-                GlassButton {
+                DesignActionCluster {
                     DesignActionItems(pageActions)
                     storageMenu
                     if showClose {

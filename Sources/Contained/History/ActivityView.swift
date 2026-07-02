@@ -89,7 +89,7 @@ struct ActivityContent: View {
                     PanelHeader(symbol: "bell",
                                 title: "Activity",
                                 subtitle: subtitle) {
-                        GlassButton {
+                        DesignActionCluster {
                             filterMenu
                             DesignActionItems(activityHeaderActions)
                         }
