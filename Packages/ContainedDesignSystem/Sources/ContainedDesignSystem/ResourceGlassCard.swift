@@ -3,8 +3,17 @@ import SwiftUI
 public enum ResourceCardSize {
     case small, medium, large
 
-    public var showsFooter: Bool { self != .small }
-    public var showsWidget: Bool { self == .large }
+    /// Footer actions stay visible in compact/expanded chrome for medium and large cards.
+    /// Small cards move footer content into the expanded body so the closed card remains header-only.
+    public var keepsFooterSticky: Bool { self != .small }
+    /// Widgets stay visible as card chrome only for large cards. Medium cards keep the widget as
+    /// part of the expanded body, preserving the simpler closed-card silhouette.
+    public var keepsWidgetSticky: Bool { self == .large }
+    public var embedsFooterInBody: Bool { self == .small }
+    public var embedsWidgetInBody: Bool { self == .medium }
+
+    public var showsFooter: Bool { keepsFooterSticky }
+    public var showsWidget: Bool { keepsWidgetSticky }
 }
 
 public enum ResourceCardExpandedMetrics {
@@ -37,6 +46,7 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
     var controlsVisible = true
     var isSelected = false
     var showsFooter = true
+    var showsWidget = true
     /// When set, the selected state reads as a soft `white.opacity` wash (matching a hovered glass
     /// button) instead of the 2.5pt accent stroke — used by the Activity and command-palette rows.
     var usesSelectionFill = false
@@ -71,6 +81,7 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
          controlsVisible: Bool = true,
          isSelected: Bool = false,
          showsFooter: Bool = true,
+         showsWidget: Bool = true,
          fill: Color? = nil,
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
@@ -89,6 +100,7 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
         self.controlsVisible = controlsVisible
         self.isSelected = isSelected
         self.showsFooter = showsFooter
+        self.showsWidget = showsWidget
         self.fill = fill
         self.fillOpacity = fillOpacity
         self.gradient = gradient
@@ -144,61 +156,85 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
 
     @ViewBuilder
     private var cardContent: some View {
-        if isExpanded {
-            VStack(alignment: .leading, spacing: 0) {
-                header()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                expandedBody()
-                if showsFooter && size != .small {
-                    footer(showWidget: size.showsWidget, showActions: controlsVisible)
-                }
+        VStack(alignment: .leading, spacing: 0) {
+            stickyHeader
+            if isExpanded {
+                expandedBody
             }
-        } else {
-            switch size {
-            case .small:
-                header()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            case .medium:
-                VStack(alignment: .leading, spacing: 0) {
-                    header()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if showsFooter {
-                        footer(showWidget: false, showActions: hovering)
-                    }
-                }
-            case .large:
-                VStack(alignment: .leading, spacing: 0) {
-                    header()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if showsFooter {
-                        footer(showWidget: true, showActions: hovering)
-                    }
-                }
+            if shouldShowStickyWidget {
+                stickyWidget
+            }
+            if shouldShowStickyFooter {
+                stickyFooter(showActions: isExpanded ? controlsVisible : hovering)
             }
         }
     }
 
-    private func expandedBody() -> some View {
+    private var stickyHeader: some View {
+        header()
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var expandedBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             bodyContent()
                 .frame(maxWidth: .infinity, alignment: .leading)
-            if showsFooter && size == .small {
-                footer(showWidget: false, showActions: controlsVisible)
+            if shouldEmbedWidgetInBody {
+                embeddedWidget
+            }
+            if shouldEmbedFooterInBody {
+                stickyFooter(showActions: controlsVisible)
             }
         }
     }
 
-    private func footer(showWidget: Bool, showActions: Bool) -> some View {
-        ResourceCardFooter(showWidget: showWidget, actionsVisible: showActions) {
+    private var stickyWidget: some View {
+        widgetBand
+    }
+
+    private var embeddedWidget: some View {
+        widgetBand
+    }
+
+    private func stickyFooter(showActions: Bool) -> some View {
+        ResourceCardFooter(actionsVisible: showActions) {
             footerLeading()
         } trailing: {
             footerActions()
         } widget: {
-            widget()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Tokens.ResourceCard.padding)
-                .padding(.bottom, Tokens.ResourceCard.padding)
+            EmptyView()
         }
+    }
+
+    private var widgetBand: some View {
+        widget()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Tokens.ResourceCard.padding)
+            .padding(.bottom, Tokens.ResourceCard.padding)
+    }
+
+    private var shouldShowStickyWidget: Bool {
+        showsWidget && hasWidgetSlot && size.keepsWidgetSticky
+    }
+
+    private var shouldEmbedWidgetInBody: Bool {
+        showsWidget && hasWidgetSlot && size.embedsWidgetInBody
+    }
+
+    private var shouldShowStickyFooter: Bool {
+        showsFooter && hasFooterSlot && size.keepsFooterSticky
+    }
+
+    private var shouldEmbedFooterInBody: Bool {
+        showsFooter && hasFooterSlot && size.embedsFooterInBody
+    }
+
+    private var hasWidgetSlot: Bool {
+        Widget.self != EmptyView.self
+    }
+
+    private var hasFooterSlot: Bool {
+        FooterLeading.self != EmptyView.self || FooterActions.self != EmptyView.self
     }
 }
 

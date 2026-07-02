@@ -43,8 +43,9 @@ This package currently depends only on platform frameworks available to a macOS
 - `GlassButton`, `GlassButtonItem`, `GlassButtonInputItem`, `GlassRowMenu`, and
   toolbar control helpers.
 - `ResourceGlassCard`, `ResourceCardPageControls`, `ResourceCardFooterChip`,
-  `ResourceCardFooterButton`, `ResourceCardInsetSection`, and other
-  `ResourceCard*` pieces for repeated card layouts and card-local controls.
+  `ResourceCardFooterButton`, `ResourceCardWidgetGroup`,
+  `ResourceCardInsetSection`, and other `ResourceCard*` pieces for repeated
+  card layouts and card-local controls.
   Use `resourceCardFloatingControls` and `resourceCardProgressOverlay` for
   card overlays instead of app-local `.overlay` recipes.
 - `ActivityStatusView` with `ActivityStatusPresentation`, where callers provide
@@ -142,6 +143,13 @@ struct DesignSystemExample: View {
 Keep card-local controls in the package. Feature views should provide plain
 values and actions instead of restyling footer chips or expanded-card page rails:
 
+`ResourceGlassCard` owns card anatomy:
+
+- the header is always sticky and visible
+- the body appears only when the card is expanded
+- the widget is sticky for `.large` cards and becomes body content for `.medium`
+- the footer is sticky for `.medium` and `.large` cards and becomes body content for `.small`
+
 ```swift
 struct CardControlsExample: View {
     @State private var page = "overview"
@@ -188,13 +196,12 @@ struct CardControlsExample: View {
                           scale: .fraction)
                 .frame(height: Tokens.ResourceCard.sparklineHeight)
         }
-        .overlay(alignment: .topTrailing) {
+        .resourceCardFloatingControls(when: true) {
             ResourceCardPageControls(items: pages,
                                      selection: page,
                                      tint: .accentColor,
                                      onSelect: { page = $0 },
                                      onClose: {})
-                .padding(Tokens.Space.s)
         }
     }
 }

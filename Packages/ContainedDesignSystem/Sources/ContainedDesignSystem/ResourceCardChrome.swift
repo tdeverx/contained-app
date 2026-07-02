@@ -256,6 +256,26 @@ public struct ResourceCardFooterGroup<Content: View>: View {
     }
 }
 
+/// A horizontal group for content in a card widget band.
+public struct ResourceCardWidgetGroup<Content: View>: View {
+    public var spacing: CGFloat
+    @ViewBuilder public var content: () -> Content
+
+    public init(spacing: CGFloat = Tokens.ResourceCard.padding,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.spacing = spacing
+        self.content = content
+    }
+
+    public var body: some View {
+        HStack(spacing: spacing) {
+            content()
+        }
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 /// A reusable footer band with a left group, right group, and optional widget stacked above them.
 public struct ResourceCardFooter<Leading: View, Trailing: View, Widget: View>: View {
     public var showWidget: Bool
