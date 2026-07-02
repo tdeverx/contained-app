@@ -39,12 +39,12 @@ import ContainedNavigation
   a handoff panel.
 - `MorphSourceFrameReader` and `MorphSourceFramesKey` for measuring source
   frames in a named coordinate space without app-local preference keys.
-- `DesignPanelScaffold` for generic fixed chrome, scrollable content, and pinned
-  footer layout inside a morph panel.
 
 Keep concrete panel contents in the app target. For example, Images, Templates,
 System, Settings, Activity, and Command Palette panels are app features that use
 this package; they do not live in this package.
+Use `DesignPanelScaffold` from `ContainedDesignSystem` for panel anatomy;
+`ContainedNavigation` performs the morph and placement around that visual body.
 
 ## Example
 

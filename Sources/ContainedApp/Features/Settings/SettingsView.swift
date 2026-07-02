@@ -8,8 +8,8 @@ import ContainedCore
 /// headers, and explanatory footers stay consistent: Appearance (theme + glass), General (behavior,
 /// data, CLI), Runtime, Registries, Updates, and About.
 ///
-/// Hosted in the toolbar Settings morph panel via the shared `DesignPanelScaffold`, so the panel hugs
-/// the active section's content height. Sections switch via a header menu rather than a `TabView`.
+/// Hosted in the toolbar Settings morph panel via the shared `DesignPanelScaffold`.
+/// Sections switch via a header menu rather than a `TabView`.
 struct SettingsContent: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -51,7 +51,7 @@ struct SettingsContent: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        DesignPanelScaffold(width: DesignTokens.PanelSize.settings.width, placement: .centered) {
+        DesignPanelScaffold(width: DesignTokens.PanelSize.settings.width) {
             if showsHeader {
                 VStack(spacing: 0) {
                     header
@@ -62,6 +62,7 @@ struct SettingsContent: View {
             sectionBody(settings: settings)
                 .padding(DesignTokens.Space.s)
         }
+        .morphPanelPlacement(.centered)
         .onAppear { consumeRequestedPage() }
         .onChange(of: ui.settingsPage) { _, requested in
             guard let requested else { return }

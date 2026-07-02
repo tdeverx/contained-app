@@ -107,6 +107,33 @@ struct DesignSystemExample: View {
 }
 ```
 
+## Panel Scaffolds
+
+Use `DesignPanelScaffold` when a host already owns presentation, size, and
+placement but needs shared fixed chrome, lazy scrolling content, and an optional
+pinned footer:
+
+```swift
+DesignPanelScaffold(width: DesignTokens.PanelSize.settings.width) {
+    PanelHeader(symbol: "gearshape",
+                title: "Settings",
+                subtitle: "Appearance") {
+        DesignActionGroup(DesignAction(systemName: "xmark",
+                                       help: "Close",
+                                       isCancel: true) {})
+    }
+    Divider()
+} content: {
+    PanelSection(header: "Theme") {
+        PanelRow(title: "Accent") {
+            TintSelector(selection: .constant(.azure),
+                         labelForTint: { _ in "Azure" })
+        }
+    }
+    .padding(DesignTokens.Space.s)
+}
+```
+
 ## Design Card Controls
 
 Use `DesignCard` for cards. Feature views pass plain titles, subtitles, page
@@ -260,6 +287,7 @@ DesignToggleButton(isOn: $following,
 
 - ``DesignContentSurface``
 - ``DesignInputSurface``
+- ``DesignPanelScaffold``
 - ``PageScaffold``
 - ``PanelHeader``
 - ``PanelSection``

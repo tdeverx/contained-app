@@ -42,7 +42,7 @@ This package currently depends only on platform frameworks available to a macOS
 - `WindowMaterial`, `DesignTint`, `ColorLayerBlendMode`, and root environment
   values for shared material/tint policy.
 - Named surface routes such as `DesignContentSurface`, `DesignInputSurface`,
-  panel scaffolds, and toolbar controls. Low-level glass modifiers and
+  `DesignPanelScaffold`, and toolbar controls. Low-level glass modifiers and
   visual-effect bridges are package implementation details.
 - `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `SheetHeader`, and
   `PageScaffold` for app-neutral scaffolding.
@@ -168,6 +168,33 @@ struct DesignSystemExample: View {
         case .pink: return "Pink"
         }
     }
+}
+```
+
+## Panel Scaffold Example
+
+Use `DesignPanelScaffold` when a host already owns presentation, size, and
+placement but needs shared fixed chrome, lazy scrolling content, and an optional
+pinned footer:
+
+```swift
+DesignPanelScaffold(width: DesignTokens.PanelSize.settings.width) {
+    PanelHeader(symbol: "gearshape",
+                title: "Settings",
+                subtitle: "Appearance") {
+        DesignActionGroup(DesignAction(systemName: "xmark",
+                                       help: "Close",
+                                       isCancel: true) {})
+    }
+    Divider()
+} content: {
+    PanelSection(header: "Theme") {
+        PanelRow(title: "Accent") {
+            TintSelector(selection: .constant(.azure),
+                         labelForTint: { _ in "Azure" })
+        }
+    }
+    .padding(DesignTokens.Space.s)
 }
 ```
 

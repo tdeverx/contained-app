@@ -9,8 +9,7 @@ struct ToolbarActivityPanel: View {
     var onClose: () -> Void
 
     var body: some View {
-        // Size + placement are reported by the DesignPanelScaffold inside ActivityContent (it hugs its
-        // content height), so no fixed morphPanelSize here.
+        // ActivityContent owns its design scaffold and morph sizing preferences.
         ActivityContent(showClose: true, elevated: false, onClose: onClose)
     }
 }
@@ -22,8 +21,7 @@ struct ToolbarSystemPanel: View {
     var onClose: () -> Void
 
     var body: some View {
-        // Size + placement are reported by the DesignPanelScaffold inside SystemContent (it hugs its
-        // content height), so no fixed morphPanelSize here.
+        // SystemContent owns its design scaffold and morph sizing preferences.
         SystemContent(elevated: false, onClose: onClose)
     }
 }
@@ -35,8 +33,7 @@ struct ToolbarSettingsPanel: View {
     var onClose: () -> Void
 
     var body: some View {
-        // Size + placement are reported by the DesignPanelScaffold inside SettingsContent (it hugs its
-        // content height and centers), so no fixed morphPanelSize here.
+        // SettingsContent owns its design scaffold and centered morph placement.
         SettingsContent(onClose: onClose)
     }
 }
