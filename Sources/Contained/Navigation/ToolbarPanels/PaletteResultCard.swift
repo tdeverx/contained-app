@@ -50,13 +50,14 @@ struct PaletteResultCard: View {
                                          ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
                                          : Tokens.ResourceCard.iconBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: item.title)
                         ResourceBadgeText(text: item.kind.rawValue,
                                           font: .caption2.weight(.semibold),
                                           foreground: selected ? .accentColor : .secondary)
                     }
+                } subtitle: {
                     if let subtitle = item.subtitle, !subtitle.isEmpty {
                         ResourceCardSubtitleText(text: subtitle)
                     }
@@ -93,13 +94,14 @@ struct PaletteResultCard: View {
                                          ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
                                          : Tokens.ResourceCard.iconBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: name)
                         ResourceBadgeText(text: snapshot.state.rawValue.capitalized,
                                           font: .caption2.weight(.semibold),
                                           foreground: snapshot.state == .running ? .green : .secondary)
                     }
+                } subtitle: {
                     ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
                 }
             } trailing: {
@@ -144,11 +146,12 @@ struct PaletteResultCard: View {
                                          ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
                                          : Tokens.ResourceCard.iconBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardMonospacedTitleText(text: Format.shortImage(reference))
                         ResourceBadgeText(text: "Tag", font: .caption2.weight(.semibold))
                     }
+                } subtitle: {
                     ResourceCardSubtitleText(text: repositoryTitle(reference))
                 }
             } trailing: {
@@ -184,11 +187,12 @@ struct PaletteResultCard: View {
                                          ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
                                          : Tokens.ResourceCard.iconBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: title)
                         ResourceBadgeText(text: subtitle, font: .caption2.weight(.semibold))
                     }
+                } subtitle: {
                     ResourceCardSubtitleText(text: footer)
                 }
             } trailing: {
@@ -209,13 +213,14 @@ struct PaletteResultCard: View {
             ResourceCardHeader {
                 DesignTintSwatch(color: tint.color, followsAppAccent: tint.followsAppAccent)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: tint.displayName)
                         ResourceBadgeText(text: app.settings.accentTint == tint ? "Current" : "Tint",
                                           font: .caption2.weight(.semibold),
                                           foreground: app.settings.accentTint == tint ? .accentColor : .secondary)
                     }
+                } subtitle: {
                     ResourceCardSubtitleText(text: item.title)
                 }
             } trailing: {

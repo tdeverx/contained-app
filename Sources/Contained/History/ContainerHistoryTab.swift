@@ -220,8 +220,9 @@ struct EventRow: View {
                                      tint: event.kind.tint,
                                      backgroundOpacity: Tokens.ResourceCard.iconEmphasisBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     ResourceCardTitleText(text: event.message)
+                } subtitle: {
                     HStack(spacing: Tokens.Space.xs) {
                         ResourceBadgeText(text: event.kind.rawValue.capitalized)
                         ResourceCardSubtitleText(text: subtitle)

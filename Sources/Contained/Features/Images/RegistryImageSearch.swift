@@ -156,17 +156,18 @@ struct RegistryImageSearch: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: symbol, tint: .accentColor)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     ResourceCardTitleText(text: title)
+                } subtitle: {
                     if let subtitle, !subtitle.isEmpty {
                         ResourceCardSubtitleText(text: subtitle)
                     }
                 }
-        } trailing: {
-            accessory()
+            } trailing: {
+                accessory()
+            }
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
-    }
     }
 
     // MARK: Search plumbing

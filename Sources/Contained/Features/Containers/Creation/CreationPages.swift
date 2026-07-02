@@ -251,8 +251,9 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
                 ResourceCardHeader {
                     ResourceCardIconChip(symbol: symbol, tint: .accentColor)
                 } content: {
-                    VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                    ResourceCardHeaderTextBlock {
                         ResourceCardTitleText(text: title)
+                    } subtitle: {
                         ResourceCardSubtitleText(text: subtitle)
                     }
                 } trailing: {
@@ -299,16 +300,17 @@ private struct CreationChoiceCard: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: symbol, tint: .accentColor)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     ResourceCardTitleText(text: title)
+                } subtitle: {
                     if let subtitle, !subtitle.isEmpty {
                         ResourceCardMonospacedSubtitleText(text: subtitle)
                     }
                 }
-        } trailing: {
-            GlassListRowChevron()
+            } trailing: {
+                GlassListRowChevron()
+            }
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
     }
-}
 }

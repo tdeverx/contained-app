@@ -24,11 +24,59 @@ public struct ResourceCardHeader<Leading: View, Content: View, Trailing: View>: 
     public var body: some View {
         HStack(alignment: .top, spacing: spacing) {
             leading()
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(2)
             content()
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
             trailing()
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(2)
         }
         .padding(padding)
+    }
+}
+
+/// Stable title/subtitle lane for `ResourceCardHeader`.
+///
+/// Use this for card header text so the title and metadata stay anchored to the leading chip while
+/// expanded-card controls appear, disappear, or change page selection.
+public struct ResourceCardHeaderTextBlock<Title: View, Subtitle: View>: View {
+    public var spacing: CGFloat
+    @ViewBuilder public var title: () -> Title
+    @ViewBuilder public var subtitle: () -> Subtitle
+
+    public init(spacing: CGFloat = Tokens.ResourceCard.compactTextSpacing,
+                @ViewBuilder title: @escaping () -> Title,
+                @ViewBuilder subtitle: @escaping () -> Subtitle) {
+        self.spacing = spacing
+        self.title = title
+        self.subtitle = subtitle
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            title()
+            subtitle()
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .layoutPriority(1)
+        .transaction { transaction in
+            transaction.animation = nil
+        }
+    }
+}
+
+public extension ResourceCardHeaderTextBlock where Subtitle == EmptyView {
+    init(spacing: CGFloat = Tokens.ResourceCard.compactTextSpacing,
+         @ViewBuilder title: @escaping () -> Title) {
+        self.init(spacing: spacing, title: title) {
+            EmptyView()
+        }
     }
 }
 

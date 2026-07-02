@@ -118,6 +118,7 @@ palette result cards.
 Recommended internal pieces:
 
 - `ResourceCardHeader` for the top row
+- `ResourceCardHeaderTextBlock` for sticky title/subtitle lanes inside headers
 - `ResourceCardIconChip` for icons and symbols
 - `ResourceCardTitleText` for names
 - `ResourceCardSubtitleText` or `ResourceCardMonospacedSubtitleText` for metadata

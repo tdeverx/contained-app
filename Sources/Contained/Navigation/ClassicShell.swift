@@ -266,8 +266,9 @@ private struct NetworksPage: View {
                 ResourceCardIconChip(symbol: network.isBuiltin ? "network.badge.shield.half.filled" : "network",
                                      tint: network.isBuiltin ? .secondary : .accentColor)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     ResourceCardTitleText(text: network.name)
+                } subtitle: {
                     ResourceCardSubtitleText(text: networkSubtitle(network))
                 }
             } trailing: {
