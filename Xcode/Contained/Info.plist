@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>Contained</string>
+  <key>CFBundleDisplayName</key>
+  <string>Contained</string>
+  <key>CFBundleIdentifier</key>
+  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>CFBundleExecutable</key>
+  <string>$(EXECUTABLE_NAME)</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$(MARKETING_VERSION)</string>
+  <key>CFBundleVersion</key>
+  <string>$(CURRENT_PROJECT_VERSION)</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>26.0</string>
+  <key>NSPrincipalClass</key>
+  <string>NSApplication</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.developer-tools</string>
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright 2026 Contained. All rights reserved.</string>
+  <key>SUFeedURL</key>
+  <string>https://raw.githubusercontent.com/tdeverx/contained-app/nightly/appcast.xml</string>
+  <key>SUPublicEDKey</key>
+  <string>M/wt6mIO/OCxhM5wK8Le0jCtaCBIhlRh2aBWv0jkq8o=</string>
+  <key>SUEnableInstallerLauncherService</key>
+  <true/>
+</dict>
+</plist>

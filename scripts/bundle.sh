@@ -59,11 +59,16 @@ if [ -d "$FRAMEWORK_SRC" ]; then
   install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/Contained" 2>/dev/null || true
 fi
 
-# Bundle the compiled String Catalog (Base localization) if SwiftPM produced one.
-BUNDLE_RES="$(swift build -c "$CONFIG" --show-bin-path)/Contained_Contained.bundle"
-if [ -d "$BUNDLE_RES" ]; then
-  cp -R "$BUNDLE_RES" "$APP/Contents/Resources/" || true
-fi
+# Bundle app resources if SwiftPM produced them. The app implementation lives in the
+# ContainedApp library target; keep the previous bundle name as a fallback for older build folders.
+BUILD_PRODUCTS="$(swift build -c "$CONFIG" --show-bin-path)"
+for bundle_name in Contained_ContainedApp.bundle Contained_Contained.bundle; do
+  BUNDLE_RES="$BUILD_PRODUCTS/$bundle_name"
+  if [ -d "$BUNDLE_RES" ]; then
+    cp -R "$BUNDLE_RES" "$APP/Contents/Resources/" || true
+    break
+  fi
+done
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

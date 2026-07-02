@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Contained
+@testable import ContainedApp
 
 @Suite("App logging settings")
 @MainActor

@@ -5,7 +5,6 @@ set -euo pipefail
 app="${1:-Contained.app}"
 plist="$app/Contents/Info.plist"
 binary="$app/Contents/MacOS/Contained"
-resource_changelog="$app/Contents/Resources/Contained_Contained.bundle/CHANGELOG.md"
 sparkle_framework="$app/Contents/Frameworks/Sparkle.framework"
 
 fail() {
@@ -16,7 +15,15 @@ fail() {
 [ -d "$app" ] || fail "App bundle '$app' was not found"
 [ -f "$plist" ] || fail "Info.plist is missing"
 [ -x "$binary" ] || fail "Executable '$binary' is missing or not executable"
-[ -f "$resource_changelog" ] || fail "Bundled CHANGELOG.md resource is missing"
+resource_changelog=""
+for bundle_name in Contained_ContainedApp.bundle Contained_Contained.bundle; do
+  candidate="$app/Contents/Resources/$bundle_name/CHANGELOG.md"
+  if [ -f "$candidate" ]; then
+    resource_changelog="$candidate"
+    break
+  fi
+done
+[ -n "$resource_changelog" ] || fail "Bundled CHANGELOG.md resource is missing"
 [ -d "$sparkle_framework" ] || fail "Sparkle.framework is missing from the bundle"
 
 plist_value() {

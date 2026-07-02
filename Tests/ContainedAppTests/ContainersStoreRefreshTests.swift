@@ -3,7 +3,7 @@ import Testing
 import ContainedCore
 import ContainedRuntime
 import AppleContainerRuntime
-@testable import Contained
+@testable import ContainedApp
 
 @Suite("Container stats streaming")
 @MainActor

@@ -38,7 +38,7 @@ body:
       placeholder: |
         - [ ] Post the recommendation and tradeoffs
         - [ ] Create or update follow-up implementation issues
-        - [ ] Update docs/wiki if policy or workflow changes
+        - [ ] Update docs if policy or workflow changes
     validations:
       required: false
 

@@ -1,0 +1,223 @@
+import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
+import SwiftData
+import ContainedCore
+
+/// The container create/edit form body — hosted by the paged `CreationFlow` and classic sheets.
+/// Owns the spec, validation, pre-flight
+/// warnings, create/recreate, and save-as-template. The host supplies a leading control (cancel for a
+/// sheet, back for a page) and is told when to close via `onFinished` (success) — the form never
+/// dismisses itself.
+struct ContainerConfigureView: View {
+    /// The leading header control: a sheet shows cancel (✕), a page shows back (‹).
+    enum Leading {
+        case cancel(() -> Void)
+        case back(() -> Void)
+    }
+
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
+    @Environment(\.modelContext) private var modelContext
+
+    let mode: ContainerEditSheet.Mode
+    let leading: Leading
+    var onFinished: () -> Void
+
+    @State private var spec: RunSpec
+    @State private var working = false
+    @State private var confirming = false
+    @State private var loaded = false
+    @State private var savingTemplate = false
+    @State private var templateName = ""
+
+    init(mode: ContainerEditSheet.Mode, leading: Leading, onFinished: @escaping () -> Void) {
+        self.mode = mode
+        self.leading = leading
+        self.onFinished = onFinished
+        switch mode {
+        case .new(let prefill):      _spec = State(initialValue: prefill ?? RunSpec())
+        case .edit(let snapshot, _): _spec = State(initialValue: RunSpec(from: snapshot.configuration))
+        }
+    }
+
+    private var isEdit: Bool { if case .edit = mode { return true }; return false }
+
+    var body: some View {
+        DesignPanelScaffold(width: DesignTokens.SheetSize.form.width) {
+            VStack(spacing: 0) {
+                header
+                Divider()
+                validationSummary
+            }
+        } content: {
+            RunSpecForm(spec: $spec)
+                .padding(DesignTokens.Space.s)
+        } footer: {
+            if app.settings.revealCLI {
+                CommandPreviewBar(command: app.previewCreateCommand(for: spec),
+                                  copyHelp: AppText.copyCommand,
+                                  copiedAccessibilityLabel: AppText.copied)
+                    .padding(DesignTokens.Space.s)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .onAppear(perform: load)
+        .confirmationDialog("Replace \(spec.name.isEmpty ? editID : spec.name)?",
+                            isPresented: $confirming) {
+            Button("Delete current container and run replacement", role: .destructive) { save() }
+        } message: {
+            Text("Contained will stop and delete the current container, then run a replacement from the command preview. Local style and health settings are reapplied. Data not stored in volumes is lost.")
+        }
+        .alert("Save as template", isPresented: $savingTemplate) {
+            TextField("Template name", text: $templateName)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") { saveTemplate() }
+        } message: {
+            Text("Save these settings as a reusable template.")
+        }
+    }
+
+    private var header: some View {
+        PanelHeader(symbol: isEdit ? "slider.horizontal.3" : "play.fill",
+                    title: isEdit ? "Edit container" : "Run a container",
+                    subtitle: isEdit ? "Replaces the existing container with your edits" : nil) {
+            HStack(spacing: DesignTokens.Space.s) {
+                DesignActionGroup(leadingAction)
+                if working {
+                    DesignProgressActionCapsule()
+                } else {
+                    DesignActionGroup([
+                        DesignAction(systemName: "bookmark",
+                                     help: AppText.saveAsTemplate,
+                                     isEnabled: spec.isRunnable) {
+                            templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
+                            savingTemplate = true
+                        },
+                        DesignAction(systemName: isEdit ? "checkmark" : "play.fill",
+                                     help: isEdit ? "Save" : "Create",
+                                     isEnabled: spec.isRunnable) {
+                            if isEdit { confirming = true } else { create() }
+                        }
+                    ])
+                    .opacity(spec.isRunnable ? 1 : 0.55)
+                }
+            }
+        }
+    }
+
+    private var leadingAction: DesignAction {
+        switch leading {
+        case .cancel(let action):
+            return DesignAction(systemName: "xmark", help: AppText.cancel, isCancel: true, action: action)
+        case .back(let action):
+            return DesignAction(systemName: "chevron.left", help: AppText.back, action: action)
+        }
+    }
+
+    @ViewBuilder
+    private var validationSummary: some View {
+        let messages = spec.validationMessages
+        let warnings = preflightWarnings
+        if !messages.isEmpty || !warnings.isEmpty || runError != nil {
+            LazyVStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
+                // Blocking issues (gate the run button) in secondary; pre-flight warnings in orange;
+                // the run/pull failure in red.
+                ForEach(messages, id: \.self) { message in
+                    Label(message, systemImage: "exclamationmark.circle")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(warnings, id: \.self) { warning in
+                    Label(warning, systemImage: "exclamationmark.triangle")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                if let runError {
+                    Label(runError, systemImage: "xmark.octagon")
+                        .font(.caption).foregroundStyle(.red)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, DesignTokens.Space.l)
+            .padding(.bottom, DesignTokens.Space.s)
+        }
+    }
+
+    /// The inline failure to show: the create/pull error (new mode) or the recreate error (edit mode).
+    private var runError: String? {
+        isEdit ? app.containers.errorMessage : app.createError
+    }
+
+    /// Cheap, app-state-aware checks that warn (but don't block) before running. Only for new
+    /// containers — an edit replaces the original in place, so a name "collision" with itself is fine.
+    private var preflightWarnings: [String] {
+        guard !isEdit else { return [] }
+        var out: [String] = []
+        let name = spec.name.trimmingCharacters(in: .whitespaces)
+        if !name.isEmpty,
+           app.containers.snapshots.contains(where: { $0.id == name || $0.displayName == name }) {
+            out.append("A container named “\(name)” already exists — creating this will fail unless you rename it.")
+        }
+        // Two ports mapping the same host port within this spec.
+        let hostPorts = spec.ports.map(\.hostPort).filter { !$0.isEmpty }
+        if Set(hostPorts).count != hostPorts.count {
+            out.append("Two port mappings share the same host port.")
+        }
+        return out
+    }
+
+    private func saveTemplate() {
+        let name = templateName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        modelContext.insert(Template(name: name, spec: spec))
+        try? modelContext.save()
+        app.flash("Saved template “\(name)”")
+    }
+
+    /// The id of the container being edited (empty in `.new` mode).
+    private var editID: String {
+        if case .edit(let snapshot, _) = mode { return snapshot.id }
+        return ""
+    }
+
+    private func load() {
+        guard !loaded else { return }
+        loaded = true
+        switch mode {
+        case .new:
+            break   // spec was prefilled at init
+        case .edit(let snapshot, _):
+            // Pull the current style + healthcheck from the local stores so edits start from what's set.
+            spec.personalization = app.containerStyle(for: snapshot)
+            spec.healthCheck = app.healthChecks.check(for: snapshot.id) ?? HealthCheck()
+        }
+    }
+
+    private func create() {
+        // Stay open while the (possibly image-pulling) create runs, so a failure can be shown inline
+        // without losing the user's spec. The header swaps to a spinner via `working`; progress for a
+        // pull still shows in the floating bar. Only close on success.
+        working = true
+        app.createError = nil
+        Task {
+            let newID = await app.createContainer(spec)
+            working = false
+            if newID != nil {
+                onFinished()
+            }
+            // else: stay open — `app.createError` drives the inline error.
+        }
+    }
+
+    private func save() {
+        guard case .edit(let snapshot, let onComplete) = mode else { return }
+        working = true
+        Task {
+            let newID = await app.recreateContainer(originalID: snapshot.id, spec: spec)
+            working = false
+            if newID != nil {
+                onComplete()
+                onFinished()
+            }
+        }
+    }
+}

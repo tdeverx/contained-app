@@ -8,7 +8,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SOURCE="CHANGELOG.md"
-TARGET="Sources/Contained/Resources/CHANGELOG.md"
+TARGET="Sources/ContainedApp/Resources/CHANGELOG.md"
 MODE="${1:-sync}"
 
 [ -f "$SOURCE" ] || { echo "✗ $SOURCE not found" >&2; exit 1; }

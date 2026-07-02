@@ -7,13 +7,23 @@ Icon?
 
 # Swift Package Manager
 .build/
+**/.build/
 .swiftpm/
+**/.swiftpm/
 # Package.resolved IS committed — this is an app, so pin exact dependency versions.
+Packages/**/Package.resolved
 
 # Xcode
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
+**/*.xcodeproj/xcuserdata/
+**/*.xcworkspace/xcuserdata/
+**/xcuserdata/
 DerivedData/
+**/DerivedData/
+*.xcresult
+*.result
+*.resultbundle
 *.xcuserstate
 *.moved-aside
 

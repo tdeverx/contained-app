@@ -1,5 +1,5 @@
 - Centralized resource-card anatomy in `ContainedDesignSystem`: headers stay visible, expanded bodies own density-specific embedded content, large widgets remain sticky, medium widgets move into the body, and small footers move into the body.
 - Routed remaining card widget/footer grouping through packaged card primitives, moved expanded page controls into the shared header trailing slot, kept that slot layout-stable during expansion, and updated design-system docs with the sticky/body slot contract.
 - Added a packaged sticky header text lane so card titles and subtitles stay anchored with the leading icon chip while expanded controls and page selections change.
-- Introduced `ResourceCard` as the app-facing resource-card API, including typed page configuration and named icon/title/subtitle/header/body/widget/footer slots, and migrated app cards away from direct `ResourceGlassCard`/header composition.
+- Introduced `DesignCard` as the app-facing resource-card API, including typed page configuration and named icon/title/subtitle/header/body/widget/footer slots, and migrated app cards away from direct `DesignCardSurface`/header composition.
 - Added semantic design-system action, toggle, toolbar, selection bar, progress, and status banner routes, then migrated app command chrome away from direct glass button/surface styling.

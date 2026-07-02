@@ -4,16 +4,20 @@ This file is the working contract for coding agents in this repository. Follow i
 
 ## Project Shape
 
-- This is a SwiftPM-first macOS 26 SwiftUI app.
-- Local reusable packages live under `Packages/` and are consumed by the root SwiftPM package.
-- `Contained.xcworkspace` is an Xcode convenience entry point over the SwiftPM manifests. Do not hand-maintain generated `.xcodeproj` state.
-- `Sources/ContainedCore` is pure/testable logic. Keep SwiftUI, app state, Sparkle, and persistence out of it.
-- `Sources/ContainedRuntime` is the shared runtime contract module. Keep it adapter-neutral so future runtimes can conform without changing app stores or views.
-- `Sources/AppleContainerRuntime` is the Apple `container` adapter. Future Docker-compatible, Podman, Lima-backed, remote, or other engines should be sibling adapter targets rather than switches in the app.
-- `Sources/Contained` is the app: SwiftUI screens, app-specific presentation mappings, navigation, stores, history, settings, and update support.
+- This is a package-first macOS 26 SwiftUI app with both SwiftPM and native Xcode entry points.
+- Local reusable packages live under `Packages/` and are consumed by the root SwiftPM package and the native Xcode app target.
+- `Contained.xcworkspace` is the Xcode entry point. `Contained.xcodeproj` contains a native macOS app target that links the `ContainedApp` package product and builds/runs `Contained.app` directly from Xcode.
+- SwiftPM remains the CI, release, packaging, signing, notarization, and appcast source of truth. Keep `Package.swift`, `swift build`, `swift test`, and `scripts/bundle.sh` working.
+- `Packages/ContainedCore/Sources/ContainedCore` is pure/testable logic. Keep SwiftUI, app state, Sparkle, and persistence out of it.
+- `Packages/ContainedRuntime/Sources/ContainedRuntime` is the shared runtime contract module. Keep it adapter-neutral so future runtimes can conform without changing app stores or views.
+- `Packages/AppleContainerRuntime/Sources/AppleContainerRuntime` is the Apple `container` adapter. Future Docker-compatible, Podman, Lima-backed, remote, or other engines should be sibling adapter packages rather than switches in the app.
+- `Sources/ContainedApp` is the app implementation: SwiftUI screens, app-specific presentation mappings, navigation, stores, history, settings, localization, and update support.
+- `Sources/Contained` is only the tiny SwiftPM executable launcher.
 - `Packages/ContainedDesignSystem` is the reusable SwiftUI/AppKit design-system package. Keep app state, stores, Sparkle, SwiftData, persistence, and feature routing out of it.
-- `Packages/ContainedNavigation` is the reusable navigation/layout package. Keep app sections, toolbar panels, stores, and concrete routing state in `Sources/Contained`.
-- `docs/wiki` mirrors the GitHub wiki. User-facing behavior or workflow changes should update the matching page.
+- `Packages/ContainedNavigation` is the reusable navigation/layout package. Keep app sections, toolbar panels, stores, and concrete routing state in `Sources/ContainedApp`.
+- `Packages/ContainedPreviewSupport` is deterministic fixture data for package examples and SwiftUI previews. Keep live runtime calls and localized copy out of it.
+- `docs/` is structured by audience and ownership. User-facing behavior or workflow changes should update the matching page under `docs/app`, `docs/features`, `docs/development`, `docs/architecture`, or `docs/release`.
+- Package docs live beside each package as README + DocC. Keep package examples working and app-supplied strings explicit.
 - Keep directory names intentional: SwiftPM-owned folders stay `Sources` and `Tests`, Swift source domain folders use PascalCase, and repo infrastructure uses lowercase names such as `docs` and `scripts`.
 
 ## Branches And Updates
@@ -30,7 +34,7 @@ This file is the working contract for coding agents in this repository. Follow i
 
 ## GitHub Issues
 
-- Follow `docs/wiki/Issues-and-Discussions.md` for issue routing, naming, labels, milestones, native parent/sub-issue links, and blocked-by/blocking links.
+- Follow `docs/development/Issues-and-Discussions.md` for issue routing, naming, labels, milestones, native parent/sub-issue links, and blocked-by/blocking links.
 - Use area labels for ownership only; do not treat area labels as workflow state.
 
 ## Release Notes
@@ -50,8 +54,8 @@ This file is the working contract for coding agents in this repository. Follow i
 
 ## Design And UI Rules
 
-- Reuse app-facing design-system routes before adding local styling: `PanelHeader`, `PanelSection`, `PanelField`, `ResourceCard`, `DesignActionGroup`, `DesignTextActionButton`, `DesignGlassToggle`, `DesignSelectionActionBar`, `CommandPreviewBar`, `TintSelector`, and `Tokens`.
-- Do not add app-local spacing, padding, radius, shadow, material, opacity, glass button styles, or micro-chrome constants. Add or extend a `ContainedDesignSystem` token/primitive first, then consume it from the app. Low-level package composition pieces such as `ResourceGlassCard`, `ResourceCardHeader`, `GlassButton`, and glass surface modifiers should not be called from `Sources/Contained`.
+- Reuse app-facing design-system routes before adding local styling: `PanelHeader`, `PanelSection`, `PanelField`, `DesignCard`, `DesignActionGroup`, `DesignTextActionButton`, `DesignGlassToggle`, `DesignSelectionActionBar`, `CommandPreviewBar`, `TintSelector`, and `DesignTokens`.
+- Do not add app-local spacing, padding, radius, shadow, material, opacity, glass button styles, or micro-chrome constants. Add or extend a `ContainedDesignSystem` token/primitive first, then consume it from the app. Low-level package composition pieces such as `DesignCardSurface`, `DesignCardHeader`, `GlassButton`, and glass surface modifiers should not be called from `Sources/ContainedApp`.
 - Keep the classic sidebar fallback working. Toolbar-first UI and toolbar panel navigation are experimental gates, not replacements.
 - Prefer native macOS/Liquid Glass behavior over custom chrome when the system primitive fits.
 - Do not make broad visual changes without a product reason.
@@ -60,14 +64,14 @@ This file is the working contract for coding agents in this repository. Follow i
 
 - Keep Apple `container` CLI actions behind `ContainerCommands` and `AppleContainerRuntime`; do not assemble argv inline in SwiftUI. App stores should depend on `any ContainerRuntimeClient` where backend choice matters.
 - Put pure decision logic in `ContainedCore` with focused tests.
-- Keep localization owned by `Sources/Contained`. Packages should receive
+- Keep localization owned by `Sources/ContainedApp`. Packages should receive
   app-supplied labels/help/accessibility strings and should not add English UI
   defaults or localized resource bundles. Use `AppText` for reusable app copy
   and dynamic templates; plain SwiftUI literals are acceptable when SwiftUI keeps
   them localization-ready.
 - Keep package errors display-neutral. Reusable targets should throw typed errors
   with stable codes/context, preferably `ContainedPackageError`, while
-  `Sources/Contained` maps them through `AppErrorPresentation`/`AppText` before
+  `Sources/ContainedApp` maps them through `AppErrorPresentation`/`AppText` before
   showing toasts, alerts, inline errors, or Activity entries. Preserve arbitrary
   backend stderr as runtime detail rather than pretending to localize it.
 - Do not write app personalization back as `contained.*` labels. Only `contained.restart` and `contained.stack` may round-trip through container labels.
@@ -112,6 +116,8 @@ CHANNEL=nightly ./scripts/validate-appcast.sh appcast.xml
 For app/UI changes:
 
 ```sh
+xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug build
+xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug test
 ./scripts/bundle.sh debug
 open Contained.app
 ```

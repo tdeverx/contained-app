@@ -33,20 +33,20 @@ struct NavigationPackageExample: View {
 
     private let originFrame = CGRect(x: 24,
                                      y: 24,
-                                     width: Tokens.Toolbar.buttonGroupHeight,
-                                     height: Tokens.Toolbar.buttonGroupHeight)
+                                     width: DesignTokens.Toolbar.buttonGroupHeight,
+                                     height: DesignTokens.Toolbar.buttonGroupHeight)
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             DesignActionGroup(DesignAction(systemName: "plus", help: "Add") {
                 isPresented = true
             })
-            .padding(Tokens.Space.l)
+            .padding(DesignTokens.Space.l)
 
             MorphingExpander(isPresented: $isPresented,
                              originFrame: originFrame,
-                             target: .centered(size: Tokens.PanelSize.add)) {
-                MorphPanelScaffold(width: Tokens.PanelSize.add.width) {
+                             target: .centered(size: DesignTokens.PanelSize.add)) {
+                DesignPanelScaffold(width: DesignTokens.PanelSize.add.width) {
                     PanelHeader(symbol: "plus",
                                 title: "Add",
                                 subtitle: "Choose a starting point") {
@@ -58,17 +58,17 @@ struct NavigationPackageExample: View {
                     }
                     Divider()
                 } content: {
-                    VStack(spacing: Tokens.Space.s) {
+                    VStack(spacing: DesignTokens.Space.s) {
                         Text("Panel content")
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(Tokens.Space.s)
+                    .padding(DesignTokens.Space.s)
                 }
             }
         }
-        .environment(\.appSafeAreas,
-                      AppSafeAreaManager(topToolbarHeight: Tokens.Toolbar.band,
-                                         bottomToolbarHeight: Tokens.Toolbar.band))
+        .environment(\.morphSafeAreas,
+                      MorphSafeAreaManager(topToolbarHeight: DesignTokens.Toolbar.band,
+                                         bottomToolbarHeight: DesignTokens.Toolbar.band))
     }
 }
 ```
@@ -87,14 +87,14 @@ Button("Open") { isPresented = true }
 
 ### Safe Areas
 
-- ``AppSafeAreaManager``
-- ``AppSafeAreaPolicy``
-- ``AppToolbarSafeAreaExclusion``
-- ``AppSafeAreaPadding``
+- ``MorphSafeAreaManager``
+- ``MorphSafeAreaPolicy``
+- ``MorphToolbarSafeAreaExclusion``
+- ``MorphSafeAreaPadding``
 
 ### Morph Targets and Geometry
 
-- ``AppMorphTarget``
+- ``MorphTarget``
 - ``MorphPanelPlacement``
 - ``MorphGeometry``
 
@@ -104,7 +104,7 @@ Button("Open") { isPresented = true }
 - ``MorphingSingleSurface``
 - ``MorphingSingleSurfaceExpander``
 - ``MorphFrame``
-- ``MorphPanelScaffold``
+- ``DesignPanelScaffold``
 - ``MorphSourceFrameReader``
 - ``MorphSourceFramesKey``
 - ``GlobalBackdropStyle``

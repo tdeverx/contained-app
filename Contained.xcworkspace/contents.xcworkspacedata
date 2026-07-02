@@ -5,12 +5,21 @@
       location = "group:Contained.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:Package.swift">
+      location = "group:Packages/ContainedCore/Package.swift">
+   </FileRef>
+   <FileRef
+      location = "group:Packages/ContainedRuntime/Package.swift">
+   </FileRef>
+   <FileRef
+      location = "group:Packages/AppleContainerRuntime/Package.swift">
    </FileRef>
    <FileRef
       location = "group:Packages/ContainedDesignSystem/Package.swift">
    </FileRef>
    <FileRef
       location = "group:Packages/ContainedNavigation/Package.swift">
+   </FileRef>
+   <FileRef
+      location = "group:Packages/ContainedPreviewSupport/Package.swift">
    </FileRef>
 </Workspace>

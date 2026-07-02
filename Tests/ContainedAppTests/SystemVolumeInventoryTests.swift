@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import ContainedCore
-@testable import Contained
+@testable import ContainedApp
 
 @Suite("System volume inventory")
 struct SystemVolumeInventoryTests {

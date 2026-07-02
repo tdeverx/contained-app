@@ -4,7 +4,7 @@
 SwiftUI/AppKit visual language.
 
 Use it for app-agnostic UI primitives: tokens, glass surfaces, panel/page/sheet
-scaffolds, toolbar controls, resource-card chrome, sparklines, JSON/stream
+scaffolds, toolbar controls, design-card chrome, sparklines, JSON/stream
 surfaces, color controls, clipboard helpers, and small chrome such as badges,
 keycaps, status dots, metric tiles, terminal surfaces, and selection overlays.
 
@@ -37,9 +37,9 @@ This package currently depends only on platform frameworks available to a macOS
 
 ## What Belongs Here
 
-- `Tokens` for spacing, radius, toolbar, panel, icon, form, chart, badge,
+- `DesignTokens` for spacing, radius, toolbar, panel, icon, form, chart, badge,
   keycap, card, terminal, and menu-bar constants.
-- `WindowMaterial`, `AppTint`, `ColorLayerBlendMode`, and root environment
+- `WindowMaterial`, `DesignTint`, `ColorLayerBlendMode`, and root environment
   values for shared material/tint policy.
 - `GlassSurface`, `glassSurface`, `glassCapsuleSurface`, and visual-effect
   helpers for all reusable glass treatment.
@@ -50,12 +50,12 @@ This package currently depends only on platform frameworks available to a macOS
   `DesignStatusBanner`, and toolbar controls for package-owned command chrome.
   `GlassButton`, `GlassButtonItem`, and `GlassButtonInputItem` are lower-level
   package composition pieces.
-- `ResourceCard`, `ResourceCardPages`, `ResourceCardFooterChip`,
-  `ResourceCardFooterButton`, `ResourceCardWidgetGroup`, `ResourceCardInsetSection`,
-  and other `ResourceCard*` pieces for repeated card layouts and card-local controls.
-  App code should use `ResourceCard`; `ResourceGlassCard` and header primitives are
+- `DesignCard`, `DesignCardPages`, `DesignCardFooterChip`,
+  `DesignCardFooterButton`, `DesignCardWidgetGroup`, `DesignCardInsetSection`,
+  and other `DesignCard*` pieces for repeated card layouts and card-local controls.
+  App code should use `DesignCard`; `DesignCardSurface` and header primitives are
   lower-level package composition pieces.
-  Use `resourceCardFloatingControls` and `resourceCardProgressOverlay` for
+  Use `designCardFloatingControls` and `designCardProgressOverlay` for
   card overlays instead of app-local `.overlay` recipes.
 - `ActivityStatusView` with `ActivityStatusPresentation`, where callers provide
   plain status text/progress instead of app model objects.
@@ -79,7 +79,7 @@ individual views:
 struct AppRoot: View {
     var body: some View {
         DesignSystemExample()
-            .tint(AppTint.azure.color)
+            .tint(DesignTint.azure.color)
             .environment(\.modalMaterial, WindowMaterial.sheet)
             .environment(\.buttonMaterial, WindowMaterial.glassClear)
             .environment(\.cardMaterial, WindowMaterial.glassRegular)
@@ -100,13 +100,13 @@ import SwiftUI
 import ContainedDesignSystem
 
 struct DesignSystemExample: View {
-    @State private var tint = AppTint.azure
+    @State private var tint = DesignTint.azure
 
     var body: some View {
         PageScaffold(symbol: "shippingbox",
                      title: "Containers",
                      subtitle: "Local runtime") {
-            VStack(spacing: Tokens.Space.l) {
+            VStack(spacing: DesignTokens.Space.l) {
                 PanelSection(header: "Appearance") {
                     PanelRow(title: "Accent") {
                         TintSelector(selection: $tint, labelForTint: tintName)
@@ -116,11 +116,11 @@ struct DesignSystemExample: View {
                     }
                 }
 
-                ResourceCard(size: .small,
+                DesignCard(size: .small,
                              elevated: false,
                              title: "web",
                              subtitle: "nginx:latest") {
-                    ResourceCardIconChip(symbol: "shippingbox.fill",
+                    DesignCardIconChip(symbol: "shippingbox.fill",
                                          tint: tint.color)
                 } titleAccessory: {
                     EmptyView()
@@ -152,7 +152,7 @@ struct DesignSystemExample: View {
         .environment(\.designSystemShowsInfoTips, true)
     }
 
-    private func tintName(_ tint: AppTint) -> String {
+    private func tintName(_ tint: DesignTint) -> String {
         switch tint {
         case .multicolor: return "App Accent"
         case .graphite: return "Graphite"
@@ -173,10 +173,10 @@ struct DesignSystemExample: View {
 Keep card-local controls in the package. Feature views provide plain values and
 actions instead of assembling headers, footer groups, or expanded-card page rails:
 
-`ResourceCard` owns card anatomy:
+`DesignCard` owns card anatomy:
 
 - the header is always sticky and visible
-- page controls are declared through `ResourceCardPages`, stay mounted in the
+- page controls are declared through `DesignCardPages`, stay mounted in the
   header trailing slot, and use `controlsReveal` for visibility
 - the body appears only when the card is expanded
 - the widget is sticky for `.large` cards and becomes body content for `.medium`
@@ -188,25 +188,25 @@ struct CardControlsExample: View {
     @State private var metric = "cpu"
 
     private let pages = [
-        ResourceCardPageControlItem(id: "overview",
+        DesignCardPageControlItem(id: "overview",
                                     title: "Overview",
                                     systemImage: "rectangle.grid.1x2"),
-        ResourceCardPageControlItem(id: "logs",
+        DesignCardPageControlItem(id: "logs",
                                     title: "Logs",
                                     systemImage: "text.alignleft")
     ]
 
     var body: some View {
-        ResourceCard(size: .large,
+        DesignCard(size: .large,
                      title: "web",
                      subtitle: "nginx:latest",
-                     pages: ResourceCardPages(items: pages,
+                     pages: DesignCardPages(items: pages,
                                               selection: page,
                                               tint: .accentColor,
                                               closeLabel: "Close",
                                               onSelect: { page = $0 },
                                               onClose: {})) {
-            ResourceCardIconChip(symbol: "shippingbox.fill")
+            DesignCardIconChip(symbol: "shippingbox.fill")
         } titleAccessory: {
             EmptyView()
         } subtitleAccessory: {
@@ -214,27 +214,27 @@ struct CardControlsExample: View {
         } headerAccessory: {
             EmptyView()
         } bodyContent: {
-            ResourceCardInsetSection(title: "Details") {
-                ResourceCardSubtitleText(text: "Ready")
+            DesignCardInsetSection(title: "Details") {
+                DesignCardSubtitleText(text: "Ready")
             }
         } footerLeading: {
-            ResourceCardFooterChip(isSelected: metric == "cpu",
+            DesignCardFooterChip(isSelected: metric == "cpu",
                                    tint: .accentColor,
                                    help: "CPU",
                                    action: { metric = "cpu" }) {
                 Image(systemName: "cpu")
             } text: {
-                ResourceCardMetricText(text: "12%")
+                DesignCardMetricText(text: "12%")
             }
         } footerActions: {
-            ResourceCardFooterButton(systemName: "play.fill",
+            DesignCardFooterButton(systemName: "play.fill",
                                      help: "Start",
                                      tint: .accentColor) {}
         } widget: {
             LiveSparkline(samples: [0, 0.12, 0.18],
                           color: .accentColor,
                           scale: .fraction)
-                .frame(height: Tokens.ResourceCard.sparklineHeight)
+                .frame(height: DesignTokens.DesignCard.sparklineHeight)
         }
     }
 }
@@ -328,16 +328,17 @@ DesignToolbarSearchField(text: $query,
 - DocC landing page:
   `Sources/ContainedDesignSystem/ContainedDesignSystem.docc/ContainedDesignSystem.md`
 - App-level guidance:
-  `../../docs/wiki/Design-System.md`
+  `../../docs/architecture/Design-System.md`
 - Navigation package:
   `../ContainedNavigation/README.md`
 
 ## Verification
 
-Build the package by itself:
+Build and test the package by itself:
 
 ```sh
 swift build --package-path Packages/ContainedDesignSystem
+swift test --package-path Packages/ContainedDesignSystem
 ```
 
 Build it through the app graph:

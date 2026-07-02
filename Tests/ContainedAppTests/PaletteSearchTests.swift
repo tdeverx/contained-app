@@ -1,5 +1,5 @@
 import Testing
-@testable import Contained
+@testable import ContainedApp
 
 @Suite("Palette fuzzy search")
 struct PaletteSearchTests {
