@@ -227,6 +227,7 @@ public struct ResourceCardPageControls<ID: Hashable>: View {
             GlassButtonItem(systemName: "xmark", help: "Close", action: onClose)
         }
         .opacity(controlsReveal)
+        .allowsHitTesting(controlsReveal > 0.01)
         .animation(.easeOut(duration: 0.18), value: controlsReveal)
     }
 }
