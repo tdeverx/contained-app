@@ -12,7 +12,7 @@ struct SystemLogsSheet: View {
         VStack(spacing: 0) {
             HStack(spacing: DesignTokens.Space.m) {
                 Text("System logs").font(.headline)
-                DesignGlassToggle(isOn: $follow, title: AppText.follow, systemName: "arrow.down.to.line")
+                DesignToggleButton(isOn: $follow, title: AppText.follow, systemName: "arrow.down.to.line")
                     .onChange(of: follow) { _, _ in session += 1 }
                 Spacer()
                 DesignActionGroup(DesignAction(systemName: "xmark",

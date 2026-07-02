@@ -20,7 +20,7 @@ public enum DesignCardExpandedMetrics {
     public static let maxWidth: CGFloat = 760
 }
 
-public struct CardSizePicker: View {
+public struct DesignCardSizePicker: View {
     @Binding var selection: CardDensity
     public var title: String
     public var labelForDensity: (CardDensity) -> String

@@ -1,6 +1,25 @@
 import SwiftUI
 
-public struct GlassOptionTile: View {
+public struct DesignOptionStack<Content: View>: View {
+    public var spacing: CGFloat
+    @ViewBuilder public var content: () -> Content
+
+    public init(spacing: CGFloat = DesignTokens.Space.s,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.spacing = spacing
+        self.content = content
+    }
+
+    public var body: some View {
+        GlassEffectContainer(spacing: spacing) {
+            LazyVStack(spacing: spacing) {
+                content()
+            }
+        }
+    }
+}
+
+public struct DesignOptionTile: View {
     public static let defaultHeight: CGFloat = 100
 
     public let symbol: String
@@ -59,7 +78,7 @@ public struct GlassOptionTile: View {
             }
             .padding(DesignTokens.Space.m)
             .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .leading)
-            .glassOptionTileSurface(cornerRadius: DesignTokens.Radius.card, interactive: enabled)
+            .designOptionTileSurface(cornerRadius: DesignTokens.Radius.card, interactive: enabled)
             .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous))
             .optionalMatchedGeometry(id: matchedID, namespace: matchedNamespace)
         }
@@ -90,7 +109,7 @@ private extension View {
         modifier(OptionalMatchedGeometry(id: id, namespace: namespace))
     }
 
-    func glassOptionTileSurface(cornerRadius: CGFloat, interactive: Bool) -> some View {
+    func designOptionTileSurface(cornerRadius: CGFloat, interactive: Bool) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         return self
             .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)

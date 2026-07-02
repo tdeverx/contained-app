@@ -88,12 +88,12 @@ struct NavigationPackageExample: View {
                     Divider()
                 } content: {
                     VStack(spacing: DesignTokens.Space.s) {
-                        GlassOptionTile(symbol: "play.rectangle",
+                        DesignOptionTile(symbol: "play.rectangle",
                                         title: "Run a container",
                                         subtitle: "Start from an image") {
                             isPresented = false
                         }
-                        GlassOptionTile(symbol: "square.stack.3d.up",
+                        DesignOptionTile(symbol: "square.stack.3d.up",
                                         title: "Use an existing image",
                                         subtitle: "Pick from local images") {
                             isPresented = false

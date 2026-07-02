@@ -12,7 +12,7 @@ struct ToolbarPageSwitcher: View {
     @Query private var templates: [Template]
 
     var body: some View {
-        DesignGlassMenuButton {
+        DesignMenuButton {
             ForEach(AppSectionGroup.allCases) { group in
                 let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
                     .filter { $0.group == group && ($0 != .build || app.settings.imageBuildEnabled) }
@@ -81,7 +81,7 @@ struct ToolbarViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return DesignGlassMenuButton {
+        return DesignMenuButton {
             Picker("Group by", selection: $ui.grouping) {
                 ForEach(ContainerGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
@@ -247,7 +247,7 @@ struct ToolbarPageFilterOptions: View {
             NetworkViewOptions()
         case .activity:
             @Bindable var ui = ui
-            DesignGlassMenuButton {
+            DesignMenuButton {
                 Picker("Filter", selection: $ui.activityFilter) {
                     Label("All events", systemImage: "tray.full").tag(EventKind?.none)
                     Divider()
@@ -278,7 +278,7 @@ private struct ImageViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return DesignGlassMenuButton {
+        return DesignMenuButton {
             Picker("Group by", selection: $ui.imageGrouping) {
                 ForEach(ImageGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
@@ -318,7 +318,7 @@ private struct TemplateViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return DesignGlassMenuButton {
+        return DesignMenuButton {
             Picker("Group by", selection: $ui.templateGrouping) {
                 ForEach(TemplateGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
@@ -345,7 +345,7 @@ private struct NetworkViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return DesignGlassMenuButton {
+        return DesignMenuButton {
             Picker("Group by", selection: $ui.networkGrouping) {
                 ForEach(NetworkGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)

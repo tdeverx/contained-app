@@ -492,8 +492,8 @@ public struct DesignBadgeText: View {
     }
 }
 
-/// Flat glass row for selectable lists inside panels and sheets.
-public struct GlassListRow<Accessory: View>: View {
+/// Flat selectable row for lists inside panels and sheets.
+public struct DesignListRow<Accessory: View>: View {
     public var symbol: String
     public var tint: Color
     public var title: String
@@ -543,7 +543,7 @@ public struct GlassListRow<Accessory: View>: View {
     }
 }
 
-public struct GlassListRowChevron: View {
+public struct DesignListRowChevron: View {
     public init() {}
 
     public var body: some View {
@@ -553,7 +553,7 @@ public struct GlassListRowChevron: View {
     }
 }
 
-public extension GlassListRow where Accessory == GlassListRowChevron {
+public extension DesignListRow where Accessory == DesignListRowChevron {
     init(symbol: String, tint: Color = .accentColor, title: String, subtitle: String?,
          monospacedSubtitle: Bool = true) {
         self.init(symbol: symbol,
@@ -561,7 +561,7 @@ public extension GlassListRow where Accessory == GlassListRowChevron {
                   title: title,
                   subtitle: subtitle,
                   monospacedSubtitle: monospacedSubtitle) {
-            GlassListRowChevron()
+            DesignListRowChevron()
         }
     }
 }

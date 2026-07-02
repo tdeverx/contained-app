@@ -89,7 +89,7 @@ struct RegistryImageSearch: View {
     private func quickPick(symbol: String, title: String, subtitle: String,
                            action: @escaping () -> Void) -> some View {
         choiceCard(symbol: symbol, title: title, subtitle: subtitle, action: action) {
-            GlassListRowChevron()
+            DesignListRowChevron()
         }
         .accessibilityAddTraits(.isButton)
     }

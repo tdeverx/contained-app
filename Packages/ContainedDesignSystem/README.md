@@ -47,10 +47,12 @@ This package currently depends only on platform frameworks available to a macOS
 - `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `SheetHeader`, and
   `PageScaffold` for app-neutral scaffolding.
 - `DesignActionGroup`, `DesignActionCluster`, `DesignInputCluster`,
-  `DesignTextActionButton`, `DesignGlassToggle`, `DesignSelectionActionBar`,
+  `DesignTextActionButton`, `DesignToggleButton`, `DesignSelectionActionBar`,
   `DesignStatusBanner`, and toolbar controls for package-owned command chrome.
   Low-level glass button groups are package implementation details behind these
   named controls.
+- `DesignOptionStack` and `DesignOptionTile` for option grids and creation-style
+  choice lists.
 - `DesignCard`, `DesignCardPages`, `DesignCardFooterChip`,
   `DesignCardFooterButton`, `DesignCardWidgetGroup`, `DesignCardInsetSection`,
   and other `DesignCard*` pieces for repeated card layouts and card-local controls.
@@ -84,7 +86,7 @@ struct AppRoot: View {
             .environment(\.modalMaterial, WindowMaterial.sheet)
             .environment(\.buttonMaterial, WindowMaterial.glassClear)
             .environment(\.cardMaterial, WindowMaterial.glassRegular)
-            .environment(\.buttonTintStyle, GlassButtonTintStyle(enabled: true,
+            .environment(\.buttonTintStyle, DesignButtonTintStyle(enabled: true,
                                                                  tint: .azure,
                                                                  opacity: 0.18))
             .environment(\.designSystemShowsInfoTips, true)
@@ -128,7 +130,7 @@ struct DesignSystemExample: View {
                 } subtitleAccessory: {
                     EmptyView()
                 } headerAccessory: {
-                    GlassListRowChevron()
+                    DesignListRowChevron()
                 } bodyContent: {
                     EmptyView()
                 } footerLeading: {
@@ -301,7 +303,7 @@ DesignTextActionButton(title: "Import",
     importArchive()
 }
 
-DesignGlassToggle(isOn: $following,
+DesignToggleButton(isOn: $following,
                   title: "Follow",
                   systemName: "arrow.down.to.line")
 

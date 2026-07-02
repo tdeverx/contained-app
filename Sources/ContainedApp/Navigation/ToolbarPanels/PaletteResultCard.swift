@@ -260,7 +260,7 @@ struct PaletteResultCard: View {
                     .foregroundStyle(.tertiary)
                     .frame(width: DesignTokens.IconSize.chip, height: DesignTokens.IconSize.chip)
             } else {
-                GlassListRowChevron()
+                DesignListRowChevron()
                     .frame(width: DesignTokens.IconSize.chip, height: DesignTokens.IconSize.chip)
             }
         case .toggle(let isOn, let set):

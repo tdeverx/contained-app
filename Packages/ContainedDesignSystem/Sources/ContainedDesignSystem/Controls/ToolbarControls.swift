@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Design-system controls for the app toolbar band, sized from `DesignTokens.Toolbar` to macOS 26 Liquid
-/// Glass toolbar proportions. Centralizing them here keeps the toolbar, the creation tiles
-/// (`GlassOptionTile`), and any future band controls visually consistent and on one source of truth.
+/// Design-system controls for the app toolbar band, sized from `DesignTokens.Toolbar` to macOS 26
+/// toolbar proportions. Centralizing them here keeps the toolbar, creation tiles
+/// (`DesignOptionTile`), and future band controls visually consistent.
 
-public struct DesignGlassMenuButton<LabelContent: View, MenuContent: View>: View {
+public struct DesignMenuButton<LabelContent: View, MenuContent: View>: View {
     @ViewBuilder public var menuContent: () -> MenuContent
     @ViewBuilder public var labelContent: () -> LabelContent
 
@@ -147,9 +147,9 @@ public struct DesignToolbarActionCluster<Content: View>: View {
     }
 }
 
-/// A toolbar-styled menu trigger that uses the same icon sizing as `GlassButtonItem` but keeps
-/// the actual menu behavior native.
-public struct ToolbarMenuButton<Content: View>: View {
+/// A toolbar-styled menu trigger that uses the shared toolbar icon lane while keeping native menu
+/// behavior.
+public struct DesignToolbarMenuButton<Content: View>: View {
     public let systemName: String
     public var help: String
     @ViewBuilder public var content: () -> Content

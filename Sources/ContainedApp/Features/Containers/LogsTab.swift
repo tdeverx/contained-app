@@ -31,7 +31,7 @@ struct LogsTab: View {
 
     private var controls: some View {
         HStack(spacing: DesignTokens.Space.m) {
-            DesignGlassToggle(isOn: $following, title: AppText.follow, systemName: "arrow.down.to.line")
+            DesignToggleButton(isOn: $following, title: AppText.follow, systemName: "arrow.down.to.line")
             if streaming {
                 HStack(spacing: DesignTokens.Toolbar.searchIconGap) {
                     ProgressView().controlSize(.small)

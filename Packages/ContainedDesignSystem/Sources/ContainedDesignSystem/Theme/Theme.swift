@@ -159,8 +159,8 @@ public extension EnvironmentValues {
     @Entry var buttonMaterial: WindowMaterial = .glassClear
     /// The user-chosen design-card material, seeded at the app root.
     @Entry var cardMaterial: WindowMaterial = .glassRegular
-    /// Optional color/gradient wash layered into glass buttons.
-    @Entry var buttonTintStyle: GlassButtonTintStyle = .disabled
+    /// Optional color/gradient wash layered into toolbar button groups.
+    @Entry var buttonTintStyle: DesignButtonTintStyle = .disabled
 }
 
 private struct SheetMaterial: ViewModifier {

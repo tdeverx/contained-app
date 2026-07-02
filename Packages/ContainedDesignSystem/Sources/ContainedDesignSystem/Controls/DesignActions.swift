@@ -256,8 +256,8 @@ public struct DesignTextActionButton: View {
     }
 }
 
-/// Package-owned glass toggle used when a binary command belongs in toolbar/panel chrome.
-public struct DesignGlassToggle: View {
+/// Package-owned toggle button used when a binary command belongs in toolbar or panel chrome.
+public struct DesignToggleButton: View {
     @Binding public var isOn: Bool
     public var title: String
     public var systemName: String

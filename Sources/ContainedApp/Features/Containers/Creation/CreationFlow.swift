@@ -73,8 +73,8 @@ struct CreationFlow: View {
     @Namespace private var tileNamespace
 
     private var springAnim: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
-    private var optionPageHeight: CGFloat { GlassOptionTile.defaultHeight + (DesignTokens.Space.s * 2) }
-    private var twoRowOptionPageHeight: CGFloat { optionPageHeight + GlassOptionTile.defaultHeight + DesignTokens.Space.s }
+    private var optionPageHeight: CGFloat { DesignOptionTile.defaultHeight + (DesignTokens.Space.s * 2) }
+    private var twoRowOptionPageHeight: CGFloat { optionPageHeight + DesignOptionTile.defaultHeight + DesignTokens.Space.s }
     private var menuSize: CGSize { CGSize(width: 760, height: optionPageHeight) }
     private var chooserSize: CGSize { CGSize(width: 640, height: twoRowOptionPageHeight) }
 
@@ -356,9 +356,9 @@ struct CreationFlow: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private func optionStack<C: View>(@ViewBuilder content: () -> C) -> some View {
-        GlassEffectContainer(spacing: DesignTokens.Space.s) {
-            LazyVStack(spacing: DesignTokens.Space.s) { content() }
+    private func optionStack<C: View>(@ViewBuilder content: @escaping () -> C) -> some View {
+        DesignOptionStack(spacing: DesignTokens.Space.s) {
+            content()
         }
     }
 
@@ -369,7 +369,7 @@ struct CreationFlow: View {
     private func box(symbol: String, title: String, subtitle: String? = nil,
                      matchedID: String? = nil,
                      enabled: Bool = true, action: @escaping () -> Void) -> some View {
-        GlassOptionTile(symbol: symbol, title: title, subtitle: subtitle,
+        DesignOptionTile(symbol: symbol, title: title, subtitle: subtitle,
                         enabled: enabled,
                         matchedID: matchedID,
                         matchedNamespace: matchedID == nil ? nil : tileNamespace,
