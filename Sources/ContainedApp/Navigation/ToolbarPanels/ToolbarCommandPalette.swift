@@ -46,9 +46,9 @@ struct ToolbarCommandPalette: View {
     private var sections: [PaletteSection] {
         switch scope {
         case .dockerHub:
-            return [PaletteSection(title: "Docker Hub", items: PaletteItem.deduplicated(hubItems()))]
+            return [PaletteSection(title: AppText.paletteDockerHub, items: PaletteItem.deduplicated(hubItems()))]
         case .localImages:
-            return [PaletteSection(title: "Local images", items: PaletteItem.deduplicated(localImageItems()))]
+            return [PaletteSection(title: AppText.paletteLocalImages, items: PaletteItem.deduplicated(localImageItems()))]
         case nil:
             if trimmedQuery.isEmpty {
                 return browseSections()
@@ -110,7 +110,7 @@ struct ToolbarCommandPalette: View {
             if let scope {
                 scopeChip(scope)
             }
-            TextField(scope?.placeholder ?? "Search or run a command…", text: $ui.searchText)
+            TextField(scope?.placeholder ?? AppText.paletteSearchOrRunPlaceholder, text: $ui.searchText)
                 .textFieldStyle(.plain)
                 .font(.body).fontWeight(.medium)
                 .focused($focused)
@@ -141,7 +141,7 @@ struct ToolbarCommandPalette: View {
             DesignScopeChipLabel(symbol: scope.symbol, title: scope.title)
         }
         .buttonStyle(.plain)
-        .help("Remove \(scope.title) scope")
+        .help(AppText.removeScopeAccessibility(scope.title))
         .accessibilityLabel(AppText.removeScopeAccessibility(scope.title))
         .fixedSize()
     }
@@ -152,28 +152,28 @@ struct ToolbarCommandPalette: View {
                 DesignBadgeText(text: scopeCountText(scope))
                 Spacer()
                 Button { ui.paletteScope = nil } label: {
-                    Label("Commands", systemImage: "command")
+                    Label(AppText.paletteCommands, systemImage: "command")
                         .labelStyle(.titleAndIcon)
                 }
                 .buttonStyle(.plain)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
-                .help("Back to commands")
+                .help(AppText.paletteBackToCommands)
             } else {
-                DesignBadgeText(text: "\(flatItems.count) match\(flatItems.count == 1 ? "" : "es")")
-                DesignBadgeText(text: "\(localImageMatches) local image\(localImageMatches == 1 ? "" : "s")")
+                DesignBadgeText(text: AppText.paletteMatchesCount(flatItems.count))
+                DesignBadgeText(text: AppText.paletteLocalImagesCount(localImageMatches))
                 Spacer()
                 if !trimmedQuery.isEmpty {
                     // "Hit search on a search entry" — pins the Docker Hub scope and keeps the typed
                     // query, searching in-place inside the same panel area.
                     Button { ui.paletteScope = .dockerHub } label: {
-                        Label("Search Docker Hub", systemImage: "globe")
+                        Label(AppText.paletteSearchDockerHub, systemImage: "globe")
                             .labelStyle(.titleAndIcon)
                     }
                     .buttonStyle(.plain)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
-                    .help("Search Docker Hub for \(trimmedQuery)")
+                    .help(AppText.paletteSearchDockerHubFor(trimmedQuery))
                 }
             }
         }
@@ -183,14 +183,14 @@ struct ToolbarCommandPalette: View {
     private func scopeCountText(_ scope: PaletteScope) -> String {
         switch scope {
         case .dockerHub:
-            if hubSearching { return "Searching…" }
-            if hubError != nil { return "Couldn't reach Docker Hub" }
-            if trimmedQuery.isEmpty { return "Popular images" }
+            if hubSearching { return AppText.paletteSearching }
+            if hubError != nil { return AppText.paletteDockerHubUnreachable }
+            if trimmedQuery.isEmpty { return AppText.palettePopularImages }
             let n = hubResults.count
-            return "\(n) result\(n == 1 ? "" : "s")"
+            return AppText.paletteResultsCount(n)
         case .localImages:
             let n = flatItems.count
-            return "\(n) image\(n == 1 ? "" : "s")"
+            return AppText.paletteImagesCount(n)
         }
     }
 
@@ -238,9 +238,9 @@ struct ToolbarCommandPalette: View {
         } else {
             DesignContentSurface(minHeight: 260) {
                 ContentUnavailableView {
-                    Label("No matches", systemImage: "magnifyingglass")
+                    Label(AppText.paletteNoMatches, systemImage: "magnifyingglass")
                 } description: {
-                    Text("Try a setting, image, container, network, or action.")
+                    Text(AppText.paletteNoMatchesDescription)
                 }
             }
         }
@@ -251,14 +251,14 @@ struct ToolbarCommandPalette: View {
             LazyVStack(spacing: DesignTokens.Space.s) {
                 if hubSearching {
                     ProgressView()
-                    Text("Searching Docker Hub…").font(.callout).foregroundStyle(.secondary)
+                    Text(AppText.paletteSearchingDockerHub).font(.callout).foregroundStyle(.secondary)
                 } else if let hubError {
                     Image(systemName: "wifi.exclamationmark").font(.title2).foregroundStyle(.orange)
-                    Text("Couldn't search Docker Hub").font(.callout.weight(.medium))
+                    Text(AppText.paletteCouldNotSearchDockerHub).font(.callout.weight(.medium))
                     Text(hubError).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 } else {
                     Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.tertiary)
-                    Text(trimmedQuery.isEmpty ? "Type to search Docker Hub" : "No images found for “\(trimmedQuery)”")
+                    Text(trimmedQuery.isEmpty ? AppText.paletteTypeToSearchDockerHub : AppText.paletteNoImagesFound(trimmedQuery))
                         .font(.callout).foregroundStyle(.secondary)
                 }
             }
@@ -267,12 +267,12 @@ struct ToolbarCommandPalette: View {
 
     private var footerBar: some View {
         HStack(spacing: DesignTokens.Space.m) {
-            keyboardHint("↑↓", "Select")
-            keyboardHint("return", "Run")
-            keyboardHint("esc", scope == nil ? "Close" : "Clear scope")
+            keyboardHint("↑↓", AppText.paletteKeyboardSelect)
+            keyboardHint("return", AppText.paletteKeyboardRun)
+            keyboardHint("esc", scope == nil ? AppText.close : AppText.paletteKeyboardClearScope)
             Spacer()
             if let selected = selectedItem {
-                DesignBadgeText(text: selected.kind.rawValue)
+                DesignBadgeText(text: selected.kind.localizedTitle)
             }
         }
         .padding(.horizontal, DesignTokens.Space.l)
@@ -318,7 +318,7 @@ struct ToolbarCommandPalette: View {
     private func hubItems() -> [PaletteItem] {
         if trimmedQuery.isEmpty {
             return RecommendedImage.all.map { rec in
-                PaletteItem(title: "Run \(rec.name)", subtitle: rec.reference,
+                PaletteItem(title: AppText.paletteRunImage(rec.name), subtitle: rec.reference,
                             keywords: [rec.reference], kind: .image,
                             icon: rec.symbol, tint: .accentColor) {
                     ui.runImage(rec.reference, returningTo: .search)
@@ -329,7 +329,7 @@ struct ToolbarCommandPalette: View {
         return hubResults.map { result in
             let subtitle = result.shortDescription?.isEmpty == false
                 ? result.shortDescription
-                : (result.isOfficial ? "Official image" : "Docker Hub")
+                : (result.isOfficial ? AppText.paletteOfficialImage : AppText.paletteDockerHub)
             return PaletteItem(title: result.repoName,
                                subtitle: subtitle,
                                keywords: [result.repoName],
@@ -347,8 +347,8 @@ struct ToolbarCommandPalette: View {
             PaletteSearch.score(query: trimmedQuery, in: $0.references + [Format.shortImage($0.primaryReference)]) != nil
         }
         return matched.map { group in
-            PaletteItem(title: "Run \(Format.shortImage(group.primaryReference))",
-                        subtitle: "\(group.references.count) tag\(group.references.count == 1 ? "" : "s")",
+            PaletteItem(title: AppText.paletteRunImage(Format.shortImage(group.primaryReference)),
+                        subtitle: AppText.paletteTagCountSubtitle(group.references.count),
                         keywords: group.references,
                         kind: .image,
                         visual: .imageGroup(group),

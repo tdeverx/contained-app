@@ -73,6 +73,19 @@ enum AppText {
     static var storageCleanup: String { string("system.storageCleanup", defaultValue: "Storage cleanup") }
     static var markAllRead: String { string("activity.markAllRead", defaultValue: "Mark all read") }
     static var clearActivity: String { string("activity.clearActivity", defaultValue: "Clear activity") }
+    static var sectionContainers: String { string("section.containers", defaultValue: "Containers") }
+    static var sectionImages: String { string("section.images", defaultValue: "Images") }
+    static var sectionBuild: String { string("section.build", defaultValue: "Build") }
+    static var sectionVolumes: String { string("section.volumes", defaultValue: "Volumes") }
+    static var sectionNetworks: String { string("section.networks", defaultValue: "Networks") }
+    static var sectionSystem: String { string("section.system", defaultValue: "System") }
+    static var sectionRegistries: String { string("section.registries", defaultValue: "Registries") }
+    static var sectionTemplates: String { string("section.templates", defaultValue: "Templates") }
+    static var sectionActivity: String { string("section.activity", defaultValue: "Activity") }
+    static var sectionSettings: String { string("section.settings", defaultValue: "Settings") }
+    static var sectionGroupWorkloads: String { string("sectionGroup.workloads", defaultValue: "Workloads") }
+    static var sectionGroupInfra: String { string("sectionGroup.infra", defaultValue: "Infra") }
+    static var sectionGroupSystem: String { string("sectionGroup.system", defaultValue: "System") }
     static var tint: String { string("common.tint", defaultValue: "Tint") }
     static var unread: String { string("common.unread", defaultValue: "Unread") }
     static var runtimeCore: String { string("runtime.core", defaultValue: "Core") }
@@ -121,6 +134,217 @@ enum AppText {
 
     static func lineCount(_ count: Int) -> String {
         string("streamConsole.lineCount", defaultValue: "\(count) lines")
+    }
+
+    static var paletteDockerHub: String { string("palette.dockerHub", defaultValue: "Docker Hub") }
+    static var paletteLocalImages: String { string("palette.localImages", defaultValue: "Local images") }
+    static var paletteSearchDockerHubPlaceholder: String {
+        string("palette.searchDockerHubPlaceholder", defaultValue: "Search Docker Hub...")
+    }
+    static var paletteFilterLocalImagesPlaceholder: String {
+        string("palette.filterLocalImagesPlaceholder", defaultValue: "Filter local images...")
+    }
+    static var paletteSearchOrRunPlaceholder: String {
+        string("palette.searchOrRunPlaceholder", defaultValue: "Search or run a command...")
+    }
+
+    static var paletteCreateSubtitle: String { string("palette.subtitle.create", defaultValue: "create") }
+    static var paletteActionSubtitle: String { string("palette.subtitle.action", defaultValue: "action") }
+    static var paletteScopeSubtitle: String { string("palette.subtitle.scope", defaultValue: "scope") }
+    static var paletteUpdatesSubtitle: String { string("palette.subtitle.updates", defaultValue: "updates") }
+    static var paletteContainerSubtitle: String { string("palette.subtitle.container", defaultValue: "container") }
+    static var paletteSettingsSubtitle: String { string("palette.subtitle.settings", defaultValue: "settings") }
+    static var paletteToggleSubtitle: String { string("palette.subtitle.toggle", defaultValue: "toggle") }
+    static var paletteAppearanceSubtitle: String { string("palette.subtitle.appearance", defaultValue: "appearance") }
+    static var paletteLocalImageSubtitle: String { string("palette.subtitle.localImage", defaultValue: "local image") }
+    static var paletteImageSubtitle: String { string("palette.subtitle.image", defaultValue: "image") }
+    static var paletteImageTagSubtitle: String { string("palette.subtitle.imageTag", defaultValue: "image tag") }
+    static var paletteVolumeSubtitle: String { string("palette.subtitle.volume", defaultValue: "volume") }
+    static var paletteNetworkSubtitle: String { string("palette.subtitle.network", defaultValue: "network") }
+    static var paletteBuiltInNetworkSubtitle: String {
+        string("palette.subtitle.builtInNetwork", defaultValue: "built-in network")
+    }
+    static var palettePullNewerTagsSubtitle: String {
+        string("palette.subtitle.pullNewerTags", defaultValue: "pull newer tags")
+    }
+    static var paletteDoesNotRecreateContainersSubtitle: String {
+        string("palette.subtitle.doesNotRecreateContainers", defaultValue: "does not recreate containers")
+    }
+    static func paletteContainerCountSubtitle(_ count: Int) -> String {
+        string("palette.subtitle.containerCount", defaultValue: "\(count) containers")
+    }
+    static func paletteTagCountSubtitle(_ count: Int) -> String {
+        string("palette.subtitle.tagCount", defaultValue: "\(count) tag\(count == 1 ? "" : "s")")
+    }
+
+    static var paletteRunContainer: String { string("palette.action.runContainer", defaultValue: "Run a container") }
+    static var paletteNewVolume: String { string("palette.action.newVolume", defaultValue: "New volume") }
+    static var paletteNewNetwork: String { string("palette.action.newNetwork", defaultValue: "New network") }
+    static var paletteImportCompose: String { string("palette.action.importCompose", defaultValue: "Import compose...") }
+    static var paletteRegistryLogin: String { string("palette.action.registryLogin", defaultValue: "Registry login") }
+    static var paletteSearchDockerHub: String { string("palette.action.searchDockerHub", defaultValue: "Search Docker Hub") }
+    static var paletteSearchLocalImages: String { string("palette.action.searchLocalImages", defaultValue: "Search local images") }
+    static var paletteRefresh: String { string("palette.action.refresh", defaultValue: "Refresh") }
+    static var paletteCheckAppUpdates: String {
+        string("palette.action.checkAppUpdates", defaultValue: "Check for app updates...")
+    }
+    static var paletteCheckAllImageUpdates: String {
+        string("palette.action.checkAllImageUpdates", defaultValue: "Check all image updates")
+    }
+    static var paletteUpdateAllImages: String {
+        string("palette.action.updateAllImages", defaultValue: "Update all images with available updates")
+    }
+    static var paletteCheckAllContainerImages: String {
+        string("palette.action.checkAllContainerImages", defaultValue: "Check all container images for updates")
+    }
+    static var palettePullContainerImageUpdates: String {
+        string("palette.action.pullContainerImageUpdates", defaultValue: "Pull available container image updates")
+    }
+    static var paletteLoadImageTar: String { string("palette.action.loadImageTar", defaultValue: "Load image tar...") }
+    static var palettePruneImages: String { string("palette.action.pruneImages", defaultValue: "Prune images...") }
+    static var paletteSystemLogs: String { string("palette.action.systemLogs", defaultValue: "System logs") }
+    static var paletteUnavailable: String { string("palette.unavailable", defaultValue: "Unavailable") }
+
+    static func paletteSettingsTitle(_ page: String) -> String {
+        string("palette.settingsTitle", defaultValue: "\(page) Settings")
+    }
+    static var paletteShowAllContainers: String {
+        string("palette.action.showAllContainers", defaultValue: "Show All Containers")
+    }
+    static var paletteShowRunningContainersOnly: String {
+        string("palette.action.showRunningOnly", defaultValue: "Show Running Containers Only")
+    }
+    static var paletteHideMenuBarItem: String {
+        string("palette.action.hideMenuBarItem", defaultValue: "Hide Menu Bar Item")
+    }
+    static var paletteShowMenuBarItem: String {
+        string("palette.action.showMenuBarItem", defaultValue: "Show Menu Bar Item")
+    }
+    static var paletteHideCLIPreviews: String {
+        string("palette.action.hideCLIPreviews", defaultValue: "Hide CLI Previews")
+    }
+    static var paletteShowCLIPreviews: String {
+        string("palette.action.showCLIPreviews", defaultValue: "Show CLI Previews")
+    }
+    static var paletteHideInfoTips: String { string("palette.action.hideInfoTips", defaultValue: "Hide Info Tips") }
+    static var paletteShowInfoTips: String { string("palette.action.showInfoTips", defaultValue: "Show Info Tips") }
+    static func paletteRunImage(_ reference: String) -> String {
+        string("palette.action.runImage", defaultValue: "Run \(reference)")
+    }
+    static func paletteCheckImageUpdate(_ reference: String) -> String {
+        string("palette.action.checkImageUpdate", defaultValue: "Check update for \(reference)")
+    }
+    static func palettePullImageUpdate(_ reference: String) -> String {
+        string("palette.action.pullImageUpdate", defaultValue: "Pull update for \(reference)")
+    }
+    static func paletteUseVolume(_ name: String) -> String {
+        string("palette.action.useVolume", defaultValue: "Use volume \(name)")
+    }
+    static func paletteRunOnNetwork(_ name: String) -> String {
+        string("palette.action.runOnNetwork", defaultValue: "Run on network \(name)")
+    }
+    static func paletteEditContainer(_ name: String) -> String {
+        string("palette.action.editContainer", defaultValue: "Edit \(name)")
+    }
+    static func paletteUpdateContainerImage(_ name: String) -> String {
+        string("palette.action.updateContainerImage", defaultValue: "Update image for \(name)")
+    }
+    static func paletteStopContainer(_ name: String) -> String {
+        string("palette.action.stopContainer", defaultValue: "Stop \(name)")
+    }
+    static func paletteRestartContainer(_ name: String) -> String {
+        string("palette.action.restartContainer", defaultValue: "Restart \(name)")
+    }
+    static func paletteStartContainer(_ name: String) -> String {
+        string("palette.action.startContainer", defaultValue: "Start \(name)")
+    }
+
+    static var paletteKindAction: String { string("palette.kind.action", defaultValue: "Action") }
+    static var paletteKindCreate: String { string("palette.kind.create", defaultValue: "Create") }
+    static var paletteKindNavigate: String { string("palette.kind.navigate", defaultValue: "Navigate") }
+    static var paletteKindSettings: String { string("palette.kind.settings", defaultValue: "Settings") }
+    static var paletteKindToggle: String { string("palette.kind.toggle", defaultValue: "Toggle") }
+    static var paletteKindImage: String { string("palette.kind.image", defaultValue: "Image") }
+    static var paletteKindContainer: String { string("palette.kind.container", defaultValue: "Container") }
+    static var paletteKindResource: String { string("palette.kind.resource", defaultValue: "Resource") }
+    static var paletteKindSearch: String { string("palette.kind.search", defaultValue: "Search") }
+    static var paletteSectionCreateSearch: String {
+        string("palette.section.createSearch", defaultValue: "Create & Search")
+    }
+    static var paletteSectionContainers: String { string("palette.section.containers", defaultValue: "Containers") }
+    static var paletteSectionImages: String { string("palette.section.images", defaultValue: "Images") }
+    static var paletteSectionVolumesNetworks: String {
+        string("palette.section.volumesNetworks", defaultValue: "Volumes & Networks")
+    }
+    static var paletteSectionActions: String { string("palette.section.actions", defaultValue: "Actions") }
+
+    static var paletteCommands: String { string("palette.commands", defaultValue: "Commands") }
+    static var paletteBackToCommands: String { string("palette.backToCommands", defaultValue: "Back to commands") }
+    static func paletteSearchDockerHubFor(_ query: String) -> String {
+        string("palette.searchDockerHubFor", defaultValue: "Search Docker Hub for \(query)")
+    }
+    static func paletteMatchesCount(_ count: Int) -> String {
+        string("palette.matchesCount", defaultValue: "\(count) match\(count == 1 ? "" : "es")")
+    }
+    static func paletteLocalImagesCount(_ count: Int) -> String {
+        string("palette.localImagesCount", defaultValue: "\(count) local image\(count == 1 ? "" : "s")")
+    }
+    static var paletteSearching: String { string("palette.searching", defaultValue: "Searching...") }
+    static var paletteDockerHubUnreachable: String {
+        string("palette.dockerHubUnreachable", defaultValue: "Couldn't reach Docker Hub")
+    }
+    static var palettePopularImages: String { string("palette.popularImages", defaultValue: "Popular images") }
+    static func paletteResultsCount(_ count: Int) -> String {
+        string("palette.resultsCount", defaultValue: "\(count) result\(count == 1 ? "" : "s")")
+    }
+    static func paletteImagesCount(_ count: Int) -> String {
+        string("palette.imagesCount", defaultValue: "\(count) image\(count == 1 ? "" : "s")")
+    }
+    static var paletteNoMatches: String { string("palette.noMatches", defaultValue: "No matches") }
+    static var paletteNoMatchesDescription: String {
+        string("palette.noMatchesDescription", defaultValue: "Try a setting, image, container, network, or action.")
+    }
+    static var paletteSearchingDockerHub: String {
+        string("palette.searchingDockerHub", defaultValue: "Searching Docker Hub...")
+    }
+    static var paletteCouldNotSearchDockerHub: String {
+        string("palette.couldNotSearchDockerHub", defaultValue: "Couldn't search Docker Hub")
+    }
+    static var paletteTypeToSearchDockerHub: String {
+        string("palette.typeToSearchDockerHub", defaultValue: "Type to search Docker Hub")
+    }
+    static func paletteNoImagesFound(_ query: String) -> String {
+        string("palette.noImagesFound", defaultValue: "No images found for \"\(query)\"")
+    }
+    static var paletteKeyboardSelect: String { string("palette.keyboard.select", defaultValue: "Select") }
+    static var paletteKeyboardRun: String { string("palette.keyboard.run", defaultValue: "Run") }
+    static var paletteKeyboardClearScope: String { string("palette.keyboard.clearScope", defaultValue: "Clear scope") }
+    static var paletteOfficialImage: String { string("palette.officialImage", defaultValue: "Official image") }
+
+    static var notificationContainerRestartedTitle: String {
+        string("notification.containerRestarted.title", defaultValue: "Container restarted")
+    }
+    static func notificationContainerRestartedBody(name: String, attempt: Int) -> String {
+        attempt > 1
+            ? string("notification.containerRestarted.bodyWithAttempt",
+                     defaultValue: "\(name) was restarted (attempt \(attempt)).")
+            : string("notification.containerRestarted.body", defaultValue: "\(name) was restarted.")
+    }
+    static var notificationContainerStoppedTitle: String {
+        string("notification.containerStopped.title", defaultValue: "Container stopped")
+    }
+    static func notificationContainerStoppedBody(_ name: String) -> String {
+        string("notification.containerStopped.body", defaultValue: "\(name) exited unexpectedly.")
+    }
+    static var notificationContainerUnhealthyTitle: String {
+        string("notification.containerUnhealthy.title", defaultValue: "Container unhealthy")
+    }
+    static func notificationContainerUnhealthyBody(_ name: String) -> String {
+        string("notification.containerUnhealthy.body", defaultValue: "\(name) failed its healthcheck.")
+    }
+
+    static func activityPullingImage(_ reference: String) -> String {
+        string("activity.pullingImage", defaultValue: "Pulling \(reference)...")
     }
 
     static func restartedContainer(_ name: String, attempt: Int) -> String {

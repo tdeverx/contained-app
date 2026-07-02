@@ -17,7 +17,7 @@ struct ToolbarPageSwitcher: View {
                 let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
                     .filter { $0.group == group && ($0 != .build || app.settings.imageBuildEnabled) }
                 if !sections.isEmpty {
-                    Section(group.rawValue) {
+                    Section(group.title) {
                         ForEach(sections) { section in
                             Button {
                                 ui.navigate(to: section)

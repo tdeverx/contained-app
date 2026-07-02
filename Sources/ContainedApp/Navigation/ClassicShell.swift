@@ -86,7 +86,7 @@ private struct AppSidebar: View {
                 let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
                     .filter { $0.group == group && isVisible($0) }
                 if !sections.isEmpty {
-                    Section(group.rawValue) {
+                    Section(group.title) {
                         ForEach(sections) { section in
                         Label {
                             HStack {

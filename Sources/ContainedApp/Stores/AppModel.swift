@@ -603,7 +603,7 @@ final class AppModel {
     @discardableResult
     func pullImage(_ reference: String) async -> Bool {
         guard let client else { return false }
-        activity = ActivityState(title: "Pulling \(Format.shortImage(reference))…")
+        activity = ActivityState(title: AppText.activityPullingImage(Format.shortImage(reference)))
         defer { activity = nil }
         do {
             for try await line in client.streamPull(reference, platform: nil) {

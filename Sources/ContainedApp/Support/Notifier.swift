@@ -11,20 +11,22 @@ final class Notifier {
     /// Post when the watchdog restarts a container.
     func containerRestarted(name: String, attempt: Int, enabled: Bool) {
         guard enabled else { return }
-        post(title: "Container restarted",
-             body: attempt > 1 ? "\(name) was restarted (attempt \(attempt))." : "\(name) was restarted.")
+        post(title: AppText.notificationContainerRestartedTitle,
+             body: AppText.notificationContainerRestartedBody(name: name, attempt: attempt))
     }
 
     /// Post when a container exits unexpectedly and no restart policy applies.
     func containerExited(name: String, enabled: Bool) {
         guard enabled else { return }
-        post(title: "Container stopped", body: "\(name) exited unexpectedly.")
+        post(title: AppText.notificationContainerStoppedTitle,
+             body: AppText.notificationContainerStoppedBody(name))
     }
 
     /// Post when an app-managed healthcheck flips a container to unhealthy.
     func containerUnhealthy(name: String, enabled: Bool) {
         guard enabled else { return }
-        post(title: "Container unhealthy", body: "\(name) failed its healthcheck.")
+        post(title: AppText.notificationContainerUnhealthyTitle,
+             body: AppText.notificationContainerUnhealthyBody(name))
     }
 
     private func post(title: String, body: String) {
