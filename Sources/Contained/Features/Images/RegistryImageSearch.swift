@@ -24,7 +24,7 @@ struct RegistryImageSearch: View {
     private var trimmedQuery: String { query.trimmingCharacters(in: .whitespaces) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.m) {
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.m) {
             searchField
             if trimmedQuery.isEmpty {
                 idleSuggestions
@@ -59,7 +59,7 @@ struct RegistryImageSearch: View {
 
     private var idleSuggestions: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Tokens.Space.l) {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
                 suggestionSection("Starters") {
                     ForEach(BuiltinTemplate.all, id: \.name) { item in
                         quickPick(symbol: item.symbol, title: item.name,
@@ -81,7 +81,7 @@ struct RegistryImageSearch: View {
     }
 
     private func suggestionSection<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
             Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 240), spacing: Tokens.Space.s)],
                       spacing: Tokens.Space.s) { content() }
@@ -101,7 +101,7 @@ struct RegistryImageSearch: View {
     @ViewBuilder
     private var resultsList: some View {
         if results.isEmpty {
-            VStack(spacing: Tokens.Space.s) {
+            LazyVStack(spacing: Tokens.Space.s) {
                 if searching {
                     ProgressView()
                     Text("Searching Docker Hub…").font(.callout).foregroundStyle(.secondary)

@@ -12,6 +12,11 @@ Use this package when a view needs reusable layout behavior such as a panel that
 grows from a toolbar source, clamps to app safe areas, and hosts fixed chrome
 above scrollable content.
 
+Card-like detail views can use `MorphingSingleSurface` when the source and
+destination are the same conceptual surface rather than a toolbar-to-panel
+handoff. Keep the source laid out, hide it while selected, and render one
+promoted overlay from the measured source frame to the target frame.
+
 ## Example
 
 ```swift
@@ -86,5 +91,7 @@ struct NavigationPackageExample: View {
 ### Morph Presentation
 
 - ``MorphingExpander``
+- ``MorphingSingleSurface``
+- ``MorphFrame``
 - ``MorphPanelScaffold``
 - ``GlobalBackdropStyle``

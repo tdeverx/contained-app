@@ -22,7 +22,7 @@ struct RunSpecForm: View {
     }
 
     var body: some View {
-        VStack(spacing: Tokens.Space.l) {
+        LazyVStack(spacing: Tokens.Space.l) {
             Text("Blue sections contain explicit values from an import, edit, template, or manual change.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -193,7 +193,7 @@ struct RunSpecForm: View {
     private var volumesSection: some View {
         Group {
             ForEach($spec.volumes) { $vol in
-                VStack(spacing: Tokens.Space.xs) {
+                LazyVStack(spacing: Tokens.Space.xs) {
                     HStack {
                         sourcePicker(source: $vol.source)
                         TextField("Source (host path or volume)", text: $vol.source).textFieldStyle(.roundedBorder)
@@ -228,7 +228,7 @@ struct RunSpecForm: View {
     private var socketsSection: some View {
         Group {
             ForEach($spec.sockets) { $socket in
-                VStack(spacing: Tokens.Space.xs) {
+                LazyVStack(spacing: Tokens.Space.xs) {
                     HStack {
                         TextField("Host socket path", text: $socket.hostPath).textFieldStyle(.roundedBorder)
                         removeButton { spec.sockets.removeAll { $0.id == socket.id } }

@@ -8,7 +8,7 @@ struct AppearanceTab: View {
     @Bindable var settings: SettingsStore
 
     var body: some View {
-        VStack(spacing: Tokens.Space.l) {
+        LazyVStack(spacing: Tokens.Space.l) {
             PanelSection(header: "Theme") {
                 PanelRow(title: "Appearance") {
                     Picker("", selection: $settings.appearance) {

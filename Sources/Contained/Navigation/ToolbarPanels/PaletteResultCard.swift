@@ -114,8 +114,6 @@ struct PaletteResultCard: View {
         } widget: {
             if snapshot.state == .running {
                 containerPaletteWidget(snapshot)
-                    .padding(.horizontal, Tokens.ResourceCard.padding)
-                    .padding(.bottom, Tokens.ResourceCard.padding)
             }
         }
         .selectionFill()

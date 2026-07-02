@@ -71,7 +71,7 @@ struct TerminalTab: View {
     }
 
     private func endedOverlay(code: Int32?) -> some View {
-        VStack(spacing: Tokens.Space.m) {
+        ResourceCardInsetSection(alignment: .center, padding: Tokens.Space.xl) {
             Image(systemName: "bolt.horizontal.circle").font(.largeTitle).foregroundStyle(.secondary)
             Text(code == nil || code == 0 ? "Session ended" : "Session ended (exit \(code!))")
                 .font(.headline)
@@ -81,8 +81,6 @@ struct TerminalTab: View {
                 }
             }
         }
-        .padding(Tokens.Space.xl)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
     }
 
     private func reconnect() {

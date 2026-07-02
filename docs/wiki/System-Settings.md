@@ -15,7 +15,7 @@ macOS. Contained does not ask for or store administrator credentials.
 
 ## Settings tabs
 
-- General: app behavior, menu bar, CLI previews, info tips, and related defaults.
+- General: app behavior, menu bar, CLI previews, metric normalization, info tips, and related defaults.
 - Appearance: tint, material, card, panel, and theme choices.
 - Data: backup/export/import and local state controls.
 - Runtime: CLI path and runtime defaults.
@@ -45,3 +45,22 @@ creation entry points where applicable.
 Contained stores settings, personalization, templates, health checks, activity
 history, image update status, and backups locally. Versioned backup and migration
 envelopes protect data created by newer app schema versions.
+
+## Metric normalization
+
+Settings -> General -> Data -> Normalize stats controls how CPU and memory
+percentages are scaled across cards, live stats, mini chips, widgets, and
+history charts:
+
+- Container: each container card is scaled against that container's configured
+  CPU and memory limits.
+- Machine: every card is scaled against Apple container's machine CPU and memory
+  resources, so container usage appears in runtime-wide context.
+
+Network and disk widgets remain raw bytes-per-second rates in both modes.
+History keeps raw samples on disk and applies the selected normalization mode
+when rendering charts, so older samples remain usable if the mode changes.
+
+The neighboring **List refresh interval** setting controls background service,
+container list, and resource-cache polling. Live metric widgets use their own
+low-priority runtime stream instead of this interval.

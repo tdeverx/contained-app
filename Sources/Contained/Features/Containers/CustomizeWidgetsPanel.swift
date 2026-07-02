@@ -17,10 +17,13 @@ struct CustomizeWidgetsPanel: View {
     }
 
     var body: some View {
-        ForEach(activeWidgetIndices, id: \.self) { index in
-            widgetSection(index)
+        LazyVStack(spacing: Tokens.Space.l) {
+            ForEach(activeWidgetIndices, id: \.self) { index in
+                widgetSection(index)
+            }
+            addWidgetSection
         }
-        addWidgetSection
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func widgetSection(_ index: Int) -> some View {

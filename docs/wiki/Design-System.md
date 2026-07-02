@@ -123,11 +123,22 @@ Recommended internal pieces:
 - `ResourceCardSubtitleText` or `ResourceCardMonospacedSubtitleText` for metadata
 - `ResourceBadgeText` for compact state or kind labels
 - `ResourceCardFooterMini` for small footer actions and metrics
+- `ResourceCardFooterChip`, `ResourceCardFooterButton`, and
+  `ResourceCardPageControls` for card-local controls
+- `ResourceCardInsetSection` for charts, lists, and read-only groups inside an
+  expanded card body
+- `resourceCardFloatingControls` and `resourceCardProgressOverlay` for
+  card-owned overlays
 - `DesignStatusDot`, `DesignStatusBadge`, `DesignKeyCap`, and
   `DesignKeyboardHint` for micro chrome
 
 Use `isSelected` instead of inventing a second selection ring. Use `elevated:
 false` for cards inside already-elevated morph panels.
+
+Do not create a second `ResourceGlassCard` or direct surface modifier inside an
+expanded card body unless the nested object is itself an independent resource
+card, such as an image tag row. In-card content should go through
+`ResourceCardInsetSection`.
 
 ## Palette visual results
 
@@ -146,9 +157,11 @@ Plain rows are reserved for generic actions such as refresh or opening a page.
 
 Use `Tokens` for spacing, radius, toolbar dimensions, panel sizes, icon sizes,
 form widths, chart sizes, badge/keycap insets, resource-card opacities, terminal
-chrome, and shadows. Use `glassSurface` and `glassCapsuleSurface` for standalone
-glass surfaces so feature views do not call `.glassEffect` directly. If a new
-visual value appears, add a token or package primitive before using it in the app.
+chrome, and shadows. Feature views should not call low-level surface modifiers
+such as `glassSurface`; use named package routes such as `ResourceGlassCard`,
+`PanelSection`, `DesignContentSurface`, `DesignInputSurface`, and
+`ResourceCardInsetSection`. If a new visual value appears, add a token or package
+primitive before using it in the app.
 
 Important groups:
 

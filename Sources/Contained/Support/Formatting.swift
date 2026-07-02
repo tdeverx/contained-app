@@ -24,7 +24,35 @@ enum Format {
         return String(format: "%.0f", value)
     }
     static func percent(_ fraction: Double) -> String {
-        fraction.formatted(.percent.precision(.fractionLength(0)))
+        adaptivePercent(fraction)
+    }
+    /// A tighter percent readout for small card chips. Kept as a named alias for callers that want
+    /// to document tight UI, while sharing the same adaptive precision as normal percent labels.
+    static func compactPercent(_ fraction: Double) -> String {
+        adaptivePercent(fraction)
+    }
+
+    private static func adaptivePercent(_ fraction: Double) -> String {
+        guard fraction.isFinite else { return "0%" }
+        let percent = max(0, fraction * 100)
+        if percent == 0 { return "0%" }
+        if percent < 0.01 { return "<0.01%" }
+        let maximumFractionDigits = percent < 1 ? 2 : 0
+        return "\(trimmedDecimal(percent, maximumFractionDigits: maximumFractionDigits))%"
+    }
+
+    private static func trimmedDecimal(_ value: Double, maximumFractionDigits: Int) -> String {
+        if maximumFractionDigits == 0 {
+            return String(Int(value.rounded()))
+        }
+        var text = String(format: "%.\(maximumFractionDigits)f", value)
+        while text.contains(".") && text.last == "0" {
+            text.removeLast()
+        }
+        if text.last == "." {
+            text.removeLast()
+        }
+        return text
     }
 
     /// Compact relative uptime, e.g. "2h", "6d", "just now".
@@ -47,6 +75,40 @@ enum Format {
         let units: [(UInt64, String)] = [(1 << 30, "G"), (1 << 20, "M"), (1 << 10, "K")]
         for (size, suffix) in units where bytes % size == 0 { return "\(bytes / size)\(suffix)" }
         return "\(bytes)"
+    }
+
+    static func memoryBytes(fromSpec spec: String?) -> UInt64? {
+        guard let spec else { return nil }
+        let trimmed = spec.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        var number = ""
+        var unit = ""
+        for character in trimmed {
+            if character.isNumber || character == "." {
+                number.append(character)
+            } else if !character.isWhitespace {
+                unit.append(character)
+            }
+        }
+        guard let value = Double(number), value >= 0 else { return nil }
+
+        let multiplier: Double
+        switch unit.lowercased() {
+        case "", "b", "byte", "bytes":
+            multiplier = 1
+        case "k", "kb", "kib":
+            multiplier = 1_024
+        case "m", "mb", "mib":
+            multiplier = 1_024 * 1_024
+        case "g", "gb", "gib":
+            multiplier = 1_024 * 1_024 * 1_024
+        case "t", "tb", "tib":
+            multiplier = 1_024 * 1_024 * 1_024 * 1_024
+        default:
+            return nil
+        }
+        return UInt64((value * multiplier).rounded())
     }
 
     /// Strip the registry/namespace for a compact image label, keeping repo:tag.

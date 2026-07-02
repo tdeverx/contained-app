@@ -72,7 +72,7 @@ struct ToolbarPageSwitcher: View {
             let running = app.containers.running.count
             return "\(total) container\(total == 1 ? "" : "s") · \(running) running"
         case .images:
-            let groups = LocalImageTagGroup.groups(for: app.images)
+            let groups = app.localImageGroups()
             let updates = groups.filter {
                 app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable
             }.count
@@ -249,7 +249,7 @@ struct ToolbarPageContextOptions: View {
     }
 
     private var imagesSubtitle: String {
-        let groups = LocalImageTagGroup.groups(for: app.images)
+        let groups = app.localImageGroups()
         let updates = groups.filter { app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable }.count
         return "\(groups.count) local · \(updates) update\(updates == 1 ? "" : "s")"
     }

@@ -189,7 +189,8 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
         } widget: {
             widget()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, 10)
+                .padding(.horizontal, Tokens.ResourceCard.padding)
+                .padding(.bottom, Tokens.ResourceCard.padding)
         }
     }
 }

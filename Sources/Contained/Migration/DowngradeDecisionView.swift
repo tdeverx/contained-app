@@ -8,7 +8,7 @@ struct DowngradeDecisionView: View {
     var onQuit: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.l) {
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
             SheetHeader(title: "This data was created by a newer version",
                         subtitle: "Stored schema \(schemaVersion), this app supports \(StateMigrator.currentSchemaVersion).",
                         cancelHelp: "Quit",
@@ -18,7 +18,7 @@ struct DowngradeDecisionView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
                 Button("Export Backup, Then Reset") { onExportAndReset() }
                     .buttonStyle(.borderedProminent)
                 Button("Try to Keep Readable Data") { onKeep() }

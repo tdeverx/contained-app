@@ -97,7 +97,7 @@ struct SystemContent: View {
                 }
             }
         } content: {
-            VStack(alignment: .leading, spacing: Tokens.Space.l) {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
                 switch activePage {
                 case .engine: engineStatusCard
                 case .automation: automationCard
@@ -122,13 +122,11 @@ struct SystemContent: View {
         }
     }
 
-    /// A consistent flat-glass section card — every System section uses this so the panel reads as one
-    /// coherent surface instead of a mix of cards and bare headings.
-    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.m) { content() }
-            .padding(Tokens.Space.s)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: elevated)
+    /// A consistent design-system section card.
+    private func card<Content: View>(@ViewBuilder _ content: @escaping () -> Content) -> some View {
+        DesignContentSurface(elevated: elevated, alignment: .leading) {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.m) { content() }
+        }
     }
 
     private var header: some View {
@@ -234,7 +232,7 @@ struct SystemContent: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, Tokens.Space.xs)
             } else {
-                VStack(spacing: 0) {
+                LazyVStack(spacing: 0) {
                     ForEach(Array(volumeInventory.enumerated()), id: \.element.id) { index, entry in
                         if index > 0 { Divider() }
                         volumeRow(entry)

@@ -5,6 +5,7 @@ import Foundation
 public struct SystemProperties: Codable, Sendable, Hashable {
     public let build: Build?
     public let container: Defaults?
+    public let machine: Defaults?
     public let kernel: Kernel?
 
     public struct Build: Codable, Sendable, Hashable {
@@ -26,6 +27,7 @@ public struct SystemProperties: Codable, Sendable, Hashable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         build = try c.decodeIfPresent(Build.self, forKey: .build)
         container = try c.decodeIfPresent(Defaults.self, forKey: .container)
+        machine = try c.decodeIfPresent(Defaults.self, forKey: .machine)
         kernel = try c.decodeIfPresent(Kernel.self, forKey: .kernel)
     }
 }

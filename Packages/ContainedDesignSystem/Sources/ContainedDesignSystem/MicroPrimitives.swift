@@ -160,6 +160,60 @@ public struct DesignMetricTile: View {
     }
 }
 
+/// A package-owned content surface for empty states and grouped panel content.
+public struct DesignContentSurface<Content: View>: View {
+    public var elevated: Bool
+    public var minHeight: CGFloat?
+    public var alignment: Alignment
+    public var padding: CGFloat
+    @ViewBuilder public var content: () -> Content
+
+    public init(elevated: Bool = false,
+                minHeight: CGFloat? = nil,
+                alignment: Alignment = .center,
+                padding: CGFloat = Tokens.Space.s,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.elevated = elevated
+        self.minHeight = minHeight
+        self.alignment = alignment
+        self.padding = padding
+        self.content = content
+    }
+
+    public var body: some View {
+        content()
+            .padding(padding)
+            .frame(maxWidth: .infinity, minHeight: minHeight, alignment: alignment)
+            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: elevated)
+    }
+}
+
+/// A package-owned surface for compact inline controls such as search fields and text editors.
+public struct DesignInputSurface<Content: View>: View {
+    public var horizontalPadding: CGFloat
+    public var verticalPadding: CGFloat
+    public var minHeight: CGFloat?
+    @ViewBuilder public var content: () -> Content
+
+    public init(horizontalPadding: CGFloat = Tokens.Space.m,
+                verticalPadding: CGFloat = Tokens.Space.s,
+                minHeight: CGFloat? = nil,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.horizontalPadding = horizontalPadding
+        self.verticalPadding = verticalPadding
+        self.minHeight = minHeight
+        self.content = content
+    }
+
+    public var body: some View {
+        content()
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .leading)
+            .glassSurface(.thin, cornerRadius: Tokens.Radius.control)
+    }
+}
+
 public extension View {
     @ViewBuilder
     func designCardSelectionOverlay(when isSelected: Bool) -> some View {

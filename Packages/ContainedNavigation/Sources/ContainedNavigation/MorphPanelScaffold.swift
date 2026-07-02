@@ -49,8 +49,10 @@ public struct MorphPanelScaffold<Chrome: View, Content: View, Footer: View>: Vie
             chrome()
             if scrolls {
                 ScrollView {
-                    content()
-                        .frame(maxWidth: .infinity)
+                    LazyVStack(spacing: 0) {
+                        content()
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 .scrollEdgeEffectStyle(scrollEdgeStyle, for: .all)
             } else {

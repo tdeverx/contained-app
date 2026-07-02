@@ -75,6 +75,7 @@ extension AppModel {
             settings.applyBackup(try value.decode(SettingsBackup.self))
             historyStore.retentionDays = settings.historyRetentionDays
             updater.channel = settings.updateChannel
+            applyStatsNormalizationContext()
         }
         if selected.contains(.personalization), let value = envelope.sections[.personalization] {
             personalization.applyBackup(try value.decode(PersonalizationBackup.self), replace: replace)

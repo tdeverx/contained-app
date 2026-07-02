@@ -121,7 +121,7 @@ struct ContainerConfigureView: View {
         let messages = spec.validationMessages
         let warnings = preflightWarnings
         if !messages.isEmpty || !warnings.isEmpty || runError != nil {
-            VStack(alignment: .leading, spacing: Tokens.Space.xs) {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.xs) {
                 // Blocking issues (gate the run button) in secondary; pre-flight warnings in orange;
                 // the run/pull failure in red.
                 ForEach(messages, id: \.self) { message in

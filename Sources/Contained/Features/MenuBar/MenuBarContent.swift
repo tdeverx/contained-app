@@ -29,7 +29,7 @@ struct MenuBarContent: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.m) {
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.m) {
             header
 
             Divider()
@@ -178,7 +178,7 @@ struct MenuBarContent: View {
 
     @ViewBuilder
     private var infoGrid: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
             infoRow("Containers", value: "\(store.running.count) running · \(stopped.count) stopped")
             infoRow("Resources", value: "\(app.images.count) images · \(app.volumes.count) volumes · \(app.networks.count) networks")
             infoRow("Bootstrap", value: cliLabel)

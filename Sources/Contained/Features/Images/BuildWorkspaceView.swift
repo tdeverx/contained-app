@@ -22,7 +22,7 @@ struct BuildWorkspaceView: View {
     private var canBuild: Bool { contextDir != nil && !tag.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var body: some View {
-        VStack(spacing: 0) {
+        LazyVStack(spacing: 0) {
             form
             Divider()
             if building, let context = contextDir, let client = app.client {
@@ -47,7 +47,7 @@ struct BuildWorkspaceView: View {
 
     private var form: some View {
         ScrollView {
-            VStack(spacing: Tokens.Space.l) {
+            LazyVStack(spacing: Tokens.Space.l) {
                 sourceSection
                 optionsSection
                 commandSection

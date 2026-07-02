@@ -22,6 +22,7 @@ enum HistoryRange: String, CaseIterable, Identifiable {
 /// The "rewind" tab: persistent CPU / memory / network history for one container, plus its event
 /// log — the long-term counterpart to the live sparklines. Backed by SwiftData via `@Query`.
 struct ContainerHistoryTab: View {
+    @Environment(AppModel.self) private var app
     let snapshot: ContainerSnapshot
     @State private var range: HistoryRange = .day
     /// Window start, recomputed only when the range changes (not per render) so the windowed `@Query`
@@ -30,14 +31,16 @@ struct ContainerHistoryTab: View {
 
     var body: some View {
         ContainerTabScaffold {
-            VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
                 Picker("Range", selection: $range) {
                     ForEach(HistoryRange.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 240)
 
-                ContainerHistoryWindow(containerID: snapshot.id, cutoff: cutoff)
+                ContainerHistoryWindow(snapshot: snapshot,
+                                       cutoff: cutoff,
+                                       normalization: app.statsNormalizationContext)
             }
         }
         .onChange(of: range) { _, newRange in cutoff = Date().addingTimeInterval(-newRange.seconds) }
@@ -48,10 +51,15 @@ struct ContainerHistoryTab: View {
 /// into the SwiftData `@Query` predicates, so only the visible range is fetched — not the container's
 /// entire retained history (which an unbounded query then re-filtered on every render).
 private struct ContainerHistoryWindow: View {
+    private let snapshot: ContainerSnapshot
+    private let normalization: StatsNormalizationContext
     @Query private var samples: [MetricSample]
     @Query private var events: [EventRecord]
 
-    init(containerID: String, cutoff: Date) {
+    init(snapshot: ContainerSnapshot, cutoff: Date, normalization: StatsNormalizationContext) {
+        self.snapshot = snapshot
+        self.normalization = normalization
+        let containerID = snapshot.id
         _samples = Query(filter: #Predicate { $0.containerID == containerID && $0.timestamp >= cutoff },
                          sort: \MetricSample.timestamp)
         _events = Query(filter: #Predicate { $0.containerID == containerID && $0.timestamp >= cutoff },
@@ -59,24 +67,24 @@ private struct ContainerHistoryWindow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.l) {
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
             if samples.isEmpty {
                 ContentUnavailableView("No history yet", systemImage: "chart.xyaxis.line",
                                        description: Text("Resource samples accumulate while the container runs."))
                     .frame(maxWidth: .infinity, minHeight: 200)
             } else {
-                chartCard("CPU", unit: "% of a core") {
+                chartCard("CPU", unit: percentUnit) {
                 Chart(samples) { sample in
                     LineMark(x: .value("Time", sample.timestamp),
-                             y: .value("CPU", sample.cpuFraction * 100))
+                             y: .value("CPU", historyValue(.cpu, sample) * 100))
                     .foregroundStyle(Color.accentColor)
                     .interpolationMethod(.monotone)
                 }
             }
-            chartCard("Memory", unit: "MB") {
+            chartCard("Memory", unit: percentUnit) {
                 Chart(samples) { sample in
                     AreaMark(x: .value("Time", sample.timestamp),
-                             y: .value("Memory", sample.memoryBytes / 1_048_576))
+                             y: .value("Memory", historyValue(.memory, sample) * 100))
                     .foregroundStyle(Color.accentColor.opacity(Tokens.Chart.areaOpacity))
                 }
             }
@@ -95,7 +103,7 @@ private struct ContainerHistoryWindow: View {
         }
 
             if !events.isEmpty {
-                VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
                     Text("Events").font(.headline)
                     ForEach(events.prefix(50)) { event in
                         EventRow(event: event)
@@ -116,6 +124,24 @@ private struct ContainerHistoryWindow: View {
                 .frame(height: Tokens.Chart.height)
                 .chartXAxis { AxisMarks(values: .automatic(desiredCount: Tokens.Chart.axisDesiredCount)) }
         }
+    }
+
+    private var percentUnit: String {
+        switch normalization.mode {
+        case .container: return "% of container"
+        case .machine: return "% of machine"
+        }
+    }
+
+    private func historyValue(_ metric: GraphMetric, _ sample: MetricSample) -> Double {
+        metric.value(from: sample,
+                     snapshot: snapshot,
+                     normalization: normalization,
+                     memoryFallbackBytes: memoryFallbackBytes)
+    }
+
+    private var memoryFallbackBytes: UInt64 {
+        UInt64(max(0, samples.map(\.memoryBytes).max() ?? 0))
     }
 }
 

@@ -15,7 +15,7 @@ struct ToolbarUpdatesPanel: View {
     @State private var imageFrames: [LocalImageTagGroup.ID: CGRect] = [:]
 
     private var imageGroups: [LocalImageTagGroup] {
-        sortedImageGroups(LocalImageTagGroup.groups(for: app.images).filter(matchesFilter))
+        sortedImageGroups(app.localImageGroups().filter(matchesFilter))
     }
 
     private var imageSections: [(title: String, groups: [LocalImageTagGroup])] {
@@ -34,7 +34,7 @@ struct ToolbarUpdatesPanel: View {
     }
 
     private var updateCount: Int {
-        LocalImageTagGroup.groups(for: app.images).filter {
+        app.localImageGroups().filter {
             app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable
         }.count
     }

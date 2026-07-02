@@ -123,19 +123,18 @@ struct CreationLocalImagesContent: View {
     var onSelect: (RunSpec) -> Void
 
     var body: some View {
-        VStack(spacing: Tokens.Space.m) {
-            HStack(spacing: Tokens.Space.s) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Filter local images", text: $query)
-                    .textFieldStyle(.plain)
-                if !query.isEmpty {
-                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                        .buttonStyle(.plain).foregroundStyle(.secondary)
+        LazyVStack(spacing: Tokens.Space.m) {
+            DesignInputSurface {
+                HStack(spacing: Tokens.Space.s) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField("Filter local images", text: $query)
+                        .textFieldStyle(.plain)
+                    if !query.isEmpty {
+                        Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                            .buttonStyle(.plain).foregroundStyle(.secondary)
+                    }
                 }
             }
-            .padding(.horizontal, Tokens.Space.m)
-            .padding(.vertical, Tokens.Space.s)
-            .glassSurface(.thin, cornerRadius: Tokens.Radius.control)
 
             if filteredLocalImages.isEmpty {
                 ContentUnavailableView {
@@ -175,13 +174,14 @@ struct CreationPastedComposeContent: View {
     var onImport: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.m) {
-            TextEditor(text: $text)
-                .font(.system(.callout, design: .monospaced))
-                .scrollContentBackground(.hidden)
-                .padding(Tokens.Space.s)
-                .glassSurface(.thin, cornerRadius: Tokens.Radius.control)
-                .frame(minHeight: 260)
+        LazyVStack(alignment: .leading, spacing: Tokens.Space.m) {
+            DesignInputSurface(horizontalPadding: Tokens.Space.s,
+                               verticalPadding: Tokens.Space.s,
+                               minHeight: 260) {
+                TextEditor(text: $text)
+                    .font(.system(.callout, design: .monospaced))
+                    .scrollContentBackground(.hidden)
+            }
 
             HStack {
                 Spacer()
@@ -246,7 +246,7 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
     @ViewBuilder var footer: () -> Footer
 
     var body: some View {
-        VStack(spacing: Tokens.Space.m) {
+        LazyVStack(spacing: Tokens.Space.m) {
             ResourceGlassCard(size: .small, elevated: false) {
                 ResourceCardHeader {
                     ResourceCardIconChip(symbol: symbol, tint: .accentColor)

@@ -7,11 +7,12 @@ import ContainedCore
 struct ContainerCard: View {
     let snapshot: ContainerSnapshot
     var style: Personalization
+    var hasStyleOverride: Bool = true
     var density: CardDensity
     var stats: StatsDelta?
-    var history: [Double]
-    /// Every metric's recent history, so the expanded footer's chips can flip the graph instantly
-    /// without waiting for the parent to recompute. The compact card just uses `history`.
+    var statsNormalization: StatsNormalizationContext = .containerSpecific
+    /// Every metric's recent history, so the footer's widget chips can flip the graph instantly
+    /// without borrowing another metric's samples.
     var histories: [GraphMetric: SampleBuffer] = [:]
     var isBusy: Bool
     var hasImageUpdate: Bool = false
@@ -38,6 +39,7 @@ struct ContainerCard: View {
     /// Multi-select mode: tapping toggles selection instead of opening the detail.
     var selecting: Bool = false
     var isSelected: Bool = false
+    var selectedWidgetIndex: Binding<Int>?
 
     @State private var tab: Tab = .overview
     @State private var confirmingDelete = false
@@ -45,7 +47,7 @@ struct ContainerCard: View {
     @State private var showingCustomize = false
     @State private var draftStyle: Personalization? = nil
     /// Session-only graph tab selection. The footer chips act as tabs and switch the graph.
-    @State private var selectedWidgetIndex = 0
+    @State private var localSelectedWidgetIndex = 0
 
     enum Tab: String, CaseIterable, Identifiable {
         case overview = "Overview"
@@ -78,7 +80,8 @@ struct ContainerCard: View {
     private var isRunning: Bool { presentation == .running }
     private var activeWidgetIndex: Int {
         let enabled = styleForDisplay.widgets.indices.filter { styleForDisplay.widget(at: $0).enabled }
-        return enabled.contains(selectedWidgetIndex) ? selectedWidgetIndex : (enabled.first ?? 0)
+        let selected = selectedWidgetIndex?.wrappedValue ?? localSelectedWidgetIndex
+        return enabled.contains(selected) ? selected : (enabled.first ?? 0)
     }
     private var activeWidget: WidgetConfiguration { styleForDisplay.widget(at: activeWidgetIndex) }
     private var activeWidgetColor: Color { activeWidget.tint?.color ?? tint }
@@ -110,9 +113,13 @@ struct ContainerCard: View {
         // Anchored to the whole card (via the surrounding Group), so the popover floats beside the
         // real, live card — which is itself the preview. The customizer carries only the form.
         .popover(isPresented: $showingCustomize, arrowEdge: .trailing) {
-            CustomizeSheet(snapshot: snapshot, presentation: .popover, onDraftChange: { draft in
-                draftStyle = draft
-            })
+            CustomizeSheet(snapshot: snapshot,
+                           presentation: .popover,
+                           initialStyle: style,
+                           initiallyOverridesInheritedStyle: hasStyleOverride,
+                           onDraftChange: { draft in
+                               draftStyle = draft
+                           })
         }
         .confirmationDialog("Delete \(name)?", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) {
@@ -136,7 +143,7 @@ struct ContainerCard: View {
                           gradientAngle: styleForDisplay.gradientAngle,
                           blendMode: styleForDisplay.backgroundBlendMode,
                           onTap: onTap) {
-            headerRow(controlsReveal: controlsVisible ? 1 : 0)
+            compactHeaderRow
         } bodyContent: {
             detailBody
         } footerLeading: {
@@ -149,7 +156,7 @@ struct ContainerCard: View {
         } footerActions: {
             footerActions
         } widget: {
-            LiveSparkline(samples: histories[activeWidget.metric]?.values ?? history,
+            LiveSparkline(samples: histories[activeWidget.metric]?.values ?? [],
                           comparisonSamples: activeWidgetComparisonMetric.flatMap { histories[$0]?.values } ?? [],
                           color: activeWidgetColor,
                           lineWidth: activeWidget.lineWidth,
@@ -157,26 +164,16 @@ struct ContainerCard: View {
                           areaUsesGradient: activeWidget.areaUsesGradient,
                           interpolation: activeWidget.interpolation,
                           pointSize: activeWidget.pointSize,
-                          barWidth: activeWidget.barWidth)
+                          barWidth: activeWidget.barWidth,
+                          scale: sparklineScale(for: activeWidget.metric),
+                          comparisonScale: activeWidgetComparisonMetric.map(sparklineScale(for:)))
                 .frame(maxWidth: .infinity)
                 .frame(height: Tokens.ResourceCard.sparklineHeight)
         }
-        .overlay { if isBusy { ProgressView().controlSize(.small) } }
-    }
-
-    @ViewBuilder
-    private func headerRow(controlsReveal: Double = 1) -> some View {
-        if isExpanded {
-            compactHeaderRow
-                .overlay(alignment: .topTrailing) {
-                    headerButtons(controlsReveal: controlsReveal)
-                        .fixedSize(horizontal: true, vertical: false)
-                        .padding(Tokens.Space.s)
-                        .zIndex(1)
-                }
-        } else {
-            compactHeaderRow
+        .resourceCardFloatingControls(when: isExpanded) {
+            headerButtons(controlsReveal: controlsVisible ? 1 : 0)
         }
+        .resourceCardProgressOverlay(when: isBusy)
     }
 
     private var compactHeaderRow: some View {
@@ -190,14 +187,12 @@ struct ContainerCard: View {
     }
 
     private func headerButtons(controlsReveal: Double) -> some View {
-        GlassButton(singleItem: false) {
-            expandedPageButtons
-            GlassButtonItem(systemName: "xmark", help: "Close") {
-                onClose()
-            }
-        }
-        .opacity(controlsReveal)
-        .animation(.easeOut(duration: 0.18), value: controlsReveal)
+        ResourceCardPageControls(items: pageControlItems,
+                                 selection: tab,
+                                 tint: tint,
+                                 controlsReveal: controlsReveal,
+                                 onSelect: selectTab,
+                                 onClose: onClose)
     }
 
     private var headerTitleBlock: some View {
@@ -322,16 +317,11 @@ struct ContainerCard: View {
         Button(role: .destructive) { onDelete() } label: { Label("Delete", systemImage: "trash") }
     }
 
-    @ViewBuilder
-    private var expandedPageButtons: some View {
-        ForEach(Tab.allCases) { item in
-            GlassButtonItem(tint: tab == item ? tint : nil,
-                            help: item.rawValue,
-                            isIcon: true,
-                            action: { tab = item }) {
-                Image(systemName: item.systemImage)
-                    .opacity(tab == item ? 1 : 0.62)
-            }
+    private var pageControlItems: [ResourceCardPageControlItem<Tab>] {
+        Tab.allCases.map { item in
+            ResourceCardPageControlItem(id: item,
+                                        title: item.rawValue,
+                                        systemImage: item.systemImage)
         }
     }
 
@@ -346,17 +336,34 @@ struct ContainerCard: View {
         case .overview:
             ContainerOverviewTab(snapshot: snapshot)
         case .logs:
-            LogsTab(snapshot: snapshot)
+            DeferredContainerPage {
+                LogsTab(snapshot: snapshot)
+            }
         case .terminal:
-            TerminalTab(snapshot: snapshot)
+            DeferredContainerPage {
+                TerminalTab(snapshot: snapshot)
+            }
         case .stats:
-            StatsTab(snapshot: snapshot)
+            DeferredContainerPage {
+                StatsTab(snapshot: snapshot)
+            }
         case .history:
             ContainerHistoryTab(snapshot: snapshot)
         case .files:
             FilesTab(snapshot: snapshot)
         case .inspect:
-            ContainerInspectTab(snapshot: snapshot)
+            DeferredContainerPage {
+                ContainerInspectTab(snapshot: snapshot)
+            }
+        }
+    }
+
+    private func selectTab(_ item: Tab) {
+        guard tab != item else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            tab = item
         }
     }
 
@@ -364,22 +371,35 @@ struct ContainerCard: View {
     private func widgetChip(_ index: Int) -> some View {
         let widget = styleForDisplay.widget(at: index)
         let active = index == activeWidgetIndex
-        return Button {
-            selectedWidgetIndex = index
-        } label: {
-            ResourceCardFooterMini {
-                if widget.showIcon {
-                    Image(systemName: widget.resolvedSystemImage).font(.caption2)
-                }
-            } text: {
-                if widget.showText {
-                    ResourceCardMetricText(text: stats.map(widget.metric.chipCaption(from:)) ?? "—")
-                }
+        return ResourceCardFooterChip(isSelected: active,
+                                      tint: widget.tint?.color ?? tint,
+                                      help: widget.metric.displayName,
+                                      action: {
+            if let selectedWidgetIndex {
+                selectedWidgetIndex.wrappedValue = index
+            } else {
+                localSelectedWidgetIndex = index
             }
-            .foregroundStyle(active ? AnyShapeStyle(widget.tint?.color ?? tint) : AnyShapeStyle(.secondary))
+        }) {
+            if widget.showIcon {
+                Image(systemName: widget.resolvedSystemImage).font(.caption2)
+            }
+        } text: {
+            if widget.showText {
+                ResourceCardMetricText(text: stats.map {
+                    widget.metric.chipCaption(from: $0,
+                                              snapshot: snapshot,
+                                              normalization: statsNormalization)
+                } ?? "—")
+            }
         }
-        .buttonStyle(.plain)
-        .help(widget.metric.displayName)
+    }
+
+    private func sparklineScale(for metric: GraphMetric) -> SparklineScale {
+        switch metric {
+        case .cpu, .memory: return .fraction
+        case .netRx, .netTx, .diskRead, .diskWrite: return .normalized
+        }
     }
 
     /// Lifecycle + edit/delete, styled to match the compact card's small plain play/stop glyph
@@ -393,21 +413,45 @@ struct ContainerCard: View {
             footerAction("play.fill", help: "Start", tint: tint, action: onStart)
         }
         footerAction("slider.horizontal.3", help: "Edit", action: onEdit)
-        footerAction("trash", help: "Delete", tint: .red) { confirmingDelete = true }
+        footerAction("trash", help: "Delete", role: .destructive) { confirmingDelete = true }
     }
 
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,
+                              role: ButtonRole? = nil,
                               action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            ResourceCardFooterMini {
-                Image(systemName: systemName).font(.body)
-            } text: {
-                EmptyView()
+        ResourceCardFooterButton(systemName: systemName,
+                                 help: help,
+                                 tint: tint,
+                                 role: role,
+                                 action: action)
+    }
+}
+
+private struct DeferredContainerPage<Content: View>: View {
+    private let delay: Duration
+    @ViewBuilder var content: () -> Content
+
+    @State private var isReady = false
+
+    init(delay: Duration = .milliseconds(60), @ViewBuilder content: @escaping () -> Content) {
+        self.delay = delay
+        self.content = content
+    }
+
+    var body: some View {
+        Group {
+            if isReady {
+                content()
+            } else {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(tint ?? .secondary)
-        .help(help)
-        .accessibilityLabel(help)
+        .task {
+            isReady = false
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            isReady = true
+        }
     }
 }

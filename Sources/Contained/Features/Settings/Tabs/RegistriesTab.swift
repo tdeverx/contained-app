@@ -11,7 +11,7 @@ struct RegistriesTab: View {
     @State private var loggingOut: RegistryLogin?
 
     var body: some View {
-        VStack(spacing: Tokens.Space.l) {
+        LazyVStack(spacing: Tokens.Space.l) {
             PanelSection(header: "Signed-in registries",
                          footer: "Credentials are typed by you and piped to the CLI via stdin, so the password never lands in the process list. Contained doesn’t store it.") {
                 if app.registries.isEmpty {

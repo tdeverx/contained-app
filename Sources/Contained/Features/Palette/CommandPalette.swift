@@ -271,8 +271,7 @@ struct PaletteItem: Identifiable {
     @MainActor
     private static func imageItems(app: AppModel, ui: UIState) -> [PaletteItem] {
         var items: [PaletteItem] = []
-        let groups = LocalImageTagGroup.groups(for: app.images)
-            .sorted { $0.primaryReference.localizedCaseInsensitiveCompare($1.primaryReference) == .orderedAscending }
+        let groups = app.localImageGroups()
         for group in groups {
             items.append(PaletteItem(title: "Run \(Format.shortImage(group.primaryReference))",
                                      subtitle: "local image",

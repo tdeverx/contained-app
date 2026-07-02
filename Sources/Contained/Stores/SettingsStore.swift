@@ -32,6 +32,9 @@ final class SettingsStore {
     var keepInMenuBar: Bool { didSet { defaults.set(keepInMenuBar, forKey: Keys.keepInMenuBar) } }
     var cliPathOverride: String { didSet { defaults.set(cliPathOverride, forKey: Keys.cliPath) } }
     var refreshInterval: Double { didSet { defaults.set(refreshInterval, forKey: Keys.refresh) } }
+    var statsNormalizationMode: StatsNormalizationMode {
+        didSet { defaults.set(statsNormalizationMode.rawValue, forKey: Keys.statsNormalizationMode) }
+    }
     var imageUpdateIntervalHours: Int { didSet { defaults.set(imageUpdateIntervalHours, forKey: Keys.imageUpdateIntervalHours) } }
     /// Automation toggles (surfaced in System → Automation). Each gates a background task.
     var imageUpdateChecksEnabled: Bool { didSet { defaults.set(imageUpdateChecksEnabled, forKey: Keys.imageUpdateChecksEnabled) } }
@@ -117,6 +120,7 @@ final class SettingsStore {
         keepInMenuBar = defaults.object(forKey: Keys.keepInMenuBar) as? Bool ?? true
         cliPathOverride = defaults.string(forKey: Keys.cliPath) ?? ""
         refreshInterval = defaults.object(forKey: Keys.refresh) as? Double ?? 2.0
+        statsNormalizationMode = StatsNormalizationMode(rawValue: defaults.string(forKey: Keys.statsNormalizationMode) ?? "") ?? .container
         imageUpdateIntervalHours = defaults.object(forKey: Keys.imageUpdateIntervalHours) as? Int ?? 6
         imageUpdateChecksEnabled = defaults.object(forKey: Keys.imageUpdateChecksEnabled) as? Bool ?? true
         appUpdateChecksEnabled = defaults.object(forKey: Keys.appUpdateChecksEnabled) as? Bool ?? true
@@ -165,9 +169,10 @@ final class SettingsStore {
                        showInfoTips: showInfoTips,
                        imageDefaultStyleEnabled: imageDefaultStyleEnabled,
                        keepInMenuBar: keepInMenuBar,
-                       cliPathOverride: cliPathOverride,
-                       refreshInterval: refreshInterval,
-                       imageUpdateIntervalHours: imageUpdateIntervalHours,
+	                       cliPathOverride: cliPathOverride,
+	                       refreshInterval: refreshInterval,
+	                       statsNormalizationMode: statsNormalizationMode,
+	                       imageUpdateIntervalHours: imageUpdateIntervalHours,
                        imageUpdateChecksEnabled: imageUpdateChecksEnabled,
                        appUpdateChecksEnabled: appUpdateChecksEnabled,
                        autoRestartEnabled: autoRestartEnabled,
@@ -207,6 +212,7 @@ final class SettingsStore {
         keepInMenuBar = snapshot.keepInMenuBar
         cliPathOverride = snapshot.cliPathOverride
         refreshInterval = snapshot.refreshInterval
+        statsNormalizationMode = snapshot.statsNormalizationMode
         imageUpdateIntervalHours = snapshot.imageUpdateIntervalHours
         imageUpdateChecksEnabled = snapshot.imageUpdateChecksEnabled
         appUpdateChecksEnabled = snapshot.appUpdateChecksEnabled
@@ -255,6 +261,7 @@ final class SettingsStore {
         static let keepInMenuBar = "keepInMenuBar"
         static let cliPath = "cliPathOverride"
         static let refresh = "refreshInterval"
+        static let statsNormalizationMode = "statsNormalizationMode"
         static let imageUpdateIntervalHours = "imageUpdateIntervalHours"
         static let imageUpdateChecksEnabled = "imageUpdateChecksEnabled"
         static let appUpdateChecksEnabled = "appUpdateChecksEnabled"

@@ -69,26 +69,41 @@ struct CustomizeSheet: View {
     let presentation: Presentation
     var onDraftChange: ((Personalization) -> Void)? = nil
 
-    @State private var style = Personalization()
-    @State private var overridesInheritedStyle = true
-    @State private var loaded = false
+    @State private var style: Personalization
+    @State private var overridesInheritedStyle: Bool
+    @State private var loaded: Bool
 
     init(snapshot: ContainerSnapshot, presentation: Presentation = .popover) {
-        self.target = .container(snapshot)
-        self.presentation = presentation
+        self.init(snapshot: snapshot,
+                  presentation: presentation,
+                  initialStyle: nil,
+                  initiallyOverridesInheritedStyle: nil,
+                  onDraftChange: nil)
     }
 
     init(snapshot: ContainerSnapshot,
          presentation: Presentation = .popover,
+         initialStyle: Personalization? = nil,
+         initiallyOverridesInheritedStyle: Bool? = nil,
          onDraftChange: ((Personalization) -> Void)? = nil) {
         self.target = .container(snapshot)
         self.presentation = presentation
         self.onDraftChange = onDraftChange
+        self._style = State(initialValue: initialStyle ?? Personalization())
+        self._overridesInheritedStyle = State(initialValue: initiallyOverridesInheritedStyle ?? true)
+        self._loaded = State(initialValue: initialStyle != nil && initiallyOverridesInheritedStyle != nil)
     }
 
-    init(target: Target, presentation: Presentation = .sheet) {
+    init(target: Target,
+         presentation: Presentation = .sheet,
+         initialStyle: Personalization? = nil,
+         initiallyOverridesInheritedStyle: Bool? = nil) {
         self.target = target
         self.presentation = presentation
+        self._style = State(initialValue: initialStyle ?? Personalization())
+        self._overridesInheritedStyle = State(initialValue: initiallyOverridesInheritedStyle ?? true)
+        self._loaded = State(initialValue: initialStyle != nil
+                                  && (!target.supportsInheritance || initiallyOverridesInheritedStyle != nil))
     }
 
     private var isPopoverPresentation: Bool { presentation == .popover }
@@ -101,7 +116,7 @@ struct CustomizeSheet: View {
             header
             Divider()
             ScrollView {
-                VStack(spacing: Tokens.Space.l) {
+                LazyVStack(spacing: Tokens.Space.l) {
                     if target.supportsInheritance { inheritanceSection }
                     editableSection { styleSection }
                     if case .container = target {

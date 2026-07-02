@@ -236,33 +236,33 @@ struct ToolbarCommandPalette: View {
         if scope == .dockerHub {
             dockerHubPlaceholder
         } else {
-            ContentUnavailableView {
-                Label("No matches", systemImage: "magnifyingglass")
-            } description: {
-                Text("Try a setting, image, container, network, or action.")
+            DesignContentSurface(minHeight: 260) {
+                ContentUnavailableView {
+                    Label("No matches", systemImage: "magnifyingglass")
+                } description: {
+                    Text("Try a setting, image, container, network, or action.")
+                }
             }
-            .frame(maxWidth: .infinity, minHeight: 260)
-            .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
         }
     }
 
     private var dockerHubPlaceholder: some View {
-        VStack(spacing: Tokens.Space.s) {
-            if hubSearching {
-                ProgressView()
-                Text("Searching Docker Hub…").font(.callout).foregroundStyle(.secondary)
-            } else if let hubError {
-                Image(systemName: "wifi.exclamationmark").font(.title2).foregroundStyle(.orange)
-                Text("Couldn't search Docker Hub").font(.callout.weight(.medium))
-                Text(hubError).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            } else {
-                Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.tertiary)
-                Text(trimmedQuery.isEmpty ? "Type to search Docker Hub" : "No images found for “\(trimmedQuery)”")
-                    .font(.callout).foregroundStyle(.secondary)
+        DesignContentSurface(minHeight: 260) {
+            LazyVStack(spacing: Tokens.Space.s) {
+                if hubSearching {
+                    ProgressView()
+                    Text("Searching Docker Hub…").font(.callout).foregroundStyle(.secondary)
+                } else if let hubError {
+                    Image(systemName: "wifi.exclamationmark").font(.title2).foregroundStyle(.orange)
+                    Text("Couldn't search Docker Hub").font(.callout.weight(.medium))
+                    Text(hubError).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                } else {
+                    Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.tertiary)
+                    Text(trimmedQuery.isEmpty ? "Type to search Docker Hub" : "No images found for “\(trimmedQuery)”")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 260)
-        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
     }
 
     private var footerBar: some View {
@@ -342,8 +342,7 @@ struct ToolbarCommandPalette: View {
     }
 
     private func localImageItems() -> [PaletteItem] {
-        let groups = LocalImageTagGroup.groups(for: app.images)
-            .sorted { $0.primaryReference.localizedCaseInsensitiveCompare($1.primaryReference) == .orderedAscending }
+        let groups = app.localImageGroups()
         let matched = trimmedQuery.isEmpty ? groups : groups.filter {
             PaletteSearch.score(query: trimmedQuery, in: $0.references + [Format.shortImage($0.primaryReference)]) != nil
         }
