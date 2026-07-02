@@ -166,9 +166,6 @@ struct ContainerCard: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: Tokens.ResourceCard.sparklineHeight)
         }
-        .resourceCardFloatingControls(when: isExpanded) {
-            headerButtons(controlsReveal: controlsVisible ? 1 : 0)
-        }
         .resourceCardProgressOverlay(when: isBusy)
     }
 
@@ -178,7 +175,11 @@ struct ContainerCard: View {
         } content: {
             headerTitleBlock
         } trailing: {
-            EmptyView()
+            if isExpanded {
+                headerButtons(controlsReveal: controlsVisible ? 1 : 0)
+            } else {
+                EmptyView()
+            }
         }
     }
 
