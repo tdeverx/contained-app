@@ -103,6 +103,11 @@ extension UnsupportedRuntimeCapability: ContainedPackageError {
     }
 }
 
+public enum RuntimeSystemAction: String, CaseIterable, Sendable {
+    case start
+    case stop
+}
+
 public protocol ContainerRuntimeClient: Sendable {
     var descriptor: RuntimeDescriptor { get }
 
@@ -135,7 +140,7 @@ public protocol ContainerRuntimeClient: Sendable {
                      platform: String?) -> AsyncThrowingStream<String, Error>
     func streamPush(_ ref: String, platform: String?) -> AsyncThrowingStream<String, Error>
     @discardableResult func runContainer(arguments: [String]) async throws -> Data
-    @discardableResult func performSystemAction(_ action: String) async throws -> Data
+    @discardableResult func performSystemAction(_ action: RuntimeSystemAction) async throws -> Data
     func registries() async throws -> [RegistryLogin]
     @discardableResult func registryLogin(server: String, username: String, password: String) async throws -> Data
     @discardableResult func registryLogout(server: String) async throws -> Data

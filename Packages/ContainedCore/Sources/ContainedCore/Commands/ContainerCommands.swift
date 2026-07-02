@@ -46,6 +46,10 @@ public enum ContainerCommands {
     public static func containerPrune() -> [String] { ["prune"] }
     /// `container exec <id> <command...>` (no TTY) — for one-shot captures like `ps`, `ls`.
     public static func exec(_ id: String, _ command: [String]) -> [String] { ["exec", id] + command }
+    /// `container exec --interactive --tty <id> <shell>` — for hosted terminal sessions.
+    public static func execInteractive(_ id: String, shell: String) -> [String] {
+        ["exec", "--interactive", "--tty", id, shell]
+    }
     /// `container export <id> --output <tar>` — export a container's filesystem as a tar archive.
     /// Note: this is a filesystem tarball, **not** an OCI image (the runtime has no `commit`).
     public static func containerExport(_ id: String, output: String) -> [String] {

@@ -54,7 +54,7 @@ public struct DesignCardSurface<Header: View, BodyContent: View, FooterLeading: 
     var showsFooter = true
     var showsWidget = true
     /// When set, the selected state reads as a soft `white.opacity` wash (matching a hovered glass
-    /// button) instead of the 2.5pt accent stroke — used by the Activity and command-palette rows.
+    /// button) instead of the 2.5pt accent stroke, useful for dense action rows.
     var usesSelectionFill = false
     var fill: Color?
     var fillOpacity: Double = 0.18

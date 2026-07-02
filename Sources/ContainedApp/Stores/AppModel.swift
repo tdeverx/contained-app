@@ -655,27 +655,27 @@ final class AppModel {
 
     /// Start the container system service, then re-bootstrap.
     func startService() async {
-        await runServiceLifecycle(["start"], resetWatchdog: false)
+        await runServiceLifecycle([.start], resetWatchdog: false)
         logger.record("Started container service", category: .system)
     }
 
     /// Stop the container system service, then re-bootstrap.
     func stopService() async {
-        await runServiceLifecycle(["stop"], resetWatchdog: true)
+        await runServiceLifecycle([.stop], resetWatchdog: true)
         logger.record("Stopped container service", category: .system, severity: .warning)
     }
 
     /// Stop then start the container system service, then re-bootstrap.
     func restartService() async {
-        await runServiceLifecycle(["stop", "start"], resetWatchdog: true)
+        await runServiceLifecycle([.stop, .start], resetWatchdog: true)
         logger.record("Restarted container service", category: .system, severity: .warning)
     }
 
-    /// Shared driver for the service lifecycle commands. Marks the app `.checking` for immediate UI
-    /// feedback, optionally resets the restart watchdog (so a deliberate stop isn't fought), runs each
-    /// `system <action>` in order, then re-reads service status. Failures are intentionally ignored —
-    /// `refreshSystem` reports the resulting state regardless.
-    private func runServiceLifecycle(_ actions: [String], resetWatchdog: Bool) async {
+    /// Shared driver for service lifecycle commands. Marks the app `.checking` for immediate UI
+    /// feedback, optionally resets the restart watchdog, runs each typed runtime action in order,
+    /// then re-reads service status. Failures are intentionally ignored because `refreshSystem`
+    /// reports the resulting state regardless.
+    private func runServiceLifecycle(_ actions: [RuntimeSystemAction], resetWatchdog: Bool) async {
         guard let client else { return }
         bootstrap = .checking
         if resetWatchdog { watchdog.reset() }

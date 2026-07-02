@@ -159,8 +159,8 @@ public struct AppleContainerClient: Sendable {
         try await runner.run(arguments)
     }
 
-    @discardableResult public func performSystemAction(_ action: String) async throws -> Data {
-        try await runner.run(["system", action])
+    @discardableResult public func performSystemAction(_ action: RuntimeSystemAction) async throws -> Data {
+        try await runner.run(["system", action.rawValue])
     }
 
     // MARK: Registries

@@ -89,7 +89,7 @@ private struct UnavailableRuntime: ContainerRuntimeClient {
         AsyncThrowingStream { $0.finish() }
     }
     func runContainer(arguments: [String]) async throws -> Data { throw TestStubError.unused }
-    func performSystemAction(_ action: String) async throws -> Data { throw TestStubError.unused }
+    func performSystemAction(_ action: RuntimeSystemAction) async throws -> Data { throw TestStubError.unused }
     func registries() async throws -> [RegistryLogin] { [] }
     func registryLogin(server: String, username: String, password: String) async throws -> Data { throw TestStubError.unused }
     func registryLogout(server: String) async throws -> Data { throw TestStubError.unused }
