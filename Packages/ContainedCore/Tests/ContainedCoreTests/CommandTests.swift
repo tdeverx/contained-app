@@ -14,6 +14,8 @@ struct CommandTests {
         #expect(ContainerCommands.start(["a", "b"]) == ["start", "a", "b"])
         #expect(ContainerCommands.stop(["a"], signal: "SIGTERM", time: 5) == ["stop", "--signal", "SIGTERM", "--time", "5", "a"])
         #expect(ContainerCommands.deleteContainers(["a"], force: true) == ["delete", "--force", "a"])
+        #expect(ContainerCommands.execInteractive("web", shell: "/bin/sh")
+                == ["exec", "--interactive", "--tty", "web", "/bin/sh"])
     }
 
     @Test func logsArgv() {

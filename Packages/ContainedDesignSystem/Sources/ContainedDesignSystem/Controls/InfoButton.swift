@@ -6,8 +6,8 @@ public extension EnvironmentValues {
 
 /// A small `info.circle` button that reveals help text in a popover. Replaces hover-only tooltips so
 /// the guidance is always discoverable (tap, not hover) and reachable by VoiceOver / keyboard. The
-/// popover wraps to as many lines as the text needs (it never truncates) and can be turned off
-/// globally in Settings → Appearance.
+/// popover wraps to as many lines as the text needs (it never truncates) and can be turned off by the
+/// host through the `designSystemShowsInfoTips` environment value.
 public struct InfoButton: View {
     public let text: String
     public var visible = true

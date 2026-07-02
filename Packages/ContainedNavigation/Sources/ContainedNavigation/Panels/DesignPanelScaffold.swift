@@ -7,8 +7,8 @@ import ContainedDesignSystem
 /// The panel takes the **fixed size** its host hands the `MorphingExpander` (e.g. `DesignTokens.PanelSize.*`).
 /// The inner `ScrollView` simply fills that area and scrolls; it does **not** measure its content. This
 /// matters for performance: an earlier version measured the scroll content's natural height (to make the
-/// panel hug it), which forced the whole `LazyVStack` to realize on open — slow for long lists like
-/// Activity. Filling a definite height keeps the list lazy (only visible rows render).
+/// panel hug it), which forced the whole `LazyVStack` to realize on open. Filling a definite height
+/// keeps long lists lazy (only visible rows render).
 ///
 /// Pass `scrolls: false` for content that brings **its own** scroll view (search results, build
 /// workspace, the paged run form). In that mode the scaffold doesn't wrap the content in a `ScrollView`,

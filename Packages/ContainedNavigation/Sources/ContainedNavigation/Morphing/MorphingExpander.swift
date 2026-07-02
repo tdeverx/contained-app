@@ -240,8 +240,8 @@ public struct MorphingExpander<Content: View>: View {
                 content()
                     // Lay the content out ONCE at the final panel size, then reveal it through the
                     // growing/clipping window below. Framing it to the *animating* rect instead would
-                    // re-lay-out — and re-draw Canvas-based sparklines (System's volume cards) — on every
-                    // frame of the open spring, which made content-heavy panels jitter.
+                    // re-lay-out — and re-draw Canvas-based sparklines — on every frame of the open
+                    // spring, which made content-heavy panels jitter.
                     .frame(width: max(target.width, 1), height: max(target.height, 1), alignment: .top)
                     // Fade only foreground content. The panel surface and shadow are separate, always
                     // visible layers so elevation participates in the morph instead of popping in late.

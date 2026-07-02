@@ -176,7 +176,7 @@ public enum DesignTokens {
         public static let outerPadding: CGFloat = 8    // band inset from the window edges
         // Space reserved when custom toolbar chrome needs to mirror the traffic-light cluster.
         public static let leadingInset: CGFloat = 80
-        public static let trafficLightsWidth: CGFloat = 82 // close/min/zoom cluster width — the Settings slot min width
+        public static let trafficLightsWidth: CGFloat = 82 // close/min/zoom cluster width for reserved toolbar slots
         public static let groupPaddingH: CGFloat = 0   // horizontal glass margin inside a group
         public static let groupSpacing: CGFloat = 8    // spacing between buttons / groups
         public static let searchMaxWidth: CGFloat = 380

@@ -104,8 +104,8 @@ struct TerminalSurface: NSViewRepresentable {
         view.nativeBackgroundColor = NSColor.black.withAlphaComponent(DesignTokens.Terminal.nativeBackgroundOpacity)
         view.nativeForegroundColor = NSColor(white: DesignTokens.Terminal.nativeForegroundWhite, alpha: 1)
 
-        // `container exec -i -t <id> <shell>` — PTY is provided by SwiftTerm; -t requests a TTY
-        // inside the container, -i keeps stdin attached. We must inherit the *host* environment
+        // PTY is provided by SwiftTerm; the command builder requests a TTY inside the container
+        // and keeps stdin attached. We must inherit the *host* environment
         // (notably HOME) so the `container` CLI can find its data dir — SwiftTerm's nil-default env
         // is too sparse and the exec would silently fail to connect. TERM/LANG drive the emulator.
         var env = ProcessInfo.processInfo.environment
@@ -113,7 +113,7 @@ struct TerminalSurface: NSViewRepresentable {
         env["LANG"] = env["LANG"] ?? "en_US.UTF-8"
         env["COLORTERM"] = "truecolor"
         view.startProcess(executable: executableURL.path,
-                          args: ["exec", "--interactive", "--tty", containerID, shell],
+                          args: ContainerCommands.execInteractive(containerID, shell: shell),
                           environment: env.map { "\($0.key)=\($0.value)" }, execName: nil)
         return view
     }
