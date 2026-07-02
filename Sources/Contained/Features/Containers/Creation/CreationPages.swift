@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 struct CreationNetworkFields: View {
@@ -250,7 +251,7 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
                 ResourceCardHeader {
                     ResourceCardIconChip(symbol: symbol, tint: .accentColor)
                 } content: {
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                         ResourceCardTitleText(text: title)
                         ResourceCardSubtitleText(text: subtitle)
                     }
@@ -298,7 +299,7 @@ private struct CreationChoiceCard: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: symbol, tint: .accentColor)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     ResourceCardTitleText(text: title)
                     if let subtitle, !subtitle.isEmpty {
                         ResourceCardMonospacedSubtitleText(text: subtitle)

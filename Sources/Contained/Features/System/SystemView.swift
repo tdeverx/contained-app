@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import ContainedCore
 
 /// System overview content: service status + controls, volumes, `system df` disk usage, a Prune
@@ -215,12 +217,7 @@ struct SystemContent: View {
         card {
             HStack {
                 Text("Volumes").font(.headline)
-                Text("\(volumeInventory.count)")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .background(AppMaterial.toolbarHoverFill, in: Capsule())
+                ResourceBadgeText(text: "\(volumeInventory.count)")
                 Spacer()
                 GlassButton(singleItem: true) {
                     GlassButtonItem(help: "New volume", action: {
@@ -249,8 +246,10 @@ struct SystemContent: View {
 
     private func volumeRow(_ entry: VolumeInventoryEntry) -> some View {
         HStack(spacing: Tokens.Space.m) {
-            Image(systemName: entry.kind.symbol).foregroundStyle(.secondary).frame(width: 20)
-            VStack(alignment: .leading, spacing: 1) {
+            Image(systemName: entry.kind.symbol)
+                .foregroundStyle(.secondary)
+                .frame(width: Tokens.IconSize.rowIconColumn)
+            VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                 HStack(spacing: Tokens.Space.xs) {
                     Text(entry.title).font(.system(.callout, design: .monospaced)).lineLimit(1)
                     ResourceBadgeText(text: entry.kind.rawValue)
@@ -353,7 +352,9 @@ struct SystemContent: View {
                           isOn: settingBinding(\.autoRestartEnabled)) { EmptyView() }
             Divider()
             HStack(spacing: Tokens.Space.s) {
-                Image(systemName: "dot.radiowaves.left.and.right").foregroundStyle(.secondary).frame(width: 20)
+                Image(systemName: "dot.radiowaves.left.and.right")
+                    .foregroundStyle(.secondary)
+                    .frame(width: Tokens.IconSize.rowIconColumn)
                 Text("Refresh loop").font(.callout)
                 Spacer()
                 Text(app.coordinator.isActive ? "Active" : "Paused")
@@ -369,8 +370,8 @@ struct SystemContent: View {
         HStack(spacing: Tokens.Space.m) {
             Image(systemName: icon).font(.title3)
                 .foregroundStyle(isOn.wrappedValue ? Color.accentColor : .secondary)
-                .frame(width: 20)
-            VStack(alignment: .leading, spacing: 2) {
+                .frame(width: Tokens.IconSize.rowIconColumn)
+            VStack(alignment: .leading, spacing: Tokens.Space.xxs) {
                 Text(title).font(.callout)
                 Text(detail).font(.caption).foregroundStyle(.secondary)
             }
@@ -445,13 +446,11 @@ struct SystemContent: View {
     private var engineStatusCard: some View {
         card {
             HStack(spacing: Tokens.Space.s) {
-                Circle().fill(app.serviceHealthy ? Color.green : Color.orange).frame(width: 9, height: 9)
+                DesignStatusDot(color: app.serviceHealthy ? .green : .orange,
+                                size: Tokens.IconSize.serviceDot)
                 Text("Container engine").font(.headline)
-                Text(app.serviceLabel)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(app.serviceHealthy ? .green : .orange)
-                    .padding(.horizontal, Tokens.Space.s).padding(.vertical, 2)
-                    .background((app.serviceHealthy ? Color.green : Color.orange).opacity(0.14), in: Capsule())
+                DesignStatusBadge(text: app.serviceLabel,
+                                  tint: app.serviceHealthy ? .green : .orange)
                 Spacer(minLength: 0)
                 if let version = app.systemStatus?.apiServerVersion {
                     Text(version).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
@@ -459,25 +458,12 @@ struct SystemContent: View {
                 }
             }
             HStack(spacing: Tokens.Space.s) {
-                statTile("Containers", value: "\(app.containers.running.count)", caption: "running")
-                statTile("Images", value: "\(app.images.count)", caption: nil)
-                statTile("Disk used", value: app.diskUsage.map { Format.bytes($0.totalSizeInBytes) } ?? "—", caption: nil)
+                DesignMetricTile(label: "Containers", value: "\(app.containers.running.count)", caption: "running")
+                DesignMetricTile(label: "Images", value: "\(app.images.count)")
+                DesignMetricTile(label: "Disk used", value: app.diskUsage.map { Format.bytes($0.totalSizeInBytes) } ?? "—")
             }
             if working { ProgressView().controlSize(.small) }
         }
-    }
-
-    private func statTile(_ label: String, value: String, caption: String?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption).foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(value).font(.title3.weight(.medium))
-                if let caption { Text(caption).font(.caption).foregroundStyle(.secondary) }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Tokens.Space.m).padding(.vertical, Tokens.Space.s)
-        .background(AppMaterial.toolbarHoverFill, in: RoundedRectangle(cornerRadius: Tokens.Radius.control, style: .continuous))
     }
 
     private func run(_ action: @escaping () async -> Void) {

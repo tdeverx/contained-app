@@ -1,7 +1,9 @@
 import SwiftUI
+import ContainedNavigation
 import AppKit
 import UniformTypeIdentifiers
 import ContainedCore
+import ContainedDesignSystem
 
 /// The app shell. Fresh installs use the classic sidebar; the experimental toolbar shell adds morph
 /// panels, command palette routing, and page-background overflow actions on top of the same app state.
@@ -88,12 +90,16 @@ struct RootView: View {
                                                              gradientAngle: settings.buttonTintGradientAngle,
                                                              blendMode: settings.buttonTintBlendMode))
         .environment(\.cardMaterial, settings.cardMaterial)
+        .environment(\.designSystemShowsInfoTips, settings.showInfoTips)
+        .environment(\.pageScaffoldUsesToolbarChrome, settings.experimentalToolbarUI)
+        .environment(\.pageScaffoldBottomClearance, settings.experimentalToolbarUI ? AppToolbar.bandHeight : 0)
         .preferredColorScheme(settings.appearance.colorScheme)
         .onAppear { applyAppearance(settings.appearance) }
         .onAppear { ui.toolbarUIEnabled = settings.experimentalToolbarUI }
         .onAppear {
             ui.panelNavigationEnabled = settings.usesPanelNavigation
             ui.ensureSelectedSectionIsNavigable()
+            updateContainerStatsVisibility()
         }
         .onChange(of: settings.appearance) { _, mode in applyAppearance(mode) }
         .onChange(of: settings.experimentalToolbarUI) { _, enabled in
@@ -101,12 +107,16 @@ struct RootView: View {
             ui.panelNavigationEnabled = settings.usesPanelNavigation
             if !enabled { ui.activeMorph = nil }
             ui.ensureSelectedSectionIsNavigable()
+            updateContainerStatsVisibility()
         }
         .onChange(of: settings.experimentalPanelNavigation) { _, _ in
             ui.panelNavigationEnabled = settings.usesPanelNavigation
             if !settings.usesPanelNavigation { ui.activeMorph = nil }
             ui.ensureSelectedSectionIsNavigable()
+            updateContainerStatsVisibility()
         }
+        .onChange(of: ui.selectedSection) { _, _ in updateContainerStatsVisibility() }
+        .onChange(of: ui.activeMorph) { _, _ in updateContainerStatsVisibility() }
         .onChange(of: settings.imageBuildEnabled) { _, enabled in
             if !enabled, ui.selectedSection == .build {
                 ui.navigate(to: .images)
@@ -196,6 +206,10 @@ struct RootView: View {
         }
     }
 
+    private func updateContainerStatsVisibility() {
+        app.setContainerStatsVisible(ui.selectedSection == .containers && ui.activeMorph == nil)
+    }
+
     private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
         if app.settings.usesPanelNavigation {
             ui.toggleMorph(morph)
@@ -241,7 +255,7 @@ struct RootView: View {
                 .font(.callout.weight(.medium))
                 .padding(.horizontal, Tokens.Space.l)
                 .padding(.vertical, Tokens.Space.s)
-                .glassEffect(.regular, in: Capsule())
+                .glassCapsuleSurface(shadow: false)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }

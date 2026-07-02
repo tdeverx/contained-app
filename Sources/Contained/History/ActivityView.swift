@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import SwiftData
 
 /// System-wide activity log: every recorded event across all containers, newest first, filterable

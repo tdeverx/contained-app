@@ -2,8 +2,9 @@ import SwiftUI
 import ContainedCore
 
 /// Drives periodic refresh of the whole app. There is no push API from `container`, so a single
-/// adaptive polling loop fetches system status + containers + stats each tick (and the active
-/// resource caches), then runs the `RestartWatchdog`. Cadence speeds up while containers are
+/// adaptive polling loop fetches system status, the container list, and active resource caches, then
+/// runs the `RestartWatchdog`. Stats sampling is throttled separately by `ContainersStore` so the CLI
+/// does not run `container stats --no-stream` on every tick. Cadence speeds up while containers are
 /// transitioning, slows when idle, and pauses when the window is in the background.
 @MainActor
 @Observable

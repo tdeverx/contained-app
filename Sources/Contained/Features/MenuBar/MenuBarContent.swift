@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import ContainedCore
+import ContainedDesignSystem
 
 /// The menu shown by the menu-bar extra: a compact command surface with service status, running
 /// containers, live resource counts, and the same creation / navigation affordances as the app menu.
@@ -28,7 +29,7 @@ struct MenuBarContent: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Tokens.Space.m) {
             header
 
             Divider()
@@ -144,13 +145,13 @@ struct MenuBarContent: View {
 
             footerRow
         }
-        .padding(14)
-        .frame(width: 340)
+        .padding(Tokens.MenuBar.padding)
+        .frame(width: Tokens.MenuBar.width)
     }
 
     @ViewBuilder
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Tokens.Toolbar.searchIconGap) {
             HStack(alignment: .firstTextBaseline) {
                 Label("Contained", systemImage: app.serviceHealthy ? "shippingbox.fill" : "shippingbox")
                     .font(.headline)
@@ -160,7 +161,7 @@ struct MenuBarContent: View {
                     .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: Tokens.ResourceCard.padding) {
                 Label(app.serviceLabel, systemImage: app.serviceHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                     .foregroundStyle(app.serviceHealthy ? .green : .secondary)
                 Text(app.settings.updateChannel.displayName)
@@ -177,7 +178,7 @@ struct MenuBarContent: View {
 
     @ViewBuilder
     private var infoGrid: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Tokens.Space.s) {
             infoRow("Containers", value: "\(store.running.count) running · \(stopped.count) stopped")
             infoRow("Resources", value: "\(app.images.count) images · \(app.volumes.count) volumes · \(app.networks.count) networks")
             infoRow("Bootstrap", value: cliLabel)
@@ -187,7 +188,7 @@ struct MenuBarContent: View {
     }
 
     private var actionStrip: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Tokens.Space.s) {
             miniAction("Open", systemImage: "app")
             miniAction("Run", systemImage: "plus") { route(.runContainer) }
             miniAction("Activity", systemImage: unreadActivityCount > 0 ? "bell.badge" : "bell") { route(.activityHistory) }
@@ -196,7 +197,7 @@ struct MenuBarContent: View {
     }
 
     private var footerRow: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Tokens.Space.s) {
             Button("Open Contained") { activate() }
             Spacer(minLength: 0)
             Button("Quit") { NSApplication.shared.terminate(nil) }
@@ -219,10 +220,10 @@ struct MenuBarContent: View {
 
     @ViewBuilder
     private func infoRow(_ title: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .firstTextBaseline, spacing: Tokens.ResourceCard.padding) {
             Text(title)
                 .foregroundStyle(.secondary)
-                .frame(width: 78, alignment: .leading)
+                .frame(width: Tokens.MenuBar.titleWidth, alignment: .leading)
             Text(value)
                 .foregroundStyle(.primary)
             Spacer(minLength: 0)

@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 /// Live resource stats for one container. Reads the deltas the `RefreshCoordinator` already polls
@@ -18,32 +19,34 @@ struct StatsTab: View {
     private let columns = [GridItem(.adaptive(minimum: 200), spacing: Tokens.Space.m)]
 
     var body: some View {
-        if snapshot.state != .running {
-            ContentUnavailableView {
-                Label("Not running", systemImage: "chart.xyaxis.line")
-            } description: { Text("Start the container to see live resource usage.") }
-        } else if let delta {
-            ContainerTabScaffold {
-                LazyVGrid(columns: columns, spacing: Tokens.Space.m) {
-                    tile(.cpu, delta, "cpu")
-                    memoryTile(delta)
-                    tile(.netRx, delta, "arrow.down.circle")
-                    tile(.netTx, delta, "arrow.up.circle")
-                    tile(.diskRead, delta, "arrow.down.doc")
-                    tile(.diskWrite, delta, "arrow.up.doc")
-                    MetricTile(label: "Processes", value: "\(delta.numProcesses)", systemImage: "gearshape.2", tint: tint)
+        Group {
+            if snapshot.state != .running {
+                ContentUnavailableView {
+                    Label("Not running", systemImage: "chart.xyaxis.line")
+                } description: { Text("Start the container to see live resource usage.") }
+            } else if let delta {
+                ContainerTabScaffold {
+                    LazyVGrid(columns: columns, spacing: Tokens.Space.m) {
+                        tile(.cpu, delta, "cpu")
+                        memoryTile(delta)
+                        tile(.netRx, delta, "arrow.down.circle")
+                        tile(.netTx, delta, "arrow.up.circle")
+                        tile(.diskRead, delta, "arrow.down.doc")
+                        tile(.diskWrite, delta, "arrow.up.doc")
+                        MetricTile(label: "Processes", value: "\(delta.numProcesses)", systemImage: "gearshape.2", tint: tint)
+                    }
+                    processList
                 }
-                processList
+            } else {
+                // Running but no sample yet (first tick pending).
+                VStack(spacing: Tokens.Space.m) {
+                    ProgressView()
+                    Text("Collecting stats…").font(.callout).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .task(id: snapshot.id) { await loadProcesses() }
-        } else {
-            // Running but no sample yet (first tick pending).
-            VStack(spacing: Tokens.Space.m) {
-                ProgressView()
-                Text("Collecting stats…").font(.callout).foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .task(id: snapshot.id) { await refreshVisibleStatsAndProcesses() }
     }
 
     @ViewBuilder
@@ -68,6 +71,12 @@ struct StatsTab: View {
         // `ps` is present in most images (busybox/coreutils); ignore failures (e.g. distroless).
         processes = (try? await client.execCapture(snapshot.id, ["ps"]))?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    private func refreshVisibleStatsAndProcesses() async {
+        guard snapshot.state == .running else { processes = ""; return }
+        await app.refreshContainerStatsNow()
+        await loadProcesses()
     }
 
     private func tile(_ metric: GraphMetric, _ delta: StatsDelta, _ symbol: String) -> some View {

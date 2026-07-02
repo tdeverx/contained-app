@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import SwiftData
 import ContainedCore
 
@@ -266,7 +268,7 @@ private struct NetworksPage: View {
                 ResourceCardIconChip(symbol: network.isBuiltin ? "network.badge.shield.half.filled" : "network",
                                      tint: network.isBuiltin ? .secondary : .accentColor)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     ResourceCardTitleText(text: network.name)
                     ResourceCardSubtitleText(text: networkSubtitle(network))
                 }

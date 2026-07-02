@@ -1,0 +1,3 @@
+- Reduced idle UI churn by decoupling container stats sampling from the main refresh tick: stats now sample slowly in the background, faster when container metrics are visible, and immediately after lifecycle actions or Stats-tab entry.
+- Reduced runtime layout churn by replacing the container grid's bound card-frame preference with coalesced frame tracking and clamping morph panel geometry before it reaches SwiftUI frames.
+- Added diagnostic timing around refresh, stats sampling, image list refreshes, and image update sweeps so future sluggishness has concrete evidence before tuning.

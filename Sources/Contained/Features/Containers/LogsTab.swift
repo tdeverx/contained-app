@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 /// Live container logs via `container logs --follow`. The stream is tied to this view's lifetime
@@ -34,7 +35,7 @@ struct LogsTab: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.capsule)
             if streaming {
-                HStack(spacing: 5) {
+                HStack(spacing: Tokens.Toolbar.searchIconGap) {
                     ProgressView().controlSize(.small)
                     Text("streaming").font(.caption).foregroundStyle(.secondary)
                 }
@@ -73,14 +74,14 @@ struct LogsTab: View {
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 1) {
+                    LazyVStack(alignment: .leading, spacing: Tokens.Space.hairline) {
                         ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                             Text(line.isEmpty ? " " : line)
                                 .font(.system(.caption, design: .monospaced))
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        Color.clear.frame(height: 1).id(bottomID)
+                        Color.clear.frame(height: Tokens.Space.hairline).id(bottomID)
                     }
                     .padding(Tokens.Space.s)
                 }

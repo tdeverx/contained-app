@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import ContainedDesignSystem
 
 struct ReleaseNotesView: View {
     var title: String
@@ -19,7 +20,7 @@ struct ReleaseNotesView: View {
             Divider()
             HTMLView(html: html)
         }
-        .frame(width: 620, height: 520)
+        .frame(Tokens.SheetSize.releaseNotes)
     }
 }
 

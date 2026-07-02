@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import AppKit
 import ContainedCore
 
@@ -12,8 +13,9 @@ struct AboutTab: View {
             PanelSection {
                 HStack(spacing: Tokens.Space.m) {
                     Image(nsImage: NSApp.applicationIconImage)
-                        .resizable().frame(width: 56, height: 56)
-                    VStack(alignment: .leading, spacing: 2) {
+                        .resizable()
+                        .frame(width: Tokens.IconSize.appIcon, height: Tokens.IconSize.appIcon)
+                    VStack(alignment: .leading, spacing: Tokens.Space.xxs) {
                         Text("Contained").font(.title3.weight(.semibold))
                         Text("Version \(appVersion)").font(.callout).foregroundStyle(.secondary)
                         Text("A native macOS UI for Apple’s container runtime.")

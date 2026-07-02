@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 
 /// Shared body scaffolding for expanded container-card pages.
 /// Keeps tab content at the same 8pt inset as the rest of the panel surfaces.

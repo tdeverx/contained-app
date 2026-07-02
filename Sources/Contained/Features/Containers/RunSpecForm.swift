@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import AppKit
 import ContainedCore
 
@@ -425,7 +427,7 @@ struct RunSpecForm: View {
             }
             .fixedSize()
             TextField("", text: $spec.network, prompt: Text("custom network")).textFieldStyle(.roundedBorder)
-                .frame(width: 180)
+                .frame(width: Tokens.FormWidth.networkName)
         }
         .task { await app.refreshNetworks() }
     }

@@ -34,10 +34,10 @@ Requirements:
 
 ## Build
 
-Contained is a Swift Package.
+Contained is a SwiftPM-first app with an Xcode workspace over the package graph.
 
 ```sh
-open Package.swift
+open Contained.xcworkspace
 swift build
 swift test
 ./scripts/bundle.sh debug
@@ -73,10 +73,12 @@ instead.
 
 ## Architecture
 
-The package has two main targets:
+The root package has the app/core targets and consumes local reusable packages:
 
 - `ContainedCore`: models, CLI command builders, real `container --format json` decoders, and testable service logic.
-- `Contained`: SwiftUI app shell, design system, navigation, feature views, stores, history, settings, Sparkle support, and app state migration.
+- `Contained`: SwiftUI app shell, navigation, feature views, stores, history, settings, Sparkle support, app state migration, and app-specific presentation mappings.
+- [`Packages/ContainedDesignSystem`](Packages/ContainedDesignSystem/README.md): reusable SwiftUI/AppKit visual primitives, tokens, spacing, material, and micro-chrome shared by the app.
+- [`Packages/ContainedNavigation`](Packages/ContainedNavigation/README.md): reusable navigation and layout infrastructure shared by app chrome.
 
 Integration is intentionally CLI-based rather than private-framework based. Personalization and app-managed metadata stay local to Contained so the user's container resources remain clean when used directly from the terminal.
 

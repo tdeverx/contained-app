@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 
 /// Widget-specific controls for `CustomizeSheet`, split out so the sheet owns the target/persistence
 /// workflow while this view owns per-widget ordering, metric, and chart editing.

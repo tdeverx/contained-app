@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import SwiftData
 import ContainedCore
 
@@ -405,6 +406,6 @@ private struct NetworkViewOptions: View {
     }
 }
 
-private func optionLabel(symbol: String, title: String, subtitle: String) -> some View {
+@MainActor private func optionLabel(symbol: String, title: String, subtitle: String) -> some View {
     ToolbarTitleSubtitleLabel(symbol: symbol, title: title, subtitle: subtitle)
 }

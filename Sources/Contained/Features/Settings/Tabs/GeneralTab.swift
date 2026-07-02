@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 // MARK: - General
@@ -23,11 +24,14 @@ struct GeneralTab: View {
             }
 
             PanelSection(header: "Data",
-                         footer: "How often running containers are polled, and how long persistent metrics & events are kept before pruning.") {
+                         footer: "How often the container list refreshes. Live metrics use a slower sampler unless the Containers view or Stats tab needs them.") {
                 PanelRow(title: "Refresh interval") {
                     HStack(spacing: Tokens.Space.s) {
-                        Slider(value: $settings.refreshInterval, in: 1...10, step: 1).frame(width: 140)
-                        Text("\(Int(settings.refreshInterval))s").monospacedDigit().frame(width: 32, alignment: .trailing)
+                        Slider(value: $settings.refreshInterval, in: 1...10, step: 1)
+                            .frame(width: Tokens.FormWidth.compactSlider)
+                        Text("\(Int(settings.refreshInterval))s")
+                            .monospacedDigit()
+                            .frame(width: Tokens.FormWidth.refreshReadout, alignment: .trailing)
                     }
                 }
                 PanelRow(title: "Keep history for") {

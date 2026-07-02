@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import SwiftData
 import AppKit
 import ContainedCore
@@ -76,11 +78,11 @@ struct ToolbarCommandPalette: View {
             VStack(spacing: 0) {
                 VStack(spacing: Tokens.Space.xs) {
                     fieldRow
-                        .frame(height: Tokens.Toolbar.searchOpenHeaderHeight)
+                .frame(height: Tokens.Toolbar.searchOpenHeaderHeight)
                     inlineSearchRow
                 }
                 .padding(.bottom, Tokens.Space.s)
-                Divider().opacity(0.5)
+                Divider()
             }
         } content: {
             resultsList
@@ -136,15 +138,7 @@ struct ToolbarCommandPalette: View {
     /// The pinned scope token shown in the search field.
     private func scopeChip(_ scope: PaletteScope) -> some View {
         Button { ui.paletteScope = nil } label: {
-            HStack(spacing: 4) {
-                Image(systemName: scope.symbol).font(.caption2)
-                Text(scope.title).font(.caption.weight(.semibold))
-                Image(systemName: "xmark").font(.caption2.weight(.bold))
-            }
-            .padding(.horizontal, Tokens.Space.s)
-            .padding(.vertical, 3)
-            .background(Color.accentColor.opacity(0.16), in: Capsule(style: .continuous))
-            .foregroundStyle(Color.accentColor)
+            DesignScopeChipLabel(symbol: scope.symbol, title: scope.title)
         }
         .buttonStyle(.plain)
         .help("Remove \(scope.title) scope")
@@ -305,16 +299,7 @@ struct ToolbarCommandPalette: View {
     }
 
     private func keyboardHint(_ key: String, _ label: String) -> some View {
-        HStack(spacing: Tokens.Space.xs) {
-            Text(key)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: Tokens.Radius.keyCap,
-                                                              style: .continuous))
-            Text(label).font(.caption).foregroundStyle(.secondary)
-        }
+        DesignKeyboardHint(key, label)
     }
 
     // MARK: Sections

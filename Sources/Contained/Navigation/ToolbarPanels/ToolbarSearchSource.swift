@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 
 struct ToolbarSearchSource: View {
     @Environment(AppModel.self) private var app
@@ -36,7 +37,7 @@ struct ToolbarSearchSource: View {
                 }
             }
         }
-        .contentShape(Capsule(style: .continuous))
+        .toolbarControlContentShape()
         .simultaneousGesture(TapGesture().onEnded { focused = true })
         .onChange(of: ui.searchText) { _, _ in escalateIfEmpty() }
         .onChange(of: ui.pageResultCount) { _, _ in escalateIfEmpty() }
