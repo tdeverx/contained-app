@@ -43,13 +43,28 @@ private extension PreviewSamples {
 
 private extension Personalization {
     static var previewContainer: Personalization {
+        let sample = PreviewSamples.cardStyle
         var style = Personalization()
-        style.nickname = "Preview Web"
-        style.icon = "shippingbox.fill"
-        style.tint = .azure
-        style.fillBackground = true
-        style.backgroundOpacity = 0.16
-        style.widgets = WidgetConfiguration.defaultWidgets()
+        style.nickname = PreviewSamples.webContainer.displayName
+        style.icon = sample.symbol
+        style.tint = DesignTint.parse(sample.tintName)
+        style.fillBackground = sample.fillsBackground
+        style.backgroundOpacity = sample.backgroundOpacity
+        style.gradient = sample.usesGradient
+        style.widgets = PreviewSamples.widgetConfigs.map(WidgetConfiguration.preview)
         return style
+    }
+}
+
+private extension WidgetConfiguration {
+    static func preview(_ descriptor: PreviewWidgetDescriptor) -> WidgetConfiguration {
+        WidgetConfiguration(
+            metric: descriptor.metric,
+            secondaryMetric: descriptor.secondaryMetric,
+            tint: descriptor.tintName.map(DesignTint.parse),
+            icon: descriptor.icon,
+            style: GraphStyle(rawValue: descriptor.style) ?? .area,
+            showText: descriptor.showsText
+        )
     }
 }
