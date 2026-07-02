@@ -78,6 +78,57 @@ public struct DesignActionGroup: View {
     }
 }
 
+/// Package-owned glass cluster for mixed content, such as a menu plus action items.
+public struct DesignActionCluster<Content: View>: View {
+    public var spacing: CGFloat
+    public var height: CGFloat
+    public var minWidth: CGFloat?
+    public var singleItem: Bool?
+    public var interactive: Bool
+    @ViewBuilder public var content: () -> Content
+
+    public init(spacing: CGFloat = 0,
+                height: CGFloat = Tokens.Toolbar.buttonGroupHeight,
+                minWidth: CGFloat? = nil,
+                singleItem: Bool? = nil,
+                interactive: Bool = true,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.spacing = spacing
+        self.height = height
+        self.minWidth = minWidth
+        self.singleItem = singleItem
+        self.interactive = interactive
+        self.content = content
+    }
+
+    public var body: some View {
+        GlassButton(spacing: spacing,
+                    height: height,
+                    minWidth: minWidth,
+                    singleItem: singleItem ?? false,
+                    interactive: interactive) {
+            content()
+        }
+    }
+}
+
+/// Package-owned input cluster for search fields and compact inline controls.
+public struct DesignInputCluster<Content: View>: View {
+    @ViewBuilder public var content: () -> Content
+
+    public init(@ViewBuilder content: @escaping () -> Content) {
+        self.content = content
+    }
+
+    public var body: some View {
+        GlassButton(singleItem: true) {
+            GlassButtonInputItem {
+                content()
+            }
+        }
+    }
+}
+
 /// Package-owned action item renderer for mixed groups that also contain menus or status labels.
 public struct DesignActionItems: View {
     public var actions: [DesignAction]

@@ -139,6 +139,8 @@ safe-area contract as morph panels, clearing both top and bottom toolbar bands.
 Use package-owned semantic controls for command chrome:
 
 - `DesignActionGroup` and `DesignActionItems` for icon action groups
+- `DesignActionCluster` for mixed menu/action capsules
+- `DesignInputCluster` for inline search/input glass lanes
 - `DesignTextActionButton` for labeled standard or prominent actions
 - `DesignGlassToggle` for glass toggle buttons
 - `DesignSelectionActionBar` for floating selection bars
@@ -218,7 +220,8 @@ form widths, chart sizes, badge/keycap insets, resource-card opacities, terminal
 chrome, and shadows. Feature views should not call low-level surface modifiers
 or glass button styles; use named package routes such as `ResourceCard`,
 `PanelSection`, `DesignContentSurface`, `DesignInputSurface`,
-`DesignActionGroup`, `DesignTextActionButton`, and `ResourceCardInsetSection`.
+`DesignActionGroup`, `DesignActionCluster`, `DesignInputCluster`,
+`DesignTextActionButton`, and `ResourceCardInsetSection`.
 If a new visual value appears, add a token or package primitive before using it
 in the app.
 

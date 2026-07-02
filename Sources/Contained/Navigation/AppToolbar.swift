@@ -66,7 +66,7 @@ struct AppToolbar: View {
                 .zIndex(toolbarImageDetail == nil ? 0 : 350)
         }
         .coordinateSpace(.named(Self.space))
-        .onPreferenceChange(ToolbarSlotKey.self) { updateSlots($0) }
+        .onPreferenceChange(MorphSourceFramesKey<UIState.ToolbarMorph>.self) { updateSlots($0) }
         .onChange(of: ui.activeMorph) { _, morph in
             if morph == nil { setMorphBackdropExpanded(false) }
         }
@@ -115,12 +115,7 @@ struct AppToolbar: View {
         ToolbarSearchSource()
             .frame(width: Tokens.Toolbar.searchMaxWidth, height: Tokens.Toolbar.controlHeight)
             .opacity(ui.activeMorph == .palette ? 0 : 1)
-            .background(
-                GeometryReader { proxy in
-                    Color.clear.preference(key: ToolbarSlotKey.self,
-                                           value: [.palette: proxy.frame(in: .named(Self.space))])
-                }
-            )
+            .background(singleSlotReader(.palette))
     }
 
     @ViewBuilder
@@ -377,18 +372,11 @@ struct AppToolbar: View {
 
     /// Report one shared frame (the cluster capsule) as the morph origin for several morphs at once.
     private func clusterSlotReader(_ morphs: [UIState.ToolbarMorph]) -> some View {
-        GeometryReader { proxy in
-            let frame = proxy.frame(in: .named(Self.space))
-            Color.clear.preference(key: ToolbarSlotKey.self,
-                                   value: Dictionary(uniqueKeysWithValues: morphs.map { ($0, frame) }))
-        }
+        MorphSourceFrameReader<UIState.ToolbarMorph>(morphs, coordinateSpaceName: Self.space)
     }
 
     private func singleSlotReader(_ morph: UIState.ToolbarMorph) -> some View {
-        GeometryReader { proxy in
-            Color.clear.preference(key: ToolbarSlotKey.self,
-                                   value: [morph: proxy.frame(in: .named(Self.space))])
-        }
+        MorphSourceFrameReader(morph, coordinateSpaceName: Self.space)
     }
 
     /// Safe area for a morph panel. Bottom-row panels clear the top toolbar; top-row panels clear the
@@ -512,34 +500,5 @@ private struct ActivityToolbarButton: View {
                                    }
             }
         ])
-    }
-}
-
-/// Collects toolbar button slot frames (in the toolbar coordinate space) so a morph can grow from the
-/// exact button that opened it.
-private struct ToolbarSlotKey: PreferenceKey {
-    static let defaultValue: [UIState.ToolbarMorph: CGRect] = [:]
-    static func reduce(value: inout [UIState.ToolbarMorph: CGRect],
-                       nextValue: () -> [UIState.ToolbarMorph: CGRect]) {
-        value.merge(nextValue()) { _, new in new }
-    }
-}
-
-private extension Dictionary where Key == UIState.ToolbarMorph, Value == CGRect {
-    func isClose(to other: [UIState.ToolbarMorph: CGRect], tolerance: CGFloat = 0.5) -> Bool {
-        guard count == other.count else { return false }
-        return allSatisfy { key, frame in
-            guard let otherFrame = other[key] else { return false }
-            return frame.isClose(to: otherFrame, tolerance: tolerance)
-        }
-    }
-}
-
-private extension CGRect {
-    func isClose(to other: CGRect, tolerance: CGFloat = 0.5) -> Bool {
-        abs(minX - other.minX) <= tolerance &&
-        abs(minY - other.minY) <= tolerance &&
-        abs(width - other.width) <= tolerance &&
-        abs(height - other.height) <= tolerance
     }
 }

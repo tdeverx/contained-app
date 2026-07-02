@@ -45,10 +45,11 @@ This package currently depends only on platform frameworks available to a macOS
   helpers for all reusable glass treatment.
 - `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `SheetHeader`, and
   `PageScaffold` for app-neutral scaffolding.
-- `DesignActionGroup`, `DesignTextActionButton`, `DesignGlassToggle`,
-  `DesignSelectionActionBar`, `DesignStatusBanner`, and toolbar controls for
-  package-owned command chrome. `GlassButton`, `GlassButtonItem`, and
-  `GlassButtonInputItem` are lower-level package composition pieces.
+- `DesignActionGroup`, `DesignActionCluster`, `DesignInputCluster`,
+  `DesignTextActionButton`, `DesignGlassToggle`, `DesignSelectionActionBar`,
+  `DesignStatusBanner`, and toolbar controls for package-owned command chrome.
+  `GlassButton`, `GlassButtonItem`, and `GlassButtonInputItem` are lower-level
+  package composition pieces.
 - `ResourceCard`, `ResourceCardPages`, `ResourceCardFooterChip`,
   `ResourceCardFooterButton`, `ResourceCardWidgetGroup`, `ResourceCardInsetSection`,
   and other `ResourceCard*` pieces for repeated card layouts and card-local controls.
@@ -273,6 +274,24 @@ DesignActionGroup([
         clear()
     }
 ])
+
+DesignActionCluster {
+    Menu {
+        Button("All") {}
+    } label: {
+        DesignMenuActionLabel(systemName: "line.3.horizontal.decrease",
+                              help: "Filter")
+    }
+    DesignActionItems([
+        DesignAction(systemName: "checkmark.circle", help: "Mark read") {}
+    ])
+}
+
+DesignInputCluster {
+    Image(systemName: "magnifyingglass")
+    TextField("Search", text: $query)
+        .textFieldStyle(.plain)
+}
 
 DesignTextActionButton(title: "Import",
                        systemName: "arrow.down.doc",

@@ -38,11 +38,9 @@ struct NavigationPackageExample: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "plus", help: "Add") {
-                    isPresented = true
-                }
-            }
+            DesignActionGroup(DesignAction(systemName: "plus", help: "Add") {
+                isPresented = true
+            })
             .padding(Tokens.Space.l)
 
             MorphingExpander(isPresented: $isPresented,
@@ -52,13 +50,11 @@ struct NavigationPackageExample: View {
                     PanelHeader(symbol: "plus",
                                 title: "Add",
                                 subtitle: "Choose a starting point") {
-                        GlassButton(singleItem: true) {
-                            GlassButtonItem(systemName: "xmark",
-                                            help: "Close",
-                                            isCancel: true) {
-                                isPresented = false
-                            }
-                        }
+                        DesignActionGroup(DesignAction(systemName: "xmark",
+                                                       help: "Close",
+                                                       isCancel: true) {
+                            isPresented = false
+                        })
                     }
                     Divider()
                 } content: {
@@ -75,6 +71,16 @@ struct NavigationPackageExample: View {
                                          bottomToolbarHeight: Tokens.Toolbar.band))
     }
 }
+```
+
+Measure real toolbar sources with `MorphSourceFrameReader` in the same named
+coordinate space that hosts the morph overlay:
+
+```swift
+Button("Open") { isPresented = true }
+    .background(MorphSourceFrameReader("settings",
+                                       coordinateSpaceName: "toolbar"))
+    .onPreferenceChange(MorphSourceFramesKey<String>.self) { frames = $0 }
 ```
 
 ## Topics
@@ -99,4 +105,6 @@ struct NavigationPackageExample: View {
 - ``MorphingSingleSurfaceExpander``
 - ``MorphFrame``
 - ``MorphPanelScaffold``
+- ``MorphSourceFrameReader``
+- ``MorphSourceFramesKey``
 - ``GlobalBackdropStyle``
