@@ -360,19 +360,20 @@ private struct ImagesPage: View {
             ZStack {
                 ToolbarUpdatesPanel(showClose: false,
                                     coordinateSpaceName: pageImageSpace,
+                                    hiddenImageGroupID: presented ? detail?.id : nil,
                                     onOpenImage: openImageDetail,
                                     onClose: {})
 
                 if let detail, presented {
-                    MorphingExpander(isPresented: detailBinding,
-                                     originFrame: usableSourceFrame ?? fallbackSourceFrame(in: viewport.size),
-                                     target: .anchored(size: Tokens.PanelSize.imageDetail,
-                                                       safeArea: imageDetailSafeAreaPolicy,
-                                                       margin: 16),
-                                     backdropStyle: .dim,
-                                     showsBackdrop: true,
-                                     closeRequestToken: closeRequestToken,
-                                     onBackdropTap: closeDetail) {
+                    MorphingSingleSurfaceExpander(isPresented: detailBinding,
+                                                  originFrame: usableSourceFrame ?? fallbackSourceFrame(in: viewport.size),
+                                                  target: .anchored(size: Tokens.PanelSize.imageDetail,
+                                                                    safeArea: imageDetailSafeAreaPolicy,
+                                                                    margin: 16),
+                                                  backdropStyle: .dim,
+                                                  showsBackdrop: true,
+                                                  closeRequestToken: closeRequestToken,
+                                                  onBackdropTap: closeDetail) {
                         ToolbarImageGroupCard(group: currentGroup(detail),
                                               isExpanded: true,
                                               onTap: {},

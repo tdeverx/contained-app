@@ -139,7 +139,7 @@ public enum MorphGeometry {
     }
 }
 
-private extension CGSize {
+extension CGSize {
     var isUsableForMorphPanel: Bool {
         width.isFinite && height.isFinite && width > 1 && height > 1
     }
@@ -327,14 +327,14 @@ private struct MorphPanelShell: View {
 
 /// Hosted content reports its desired panel size up to the enclosing `MorphingExpander`, which animates
 /// the panel to it — so a paged panel can resize and re-center between sections.
-private struct MorphPanelSizeKey: PreferenceKey {
+struct MorphPanelSizeKey: PreferenceKey {
     static let defaultValue: CGSize? = nil
     static func reduce(value: inout CGSize?, nextValue: () -> CGSize?) {
         if let next = nextValue() { value = next }
     }
 }
 
-private struct MorphPanelPlacementKey: PreferenceKey {
+struct MorphPanelPlacementKey: PreferenceKey {
     static let defaultValue: MorphPanelPlacement? = nil
     static func reduce(value: inout MorphPanelPlacement?,
                        nextValue: () -> MorphPanelPlacement?) {

@@ -36,6 +36,7 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
     var cornerRadiusOverride: CGFloat?
     var controlsVisible = true
     var isSelected = false
+    var showsFooter = true
     /// When set, the selected state reads as a soft `white.opacity` wash (matching a hovered glass
     /// button) instead of the 2.5pt accent stroke — used by the Activity and command-palette rows.
     var usesSelectionFill = false
@@ -69,6 +70,7 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
          cornerRadiusOverride: CGFloat? = nil,
          controlsVisible: Bool = true,
          isSelected: Bool = false,
+         showsFooter: Bool = true,
          fill: Color? = nil,
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
@@ -86,6 +88,7 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
         self.cornerRadiusOverride = cornerRadiusOverride
         self.controlsVisible = controlsVisible
         self.isSelected = isSelected
+        self.showsFooter = showsFooter
         self.fill = fill
         self.fillOpacity = fillOpacity
         self.gradient = gradient
@@ -146,7 +149,7 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
                 header()
                     .frame(maxWidth: .infinity, alignment: .leading)
                 expandedBody()
-                if size != .small {
+                if showsFooter && size != .small {
                     footer(showWidget: size.showsWidget, showActions: controlsVisible)
                 }
             }
@@ -159,13 +162,17 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
                 VStack(alignment: .leading, spacing: 0) {
                     header()
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    footer(showWidget: false, showActions: hovering)
+                    if showsFooter {
+                        footer(showWidget: false, showActions: hovering)
+                    }
                 }
             case .large:
                 VStack(alignment: .leading, spacing: 0) {
                     header()
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    footer(showWidget: true, showActions: hovering)
+                    if showsFooter {
+                        footer(showWidget: true, showActions: hovering)
+                    }
                 }
             }
         }
@@ -175,7 +182,7 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
         VStack(alignment: .leading, spacing: 0) {
             bodyContent()
                 .frame(maxWidth: .infinity, alignment: .leading)
-            if size == .small {
+            if showsFooter && size == .small {
                 footer(showWidget: false, showActions: controlsVisible)
             }
         }

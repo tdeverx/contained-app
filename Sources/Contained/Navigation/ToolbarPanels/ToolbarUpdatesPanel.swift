@@ -10,6 +10,7 @@ struct ToolbarUpdatesPanel: View {
     @Environment(UIState.self) private var ui
     var showClose = true
     var coordinateSpaceName = AppToolbar.space
+    var hiddenImageGroupID: LocalImageTagGroup.ID?
     var onOpenImage: (LocalImageTagGroup, CGRect) -> Void
     var onClose: () -> Void
     @State private var imageFrames: [LocalImageTagGroup.ID: CGRect] = [:]
@@ -117,6 +118,7 @@ struct ToolbarUpdatesPanel: View {
                                   onOpenImage(group, imageFrames[group.id] ?? .zero)
                               },
                               onClose: {})
+            .opacity(hiddenImageGroupID == group.id ? 0 : 1)
             .background {
                 GeometryReader { proxy in
                     Color.clear
