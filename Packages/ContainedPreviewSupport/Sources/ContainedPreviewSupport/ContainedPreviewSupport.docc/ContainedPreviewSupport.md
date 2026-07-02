@@ -22,3 +22,7 @@ The package does not import the app target. App previews should translate the
 neutral descriptors into app-owned types such as local personalization or view
 state at the preview boundary, including any localized copy shown around
 activity state.
+
+The `Samples` source folder contains the deterministic fixture models and
+values. Keep new preview data there unless it becomes a reusable pure model that
+belongs in `ContainedCore` or `ContainedRuntime`.
