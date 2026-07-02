@@ -1,5 +1,6 @@
 import AppKit
 import ContainedCore
+import ContainedRuntime
 
 /// Import a `compose.yaml` without a dedicated page: pick the file, translate each service with an
 /// image into a `RunSpec`, pull the images, then open a prefilled New-Container editor per service
@@ -37,24 +38,25 @@ enum ComposeImport {
                            baseDirectory: URL? = nil, app: AppModel, ui: UIState) {
         do {
             let parsed = try ComposeParser.parse(text, projectName: projectName)
-            var specs: [RunSpec] = []
-            for service in parsed.services where service.image != nil {
-                var spec = RunSpec(service: service, projectName: parsed.name)
-                if let baseDirectory {
-                    spec.volumes = spec.volumes.map { resolveRelativeVolume($0, baseDirectory: baseDirectory) }
-                }
-                specs.append(spec)
+            guard let client = app.client else {
+                app.flash(AppText.containerRuntimeNotReady)
+                app.logger.record("Compose import \(parsed.name) could not start because no runtime is available",
+                                  category: .compose,
+                                  severity: .warning)
+                return
             }
+            let plan = try client.translateCompose(parsed, baseDirectory: baseDirectory)
+            let specs = plan.items.map { RunSpec(request: $0.request, healthCheck: $0.healthCheck) }
             guard !specs.isEmpty else {
-                app.flash("No services with an image to import.")
+                app.flash(AppText.composeNoServicesWithImages)
                 app.logger.record("Compose import \(parsed.name) had no services with images",
                                   category: .compose,
                                   severity: .warning)
                 return
             }
-            if !parsed.warnings.isEmpty {
-                app.flash("Some compose keys weren't translated — review each container before creating.")
-                app.logger.record("Compose import \(parsed.name) produced \(parsed.warnings.count) warning\(parsed.warnings.count == 1 ? "" : "s")",
+            if !plan.warnings.isEmpty {
+                app.flash(AppText.composeWarnings)
+                app.logger.record("Compose import \(parsed.name) produced \(plan.warnings.count) warning\(plan.warnings.count == 1 ? "" : "s")",
                                   category: .compose,
                                   severity: .warning)
             }
@@ -68,14 +70,5 @@ enum ComposeImport {
                                      category: .compose,
                                      severity: .error)
         }
-    }
-
-    /// Docker Compose resolves relative bind sources from the compose file's directory. The runtime
-    /// receives `container run` from the app process, so make those sources absolute at import time.
-    static func resolveRelativeVolume(_ volume: VolumeMap, baseDirectory: URL) -> VolumeMap {
-        guard volume.source.hasPrefix("./") || volume.source.hasPrefix("../") else { return volume }
-        var resolved = volume
-        resolved.source = baseDirectory.appending(path: volume.source).standardizedFileURL.path
-        return resolved
     }
 }

@@ -94,6 +94,24 @@ public struct AppleContainerClient: Sendable {
         try await decode(SystemStatus.self, ContainerCommands.systemStatus, "system status")
     }
 
+    public func previewCreateCommand(for request: ContainerCreateRequest) throws -> RuntimeCommandPreview {
+        AppleContainerCreateTranslator.preview(for: request)
+    }
+
+    @discardableResult public func createContainer(_ request: ContainerCreateRequest) async throws -> ContainerCreateResult {
+        let data = try await runner.run(ContainerCommands.run(request))
+        return AppleContainerCreateTranslator.result(from: data, request: request)
+    }
+
+    public func translateCompose(_ project: ComposeProject, baseDirectory: URL?) throws -> RuntimeComposeImportPlan {
+        AppleContainerCreateTranslator.composePlan(for: project, baseDirectory: baseDirectory)
+    }
+
+    public func imageDefaults(for request: ContainerCreateRequest,
+                              in images: [ImageResource]) throws -> ContainerImageDefaults? {
+        AppleContainerCreateTranslator.imageDefaults(for: request, in: images)
+    }
+
     public func networks() async throws -> [NetworkResource] {
         try await decode([NetworkResource].self, ContainerCommands.networkList(), "network list")
     }

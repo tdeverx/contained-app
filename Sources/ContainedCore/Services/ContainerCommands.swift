@@ -62,6 +62,60 @@ public enum ContainerCommands {
         return args
     }
 
+    public static func run(_ request: ContainerCreateRequest) -> [String] {
+        var args = ["run"]
+        if request.detach { args.append("--detach") }
+        if request.removeOnExit { args.append("--rm") }
+        if request.interactive { args.append("--interactive") }
+        if request.tty { args.append("--tty") }
+        if !request.name.isEmpty { args += ["--name", request.name] }
+        if !request.cpus.isEmpty { args += ["--cpus", request.cpus] }
+        if !request.memory.isEmpty { args += ["--memory", request.memory] }
+        if !request.entrypoint.isEmpty { args += ["--entrypoint", request.entrypoint] }
+        if request.readOnly { args.append("--read-only") }
+        if request.useInit { args.append("--init") }
+        if request.rosetta { args.append("--rosetta") }
+        if request.ssh { args.append("--ssh") }
+        if request.virtualization { args.append("--virtualization") }
+        if !request.platform.isEmpty { args += ["--platform", request.platform] }
+        if !request.workingDir.isEmpty { args += ["--workdir", request.workingDir] }
+        if !request.user.isEmpty { args += ["--user", request.user] }
+        if !request.uid.isEmpty { args += ["--uid", request.uid] }
+        if !request.gid.isEmpty { args += ["--gid", request.gid] }
+        if !request.shmSize.isEmpty { args += ["--shm-size", request.shmSize] }
+        for cap in request.capAdd where !cap.isEmpty { args += ["--cap-add", cap] }
+        for cap in request.capDrop where !cap.isEmpty { args += ["--cap-drop", cap] }
+        if !request.cidFile.isEmpty { args += ["--cidfile", request.cidFile] }
+        if !request.initImage.isEmpty { args += ["--init-image", request.initImage] }
+        if !request.kernel.isEmpty { args += ["--kernel", request.kernel] }
+        if !request.network.isEmpty { args += ["--network", request.network] }
+        if request.noDNS { args.append("--no-dns") }
+        if !request.noDNS {
+            for server in request.dns where !server.isEmpty { args += ["--dns", server] }
+            if !request.dnsDomain.isEmpty { args += ["--dns-domain", request.dnsDomain] }
+            for domain in request.dnsSearch where !domain.isEmpty { args += ["--dns-search", domain] }
+            for option in request.dnsOption where !option.isEmpty { args += ["--dns-option", option] }
+        }
+        for mount in request.tmpfs where !mount.isEmpty { args += ["--tmpfs", mount] }
+        for limit in request.ulimits where !limit.isEmpty { args += ["--ulimit", limit] }
+        if !request.runtime.isEmpty { args += ["--runtime", request.runtime] }
+        if !request.scheme.isEmpty { args += ["--scheme", request.scheme] }
+        if !request.progress.isEmpty { args += ["--progress", request.progress] }
+        if !request.maxConcurrentDownloads.isEmpty {
+            args += ["--max-concurrent-downloads", request.maxConcurrentDownloads]
+        }
+        for port in request.ports where port.isValid { args += ["--publish", port.spec] }
+        for volume in request.volumes where volume.isValid { args += ["--volume", volume.spec] }
+        for mount in request.mounts where !mount.isEmpty { args += ["--mount", mount] }
+        for socket in request.sockets where socket.isValid { args += ["--publish-socket", socket.spec] }
+        for file in request.envFiles where !file.isEmpty { args += ["--env-file", file] }
+        for variable in request.env where variable.isValid { args += ["--env", "\(variable.key)=\(variable.value)"] }
+        for label in request.allLabelArguments() { args += ["--label", label] }
+        args.append(request.image)
+        args += request.command
+        return args
+    }
+
     // MARK: Images
 
     public static func imageList() -> [String] { ["image", "list"] + jsonFormat }

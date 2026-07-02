@@ -53,6 +53,7 @@ struct SocketMap: Identifiable, Hashable, Codable {
 
 /// The complete state of the Create/Run form. Knows how to render itself as a `container run` argv.
 struct RunSpec: Codable {
+    var runtimeKind: RuntimeKind? = .appleContainer
     var image = ""
     var platform = ""
     var name = ""
@@ -221,136 +222,113 @@ struct RunSpec: Codable {
     /// Build the `container run …` argument vector. Single source of truth for the live preview
     /// and the actual execution.
     func arguments() -> [String] {
-        var args = ["run"]
-        if detach { args.append("--detach") }
-        if removeOnExit { args.append("--rm") }
-        if interactive { args.append("--interactive") }
-        if tty { args.append("--tty") }
-        if !name.isEmpty { args += ["--name", name] }
-        if !cpus.isEmpty { args += ["--cpus", cpus] }
-        if !memory.isEmpty { args += ["--memory", memory] }
-        if !entrypoint.isEmpty { args += ["--entrypoint", entrypoint] }
-        if readOnly { args.append("--read-only") }
-        if useInit { args.append("--init") }
-        if rosetta { args.append("--rosetta") }
-        if ssh { args.append("--ssh") }
-        if virtualization { args.append("--virtualization") }
-        if !platform.isEmpty { args += ["--platform", platform] }
-
-        // Advanced
-        if !workingDir.isEmpty { args += ["--workdir", workingDir] }
-        if !user.isEmpty { args += ["--user", user] }
-        if !uid.isEmpty { args += ["--uid", uid] }
-        if !gid.isEmpty { args += ["--gid", gid] }
-        if !shmSize.isEmpty { args += ["--shm-size", shmSize] }
-        for cap in capAdd where !cap.isEmpty { args += ["--cap-add", cap] }
-        for cap in capDrop where !cap.isEmpty { args += ["--cap-drop", cap] }
-        if !cidFile.isEmpty { args += ["--cidfile", cidFile] }
-        if !initImage.isEmpty { args += ["--init-image", initImage] }
-        if !kernel.isEmpty { args += ["--kernel", kernel] }
-        if !network.isEmpty { args += ["--network", network] }
-        if noDNS { args.append("--no-dns") }
-        if !noDNS {
-            for server in dns where !server.isEmpty { args += ["--dns", server] }
-            if !dnsDomain.isEmpty { args += ["--dns-domain", dnsDomain] }
-            for domain in dnsSearch where !domain.isEmpty { args += ["--dns-search", domain] }
-            for option in dnsOption where !option.isEmpty { args += ["--dns-option", option] }
-        }
-        for mount in tmpfs where !mount.isEmpty { args += ["--tmpfs", mount] }
-        for limit in ulimits where !limit.isEmpty { args += ["--ulimit", limit] }
-        if !runtime.isEmpty { args += ["--runtime", runtime] }
-        if !scheme.isEmpty { args += ["--scheme", scheme] }
-        if !progress.isEmpty { args += ["--progress", progress] }
-        if !maxConcurrentDownloads.isEmpty { args += ["--max-concurrent-downloads", maxConcurrentDownloads] }
-
-        for port in ports where port.isValid { args += ["--publish", port.spec] }
-        for volume in volumes where volume.isValid { args += ["--volume", volume.spec] }
-        for mount in mounts where !mount.isEmpty { args += ["--mount", mount] }
-        for socket in sockets where socket.isValid { args += ["--publish-socket", socket.spec] }
-        for file in envFiles where !file.isEmpty { args += ["--env-file", file] }
-        for variable in env where variable.isValid { args += ["--env", "\(variable.key)=\(variable.value)"] }
-
-        for label in allLabels() { args += ["--label", label] }
-
-        args.append(image)
-        let extra = command.split(separator: " ").map(String.init)
-        args += extra
-        return args
+        ContainerCommands.run(createRequest)
     }
 
-    /// Build a run spec from a compose service, tagged with `contained.stack` so the launched
-    /// containers retain their imported Compose group.
-    init(service: ComposeService, projectName: String) {
-        image = service.image ?? ""
-        platform = service.platform ?? ""
-        name = service.name
-        command = service.command ?? ""
-        entrypoint = service.entrypoint ?? ""
-        detach = true
-        interactive = service.interactive
-        tty = service.tty
-        restart = RestartPolicy(label: service.restart)
-        cpus = service.cpus ?? ""
-        memory = service.memory ?? ""
-        readOnly = service.readOnly
-        useInit = service.initProcess
-        workingDir = service.workingDir ?? ""
-        user = service.user ?? ""
-        capAdd = service.capAdd
-        capDrop = service.capDrop
-        network = service.network ?? ""
-        dns = service.dns
-        dnsSearch = service.dnsSearch
-        dnsOption = service.dnsOptions
-        tmpfs = service.tmpfs
-        ulimits = service.ulimits
-        ports = service.ports.compactMap(Self.portMap)
-        volumes = service.volumes.compactMap { spec in
-            let parts = spec.split(separator: ":", maxSplits: 2).map(String.init)
-            guard parts.count > 1 else { return nil }
-            return VolumeMap(source: parts.first ?? "", target: parts.count > 1 ? parts[1] : "",
-                             readOnly: parts.count > 2 && parts[2] == "ro")
-        }
-        env = service.environment.compactMap { entry in
-            guard let eq = entry.firstIndex(of: "=") else { return nil }
-            return KeyValue(key: String(entry[..<eq]), value: String(entry[entry.index(after: eq)...]))
-        }
-        envFiles = service.envFiles
-        labels = service.labels.compactMap(Self.keyValue)
-        labels.append(KeyValue(key: "contained.stack", value: projectName))
-        if let hc = service.healthcheck {
-            healthCheck = HealthCheck(command: hc.test, intervalSeconds: hc.intervalSeconds,
-                                      retries: hc.retries, enabled: true)
-        }
+    var createRequest: ContainerCreateRequest {
+        var request = ContainerCreateRequest()
+        request.runtimeKind = effectiveRuntimeKind
+        request.image = image
+        request.platform = platform
+        request.name = name
+        request.command = command.split(separator: " ").map(String.init)
+        request.entrypoint = entrypoint
+        request.detach = detach
+        request.removeOnExit = removeOnExit
+        request.interactive = interactive
+        request.tty = tty
+        request.cpus = cpus
+        request.memory = memory
+        request.env = env.map { ContainerCreateKeyValue(key: $0.key, value: $0.value) }
+        request.envFiles = envFiles
+        request.ports = ports.map { ContainerCreatePort(hostPort: $0.hostPort, containerPort: $0.containerPort, proto: $0.proto) }
+        request.volumes = volumes.map { ContainerCreateVolume(source: $0.source, target: $0.target, readOnly: $0.readOnly) }
+        request.mounts = mounts
+        request.sockets = sockets.map { ContainerCreateSocket(hostPath: $0.hostPath, containerPath: $0.containerPath) }
+        request.labels = labels.map { ContainerCreateKeyValue(key: $0.key, value: $0.value) }
+        request.restart = restart
+        request.readOnly = readOnly
+        request.useInit = useInit
+        request.rosetta = rosetta
+        request.ssh = ssh
+        request.virtualization = virtualization
+        request.workingDir = workingDir
+        request.user = user
+        request.uid = uid
+        request.gid = gid
+        request.shmSize = shmSize
+        request.capAdd = capAdd
+        request.capDrop = capDrop
+        request.cidFile = cidFile
+        request.initImage = initImage
+        request.kernel = kernel
+        request.network = network
+        request.noDNS = noDNS
+        request.dns = dns
+        request.dnsDomain = dnsDomain
+        request.dnsSearch = dnsSearch
+        request.dnsOption = dnsOption
+        request.tmpfs = tmpfs
+        request.ulimits = ulimits
+        request.runtime = runtime
+        request.scheme = scheme
+        request.progress = progress
+        request.maxConcurrentDownloads = maxConcurrentDownloads
+        return request
     }
 
-    private static func portMap(_ spec: String) -> PortMap? {
-        var raw = spec
-        let proto: String
-        if let slash = raw.lastIndex(of: "/") {
-            proto = String(raw[raw.index(after: slash)...])
-            raw = String(raw[..<slash])
-        } else {
-            proto = "tcp"
-        }
-        let parts = raw.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-        guard parts.count >= 2 else { return nil }
-        let host = parts.dropLast().joined(separator: ":")
-        let container = parts[parts.count - 1]
-        guard !host.isEmpty, !container.isEmpty else { return nil }
-        return PortMap(hostPort: host, containerPort: container, proto: proto)
+    init(request: ContainerCreateRequest, healthCheck: HealthCheck? = nil) {
+        runtimeKind = request.runtimeKind
+        image = request.image
+        platform = request.platform
+        name = request.name
+        command = request.command.joined(separator: " ")
+        entrypoint = request.entrypoint
+        detach = request.detach
+        removeOnExit = request.removeOnExit
+        interactive = request.interactive
+        tty = request.tty
+        cpus = request.cpus
+        memory = request.memory
+        env = request.env.map { KeyValue(key: $0.key, value: $0.value) }
+        envFiles = request.envFiles
+        ports = request.ports.map { PortMap(hostPort: $0.hostPort, containerPort: $0.containerPort, proto: $0.proto) }
+        volumes = request.volumes.map { VolumeMap(source: $0.source, target: $0.target, readOnly: $0.readOnly) }
+        mounts = request.mounts
+        sockets = request.sockets.map { SocketMap(hostPath: $0.hostPath, containerPath: $0.containerPath) }
+        labels = request.labels.map { KeyValue(key: $0.key, value: $0.value) }
+        restart = request.restart
+        readOnly = request.readOnly
+        useInit = request.useInit
+        rosetta = request.rosetta
+        ssh = request.ssh
+        virtualization = request.virtualization
+        workingDir = request.workingDir
+        user = request.user
+        uid = request.uid
+        gid = request.gid
+        shmSize = request.shmSize
+        capAdd = request.capAdd
+        capDrop = request.capDrop
+        cidFile = request.cidFile
+        initImage = request.initImage
+        kernel = request.kernel
+        network = request.network
+        noDNS = request.noDNS
+        dns = request.dns
+        dnsDomain = request.dnsDomain
+        dnsSearch = request.dnsSearch
+        dnsOption = request.dnsOption
+        tmpfs = request.tmpfs
+        ulimits = request.ulimits
+        runtime = request.runtime
+        scheme = request.scheme
+        progress = request.progress
+        maxConcurrentDownloads = request.maxConcurrentDownloads
+        if let healthCheck { self.healthCheck = healthCheck }
     }
 
-    private static func keyValue(_ entry: String) -> KeyValue? {
-        guard let eq = entry.firstIndex(of: "=") else { return nil }
-        return KeyValue(key: String(entry[..<eq]), value: String(entry[entry.index(after: eq)...]))
-    }
-
-    /// Restart policy plus user labels, deduped as `key=value` strings.
-    private func allLabels() -> [String] {
-        var result: [String: String] = [:]
-        for label in labels where label.isValid { result[label.key] = label.value }
-        if restart != .no { result["contained.restart"] = restart.rawValue }
-        return result.map { "\($0.key)=\($0.value)" }.sorted()
+    var effectiveRuntimeKind: RuntimeKind {
+        runtimeKind ?? .appleContainer
     }
 }
