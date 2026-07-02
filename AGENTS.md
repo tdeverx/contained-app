@@ -60,6 +60,11 @@ This file is the working contract for coding agents in this repository. Follow i
 
 - Keep Apple `container` CLI actions behind `ContainerCommands` and `AppleContainerRuntime`; do not assemble argv inline in SwiftUI. App stores should depend on `any ContainerRuntimeClient` where backend choice matters.
 - Put pure decision logic in `ContainedCore` with focused tests.
+- Keep localization owned by `Sources/Contained`. Packages should receive
+  app-supplied labels/help/accessibility strings and should not add English UI
+  defaults or localized resource bundles. Use `AppText` for reusable app copy
+  and dynamic templates; plain SwiftUI literals are acceptable when SwiftUI keeps
+  them localization-ready.
 - Do not write app personalization back as `contained.*` labels. Only `contained.restart` and `contained.stack` may round-trip through container labels.
 - Keep helper scripts in `scripts/` and prefer hyphenated file names for multi-word shell scripts.
 - Keep comments human and useful. Explain surprising intent, not obvious syntax.

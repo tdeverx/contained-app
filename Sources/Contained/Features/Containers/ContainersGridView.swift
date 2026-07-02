@@ -451,14 +451,16 @@ struct ContainersGridView: View {
     }
 
     private var batchBar: some View {
-        DesignSelectionActionBar(count: selection.count, actions: [
-            DesignAction(systemName: "play.fill", title: "Start") {
+        DesignSelectionActionBar(count: selection.count,
+                                 countLabel: AppText.selectedCount,
+                                 actions: [
+            DesignAction(systemName: "play.fill", title: AppText.start) {
                 batch { await store.start($0) }
             },
-            DesignAction(systemName: "stop.fill", title: "Stop") {
+            DesignAction(systemName: "stop.fill", title: AppText.stop) {
                 batch { await store.stop($0) }
             },
-            DesignAction(systemName: "trash", title: "Delete", role: .destructive) {
+            DesignAction(systemName: "trash", title: AppText.delete, role: .destructive) {
                 batch { await store.remove($0, force: true) }
             }
         ])

@@ -9,17 +9,23 @@ enum StatsNormalizationMode: String, CaseIterable, Identifiable, Codable, Sendab
 
     var displayName: String {
         switch self {
-        case .container: return "Container"
-        case .machine: return "Machine"
+        case .container: return AppText.string("statsNormalization.container", defaultValue: "Container")
+        case .machine: return AppText.string("statsNormalization.machine", defaultValue: "Machine")
         }
     }
 
     var footnote: String {
         switch self {
         case .container:
-            return "CPU and memory are scaled against each container's own configured limits."
+            return AppText.string(
+                "statsNormalization.container.footnote",
+                defaultValue: "CPU and memory are scaled against each container's own configured limits."
+            )
         case .machine:
-            return "CPU and memory are scaled against Apple container's machine CPU and memory resources."
+            return AppText.string(
+                "statsNormalization.machine.footnote",
+                defaultValue: "CPU and memory are scaled against Apple container's machine CPU and memory resources."
+            )
         }
     }
 }

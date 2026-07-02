@@ -12,12 +12,12 @@ enum AppStateSection: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var displayName: String {
         switch self {
-        case .settings: return "Settings"
-        case .personalization: return "Personalization"
-        case .healthChecks: return "Health checks"
-        case .templates: return "Templates"
-        case .history: return "Activity history"
-        case .caches: return "Caches"
+        case .settings: return AppText.string("backup.section.settings", defaultValue: "Settings")
+        case .personalization: return AppText.string("backup.section.personalization", defaultValue: "Personalization")
+        case .healthChecks: return AppText.string("backup.section.healthChecks", defaultValue: "Health checks")
+        case .templates: return AppText.string("backup.section.templates", defaultValue: "Templates")
+        case .history: return AppText.string("backup.section.history", defaultValue: "Activity history")
+        case .caches: return AppText.string("backup.section.caches", defaultValue: "Caches")
         }
     }
 }

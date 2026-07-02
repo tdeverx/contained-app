@@ -185,7 +185,7 @@ struct CreationPastedComposeContent: View {
 
             HStack {
                 Spacer()
-                DesignTextActionButton(title: "Import",
+            DesignTextActionButton(title: AppText.string("common.import", defaultValue: "Import"),
                                        systemName: "arrow.down.doc",
                                        prominence: .prominent,
                                        isEnabled: !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
@@ -272,7 +272,9 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
 
             fields()
 
-            CommandPreviewBar(command: command)
+            CommandPreviewBar(command: command,
+                              copyHelp: AppText.copyCommand,
+                              copiedAccessibilityLabel: AppText.copied)
                 .frame(maxWidth: .infinity)
 
             footer()

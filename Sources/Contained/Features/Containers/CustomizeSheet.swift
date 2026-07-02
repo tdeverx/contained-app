@@ -146,8 +146,8 @@ struct CustomizeSheet: View {
                     title: headerTitle,
                     subtitle: imageSubtitle) {
             DesignActionGroup([
-                DesignAction(systemName: "checkmark", help: "Save") { save() },
-                DesignAction(systemName: "xmark", help: "Close", isCancel: true) { dismiss() }
+                DesignAction(systemName: "checkmark", help: AppText.save) { save() },
+                DesignAction(systemName: "xmark", help: AppText.close, isCancel: true) { dismiss() }
             ])
         }
     }
@@ -177,7 +177,7 @@ struct CustomizeSheet: View {
             }
             PanelRow(title: "Color",
                      info: "App Accent follows the accent tint from Settings; other swatches pin this style.") {
-                TintSelector(selection: $style.tint)
+                TintSelector(selection: $style.tint) { $0.localizedDisplayName }
             }
         }
     }
@@ -206,12 +206,12 @@ struct CustomizeSheet: View {
                 }
                 PanelToggleRow(title: "Gradient", isOn: $style.gradient)
                 if style.gradient {
-                    GradientAngleControl(angle: $style.gradientAngle)
+                    GradientAngleControl(angle: $style.gradientAngle, title: AppText.direction)
                 }
                 PanelRow(title: "Blend mode") {
                     Picker("", selection: $style.backgroundBlendMode) {
                         ForEach(ColorLayerBlendMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
+                            Text(mode.localizedDisplayName).tag(mode)
                         }
                     }
                     .labelsHidden()

@@ -8,6 +8,10 @@ Reusable navigation and layout infrastructure for Contained's window chrome.
 `ContainedDesignSystem` for tokens and visual primitives, but it does not own app
 routes, stores, toolbar panel contents, or feature decisions.
 
+Host apps own localized strings. This package provides layout behavior and
+accepts caller-supplied titles, help text, accessibility labels, and panel copy
+through the views it composes.
+
 Use this package when a view needs reusable layout behavior such as a panel that
 grows from a toolbar source, clamps to app safe areas, and hosts fixed chrome
 above scrollable content.

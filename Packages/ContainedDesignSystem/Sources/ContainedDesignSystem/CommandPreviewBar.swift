@@ -4,12 +4,18 @@ import SwiftUI
 /// copyable to the clipboard. Drives user trust and learning.
 public struct CommandPreviewBar: View {
     public let command: [String]
+    public var copyHelp: String
+    public var copiedAccessibilityLabel: String
     @State private var copied = false
 
     private var rendered: String { (["container"] + command).joined(separator: " ") }
 
-    public init(command: [String]) {
+    public init(command: [String],
+                copyHelp: String,
+                copiedAccessibilityLabel: String) {
         self.command = command
+        self.copyHelp = copyHelp
+        self.copiedAccessibilityLabel = copiedAccessibilityLabel
     }
 
     public var body: some View {
@@ -32,8 +38,8 @@ public struct CommandPreviewBar: View {
                     .foregroundStyle(copied ? .green : .secondary)
             }
             .buttonStyle(.plain)
-            .help("Copy command")
-            .accessibilityLabel(copied ? "Copied" : "Copy command")
+            .help(copyHelp)
+            .accessibilityLabel(copied ? copiedAccessibilityLabel : copyHelp)
         }
         .padding(.horizontal, Tokens.Space.s)
         .padding(.vertical, Tokens.Space.s)

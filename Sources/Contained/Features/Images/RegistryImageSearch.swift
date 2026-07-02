@@ -109,7 +109,8 @@ struct RegistryImageSearch: View {
                     Image(systemName: "wifi.exclamationmark").font(.title2).foregroundStyle(.orange)
                     Text("Couldn't search Docker Hub").font(.callout.weight(.medium))
                     Text(errorMessage).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    DesignTextActionButton(title: "Retry", systemName: "arrow.clockwise") {
+                    DesignTextActionButton(title: AppText.string("common.retry", defaultValue: "Retry"),
+                                           systemName: "arrow.clockwise") {
                         searchNow()
                     }
                 } else {

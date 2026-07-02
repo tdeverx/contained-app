@@ -11,7 +11,7 @@ struct DowngradeDecisionView: View {
         LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
             SheetHeader(title: "This data was created by a newer version",
                         subtitle: "Stored schema \(schemaVersion), this app supports \(StateMigrator.currentSchemaVersion).",
-                        cancelHelp: "Quit",
+                        cancelHelp: AppText.quit,
                         onCancel: onQuit)
 
             Text("You can export a backup before resetting incompatible local data, try to keep what this build can still read, or quit and install the newer build again.")

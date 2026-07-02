@@ -11,6 +11,18 @@ private extension EnvironmentValues {
     }
 }
 
+private struct OptionalAccessibilityLabel: ViewModifier {
+    var label: String
+
+    func body(content: Content) -> some View {
+        if label.isEmpty {
+            content
+        } else {
+            content.accessibilityLabel(label)
+        }
+    }
+}
+
 public struct GlassButtonTintStyle: Equatable, Sendable {
     public var enabled = false
     public var tint: AppTint = .multicolor
@@ -105,7 +117,7 @@ public struct GlassButtonItem<Label: View>: View {
             }
         }
         .help(help)
-        .accessibilityLabel(help.isEmpty ? "Button" : help)
+        .modifier(OptionalAccessibilityLabel(label: help))
         .keyboardShortcut(isCancel && action != nil ? .cancelAction : nil)
     }
 }

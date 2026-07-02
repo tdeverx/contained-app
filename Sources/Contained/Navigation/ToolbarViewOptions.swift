@@ -129,13 +129,13 @@ struct ToolbarPageContextOptions: View {
             EmptyView()
         case .images:
             DesignActionGroup([
-                DesignAction(systemName: "square.and.arrow.down", help: "Load Image Tar") {
+                DesignAction(systemName: "square.and.arrow.down", help: AppText.loadImageTar) {
                     ui.dispatch(.loadImage)
                 },
-                DesignAction(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
+                DesignAction(systemName: "arrow.triangle.2.circlepath", help: AppText.checkForUpdates) {
                     Task { await app.runImageUpdateSweepNow() }
                 },
-                DesignAction(systemName: "trash", help: "Prune Images", role: .destructive) {
+                DesignAction(systemName: "trash", help: AppText.pruneImages, role: .destructive) {
                     ui.dispatch(.pruneImages)
                 }
             ])
@@ -144,20 +144,20 @@ struct ToolbarPageContextOptions: View {
             EmptyView()
         case .networks:
             DesignActionGroup([
-                DesignAction(systemName: "plus", help: "New Network") {
+                DesignAction(systemName: "plus", help: AppText.newNetwork) {
                     ui.dispatch(.createNetwork)
                 },
-                DesignAction(systemName: "arrow.clockwise", help: "Refresh Networks") {
+                DesignAction(systemName: "arrow.clockwise", help: AppText.refreshNetworks) {
                     Task { await app.refreshNetworks() }
                 }
             ])
             .help("\(app.networks.count) network\(app.networks.count == 1 ? "" : "s")")
         case .volumes:
             DesignActionGroup([
-                DesignAction(systemName: "plus", help: "New Volume") {
+                DesignAction(systemName: "plus", help: AppText.newVolume) {
                     ui.dispatch(.createVolume)
                 },
-                DesignAction(systemName: "arrow.clockwise", help: "Refresh Volumes") {
+                DesignAction(systemName: "arrow.clockwise", help: AppText.refreshVolumes) {
                     Task { await app.refreshSystemResources() }
                 }
             ])
@@ -166,17 +166,17 @@ struct ToolbarPageContextOptions: View {
             HStack(spacing: Tokens.Toolbar.groupSpacing) {
                 DesignActionGroup(serviceActions)
                 DesignActionGroup(systemPageActions + [
-                    DesignAction(systemName: "text.alignleft", help: "System Logs") {
+                    DesignAction(systemName: "text.alignleft", help: AppText.systemLogs) {
                         ui.dispatch(.systemLogs)
                     }
                 ])
             }
         case .activity:
             DesignActionGroup([
-                DesignAction(systemName: "checkmark.circle", help: "Mark all read") {
+                DesignAction(systemName: "checkmark.circle", help: AppText.markAllRead) {
                     app.historyStore.markAllEventsRead()
                 },
-                DesignAction(systemName: "trash", help: "Clear activity", role: .destructive) {
+                DesignAction(systemName: "trash", help: AppText.clearActivity, role: .destructive) {
                     app.historyStore.clearEvents()
                 }
             ])
@@ -198,15 +198,15 @@ struct ToolbarPageContextOptions: View {
 
     private var serviceActions: [DesignAction] {
         let power = app.serviceHealthy
-            ? DesignAction(systemName: "stop.fill", help: "Stop service", role: .destructive) {
+            ? DesignAction(systemName: "stop.fill", help: AppText.stopService, role: .destructive) {
                 Task { await app.stopService() }
             }
-            : DesignAction(systemName: "play.fill", help: "Start service") {
+            : DesignAction(systemName: "play.fill", help: AppText.startService) {
                 Task { await app.startService() }
             }
         return [
             power,
-            DesignAction(systemName: "arrow.clockwise", help: "Restart service") {
+            DesignAction(systemName: "arrow.clockwise", help: AppText.restartService) {
                         Task { await app.restartService() }
             }
         ]

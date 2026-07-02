@@ -117,7 +117,7 @@ struct ToolbarTemplatesPanel: View {
                     subtitle: "\(saved.count) saved") {
             if showClose {
                 DesignActionGroup(DesignAction(systemName: "xmark",
-                                               help: "Close",
+                                               help: AppText.close,
                                                isCancel: true,
                                                action: onClose))
             }
@@ -184,8 +184,8 @@ struct ToolbarTemplatesPanel: View {
             .buttonStyle(.plain)
             .foregroundStyle(.red)
             .help("Delete")
-            .accessibilityLabel("Delete")
-            DesignTextActionButton(title: "Use",
+            .accessibilityLabel(AppText.delete)
+            DesignTextActionButton(title: AppText.string("common.use", defaultValue: "Use"),
                                    systemName: "plus.circle",
                                    prominence: .prominent,
                                    controlSize: .small) {

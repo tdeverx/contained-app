@@ -78,6 +78,11 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Agents start at `AGENTS.md`.** Coding agents should read the root agent guide before editing; it summarizes branch, update, release-note, design-system, and verification rules.
 - **Directory names are intentional.** SwiftPM folders stay `Sources` and `Tests`, Swift source domains use PascalCase, and repository infrastructure uses lowercase names such as `docs` and `scripts`. Put helper scripts in `scripts/` and use hyphenated names for multi-word shell scripts.
 - **Reusable packages live under `Packages/`.** Keep app-agnostic design primitives, tokens, spacing, material, opacity, and micro-chrome in `ContainedDesignSystem`; keep app state, stores, Sparkle, SwiftData, persistence, and feature routing in the executable target.
+- **The app owns localization.** Reusable packages should not introduce
+  user-facing English defaults or localized resource bundles. If a package
+  component needs text, add an explicit parameter and pass app-owned strings
+  from `Sources/Contained`; reusable enum labels and dynamic templates should
+  flow through `AppText` with English fallbacks.
 - **Package docs live with the package.** Keep package-local import/setup/examples in [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md) and [`Packages/ContainedNavigation/README.md`](../../Packages/ContainedNavigation/README.md), with DocC landing pages under each target's `.docc` catalog. Keep `docs/wiki` focused on app-level architecture and workflow guidance.
 - **Xcode opens the workspace.** `Contained.xcworkspace` points at the root and local package manifests. SwiftPM package manifests remain the build graph source of truth; do not hand-maintain generated `.xcodeproj` state.
 - **Navigation infrastructure belongs in `ContainedNavigation` only when it is generic.** App sections, pending actions, concrete toolbar panels, and `UIState` stay in the executable target until they can cross the boundary without app policy.

@@ -22,15 +22,21 @@ public enum ResourceCardExpandedMetrics {
 
 public struct CardSizePicker: View {
     @Binding var selection: CardDensity
+    public var title: String
+    public var labelForDensity: (CardDensity) -> String
 
-    public init(selection: Binding<CardDensity>) {
+    public init(selection: Binding<CardDensity>,
+                title: String,
+                labelForDensity: @escaping (CardDensity) -> String) {
         self._selection = selection
+        self.title = title
+        self.labelForDensity = labelForDensity
     }
 
     public var body: some View {
-        Picker("Card size", selection: $selection) {
+        Picker(title, selection: $selection) {
             ForEach(CardDensity.allCases) { density in
-                Text(density.displayName).tag(density)
+                Text(labelForDensity(density)).tag(density)
             }
         }
         .pickerStyle(.segmented)

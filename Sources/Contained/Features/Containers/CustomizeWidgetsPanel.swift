@@ -95,7 +95,8 @@ struct CustomizeWidgetsPanel: View {
         }
         PanelToggleRow(title: "Show text", isOn: widgetBinding(index, \.showText))
         PanelRow(title: "Color") {
-            TintSelector(optionalSelection: widgetBinding(index, \.tint), automaticLabel: "Card Color")
+            TintSelector(optionalSelection: widgetBinding(index, \.tint),
+                         automaticLabel: AppText.cardColor) { $0.localizedDisplayName }
         }
     }
 
@@ -134,7 +135,7 @@ struct CustomizeWidgetsPanel: View {
         widgetGroupLabel("Chart", systemImage: "chart.xyaxis.line")
         PanelRow(title: "Type") {
             Picker("", selection: widgetStyleBinding(index)) {
-                ForEach(GraphStyle.allCases) { Text($0.displayName).tag($0) }
+                ForEach(GraphStyle.allCases) { Text($0.localizedDisplayName).tag($0) }
             }
             .labelsHidden()
             .fixedSize()
@@ -145,7 +146,7 @@ struct CustomizeWidgetsPanel: View {
         if chartStyle.usesLineOptions {
             PanelRow(title: "Interpolation") {
                 Picker("", selection: widgetBinding(index, \.interpolation)) {
-                    ForEach(WidgetInterpolation.allCases) { Text($0.displayName).tag($0) }
+                    ForEach(WidgetInterpolation.allCases) { Text($0.localizedDisplayName).tag($0) }
                 }
                 .labelsHidden()
                 .fixedSize()

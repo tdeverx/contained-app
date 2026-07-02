@@ -12,18 +12,22 @@ struct SystemLogsSheet: View {
         VStack(spacing: 0) {
             HStack(spacing: Tokens.Space.m) {
                 Text("System logs").font(.headline)
-                DesignGlassToggle(isOn: $follow, title: "Follow", systemName: "arrow.down.to.line")
+                DesignGlassToggle(isOn: $follow, title: AppText.follow, systemName: "arrow.down.to.line")
                     .onChange(of: follow) { _, _ in session += 1 }
                 Spacer()
                 DesignActionGroup(DesignAction(systemName: "xmark",
-                                               help: "Close",
+                                               help: AppText.close,
                                                isCancel: true) {
                         dismiss()
                 })
             }
             .padding(Tokens.Space.s)
             if let client = app.client {
-                StreamConsole(stream: { client.streamSystemLogs(follow: follow, last: 500) })
+                StreamConsole(stream: { client.streamSystemLogs(follow: follow, last: 500) },
+                              workingLabel: AppText.working,
+                              completedLabel: AppText.completed,
+                              lineCountLabel: AppText.lineCount,
+                              copyLogHelp: AppText.copyLog)
                     .id(session)
                     .padding(.horizontal, Tokens.Space.s)
                     .padding(.bottom, Tokens.Space.s)

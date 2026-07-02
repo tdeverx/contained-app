@@ -206,11 +206,11 @@ struct PaletteResultCard: View {
                      fillOpacity: selected ? Tokens.ResourceCard.selectedTintFillOpacity : Tokens.ResourceCard.selectedSubtleFillOpacity,
                      elevated: false,
                      onTap: action,
-                     title: tint.displayName,
+                     title: tint.localizedDisplayName,
                      subtitle: item.title) {
             DesignTintSwatch(color: tint.color, followsAppAccent: tint.followsAppAccent)
         } titleAccessory: {
-            ResourceBadgeText(text: app.settings.accentTint == tint ? "Current" : "Tint",
+            ResourceBadgeText(text: app.settings.accentTint == tint ? AppText.current : AppText.tint,
                               font: .caption2.weight(.semibold),
                               foreground: app.settings.accentTint == tint ? .accentColor : .secondary)
         } subtitleAccessory: {

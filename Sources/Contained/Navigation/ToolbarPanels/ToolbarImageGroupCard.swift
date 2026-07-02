@@ -190,7 +190,7 @@ struct ToolbarImageGroupCard: View {
             HStack {
                 Spacer()
                 if tagBusy { ProgressView().controlSize(.small) }
-                DesignTextActionButton(title: "Add Tag",
+                DesignTextActionButton(title: AppText.addTag,
                                        systemName: "checkmark",
                                        prominence: .prominent,
                                        isEnabled: !tagTarget.trimmingCharacters(in: .whitespaces).isEmpty && !tagBusy) {
@@ -203,7 +203,11 @@ struct ToolbarImageGroupCard: View {
     private func pushPage(_ reference: String) -> some View {
         imagePageBody(title: "Push image", subtitle: Format.shortImage(reference)) {
             if pushStartedReference == reference, let client = app.client {
-                StreamConsole(stream: { client.streamPush(reference) })
+                StreamConsole(stream: { client.streamPush(reference) },
+                              workingLabel: AppText.working,
+                              completedLabel: AppText.completed,
+                              lineCountLabel: AppText.lineCount,
+                              copyLogHelp: AppText.copyLog)
                     .frame(minHeight: 260)
             } else {
                 pushReadiness(reference)
@@ -257,7 +261,7 @@ struct ToolbarImageGroupCard: View {
                 Spacer()
                 switch readiness.action {
                 case .push:
-                    DesignTextActionButton(title: "Push",
+                    DesignTextActionButton(title: AppText.push,
                                            systemName: "arrow.up.circle",
                                            prominence: .prominent,
                                            isEnabled: app.client != nil) {
@@ -375,6 +379,7 @@ struct ToolbarImageGroupCard: View {
                           selection: page,
                           tint: resolvedImageTint,
                           controlsReveal: isExpanded ? 1 : 0,
+                          closeLabel: AppText.close,
                           onSelect: selectPage,
                           onClose: onClose)
     }
@@ -417,22 +422,22 @@ struct ToolbarImageGroupCard: View {
 
     @ViewBuilder
     private func imageFooterActions(_ group: LocalImageTagGroup) -> some View {
-        footerAction("play", help: "Run") {
+        footerAction("play", help: AppText.run) {
             ui.runImage(group.primaryReference)
             if isExpanded { onClose() }
         }
-        footerAction("arrow.triangle.2.circlepath", help: "Check for Updates") {
+        footerAction("arrow.triangle.2.circlepath", help: AppText.checkForUpdates) {
             Task { await app.checkImageUpdate(group.primaryReference) }
         }
         if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
-            footerAction("arrow.down.circle", help: "Pull Update", tint: .orange) {
+            footerAction("arrow.down.circle", help: AppText.pullUpdate, tint: .orange) {
                 Task { await app.pullImageUpdate(group.primaryReference) }
             }
         }
         if let image = primaryImage(group) {
-            footerAction("arrow.up.doc", help: "Save") { save(image) }
+            footerAction("arrow.up.doc", help: AppText.save) { save(image) }
         }
-        footerAction("trash", help: "Prune", role: .destructive) { pruning = true }
+        footerAction("trash", help: AppText.prune, role: .destructive) { pruning = true }
     }
 
     private func tagList(_ group: LocalImageTagGroup) -> some View {
@@ -483,12 +488,12 @@ struct ToolbarImageGroupCard: View {
                 ResourceCardMetricText(text: "Local tag")
             }
         } footerActions: {
-            footerAction("play", help: "Run") {
+            footerAction("play", help: AppText.run) {
                 ui.runImage(reference)
                 if isExpanded { onClose() }
             }
-            footerAction("doc.on.doc", help: "Copy reference") { copyToPasteboard(reference) }
-            footerAction("trash", help: "Delete tag", role: .destructive) { deletingReference = reference }
+            footerAction("doc.on.doc", help: AppText.copyReference) { copyToPasteboard(reference) }
+            footerAction("trash", help: AppText.deleteTag, role: .destructive) { deletingReference = reference }
         } widget: {
             EmptyView()
         }

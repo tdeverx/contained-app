@@ -9,7 +9,7 @@ struct ReleaseNotesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SheetHeader(title: title, cancelHelp: "Done") {
+            SheetHeader(title: title, cancelHelp: AppText.done) {
                 onClose?()
             }
             Divider()

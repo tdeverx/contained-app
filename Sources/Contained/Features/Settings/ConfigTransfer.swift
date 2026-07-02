@@ -8,6 +8,12 @@ enum ConfigImportMode: String, CaseIterable, Identifiable {
     case replace = "Replace"
 
     var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .merge: return AppText.string("backup.importMode.merge", defaultValue: "Merge")
+        case .replace: return AppText.string("backup.importMode.replace", defaultValue: "Replace")
+        }
+    }
     var replacesExistingData: Bool { self == .replace }
 }
 
@@ -28,7 +34,7 @@ struct ConfigTransferControls: View {
             }
             Picker("Import mode", selection: $importMode) {
                 ForEach(ConfigImportMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
+                    Text(mode.displayName).tag(mode)
                 }
             }
             .pickerStyle(.segmented)

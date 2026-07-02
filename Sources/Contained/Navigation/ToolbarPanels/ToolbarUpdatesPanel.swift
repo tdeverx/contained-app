@@ -83,20 +83,20 @@ struct ToolbarUpdatesPanel: View {
 
     private var imageHeaderActions: [DesignAction] {
         var actions = [
-            DesignAction(systemName: "square.and.arrow.down", help: "Load Image Tar") {
+            DesignAction(systemName: "square.and.arrow.down", help: AppText.loadImageTar) {
                     ui.dispatch(.loadImage)
                     onClose()
             },
-            DesignAction(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
+            DesignAction(systemName: "arrow.triangle.2.circlepath", help: AppText.checkForUpdates) {
                     Task { await app.runImageUpdateSweepNow() }
             },
-            DesignAction(systemName: "trash", help: "Prune Images", role: .destructive) {
+            DesignAction(systemName: "trash", help: AppText.pruneImages, role: .destructive) {
                     ui.dispatch(.pruneImages)
                     onClose()
             }
         ]
         if showClose {
-            actions.append(DesignAction(systemName: "xmark", help: "Close", isCancel: true, action: onClose))
+            actions.append(DesignAction(systemName: "xmark", help: AppText.close, isCancel: true, action: onClose))
         }
         return actions
     }

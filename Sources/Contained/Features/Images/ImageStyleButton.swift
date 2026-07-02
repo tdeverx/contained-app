@@ -22,7 +22,7 @@ struct ImageStyleButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help("Customize image style")
-        .accessibilityLabel("Customize \(Format.shortImage(reference)) image style")
+        .accessibilityLabel(AppText.customizeImageStyleAccessibility(Format.shortImage(reference)))
         .popover(isPresented: $showingCustomize, arrowEdge: .trailing) {
             CustomizeSheet(target: target,
                            presentation: .popover,

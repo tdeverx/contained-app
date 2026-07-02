@@ -17,6 +17,7 @@ public struct ResourceCardPages<ID: Hashable> {
     public var selection: ID
     public var tint: Color
     public var controlsReveal: Double
+    public var closeLabel: String
     public var onSelect: (ID) -> Void
     public var onClose: () -> Void
 
@@ -24,12 +25,14 @@ public struct ResourceCardPages<ID: Hashable> {
                 selection: ID,
                 tint: Color,
                 controlsReveal: Double = 1,
+                closeLabel: String,
                 onSelect: @escaping (ID) -> Void,
                 onClose: @escaping () -> Void) {
         self.items = items
         self.selection = selection
         self.tint = tint
         self.controlsReveal = controlsReveal
+        self.closeLabel = closeLabel
         self.onSelect = onSelect
         self.onClose = onClose
     }
@@ -188,6 +191,7 @@ public struct ResourceCard<Icon: View, TitleAccessory: View, SubtitleAccessory: 
                                              selection: pages.selection,
                                              tint: pages.tint,
                                              controlsReveal: pages.controlsReveal,
+                                             closeLabel: pages.closeLabel,
                                              onSelect: pages.onSelect,
                                              onClose: pages.onClose)
                 }

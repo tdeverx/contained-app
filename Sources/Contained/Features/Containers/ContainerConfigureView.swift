@@ -55,7 +55,9 @@ struct ContainerConfigureView: View {
                 .padding(Tokens.Space.s)
         } footer: {
             if app.settings.revealCLI {
-                CommandPreviewBar(command: spec.arguments())
+                CommandPreviewBar(command: spec.arguments(),
+                                  copyHelp: AppText.copyCommand,
+                                  copiedAccessibilityLabel: AppText.copied)
                     .padding(Tokens.Space.s)
                     .frame(maxWidth: .infinity)
             }
@@ -87,7 +89,7 @@ struct ContainerConfigureView: View {
                 } else {
                     DesignActionGroup([
                         DesignAction(systemName: "bookmark",
-                                     help: "Save as template",
+                                     help: AppText.saveAsTemplate,
                                      isEnabled: spec.isRunnable) {
                             templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
                             savingTemplate = true
@@ -107,9 +109,9 @@ struct ContainerConfigureView: View {
     private var leadingAction: DesignAction {
         switch leading {
         case .cancel(let action):
-            return DesignAction(systemName: "xmark", help: "Cancel", isCancel: true, action: action)
+            return DesignAction(systemName: "xmark", help: AppText.cancel, isCancel: true, action: action)
         case .back(let action):
-            return DesignAction(systemName: "chevron.left", help: "Back", action: action)
+            return DesignAction(systemName: "chevron.left", help: AppText.back, action: action)
         }
     }
 

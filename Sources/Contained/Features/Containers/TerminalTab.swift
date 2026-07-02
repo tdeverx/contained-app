@@ -64,7 +64,7 @@ struct TerminalTab: View {
             .onChange(of: shell) { _, _ in reconnect() }
             Text("exec into \(snapshot.id)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
             Spacer()
-            DesignActionGroup(DesignAction(systemName: "arrow.clockwise", help: "Reconnect") { reconnect() })
+            DesignActionGroup(DesignAction(systemName: "arrow.clockwise", help: AppText.reconnect) { reconnect() })
         }
     }
 
@@ -75,7 +75,7 @@ struct TerminalTab: View {
                 .font(.headline)
             DesignActionGroup(DesignAction(systemName: "arrow.clockwise",
                                            title: "Reconnect",
-                                           help: "Reconnect terminal",
+                                           help: AppText.reconnectTerminal,
                                            action: reconnect))
         }
     }

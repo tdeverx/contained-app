@@ -5,18 +5,24 @@ import SwiftUI
 public struct TintSelector: View {
     private let selection: Binding<AppTint?>
     private let automaticLabel: String?
+    private let labelForTint: (AppTint) -> String
 
-    public init(selection: Binding<AppTint>) {
+    public init(selection: Binding<AppTint>,
+                labelForTint: @escaping (AppTint) -> String) {
         self.selection = Binding<AppTint?>(
             get: { selection.wrappedValue },
             set: { if let newValue = $0 { selection.wrappedValue = newValue } }
         )
         self.automaticLabel = nil
+        self.labelForTint = labelForTint
     }
 
-    public init(optionalSelection: Binding<AppTint?>, automaticLabel: String) {
+    public init(optionalSelection: Binding<AppTint?>,
+                automaticLabel: String,
+                labelForTint: @escaping (AppTint) -> String) {
         self.selection = optionalSelection
         self.automaticLabel = automaticLabel
+        self.labelForTint = labelForTint
     }
 
     public var body: some View {
@@ -29,10 +35,11 @@ public struct TintSelector: View {
                     .accessibilityAddTraits(selection.wrappedValue == nil ? .isSelected : [])
             }
             ForEach(AppTint.allCases) { tint in
+                let label = labelForTint(tint)
                 Button { selection.wrappedValue = tint } label: { swatch(tint) }
                     .buttonStyle(.plain)
-                    .help(tint.displayName)
-                    .accessibilityLabel(tint.displayName)
+                    .help(label)
+                    .accessibilityLabel(label)
                     .accessibilityAddTraits(selection.wrappedValue == tint ? .isSelected : [])
             }
         }

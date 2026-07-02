@@ -131,7 +131,7 @@ struct ActivityContent: View {
         ]
         if showClose {
             actions.append(DesignAction(systemName: "xmark",
-                                        help: "Close",
+                                        help: AppText.close,
                                         isCancel: true,
                                         action: onClose))
         }

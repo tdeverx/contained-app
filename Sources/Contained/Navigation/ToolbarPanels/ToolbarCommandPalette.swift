@@ -127,7 +127,7 @@ struct ToolbarCommandPalette: View {
             if !ui.searchText.isEmpty {
                 Button { ui.searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.plain).foregroundStyle(.secondary)
-                    .help("Clear search").accessibilityLabel("Clear search")
+                    .help(AppText.clearSearch).accessibilityLabel(AppText.clearSearch)
             } else {
                 Text("esc").font(.caption2).fontWeight(.medium).foregroundStyle(.tertiary)
             }
@@ -142,7 +142,7 @@ struct ToolbarCommandPalette: View {
         }
         .buttonStyle(.plain)
         .help("Remove \(scope.title) scope")
-        .accessibilityLabel("Remove \(scope.title) scope")
+        .accessibilityLabel(AppText.removeScopeAccessibility(scope.title))
         .fixedSize()
     }
 

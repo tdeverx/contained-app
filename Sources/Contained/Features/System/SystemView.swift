@@ -139,7 +139,7 @@ struct SystemContent: View {
                     storageMenu
                     if showClose {
                         DesignActionItems([DesignAction(systemName: "xmark",
-                                                        help: "Close",
+                                                        help: AppText.close,
                                                         isCancel: true,
                                                         action: onClose)])
                     }
@@ -162,7 +162,7 @@ struct SystemContent: View {
         DesignActionGroup([
             servicePowerAction,
             DesignAction(systemName: "arrow.clockwise",
-                         help: "Restart service",
+                         help: AppText.restartService,
                          isEnabled: !working) {
                 run { await app.restartService() }
             }
@@ -172,14 +172,14 @@ struct SystemContent: View {
     private var servicePowerAction: DesignAction {
         if app.serviceHealthy {
             return DesignAction(systemName: "stop.fill",
-                                help: "Stop service",
+                                help: AppText.stopService,
                                 role: .destructive,
                                 isEnabled: !working) {
                 run { await app.stopService() }
             }
         } else {
             return DesignAction(systemName: "play.fill",
-                                help: "Start service",
+                                help: AppText.startService,
                                 isEnabled: !working) {
                 run { await app.startService() }
             }
@@ -199,7 +199,7 @@ struct SystemContent: View {
             Button { pruneTarget = .networks } label: { Label("Unused networks", systemImage: "network") }
         } label: {
             DesignMenuActionLabel(systemName: "trash",
-                                  help: "Storage cleanup",
+                                  help: AppText.storageCleanup,
                                   role: .destructive)
         }
         .buttonStyle(.plain)
@@ -222,7 +222,7 @@ struct SystemContent: View {
                 Spacer()
                 DesignActionGroup(DesignAction(systemName: "plus",
                                                title: "New",
-                                               help: "New volume") {
+                                               help: AppText.newVolume) {
                         onClose()
                         ui.dispatch(.createVolume)
                 })
@@ -263,7 +263,9 @@ struct SystemContent: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            GlassRowMenu { volumeMenu(entry) }
+            GlassRowMenu(accessibilityLabel: AppText.string("menu.volumeActions", defaultValue: "Volume actions")) {
+                volumeMenu(entry)
+            }
         }
         .padding(.vertical, Tokens.Space.s)
         .contextMenu { volumeMenu(entry) }
@@ -312,7 +314,7 @@ struct SystemContent: View {
                             .font(.system(.caption, design: .monospaced).weight(.semibold)).monospacedDigit()
                         DesignActionGroup(DesignAction(systemName: "arrow.triangle.2.circlepath",
                                                        title: "Run now",
-                                                       help: "Run image update check now") {
+                                                       help: AppText.runImageUpdateCheckNow) {
                                 Task { await app.runImageUpdateSweepNow() }
                         })
                     }
@@ -327,7 +329,7 @@ struct SystemContent: View {
                           isOn: appUpdateBinding) {
                 DesignActionGroup(DesignAction(systemName: "arrow.down.app",
                                                title: "Check now",
-                                               help: "Check for app updates now",
+                                               help: AppText.checkForUpdatesNow,
                                                isEnabled: app.updater.canCheckForUpdates
                                                    && app.settings.appUpdateChecksEnabled) {
                         app.updater.checkForUpdates()

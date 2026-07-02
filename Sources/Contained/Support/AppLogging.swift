@@ -13,19 +13,27 @@ enum AppLogLevel: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .off: return "Off"
-        case .errors: return "Errors"
-        case .important: return "Important"
-        case .verbose: return "Verbose"
+        case .off: return AppText.string("logging.level.off", defaultValue: "Off")
+        case .errors: return AppText.string("logging.level.errors", defaultValue: "Errors")
+        case .important: return AppText.string("logging.level.important", defaultValue: "Important")
+        case .verbose: return AppText.string("logging.level.verbose", defaultValue: "Verbose")
         }
     }
 
     var footnote: String {
         switch self {
-        case .off: return "No app events are recorded."
-        case .errors: return "Only failures are recorded."
-        case .important: return "User actions, failures, and state changes are recorded."
-        case .verbose: return "Adds routine refreshes and background work."
+        case .off: return AppText.string("logging.level.off.footnote", defaultValue: "No app events are recorded.")
+        case .errors: return AppText.string("logging.level.errors.footnote", defaultValue: "Only failures are recorded.")
+        case .important:
+            return AppText.string(
+                "logging.level.important.footnote",
+                defaultValue: "User actions, failures, and state changes are recorded."
+            )
+        case .verbose:
+            return AppText.string(
+                "logging.level.verbose.footnote",
+                defaultValue: "Adds routine refreshes and background work."
+            )
         }
     }
 
@@ -47,8 +55,8 @@ enum AppLogDestination: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .activity: return "Activity history"
-        case .console: return "macOS Console"
+        case .activity: return AppText.string("logging.destination.activity", defaultValue: "Activity history")
+        case .console: return AppText.string("logging.destination.console", defaultValue: "macOS Console")
         }
     }
 }
@@ -66,13 +74,13 @@ enum AppLogCategory: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .lifecycle: return "Containers"
-        case .image: return "Images"
-        case .compose: return "Compose"
-        case .system: return "System"
-        case .health: return "Health"
-        case .registry: return "Registries"
-        case .ui: return "Interface"
+        case .lifecycle: return AppText.string("logging.category.lifecycle", defaultValue: "Containers")
+        case .image: return AppText.string("logging.category.image", defaultValue: "Images")
+        case .compose: return AppText.string("logging.category.compose", defaultValue: "Compose")
+        case .system: return AppText.string("logging.category.system", defaultValue: "System")
+        case .health: return AppText.string("logging.category.health", defaultValue: "Health")
+        case .registry: return AppText.string("logging.category.registry", defaultValue: "Registries")
+        case .ui: return AppText.string("logging.category.ui", defaultValue: "Interface")
         }
     }
 
