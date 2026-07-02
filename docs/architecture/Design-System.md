@@ -149,11 +149,11 @@ Use package-owned semantic controls for command chrome:
   `DesignToolbarStatusButton`, `DesignToolbarActionCluster`, and
   `DesignToolbarVanitySlot` for toolbar-specific slots
 
-Feature views should not call `GlassButton`, `GlassButtonItem`,
-`GlassButtonInputItem`, `glassSurface`, `glassCapsuleSurface`, or
-`.buttonStyle(.glass/.glassProminent)` directly. Those are package composition
-pieces. If a view needs a new command shape, add a named design-system route and
-then consume it from the app.
+Feature views cannot call the package-internal `GlassButton`, `GlassButtonItem`,
+`GlassButtonInputItem`, `glassSurface`, or `glassCapsuleSurface` routes. They
+also should not use `.buttonStyle(.glass/.glassProminent)` directly. If a view
+needs a new command shape, add a named design-system route and then consume it
+from the app.
 
 ## Design cards
 
@@ -191,9 +191,8 @@ false` for cards inside already-elevated morph panels.
 - footers stay sticky on `.medium` and `.large` cards and move into the
   expanded body on `.small`
 
-Feature views should not call `DesignCardSurface`, `DesignCardHeader`, or
-`DesignCardPageControls` directly. Those are package composition pieces used by
-`DesignCard`.
+`DesignCardSurface`, `DesignCardHeader`, and `DesignCardPageControls` are
+package-internal composition pieces used by `DesignCard`.
 
 Do not create a second `DesignCard` or direct surface modifier inside an
 expanded card body unless the nested object is itself an independent resource

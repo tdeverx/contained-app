@@ -107,7 +107,7 @@ struct DesignSystemExample: View {
 }
 ```
 
-## Resource Card Controls
+## Design Card Controls
 
 Use `DesignCard` for cards. Feature views pass plain titles, subtitles, page
 IDs, labels, metric strings, and actions; the package owns header/body/widget/footer
@@ -258,8 +258,8 @@ DesignGlassToggle(isOn: $following,
 
 ### Surfaces and Scaffolds
 
-- ``GlassSurface``
-- ``GlassCapsuleSurface``
+- ``DesignContentSurface``
+- ``DesignInputSurface``
 - ``PageScaffold``
 - ``PanelHeader``
 - ``PanelSection``
@@ -285,20 +285,14 @@ DesignGlassToggle(isOn: $following,
 - ``DesignToolbarVanitySlot``
 - ``DesignToolbarStatusButton``
 - ``DesignToolbarActionCluster``
-- ``GlassButton``
-- ``GlassButtonItem``
-- ``GlassButtonInputItem``
 - ``GlassRowMenu``
 
-### Resource Cards
+### Design Cards
 
 - ``DesignCard``
 - ``DesignCardPages``
 - ``DesignCardNoPage``
 - ``DesignCardTextStyle``
-- ``DesignCardSurface``
-- ``DesignCardHeader``
-- ``DesignCardHeaderTextBlock``
 - ``DesignCardIconChip``
 - ``DesignBadgeText``
 - ``DesignCardFooterMini``
@@ -306,7 +300,6 @@ DesignGlassToggle(isOn: $following,
 - ``DesignCardFooterChip``
 - ``DesignCardFooterButton``
 - ``DesignCardInsetSection``
-- ``DesignCardPageControls``
 - ``DesignCardPageControlItem``
 - ``View/designCardFloatingControls(when:controls:)``
 - ``View/designCardProgressOverlay(when:)``

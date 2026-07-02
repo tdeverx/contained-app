@@ -50,7 +50,7 @@ public struct GlassButtonTintStyle: Equatable, Sendable {
 
 /// A reusable glass button item: an icon or text button with the shared 28pt inner height and 4pt
 /// padding. Place it inside `GlassButton` to get the full 36pt glass capsule.
-public struct GlassButtonItem<Label: View>: View {
+struct GlassButtonItem<Label: View>: View {
     var role: ButtonRole? = nil
     var tint: Color? = nil
     var help: String = ""
@@ -70,7 +70,7 @@ public struct GlassButtonItem<Label: View>: View {
         return AnyShapeStyle(.primary)
     }
 
-    public init(role: ButtonRole? = nil, tint: Color? = nil, help: String = "",
+    init(role: ButtonRole? = nil, tint: Color? = nil, help: String = "",
          isCancel: Bool = false, isLabel: Bool = false, isIcon: Bool = false,
          action: (() -> Void)? = nil, @ViewBuilder label: @escaping () -> Label) {
         self.role = role
@@ -103,7 +103,7 @@ public struct GlassButtonItem<Label: View>: View {
             .animation(.easeOut(duration: 0.15), value: hovering)
     }
 
-    public var body: some View {
+    var body: some View {
         Group {
             if let action, !isLabel {
                 Button(role: role, action: action) {
@@ -124,17 +124,17 @@ public struct GlassButtonItem<Label: View>: View {
 
 /// Input content that occupies the same 28pt inner lane as `GlassButtonItem`, but leaves hover/pressed
 /// treatment to the enclosing `GlassButton` container.
-public struct GlassButtonInputItem<Content: View>: View {
-    public var spacing = DesignTokens.Toolbar.searchIconGap
+struct GlassButtonInputItem<Content: View>: View {
+    var spacing = DesignTokens.Toolbar.searchIconGap
     @ViewBuilder var content: () -> Content
 
-    public init(spacing: CGFloat = DesignTokens.Toolbar.searchIconGap,
-                @ViewBuilder content: @escaping () -> Content) {
+    init(spacing: CGFloat = DesignTokens.Toolbar.searchIconGap,
+         @ViewBuilder content: @escaping () -> Content) {
         self.spacing = spacing
         self.content = content
     }
 
-    public var body: some View {
+    var body: some View {
         HStack(spacing: spacing) { content() }
             .font(.body.weight(.medium))
             .padding(DesignTokens.Toolbar.iconInnerPadding)
@@ -143,7 +143,7 @@ public struct GlassButtonInputItem<Content: View>: View {
     }
 }
 
-public extension GlassButtonItem where Label == Image {
+extension GlassButtonItem where Label == Image {
     init(systemName: String, role: ButtonRole? = nil, tint: Color? = nil, help: String = "",
          isCancel: Bool = false, isLabel: Bool = false, action: (() -> Void)? = nil) {
         self.role = role
@@ -159,21 +159,21 @@ public extension GlassButtonItem where Label == Image {
 
 /// A pill that groups related glass button items under one shared interactive-glass capsule. This
 /// is the morph target for compact button groups across the app.
-public struct GlassButton<Content: View>: View {
-    public var spacing: CGFloat = 0
-    public var height: CGFloat = DesignTokens.Toolbar.buttonGroupHeight
-    public var minWidth: CGFloat? = nil
-    public var singleItem: Bool = false
+struct GlassButton<Content: View>: View {
+    var spacing: CGFloat = 0
+    var height: CGFloat = DesignTokens.Toolbar.buttonGroupHeight
+    var minWidth: CGFloat? = nil
+    var singleItem: Bool = false
     /// Set `false` for a static glass container (no hover treatment) — e.g. vanity toolbar chrome.
-    public var interactive: Bool = true
+    var interactive: Bool = true
     @ViewBuilder var content: () -> Content
 
-    public init(spacing: CGFloat = 0,
-                height: CGFloat = DesignTokens.Toolbar.buttonGroupHeight,
-                minWidth: CGFloat? = nil,
-                singleItem: Bool = false,
-                interactive: Bool = true,
-                @ViewBuilder content: @escaping () -> Content) {
+    init(spacing: CGFloat = 0,
+         height: CGFloat = DesignTokens.Toolbar.buttonGroupHeight,
+         minWidth: CGFloat? = nil,
+         singleItem: Bool = false,
+         interactive: Bool = true,
+         @ViewBuilder content: @escaping () -> Content) {
         self.spacing = spacing
         self.height = height
         self.minWidth = minWidth
@@ -186,7 +186,7 @@ public struct GlassButton<Content: View>: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.buttonTintStyle) private var tintStyle
 
-    public var body: some View {
+    var body: some View {
         let shape = Capsule(style: .continuous)
         HStack(spacing: spacing) { content() }
             .padding(.horizontal, DesignTokens.Toolbar.iconInnerPadding)

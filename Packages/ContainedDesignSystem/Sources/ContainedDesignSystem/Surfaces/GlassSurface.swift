@@ -2,29 +2,29 @@ import SwiftUI
 
 /// Centralized Liquid Glass surface: real `.glassEffect()` plus a soft shadow that lifts the
 /// element off the backdrop, and an optional colored (optionally gradient) wash behind the glass.
-public struct GlassSurface: ViewModifier {
-    public enum Level { case regular, thin, ultraThin }
-    public var level: Level
-    public var cornerRadius: CGFloat
-    public var glass: Glass
+struct GlassSurface: ViewModifier {
+    enum Level { case regular, thin, ultraThin }
+    var level: Level
+    var cornerRadius: CGFloat
+    var glass: Glass
     /// Lift the surface off the backdrop with a soft shadow. Pass `false` for flat tiles that sit
     /// inside an already-elevated panel (e.g. cards in the toolbar morph panels / the creation menu).
-    public var shadow: Bool
-    public var fill: Color?
-    public var fillOpacity: Double
-    public var gradient: Bool
-    public var gradientAngle: Double
+    var shadow: Bool
+    var fill: Color?
+    var fillOpacity: Double
+    var gradient: Bool
+    var gradientAngle: Double
 
     @Environment(\.colorScheme) private var colorScheme
 
-    public init(level: Level = .regular,
-                cornerRadius: CGFloat = DesignTokens.Radius.card,
-                glass: Glass = .regular,
-                shadow: Bool = true,
-                fill: Color? = nil,
-                fillOpacity: Double = 0.18,
-                gradient: Bool = false,
-                gradientAngle: Double = 135) {
+    init(level: Level = .regular,
+         cornerRadius: CGFloat = DesignTokens.Radius.card,
+         glass: Glass = .regular,
+         shadow: Bool = true,
+         fill: Color? = nil,
+         fillOpacity: Double = 0.18,
+         gradient: Bool = false,
+         gradientAngle: Double = 135) {
         self.level = level
         self.cornerRadius = cornerRadius
         self.glass = glass
@@ -35,7 +35,7 @@ public struct GlassSurface: ViewModifier {
         self.gradientAngle = gradientAngle
     }
 
-    public func body(content: Content) -> some View {
+    func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         // Layering, back → front: tint wash → glass → content.
         // `.glassEffect` puts the glass *behind* the content; the tint sits behind the glass so it
@@ -94,20 +94,20 @@ public struct GlassSurface: ViewModifier {
 
 /// Capsule variant for transient bars and compact floating controls that need the same glass rules
 /// without pretending they are rounded cards.
-public struct GlassCapsuleSurface: ViewModifier {
-    public var level: GlassSurface.Level
-    public var glass: Glass
-    public var shadow: Bool
-    public var fill: Color?
-    public var fillOpacity: Double
+struct GlassCapsuleSurface: ViewModifier {
+    var level: GlassSurface.Level
+    var glass: Glass
+    var shadow: Bool
+    var fill: Color?
+    var fillOpacity: Double
 
     @Environment(\.colorScheme) private var colorScheme
 
-    public init(level: GlassSurface.Level = .regular,
-                glass: Glass = .regular,
-                shadow: Bool = true,
-                fill: Color? = nil,
-                fillOpacity: Double = 0.18) {
+    init(level: GlassSurface.Level = .regular,
+         glass: Glass = .regular,
+         shadow: Bool = true,
+         fill: Color? = nil,
+         fillOpacity: Double = 0.18) {
         self.level = level
         self.glass = glass
         self.shadow = shadow
@@ -115,7 +115,7 @@ public struct GlassCapsuleSurface: ViewModifier {
         self.fillOpacity = fillOpacity
     }
 
-    public func body(content: Content) -> some View {
+    func body(content: Content) -> some View {
         let shape = Capsule()
         return content
             .clipShape(shape)
@@ -148,7 +148,7 @@ public struct GlassCapsuleSurface: ViewModifier {
     }
 }
 
-public extension View {
+extension View {
     func glassSurface(_ level: GlassSurface.Level = .regular,
                       cornerRadius: CGFloat = DesignTokens.Radius.card,
                       glass: Glass = .regular,
