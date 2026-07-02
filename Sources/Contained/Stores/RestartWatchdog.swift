@@ -1,5 +1,6 @@
 import Foundation
 import ContainedCore
+import ContainedRuntime
 
 /// App-managed restart policy. The `container` CLI has no native `--restart`, so on each refresh
 /// tick we diff container states and re-issue `start` for containers that crashed (transitioned
@@ -22,7 +23,9 @@ final class RestartWatchdog {
     private var nextEligible: [String: Date] = [:]
 
     /// Evaluate the latest snapshots against the previous tick and act on crashes.
-    func evaluate(snapshots: [ContainerSnapshot], store: ContainersStore, client: ContainerClient,
+    func evaluate(snapshots: [ContainerSnapshot],
+                  store: ContainersStore,
+                  client: any ContainerRuntimeClient,
                   now: Date = Date()) async {
         var restarts: [(ContainerSnapshot, Int)] = []
 

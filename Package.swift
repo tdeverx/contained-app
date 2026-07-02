@@ -7,6 +7,8 @@ let package = Package(
     products: [
         .executable(name: "Contained", targets: ["Contained"]),
         .library(name: "ContainedCore", targets: ["ContainedCore"]),
+        .library(name: "ContainedRuntime", targets: ["ContainedRuntime"]),
+        .library(name: "AppleContainerRuntime", targets: ["AppleContainerRuntime"]),
     ],
     dependencies: [
         .package(path: "Packages/ContainedDesignSystem"),
@@ -27,11 +29,27 @@ let package = Package(
             dependencies: [.product(name: "Yams", package: "Yams")],
             path: "Sources/ContainedCore"
         ),
+        // Runtime adapter contracts. Keep this generic so Apple container, Docker-compatible,
+        // and future engines can share one app-facing capability/client boundary.
+        .target(
+            name: "ContainedRuntime",
+            dependencies: ["ContainedCore"],
+            path: "Sources/ContainedRuntime"
+        ),
+        // Current Apple `container` CLI adapter. Future runtime adapters should be sibling targets,
+        // not branches inside the app stores or SwiftUI views.
+        .target(
+            name: "AppleContainerRuntime",
+            dependencies: ["ContainedCore", "ContainedRuntime"],
+            path: "Sources/AppleContainerRuntime"
+        ),
         // The SwiftUI app, including Sparkle wiring for signed release builds.
         .executableTarget(
             name: "Contained",
             dependencies: [
                 "ContainedCore",
+                "ContainedRuntime",
+                "AppleContainerRuntime",
                 .product(name: "ContainedDesignSystem", package: "ContainedDesignSystem"),
                 .product(name: "ContainedNavigation", package: "ContainedNavigation"),
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
@@ -49,11 +67,17 @@ let package = Package(
             path: "Tests/ContainedCoreTests",
             resources: [.copy("Fixtures")]
         ),
+        .testTarget(
+            name: "ContainedRuntimeTests",
+            dependencies: ["ContainedCore", "ContainedRuntime", "AppleContainerRuntime"],
+            path: "Tests/ContainedRuntimeTests",
+            resources: [.copy("Fixtures")]
+        ),
         // Tests for app-target value types (RunSpec argv, compose→spec mapping). Imports the
         // executable target with @testable.
         .testTarget(
             name: "ContainedAppTests",
-            dependencies: ["Contained", "ContainedCore"],
+            dependencies: ["Contained", "ContainedCore", "ContainedRuntime", "AppleContainerRuntime"],
             path: "Tests/ContainedAppTests"
         ),
         .testTarget(

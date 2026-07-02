@@ -3,6 +3,7 @@ import ContainedNavigation
 import ContainedDesignSystem
 import AppKit
 import ContainedCore
+import ContainedRuntime
 
 /// The Containers screen: a responsive grid of personalized glass cards. Density and the running
 /// filter live in the background context menu and menu commands; tapping a card grows it in place

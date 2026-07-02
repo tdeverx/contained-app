@@ -1,6 +1,7 @@
 import SwiftUI
 import ContainedDesignSystem
 import ContainedCore
+import ContainedRuntime
 
 /// Sign in to a registry. The user types their own credentials; the password is sent via stdin.
 /// Registry credential management lives in Settings → Registries; this sheet is launched from that tab.

@@ -1,5 +1,7 @@
 import SwiftUI
 import ContainedCore
+import ContainedRuntime
+import AppleContainerRuntime
 import OSLog
 
 /// Root app state: locates the CLI, owns the typed client and the feature stores, and tracks the
@@ -31,7 +33,7 @@ final class AppModel {
     let manifestClient = RegistryManifestClient()
 
     private(set) var bootstrap: Bootstrap = .checking
-    private(set) var client: ContainerClient?
+    private(set) var client: (any ContainerRuntimeClient)?
     /// Resolved path to the `container` binary — needed to spawn the terminal's `exec` process.
     private(set) var cliURL: URL?
     private(set) var systemStatus: SystemStatus?
@@ -154,13 +156,13 @@ final class AppModel {
 
     func bootstrapIfNeeded() async {
         logger.record("Checking container CLI", category: .system, severity: .debug)
-        guard let url = CLILocator.locate(override: settings.cliPathOverride) else {
+        guard let url = AppleContainerCLILocator.locate(override: settings.cliPathOverride) else {
             bootstrap = .cliMissing
             logger.record("Container CLI missing", category: .system, severity: .error)
             return
         }
         let runner = CommandRunner(executableURL: url)
-        let client = ContainerClient(runner: runner)
+        let client = AppleContainerClient(runner: runner)
         self.client = client
         self.cliURL = url
         containers.client = client
@@ -168,8 +170,8 @@ final class AppModel {
         // Version check.
         if let versionData = try? await runner.run(ContainerCommands.version) {
             let raw = String(decoding: versionData, as: UTF8.self)
-            cliVersion = CLILocator.parseVersion(raw)
-            if let v = cliVersion, !CLILocator.isSupported(v) {
+            cliVersion = AppleContainerCLILocator.parseVersion(raw)
+            if let v = cliVersion, !AppleContainerCLILocator.isSupported(v) {
                 bootstrap = .unsupported(version: v)
                 logger.record("Unsupported container CLI version \(v)", category: .system, severity: .error)
                 return
@@ -335,11 +337,9 @@ final class AppModel {
         containerStatsStreamIDs = ids
         diagnosticLogger.info("Stats stream starting for \(ids.count, privacy: .public) container(s)")
         containerStatsStreamTask = Task(priority: .utility) { [weak self, client, ids, generation] in
-            var parser = ContainerStatsTableParser()
             do {
-                for try await chunk in client.streamStatsTable(ids: ids) {
+                for try await samples in client.streamStats(ids: ids) {
                     guard !Task.isCancelled else { return }
-                    let samples = parser.append(chunk)
                     guard !samples.isEmpty else { continue }
                     await MainActor.run {
                         guard let self,
@@ -620,7 +620,7 @@ final class AppModel {
         guard let client else { return }
         bootstrap = .checking
         if resetWatchdog { watchdog.reset() }
-        for action in actions { _ = try? await client.runner.run(["system", action]) }
+        for action in actions { _ = try? await client.performSystemAction(action) }
         await refreshSystem()
     }
 

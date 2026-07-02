@@ -1,5 +1,6 @@
 import SwiftUI
 import ContainedCore
+import ContainedRuntime
 
 /// Local store of per-container healthchecks (keyed by container id), persisted to UserDefaults.
 /// Migrated to SwiftData in WS7, alongside personalization.
@@ -66,8 +67,10 @@ final class HealthMonitor {
     /// Fired once when a container transitions into the unhealthy state.
     var onUnhealthy: ((ContainerSnapshot) -> Void)?
 
-    func evaluate(snapshots: [ContainerSnapshot], store: HealthCheckStore,
-                  client: ContainerClient, now: Date = Date()) async {
+    func evaluate(snapshots: [ContainerSnapshot],
+                  store: HealthCheckStore,
+                  client: any ContainerRuntimeClient,
+                  now: Date = Date()) async {
         let running = Dictionary(snapshots.filter { $0.state == .running }.map { ($0.id, $0) },
                                  uniquingKeysWith: { a, _ in a })
 

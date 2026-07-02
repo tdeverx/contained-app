@@ -55,7 +55,9 @@ enforced without breaking appcast publishing.
 ## Layout
 
 ```
-Sources/ContainedCore/   pure logic — models, CLI wrapper, decoding, compose (no SwiftUI)
+Sources/ContainedCore/   pure logic — models, decoding, compose, argv builders (no SwiftUI)
+Sources/ContainedRuntime/ shared runtime contracts and capabilities
+Sources/AppleContainerRuntime/ Apple container runtime adapter
 Sources/Contained/       the SwiftUI app
   DesignSystem/          core-dependent presentation mappings only
   Features/<Domain>/     one folder per sidebar domain
@@ -63,8 +65,9 @@ Sources/Contained/       the SwiftUI app
 Packages/ContainedDesignSystem/ reusable SwiftUI/AppKit visual primitives and tokens
 Packages/ContainedNavigation/ reusable navigation/layout infrastructure
 Contained.xcworkspace/   optional Xcode entry point over the SwiftPM packages
-Tests/ContainedCoreTests/  golden-argv + decode + decision tests
-Tests/ContainedAppTests/   RunSpec argv + compose mapping
+Tests/ContainedCoreTests/    golden-argv + decode + decision tests
+Tests/ContainedRuntimeTests/ runtime adapter contract + Apple adapter tests
+Tests/ContainedAppTests/     RunSpec argv + compose mapping
 scripts/                 bundle.sh, release.sh, appcast.sh
 docs/wiki/               local mirror of the GitHub wiki pages
 appcast.xml              Sparkle feed at the root of each release branch
@@ -78,8 +81,8 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Package docs live with the package.** Keep package-local import/setup/examples in [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md) and [`Packages/ContainedNavigation/README.md`](../../Packages/ContainedNavigation/README.md), with DocC landing pages under each target's `.docc` catalog. Keep `docs/wiki` focused on app-level architecture and workflow guidance.
 - **Xcode opens the workspace.** `Contained.xcworkspace` points at the root and local package manifests. SwiftPM package manifests remain the build graph source of truth; do not hand-maintain generated `.xcodeproj` state.
 - **Navigation infrastructure belongs in `ContainedNavigation` only when it is generic.** App sections, pending actions, concrete toolbar panels, and `UIState` stay in the executable target until they can cross the boundary without app policy.
-- **Every CLI action goes through a `ContainerCommands` builder** + a `ContainerClient` wrapper, with a golden-argv test. The UI never assembles argv inline — this keeps "Reveal CLI" honest.
-- **Runtime-facing code should depend on `ContainerRuntimeClient` where a backend choice matters.** The Apple `container` implementation remains the default; future Docker-compatible behavior should advertise capability differences through `RuntimeDescriptor`.
+- **Every Apple `container` CLI action goes through a `ContainerCommands` builder** + `AppleContainerRuntime`, with a golden-argv test. The UI never assembles argv inline — this keeps "Reveal CLI" honest.
+- **Runtime-facing code should depend on `ContainerRuntimeClient` where a backend choice matters.** The Apple `container` implementation remains the default adapter; future Docker-compatible, Podman, Lima-backed, remote, or other runtimes should be sibling adapter targets that advertise capability differences through `RuntimeDescriptor`.
 - **Pure decision logic is factored into `ContainedCore`** (`RestartDecision`, `HealthDecision`, compose ordering) and unit-tested without spawning processes.
 - **No `contained.*` personalization labels.** Card styles and healthchecks live in local stores. Only `contained.restart` and `contained.stack` are written (they must round-trip through the container).
 - **Never put secrets or personal data in test fixtures.** Fixtures are captured CLI output — scrub tokens, domains, and paths before committing. (`.gitignore` blocks signing material; push protection is on.)

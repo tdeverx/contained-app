@@ -1,0 +1,526 @@
+[
+  {
+    "configuration" : {
+      "creationDate" : "2026-06-16T00:00:15Z",
+      "descriptor" : {
+        "digest" : "sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b",
+        "mediaType" : "application\/vnd.oci.image.index.v1+json",
+        "size" : 9218
+      },
+      "name" : "docker.io\/library\/alpine:latest"
+    },
+    "id" : "28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b",
+    "variants" : [
+      {
+        "config" : {
+          "architecture" : "amd64",
+          "config" : {
+            "Cmd" : [
+              "\/bin\/sh"
+            ],
+            "Env" : [
+              "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin"
+            ],
+            "WorkingDir" : "\/"
+          },
+          "created" : "2026-06-16T00:01:29.967161902Z",
+          "history" : [
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:01:29.967161902Z",
+              "created_by" : "ADD alpine-minirootfs-3.24.1-x86_64.tar.gz \/ # buildkit"
+            },
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:01:29.967161902Z",
+              "created_by" : "CMD [\"\/bin\/sh\"]",
+              "empty_layer" : true
+            }
+          ],
+          "os" : "linux",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:34884abbe92863fce933ed7c39c0e045631af0ed86d5cc0dfbdf9fdca426ce3c"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:79ff19e9084a00eece421b2523fb93e22d730e2c0e525905de047e848e56d95f",
+        "platform" : {
+          "architecture" : "amd64",
+          "os" : "linux"
+        },
+        "size" : 3848024
+      },
+      {
+        "config" : {
+          "architecture" : "unknown",
+          "config" : {
+
+          },
+          "os" : "unknown",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:f5124fb579e27b9769a8ce0158cb650168246572098b5095ecbf8e605488afb6",
+              "sha256:56dceff11b3396976a334a95c6a2816e051a060123c719b35e4fc5104a962f7f"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:f21951a6120df0f5f9329311202f7869e7b70120f4748632d58753cff662b126",
+        "platform" : {
+          "architecture" : "unknown",
+          "os" : "unknown"
+        },
+        "size" : 86390
+      },
+      {
+        "config" : {
+          "architecture" : "arm",
+          "config" : {
+            "Cmd" : [
+              "\/bin\/sh"
+            ],
+            "Env" : [
+              "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin"
+            ],
+            "WorkingDir" : "\/"
+          },
+          "created" : "2026-06-16T00:00:25.329026823Z",
+          "history" : [
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:00:25.329026823Z",
+              "created_by" : "ADD alpine-minirootfs-3.24.1-armhf.tar.gz \/ # buildkit"
+            },
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:00:25.329026823Z",
+              "created_by" : "CMD [\"\/bin\/sh\"]",
+              "empty_layer" : true
+            }
+          ],
+          "os" : "linux",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:78ed6782dc1bda42a805a54b6a8cf65a497ca4e409bc5bfe00e38ec85bdf826d"
+            ],
+            "type" : "layers"
+          },
+          "variant" : "v6"
+        },
+        "digest" : "sha256:bc301c70d7e7b929e5d3251d08ecc2e2894c22580958f79298052ed73ada4be0",
+        "platform" : {
+          "architecture" : "arm",
+          "os" : "linux",
+          "variant" : "v6"
+        },
+        "size" : 3555096
+      },
+      {
+        "config" : {
+          "architecture" : "unknown",
+          "config" : {
+
+          },
+          "os" : "unknown",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:f5124fb579e27b9769a8ce0158cb650168246572098b5095ecbf8e605488afb6",
+              "sha256:56dceff11b3396976a334a95c6a2816e051a060123c719b35e4fc5104a962f7f"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:9ebfa72c35ca370f63e20c92dfa3ac11b67f753b193cc345aa2b23f89241227c",
+        "platform" : {
+          "architecture" : "unknown",
+          "os" : "unknown"
+        },
+        "size" : 86118
+      },
+      {
+        "config" : {
+          "architecture" : "arm",
+          "config" : {
+            "Cmd" : [
+              "\/bin\/sh"
+            ],
+            "Env" : [
+              "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin"
+            ],
+            "WorkingDir" : "\/"
+          },
+          "created" : "2026-06-16T00:00:26.526765088Z",
+          "history" : [
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:00:26.526765088Z",
+              "created_by" : "ADD alpine-minirootfs-3.24.1-armv7.tar.gz \/ # buildkit"
+            },
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:00:26.526765088Z",
+              "created_by" : "CMD [\"\/bin\/sh\"]",
+              "empty_layer" : true
+            }
+          ],
+          "os" : "linux",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:1e30d7d82ee088ef08d915b4394ec1aa51a54d871dcd0770dc7503bee836e489"
+            ],
+            "type" : "layers"
+          },
+          "variant" : "v7"
+        },
+        "digest" : "sha256:48bf253520b161ff0f7bd9c6b2aded4126fa8ee2bc29386580b2a8a0322a1742",
+        "platform" : {
+          "architecture" : "arm",
+          "os" : "linux",
+          "variant" : "v7"
+        },
+        "size" : 3262261
+      },
+      {
+        "config" : {
+          "architecture" : "unknown",
+          "config" : {
+
+          },
+          "os" : "unknown",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:f5124fb579e27b9769a8ce0158cb650168246572098b5095ecbf8e605488afb6",
+              "sha256:56dceff11b3396976a334a95c6a2816e051a060123c719b35e4fc5104a962f7f"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:b47a7a1760540077a1aefc00795604cd7e1b2acf556312118e10806f9a58d072",
+        "platform" : {
+          "architecture" : "unknown",
+          "os" : "unknown"
+        },
+        "size" : 86390
+      },
+      {
+        "config" : {
+          "architecture" : "arm64",
+          "config" : {
+            "Cmd" : [
+              "\/bin\/sh"
+            ],
+            "Env" : [
+              "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin"
+            ],
+            "WorkingDir" : "\/"
+          },
+          "created" : "2026-06-16T00:01:20.474100947Z",
+          "history" : [
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:01:20.474100947Z",
+              "created_by" : "ADD alpine-minirootfs-3.24.1-aarch64.tar.gz \/ # buildkit"
+            },
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:01:20.474100947Z",
+              "created_by" : "CMD [\"\/bin\/sh\"]",
+              "empty_layer" : true
+            }
+          ],
+          "os" : "linux",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:b2848c02ac6ff53d265469b5b30f649f335e546a83330cd8916d54e65e640409"
+            ],
+            "type" : "layers"
+          },
+          "variant" : "v8"
+        },
+        "digest" : "sha256:e7a1a92a5bfeee40966aea60f0796b0e7917cc35591542701834f03a68fa3d18",
+        "platform" : {
+          "architecture" : "arm64",
+          "os" : "linux",
+          "variant" : "v8"
+        },
+        "size" : 4184689
+      },
+      {
+        "config" : {
+          "architecture" : "unknown",
+          "config" : {
+
+          },
+          "os" : "unknown",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:f5124fb579e27b9769a8ce0158cb650168246572098b5095ecbf8e605488afb6",
+              "sha256:56dceff11b3396976a334a95c6a2816e051a060123c719b35e4fc5104a962f7f"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:d9dc32c63a23ac682a41ab2eae01051d2a4fbe472eefd109faf97be63a5216e5",
+        "platform" : {
+          "architecture" : "unknown",
+          "os" : "unknown"
+        },
+        "size" : 86390
+      },
+      {
+        "config" : {
+          "architecture" : "386",
+          "config" : {
+            "Cmd" : [
+              "\/bin\/sh"
+            ],
+            "Env" : [
+              "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin"
+            ],
+            "WorkingDir" : "\/"
+          },
+          "created" : "2026-06-16T00:01:19.360099979Z",
+          "history" : [
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:01:19.360099979Z",
+              "created_by" : "ADD alpine-minirootfs-3.24.1-x86.tar.gz \/ # buildkit"
+            },
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:01:19.360099979Z",
+              "created_by" : "CMD [\"\/bin\/sh\"]",
+              "empty_layer" : true
+            }
+          ],
+          "os" : "linux",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:20868c90c269dd93125a9ddea2bec8b326ccfc8229d85a7456ee028a165b29b1"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:6f5908cdf811d574b30ec394e405ef74ee293bed5af1620a5187d604604a90a8",
+        "platform" : {
+          "architecture" : "386",
+          "os" : "linux"
+        },
+        "size" : 3671765
+      },
+      {
+        "config" : {
+          "architecture" : "unknown",
+          "config" : {
+
+          },
+          "os" : "unknown",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:f5124fb579e27b9769a8ce0158cb650168246572098b5095ecbf8e605488afb6",
+              "sha256:56dceff11b3396976a334a95c6a2816e051a060123c719b35e4fc5104a962f7f"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:bf1792d3b17c3493e465c13b8357c5f60c2acc36cb69aab0813d4e7f1995ac2b",
+        "platform" : {
+          "architecture" : "unknown",
+          "os" : "unknown"
+        },
+        "size" : 86390
+      },
+      {
+        "config" : {
+          "architecture" : "ppc64le",
+          "config" : {
+            "Cmd" : [
+              "\/bin\/sh"
+            ],
+            "Env" : [
+              "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin"
+            ],
+            "WorkingDir" : "\/"
+          },
+          "created" : "2026-06-16T00:00:15.017984356Z",
+          "history" : [
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:00:15.017984356Z",
+              "created_by" : "ADD alpine-minirootfs-3.24.1-ppc64le.tar.gz \/ # buildkit"
+            },
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:00:15.017984356Z",
+              "created_by" : "CMD [\"\/bin\/sh\"]",
+              "empty_layer" : true
+            }
+          ],
+          "os" : "linux",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:8c55296752dfcaf17e3fa825036cfe5050c55402025b508314048e741c9a5f16"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:a30366c2d2645b131e92b797b39357db29f197966c660db2767f143353000d6f",
+        "platform" : {
+          "architecture" : "ppc64le",
+          "os" : "linux"
+        },
+        "size" : 3815039
+      },
+      {
+        "config" : {
+          "architecture" : "unknown",
+          "config" : {
+
+          },
+          "os" : "unknown",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:f5124fb579e27b9769a8ce0158cb650168246572098b5095ecbf8e605488afb6",
+              "sha256:56dceff11b3396976a334a95c6a2816e051a060123c719b35e4fc5104a962f7f"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:7a21929832908e662272c6e3333f68c662e3854ad4956e49d995251dcd9ccbfe",
+        "platform" : {
+          "architecture" : "unknown",
+          "os" : "unknown"
+        },
+        "size" : 86390
+      },
+      {
+        "config" : {
+          "architecture" : "riscv64",
+          "config" : {
+            "Cmd" : [
+              "\/bin\/sh"
+            ],
+            "Env" : [
+              "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin"
+            ],
+            "WorkingDir" : "\/"
+          },
+          "created" : "2026-06-16T05:59:15.56408535Z",
+          "history" : [
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T05:59:15.56408535Z",
+              "created_by" : "ADD alpine-minirootfs-3.24.1-riscv64.tar.gz \/ # buildkit"
+            },
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T05:59:15.56408535Z",
+              "created_by" : "CMD [\"\/bin\/sh\"]",
+              "empty_layer" : true
+            }
+          ],
+          "os" : "linux",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:d806e99d43aeb11f79a974b2623809f37ead271ba59a954bd643342d3ae87e71"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:20a26477b54fb521bc8f633ea0af1f8f9b3dac5661739f857b381b117226919b",
+        "platform" : {
+          "architecture" : "riscv64",
+          "os" : "linux"
+        },
+        "size" : 3575994
+      },
+      {
+        "config" : {
+          "architecture" : "unknown",
+          "config" : {
+
+          },
+          "os" : "unknown",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:f5124fb579e27b9769a8ce0158cb650168246572098b5095ecbf8e605488afb6",
+              "sha256:56dceff11b3396976a334a95c6a2816e051a060123c719b35e4fc5104a962f7f"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:83b3fe59c5ee68a257a6e179c792b9bd5b0aceb02ceb2813f14eef469a020c00",
+        "platform" : {
+          "architecture" : "unknown",
+          "os" : "unknown"
+        },
+        "size" : 86390
+      },
+      {
+        "config" : {
+          "architecture" : "s390x",
+          "config" : {
+            "Cmd" : [
+              "\/bin\/sh"
+            ],
+            "Env" : [
+              "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin"
+            ],
+            "WorkingDir" : "\/"
+          },
+          "created" : "2026-06-16T00:00:21.879382071Z",
+          "history" : [
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:00:21.879382071Z",
+              "created_by" : "ADD alpine-minirootfs-3.24.1-s390x.tar.gz \/ # buildkit"
+            },
+            {
+              "comment" : "buildkit.dockerfile.v0",
+              "created" : "2026-06-16T00:00:21.879382071Z",
+              "created_by" : "CMD [\"\/bin\/sh\"]",
+              "empty_layer" : true
+            }
+          ],
+          "os" : "linux",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:ff89eb082f59748c49390592d343caad75d5a0f38be634c4a5ff87b55add7c8d"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:4eea4e45f63fc6b38e5f653120aaf8a7c19043706f6d76070821495371e3017b",
+        "platform" : {
+          "architecture" : "s390x",
+          "os" : "linux"
+        },
+        "size" : 3710951
+      },
+      {
+        "config" : {
+          "architecture" : "unknown",
+          "config" : {
+
+          },
+          "os" : "unknown",
+          "rootfs" : {
+            "diff_ids" : [
+              "sha256:f5124fb579e27b9769a8ce0158cb650168246572098b5095ecbf8e605488afb6",
+              "sha256:56dceff11b3396976a334a95c6a2816e051a060123c719b35e4fc5104a962f7f"
+            ],
+            "type" : "layers"
+          }
+        },
+        "digest" : "sha256:4a411cfbe9fc8bbe39859f835711f280d91a856a28a6ca01ef82ca298170c727",
+        "platform" : {
+          "architecture" : "unknown",
+          "os" : "unknown"
+        },
+        "size" : 86390
+      }
+    ]
+  }
+]

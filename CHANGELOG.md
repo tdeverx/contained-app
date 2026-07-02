@@ -95,7 +95,7 @@
 
 - Swift Package layout with a pure `ContainedCore` library for CLI command builders, JSON models, compose parsing, decision helpers, and service logic, plus a `Contained` SwiftUI executable for UI, stores, Sparkle, SwiftData, and migration.
 - `ContainerCommands` is the single source of truth for `container` argv construction and is covered by golden tests.
-- `CommandRunner` supports one-shot commands and streamed output; `ContainerClient` exposes typed async methods over real `container --format json` output.
+- `ContainedRuntime` defines the shared runtime contract, while `AppleContainerRuntime` exposes typed async methods over real `container --format json` output and typed stats streams.
 - `RunSpec` is the single source of truth for Run/Edit form state, validation, CLI preview, and actual execution.
 - `AppModel` owns bootstrap, client wiring, stores, refresh coordination, image updates, service lifecycle, config transfer, and resource-style lookup through focused extensions.
 - `UIState`, `AppSection`, toolbar option enums, and pending actions centralize navigation, filters, morph routing, and classic fallback routing.

@@ -1,5 +1,6 @@
 import SwiftUI
 import ContainedCore
+import ContainedRuntime
 
 /// Image-update tracking: comparing the local digest of each image against the registry's current
 /// manifest digest, on a throttled background sweep and on demand. Split out of `AppModel` because it

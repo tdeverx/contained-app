@@ -1,4 +1,5 @@
 import Foundation
+import ContainedCore
 
 /// Parses the ANSI table emitted by `container stats --format table`.
 ///

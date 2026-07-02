@@ -2,6 +2,7 @@ import SwiftUI
 import ContainedDesignSystem
 import AppKit
 import ContainedCore
+import ContainedRuntime
 
 /// Browse a running container's filesystem (`exec ls -1ap`) and copy files in/out with the native
 /// `container cp`. AppKit bridge (flagged): `NSOpenPanel`/`NSSavePanel` for host file selection.

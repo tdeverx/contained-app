@@ -2,6 +2,8 @@ import SwiftUI
 import ContainedDesignSystem
 import OSLog
 import ContainedCore
+import ContainedRuntime
+import ContainedRuntime
 
 /// Owns the container list and derived live stats. Lifecycle actions run through the client and
 /// trigger a refresh. Stats arrive from the app-wide runtime stream and are converted into deltas
@@ -58,7 +60,7 @@ final class ContainersStore {
     @ObservationIgnored private var metricsStates: [String: ContainerMetricsState] = [:]
     @ObservationIgnored private var statsNormalizationContext: StatsNormalizationContext = .containerSpecific
 
-    var client: ContainerClient?
+    var client: (any ContainerRuntimeClient)?
 
     private var lastStreamedStats: [String: RuntimeStatsSnapshot] = [:]
     private var lastStreamedStatsDate: Date?
@@ -272,7 +274,7 @@ final class ContainersStore {
                        severity: .info)
         diagnosticLogger.notice("Run started from creation flow")
         do {
-            let output = try await client.runner.run(spec.arguments())
+            let output = try await client.runContainer(arguments: spec.arguments())
             performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
@@ -321,7 +323,7 @@ final class ContainersStore {
         do {
             _ = try? await client.stop([originalID])          // best-effort; may already be stopped
             _ = try await client.deleteContainers([originalID], force: true)
-            _ = try await client.runner.run(spec.arguments())
+            _ = try await client.runContainer(arguments: spec.arguments())
             performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
@@ -355,7 +357,9 @@ final class ContainersStore {
         }
     }
 
-    private func act(_ id: String, verb: String, _ body: @escaping (ContainerClient) async throws -> Void) async {
+    private func act(_ id: String,
+                     verb: String,
+                     _ body: @escaping (any ContainerRuntimeClient) async throws -> Void) async {
         guard let client else { return }
         busyIDs.insert(id)
         defer { busyIDs.remove(id) }

@@ -2,7 +2,7 @@ import Foundation
 
 /// Finds the `container` binary and reports its version. The app is not sandboxed, so it can read
 /// these well-known install locations directly.
-public enum CLILocator {
+public enum AppleContainerCLILocator {
     public static let defaultCandidates = [
         "/usr/local/bin/container",
         "/opt/homebrew/bin/container",

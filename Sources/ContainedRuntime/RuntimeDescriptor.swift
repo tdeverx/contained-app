@@ -1,8 +1,20 @@
 import Foundation
+import ContainedCore
 
-public enum RuntimeKind: String, Codable, Equatable, Sendable {
-    case appleContainer
-    case dockerCompatible
+/// Stable identifier for a runtime adapter.
+///
+/// This is intentionally open-ended rather than a closed enum. Apple `container` is the first
+/// adapter, Docker-compatible engines are an obvious future adapter, and the package should also be
+/// able to host runtimes that do not exist yet without editing this shared module.
+public struct RuntimeKind: RawRepresentable, Codable, Equatable, Hashable, Sendable {
+    public var rawValue: String
+
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public static let appleContainer = RuntimeKind(rawValue: "apple-container")
+    public static let dockerCompatible = RuntimeKind(rawValue: "docker-compatible")
 }
 
 public struct RuntimeCapability: OptionSet, Equatable, Sendable {
@@ -52,12 +64,12 @@ public struct RuntimeCapability: OptionSet, Equatable, Sendable {
 public struct RuntimeDescriptor: Equatable, Sendable {
     public var kind: RuntimeKind
     public var displayName: String
-    public var executableName: String
+    public var executableName: String?
     public var capabilities: RuntimeCapability
 
     public init(kind: RuntimeKind,
                 displayName: String,
-                executableName: String,
+                executableName: String? = nil,
                 capabilities: RuntimeCapability) {
         self.kind = kind
         self.displayName = displayName
@@ -104,15 +116,15 @@ public protocol ContainerRuntimeClient: Sendable {
 
     func listContainers(all: Bool) async throws -> [ContainerSnapshot]
     func stats(ids: [String]) async throws -> [ContainerStats]
-    func streamStatsTable(ids: [String]) -> AsyncThrowingStream<String, Error>
+    func streamStats(ids: [String]) -> AsyncThrowingStream<[RuntimeStatsSnapshot], Error>
     func diskUsage() async throws -> DiskUsage
     func systemProperties() async throws -> SystemProperties
     func dnsDomains() async throws -> [String]
-    func createDNSDomain(_ domain: String) async throws -> Data
-    func deleteDNSDomain(_ domain: String) async throws -> Data
-    func setRecommendedKernel() async throws -> Data
+    @discardableResult func createDNSDomain(_ domain: String) async throws -> Data
+    @discardableResult func deleteDNSDomain(_ domain: String) async throws -> Data
+    @discardableResult func setRecommendedKernel() async throws -> Data
     func execCapture(_ id: String, _ command: [String]) async throws -> String
-    func copy(source: String, destination: String) async throws -> Data
+    @discardableResult func copy(source: String, destination: String) async throws -> Data
     func streamSystemLogs(follow: Bool, last: Int?) -> AsyncThrowingStream<String, Error>
     func systemStatus() async throws -> SystemStatus
     func networks() async throws -> [NetworkResource]
@@ -125,24 +137,72 @@ public protocol ContainerRuntimeClient: Sendable {
                      buildArgs: [String: String], noCache: Bool,
                      platform: String?) -> AsyncThrowingStream<String, Error>
     func streamPush(_ ref: String, platform: String?) -> AsyncThrowingStream<String, Error>
+    @discardableResult func runContainer(arguments: [String]) async throws -> Data
+    @discardableResult func performSystemAction(_ action: String) async throws -> Data
     func registries() async throws -> [RegistryLogin]
-    func registryLogin(server: String, username: String, password: String) async throws -> Data
-    func registryLogout(server: String) async throws -> Data
-    func deleteImages(_ refs: [String]) async throws -> Data
-    func tagImage(source: String, target: String) async throws -> Data
-    func saveImages(_ refs: [String], to output: String) async throws -> Data
-    func loadImages(from input: String) async throws -> Data
-    func exportContainer(_ id: String, to output: String) async throws -> Data
-    func pruneImages(all: Bool) async throws -> Data
-    func start(_ ids: [String]) async throws -> Data
-    func stop(_ ids: [String]) async throws -> Data
-    func deleteContainers(_ ids: [String], force: Bool) async throws -> Data
-    func pruneContainers() async throws -> Data
-    func pruneVolumes() async throws -> Data
-    func pruneNetworks() async throws -> Data
-    func createVolume(name: String, size: String?, labels: [String: String]) async throws -> Data
-    func deleteVolumes(_ names: [String]) async throws -> Data
-    func createNetwork(name: String, subnet: String?, internalOnly: Bool,
+    @discardableResult func registryLogin(server: String, username: String, password: String) async throws -> Data
+    @discardableResult func registryLogout(server: String) async throws -> Data
+    @discardableResult func deleteImages(_ refs: [String]) async throws -> Data
+    @discardableResult func tagImage(source: String, target: String) async throws -> Data
+    @discardableResult func saveImages(_ refs: [String], to output: String) async throws -> Data
+    @discardableResult func loadImages(from input: String) async throws -> Data
+    @discardableResult func exportContainer(_ id: String, to output: String) async throws -> Data
+    @discardableResult func pruneImages(all: Bool) async throws -> Data
+    @discardableResult func start(_ ids: [String]) async throws -> Data
+    @discardableResult func stop(_ ids: [String]) async throws -> Data
+    @discardableResult func deleteContainers(_ ids: [String], force: Bool) async throws -> Data
+    @discardableResult func pruneContainers() async throws -> Data
+    @discardableResult func pruneVolumes() async throws -> Data
+    @discardableResult func pruneNetworks() async throws -> Data
+    @discardableResult func createVolume(name: String, size: String?, labels: [String: String]) async throws -> Data
+    @discardableResult func deleteVolumes(_ names: [String]) async throws -> Data
+    @discardableResult func createNetwork(name: String, subnet: String?, internalOnly: Bool,
                        labels: [String: String]) async throws -> Data
-    func deleteNetworks(_ names: [String]) async throws -> Data
+    @discardableResult func deleteNetworks(_ names: [String]) async throws -> Data
+}
+
+public extension ContainerRuntimeClient {
+    func listContainers() async throws -> [ContainerSnapshot] {
+        try await listContainers(all: true)
+    }
+
+    func stats() async throws -> [ContainerStats] {
+        try await stats(ids: [])
+    }
+
+    func streamStats() -> AsyncThrowingStream<[RuntimeStatsSnapshot], Error> {
+        streamStats(ids: [])
+    }
+
+    func streamLogs(id: String, follow: Bool, tail: Int?) -> AsyncThrowingStream<String, Error> {
+        streamLogs(id: id, follow: follow, tail: tail, boot: false)
+    }
+
+    func streamLogs(id: String) -> AsyncThrowingStream<String, Error> {
+        streamLogs(id: id, follow: true, tail: 200, boot: false)
+    }
+
+    func streamPull(_ ref: String) -> AsyncThrowingStream<String, Error> {
+        streamPull(ref, platform: nil)
+    }
+
+    func streamPush(_ ref: String) -> AsyncThrowingStream<String, Error> {
+        streamPush(ref, platform: nil)
+    }
+
+    @discardableResult func createVolume(name: String, size: String?) async throws -> Data {
+        try await createVolume(name: name, size: size, labels: [:])
+    }
+
+    @discardableResult func createVolume(name: String) async throws -> Data {
+        try await createVolume(name: name, size: nil, labels: [:])
+    }
+
+    @discardableResult func createNetwork(name: String, subnet: String?, internalOnly: Bool) async throws -> Data {
+        try await createNetwork(name: name, subnet: subnet, internalOnly: internalOnly, labels: [:])
+    }
+
+    @discardableResult func createNetwork(name: String) async throws -> Data {
+        try await createNetwork(name: name, subnet: nil, internalOnly: false, labels: [:])
+    }
 }

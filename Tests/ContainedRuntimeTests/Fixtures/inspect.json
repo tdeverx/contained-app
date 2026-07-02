@@ -1,0 +1,119 @@
+[
+  {
+    "configuration" : {
+      "capAdd" : [
+
+      ],
+      "capDrop" : [
+
+      ],
+      "creationDate" : "2026-06-24T10:16:58Z",
+      "dns" : {
+        "nameservers" : [
+
+        ],
+        "options" : [
+
+        ],
+        "searchDomains" : [
+
+        ]
+      },
+      "id" : "fixture-web",
+      "image" : {
+        "descriptor" : {
+          "digest" : "sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b",
+          "mediaType" : "application\/vnd.oci.image.index.v1+json",
+          "size" : 9218
+        },
+        "reference" : "docker.io\/library\/alpine:latest"
+      },
+      "initProcess" : {
+        "arguments" : [
+          "600"
+        ],
+        "environment" : [
+          "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin",
+          "FOO=bar"
+        ],
+        "executable" : "sleep",
+        "rlimits" : [
+
+        ],
+        "supplementalGroups" : [
+
+        ],
+        "terminal" : false,
+        "user" : {
+          "id" : {
+            "gid" : 0,
+            "uid" : 0
+          }
+        },
+        "workingDirectory" : "\/"
+      },
+      "labels" : {
+        "contained.icon" : "globe",
+        "contained.tint" : "teal"
+      },
+      "mounts" : [
+
+      ],
+      "networks" : [
+        {
+          "network" : "default",
+          "options" : {
+            "hostname" : "fixture-web",
+            "mtu" : 1280
+          }
+        }
+      ],
+      "platform" : {
+        "architecture" : "arm64",
+        "os" : "linux"
+      },
+      "publishedPorts" : [
+        {
+          "containerPort" : 80,
+          "count" : 1,
+          "hostAddress" : "0.0.0.0",
+          "hostPort" : 18080,
+          "proto" : "tcp"
+        }
+      ],
+      "publishedSockets" : [
+
+      ],
+      "readOnly" : false,
+      "resources" : {
+        "cpuOverhead" : 1,
+        "cpus" : 4,
+        "memoryInBytes" : 1073741824
+      },
+      "rosetta" : false,
+      "runtimeHandler" : "container-runtime-linux",
+      "ssh" : false,
+      "sysctls" : {
+
+      },
+      "useInit" : false,
+      "virtualization" : false
+    },
+    "id" : "fixture-web",
+    "status" : {
+      "networks" : [
+        {
+          "hostname" : "fixture-web",
+          "ipv4Address" : "192.168.64.3\/24",
+          "ipv4Gateway" : "192.168.64.1",
+          "ipv6Address" : "fdfd:fa52:b619:2ef7:fcb1:66ff:fe77:68e1\/64",
+          "macAddress" : "fe:b1:66:77:68:e1",
+          "mtu" : 1280,
+          "network" : "default"
+        }
+      ],
+      "startedDate" : "2026-06-24T10:16:59Z",
+      "state" : "running"
+    }
+  }
+]
