@@ -101,8 +101,9 @@ struct ToolbarUpdatesPanel: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: "checkmark.circle.fill", tint: .green)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     ResourceCardTitleText(text: "No images")
+                } subtitle: {
                     ResourceCardSubtitleText(text: "Pull or build an image to see it here")
                 }
             } trailing: {

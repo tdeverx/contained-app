@@ -189,13 +189,10 @@ struct ContainerCard: View {
     }
 
     private var headerTitleBlock: some View {
-        VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
-            HStack(alignment: .top, spacing: Tokens.Space.xs) {
-                ResourceCardTitleText(text: name)
-            }
-            HStack(alignment: .top, spacing: Tokens.Space.xs) {
-                ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
-            }
+        ResourceCardHeaderTextBlock {
+            ResourceCardTitleText(text: name)
+        } subtitle: {
+            ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
         }
     }
 

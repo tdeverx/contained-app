@@ -63,9 +63,9 @@ struct DesignSystemExample: View {
                         ResourceCardIconChip(symbol: "shippingbox.fill",
                                              tint: tint.color)
                     } content: {
-                        VStack(alignment: .leading,
-                               spacing: Tokens.ResourceCard.compactTextSpacing) {
+                        ResourceCardHeaderTextBlock {
                             ResourceCardTitleText(text: "web")
+                        } subtitle: {
                             ResourceCardSubtitleText(text: "nginx:latest")
                         }
                     } trailing: {
@@ -114,7 +114,9 @@ struct CardControlsExample: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: "shippingbox.fill")
             } content: {
-                ResourceCardTitleText(text: "web")
+                ResourceCardHeaderTextBlock {
+                    ResourceCardTitleText(text: "web")
+                }
             } trailing: {
                 ResourceCardPageControls(items: pages,
                                          selection: page,
@@ -198,6 +200,7 @@ DesignInputSurface {
 
 - ``ResourceGlassCard``
 - ``ResourceCardHeader``
+- ``ResourceCardHeaderTextBlock``
 - ``ResourceCardIconChip``
 - ``ResourceBadgeText``
 - ``ResourceCardFooterMini``

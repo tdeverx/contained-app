@@ -130,8 +130,9 @@ struct ToolbarTemplatesPanel: View {
                                      tint: .secondary,
                                      backgroundOpacity: Tokens.ResourceCard.iconEmphasisBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     ResourceCardTitleText(text: "No templates")
+                } subtitle: {
                     ResourceCardSubtitleText(text: "Save a container's settings as a template from the create form.")
                 }
             } trailing: {
@@ -145,8 +146,9 @@ struct ToolbarTemplatesPanel: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: "bookmark.fill", tint: .accentColor)
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     ResourceCardTitleText(text: template.name)
+                } subtitle: {
                     ResourceCardMonospacedSubtitleText(text: Format.shortImage(template.spec?.image ?? "—"))
                 }
             } trailing: {

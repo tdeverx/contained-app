@@ -42,8 +42,8 @@ This package currently depends only on platform frameworks available to a macOS
   `PageScaffold` for app-neutral scaffolding.
 - `GlassButton`, `GlassButtonItem`, `GlassButtonInputItem`, `GlassRowMenu`, and
   toolbar control helpers.
-- `ResourceGlassCard`, `ResourceCardPageControls`, `ResourceCardFooterChip`,
-  `ResourceCardFooterButton`, `ResourceCardWidgetGroup`,
+- `ResourceGlassCard`, `ResourceCardHeaderTextBlock`, `ResourceCardPageControls`,
+  `ResourceCardFooterChip`, `ResourceCardFooterButton`, `ResourceCardWidgetGroup`,
   `ResourceCardInsetSection`, and other `ResourceCard*` pieces for repeated
   card layouts and card-local controls.
   Use `resourceCardFloatingControls` and `resourceCardProgressOverlay` for
@@ -112,9 +112,9 @@ struct DesignSystemExample: View {
                         ResourceCardIconChip(symbol: "shippingbox.fill",
                                              tint: tint.color)
                     } content: {
-                        VStack(alignment: .leading,
-                               spacing: Tokens.ResourceCard.compactTextSpacing) {
+                        ResourceCardHeaderTextBlock {
                             ResourceCardTitleText(text: "web")
+                        } subtitle: {
                             ResourceCardSubtitleText(text: "nginx:latest")
                         }
                     } trailing: {
@@ -171,7 +171,9 @@ struct CardControlsExample: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: "shippingbox.fill")
             } content: {
-                ResourceCardTitleText(text: "web")
+                ResourceCardHeaderTextBlock {
+                    ResourceCardTitleText(text: "web")
+                }
             } trailing: {
                 ResourceCardPageControls(items: pages,
                                          selection: page,

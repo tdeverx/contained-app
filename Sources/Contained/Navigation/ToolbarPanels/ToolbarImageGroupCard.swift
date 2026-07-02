@@ -343,8 +343,9 @@ struct ToolbarImageGroupCard: View {
                 imageChip(style)
             }
         } content: {
-            VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+            ResourceCardHeaderTextBlock {
                 ResourceCardTitleText(text: repositoryTitle(group.primaryReference))
+            } subtitle: {
                 ResourceCardSubtitleText(text: repositoryOwner(group.primaryReference))
             }
         } trailing: {
@@ -467,8 +468,9 @@ struct ToolbarImageGroupCard: View {
                                  style: style,
                                  target: .imageTag(reference: reference, groupID: group.id))
             } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                ResourceCardHeaderTextBlock {
                     ResourceCardMonospacedTitleText(text: Format.shortImage(reference))
+                } subtitle: {
                     ResourceCardSubtitleText(text: repositoryName(reference))
                 }
             } trailing: {
