@@ -9,9 +9,10 @@ struct Phase4Tests {
 
     @Test func imageAndStreamingArgv() {
         #expect(ContainerCommands.imageList() == ["image", "list", "--format", "json"])
-        // Streaming stats omits --no-stream.
+        // Structured stats stay one-shot; table mode is the Apple CLI's streaming surface.
         #expect(ContainerCommands.stats(ids: ["web"], noStream: false) == ["stats", "--format", "json", "web"])
         #expect(ContainerCommands.stats(ids: ["web"]) == ["stats", "--no-stream", "--format", "json", "web"])
+        #expect(ContainerCommands.statsTableStream(ids: ["web"]) == ["stats", "--format", "table", "web"])
         #expect(ContainerCommands.logs("web", follow: true, tail: 500) == ["logs", "--follow", "-n", "500", "web"])
     }
 
@@ -113,6 +114,21 @@ struct Phase4Tests {
         var received: [String] = []
         for try await chunk in client.streamLogs(id: "web") { received.append(chunk) }
         #expect(received == ["line one\n", "line two\n"])
+    }
+
+    @Test func statsTableParserUsesLatestANSIFrame() throws {
+        let samples = ContainerStatsTableParser.parseLatestFrame(in: try Fixture.string("stats-table"))
+        #expect(samples.count == 2)
+        #expect(samples[0].id == "buildkit")
+        #expect(samples[0].memoryUsageBytes == 108_202_557)
+        #expect(samples[0].memoryLimitBytes == 2_147_483_648)
+        #expect(samples[0].networkRxBytes == 486_953)
+        #expect(samples[0].networkTxBytes == 604)
+        #expect(samples[0].blockReadBytes == 62_044_242)
+        #expect(samples[0].blockWriteBytes == 24_576)
+        #expect(samples[0].numProcesses == 17)
+        #expect(samples[1].id == "sonarrhd")
+        #expect(abs((samples[1].cpuCoreFraction ?? 0) - 0.0006) < 0.00001)
     }
 
     // MARK: Restart watchdog decision logic

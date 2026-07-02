@@ -31,7 +31,7 @@ Switch **Settings → Updates → Update channel** to **Beta** or **Nightly**. N
 
 ## Stats look choppy / not real-time
 
-The `container stats --format json` command emits one frame and then blocks, so Contained **samples** stats instead of streaming them. The container list follows **Settings → General → Data → Refresh interval**; live metrics sample more slowly in the background, faster while the Containers UI is visible, and immediately when the Stats tab opens.
+Apple container's structured stats formats are static, while `container stats --format table` is the public streaming surface. Contained keeps one low-priority table stream open for the running containers and converts every frame into the card, widget, history, and Stats-tab metrics. The container list itself still follows **Settings → General → Data → Refresh interval**.
 
 ## A container keeps restarting
 

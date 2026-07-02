@@ -1,24 +1,51 @@
 import Foundation
 
+public enum CommandExecutionPriority: Sendable {
+    case userInitiated
+    case utility
+    case background
+
+    var dispatchQoS: DispatchQoS.QoSClass {
+        switch self {
+        case .userInitiated: .userInitiated
+        case .utility: .utility
+        case .background: .background
+        }
+    }
+
+    var qualityOfService: QualityOfService {
+        switch self {
+        case .userInitiated: .userInitiated
+        case .utility: .utility
+        case .background: .background
+        }
+    }
+}
+
 /// Abstraction over `container` CLI execution so stores can be tested against a mock with no daemon.
 public protocol CommandRunning: Sendable {
     /// Run a command to completion. Returns stdout `Data` on success; throws `CommandError` on
     /// launch failure or non-zero exit (carrying stderr).
-    func run(_ arguments: [String]) async throws -> Data
-
-    /// Run a command, writing `stdin` to the child's standard input (e.g. `registry login
-    /// --password-stdin`, so the secret never appears in argv / the process list).
-    func run(_ arguments: [String], stdin: Data?) async throws -> Data
+    func run(_ arguments: [String],
+             stdin: Data?,
+             priority: CommandExecutionPriority) async throws -> Data
 
     /// Stream a long-running command's merged stdout+stderr as it arrives. Cancelling the consuming
     /// task (or finishing the stream) terminates the child process — no leaked `logs -f`/`stats`.
-    func stream(_ arguments: [String]) -> AsyncThrowingStream<String, Error>
+    func stream(_ arguments: [String], priority: CommandExecutionPriority) -> AsyncThrowingStream<String, Error>
 }
 
 public extension CommandRunning {
-    /// Default: ignore stdin (conformers that don't spawn a real process, like the test mock).
+    func run(_ arguments: [String]) async throws -> Data {
+        try await run(arguments, stdin: nil, priority: .userInitiated)
+    }
+
     func run(_ arguments: [String], stdin: Data?) async throws -> Data {
-        try await run(arguments)
+        try await run(arguments, stdin: stdin, priority: .userInitiated)
+    }
+
+    func stream(_ arguments: [String]) -> AsyncThrowingStream<String, Error> {
+        stream(arguments, priority: .userInitiated)
     }
 }
 
@@ -31,16 +58,23 @@ public final class CommandRunner: CommandRunning {
     }
 
     public func run(_ arguments: [String]) async throws -> Data {
-        try await run(arguments, stdin: nil)
+        try await run(arguments, stdin: nil, priority: .userInitiated)
     }
 
     public func run(_ arguments: [String], stdin: Data?) async throws -> Data {
+        try await run(arguments, stdin: stdin, priority: .userInitiated)
+    }
+
+    public func run(_ arguments: [String],
+                    stdin: Data?,
+                    priority: CommandExecutionPriority) async throws -> Data {
         let executableURL = self.executableURL
         return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
+            DispatchQueue.global(qos: priority.dispatchQoS).async {
                 let process = Process()
                 process.executableURL = executableURL
                 process.arguments = arguments
+                process.qualityOfService = priority.qualityOfService
 
                 let outPipe = Pipe()
                 let errPipe = Pipe()
@@ -63,27 +97,27 @@ public final class CommandRunner: CommandRunning {
                 }
 
                 // Read both pipes concurrently so a full stderr buffer can't deadlock stdout.
-                var outData = Data()
-                var errData = Data()
+                let outBox = DataBox()
+                let errBox = DataBox()
                 let group = DispatchGroup()
-                let readQueue = DispatchQueue.global(qos: .userInitiated)
+                let readQueue = DispatchQueue.global(qos: priority.dispatchQoS)
                 group.enter()
                 readQueue.async {
-                    outData = outPipe.fileHandleForReading.readDataToEndOfFile()
+                    outBox.set(outPipe.fileHandleForReading.readDataToEndOfFile())
                     group.leave()
                 }
                 group.enter()
                 readQueue.async {
-                    errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+                    errBox.set(errPipe.fileHandleForReading.readDataToEndOfFile())
                     group.leave()
                 }
                 process.waitUntilExit()
                 group.wait()
 
                 if process.terminationStatus == 0 {
-                    continuation.resume(returning: outData)
+                    continuation.resume(returning: outBox.data)
                 } else {
-                    let stderr = String(decoding: errData, as: UTF8.self)
+                    let stderr = String(decoding: errBox.data, as: UTF8.self)
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                     continuation.resume(throwing: CommandError.nonZeroExit(
                         code: process.terminationStatus,
@@ -95,7 +129,7 @@ public final class CommandRunner: CommandRunning {
         }
     }
 
-    public func stream(_ arguments: [String]) -> AsyncThrowingStream<String, Error> {
+    public func stream(_ arguments: [String], priority: CommandExecutionPriority) -> AsyncThrowingStream<String, Error> {
         let executableURL = self.executableURL
         return AsyncThrowingStream { continuation in
             // Process/FileHandle aren't Sendable; box them so the @Sendable onTermination closure
@@ -104,6 +138,7 @@ public final class CommandRunner: CommandRunning {
             let process = box.process
             process.executableURL = executableURL
             process.arguments = arguments
+            process.qualityOfService = priority.qualityOfService
 
             let pipe = Pipe()
             process.standardOutput = pipe
@@ -127,10 +162,12 @@ public final class CommandRunner: CommandRunning {
             }
 
             box.handle = handle
-            do {
-                try process.run()
-            } catch {
-                continuation.finish(throwing: CommandError.launchFailed(underlying: error.localizedDescription))
+            DispatchQueue.global(qos: priority.dispatchQoS).async {
+                do {
+                    try process.run()
+                } catch {
+                    continuation.finish(throwing: CommandError.launchFailed(underlying: error.localizedDescription))
+                }
             }
         }
     }
@@ -146,4 +183,17 @@ public final class CommandRunner: CommandRunning {
 private final class ProcessBox: @unchecked Sendable {
     let process = Process()
     var handle: FileHandle?
+}
+
+private final class DataBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = Data()
+
+    var data: Data {
+        lock.withLock { storage }
+    }
+
+    func set(_ data: Data) {
+        lock.withLock { storage = data }
+    }
 }

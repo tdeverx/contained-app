@@ -24,7 +24,7 @@ struct GeneralTab: View {
             }
 
             PanelSection(header: "Data",
-                         footer: "How often the container list refreshes. Live metrics use a slower sampler unless the Containers view or Stats tab needs them.") {
+                         footer: "How often the container list refreshes. Live metrics use one low-priority runtime stream independent of this interval.") {
                 PanelRow(title: "Refresh interval") {
                     HStack(spacing: Tokens.Space.s) {
                         Slider(value: $settings.refreshInterval, in: 1...10, step: 1)

@@ -3,9 +3,8 @@ import ContainedCore
 
 /// Drives periodic refresh of the whole app. There is no push API from `container`, so a single
 /// adaptive polling loop fetches system status, the container list, and active resource caches, then
-/// runs the `RestartWatchdog`. Stats sampling is throttled separately by `ContainersStore` so the CLI
-/// does not run `container stats --no-stream` on every tick. Cadence speeds up while containers are
-/// transitioning, slows when idle, and pauses when the window is in the background.
+/// runs the `RestartWatchdog`. Stats use a separate app-wide stream, so this loop only owns the
+/// service/list/resource cadence and pauses when the window is in the background.
 @MainActor
 @Observable
 final class RefreshCoordinator {

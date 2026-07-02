@@ -182,4 +182,26 @@ struct CommandTests {
         #expect(delta.netRxBytesPerSec == 2048)
         #expect(delta.numProcesses == 2)
     }
+
+    @Test func statsDeltaConvertsRuntimeSnapshotRates() {
+        let previous = RuntimeStatsSnapshot(id: "x", cpuCoreFraction: 0.1,
+                                            memoryUsageBytes: 100, memoryLimitBytes: 1000,
+                                            blockReadBytes: 1_000, blockWriteBytes: 2_000,
+                                            networkRxBytes: 3_000, networkTxBytes: 4_000,
+                                            numProcesses: 1)
+        let current = RuntimeStatsSnapshot(id: "x", cpuCoreFraction: 0.42,
+                                           memoryUsageBytes: 200, memoryLimitBytes: 1000,
+                                           blockReadBytes: 1_500, blockWriteBytes: 2_800,
+                                           networkRxBytes: 4_000, networkTxBytes: 4_400,
+                                           numProcesses: 3)
+
+        let delta = StatsDelta.from(snapshot: current, previous: previous, interval: 2)
+        #expect(delta.cpuCoreFraction == 0.42)
+        #expect(delta.memoryFraction == 0.2)
+        #expect(delta.blockReadBytesPerSec == 250)
+        #expect(delta.blockWriteBytesPerSec == 400)
+        #expect(delta.netRxBytesPerSec == 500)
+        #expect(delta.netTxBytesPerSec == 200)
+        #expect(delta.numProcesses == 3)
+    }
 }

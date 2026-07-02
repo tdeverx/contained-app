@@ -1,10 +1,10 @@
 # Architecture
 
-Contained is a SwiftUI-native macOS app that wraps Apple's `container` CLI. It shells out to the CLI with `--format json` and decodes typed models — there is no private API or daemon.
+Contained is a SwiftUI-native macOS app that wraps Apple's `container` CLI. It shells out to public CLI commands, usually with `--format json`, and decodes typed models. Visible container stats are the exception: Apple container only streams stats in table mode, so Contained parses that public table stream behind the same runtime boundary. There is no private API or daemon.
 
 ```
  SwiftUI Views  ──>  @Observable Stores  ──>  ContainerClient  ──>  CommandRunner  ──>  `container` CLI
- (Features/*)        (AppModel, …)            (typed facade)        (run / stream)       (--format json)
+ (Features/*)        (AppModel, …)            (typed facade)        (run / stream)       (json / table)
        ^                    │                       ^                                          │
        └──── ContainedDesignSystem ────────────────┘                                          │
                             └───────────────────  decoded models (ContainedCore)  ◀───────────┘
@@ -29,15 +29,16 @@ remains the source of truth for builds, tests, and release scripts.
 ## CLI wrapper (core)
 
 - **`ContainerCommands`** — pure argv builders, side-effect-free so golden tests assert the exact arguments (the "Reveal CLI" affordances read from the same source of truth).
-- **`CommandRunner`** — runs a one-shot command (`run`) or a streaming one (`stream`, an `AsyncThrowingStream`). Passwords are piped via `--password-stdin`, never argv.
+- **`CommandRunner`** — runs a one-shot command (`run`) or a streaming one (`stream`, an `AsyncThrowingStream`). Commands can opt into utility/background priority for vanity work such as stats. Passwords are piped via `--password-stdin`, never argv.
 - **`ContainerClient`** — the Apple `container` implementation of `ContainerRuntimeClient`; returns decoded models and maps decode failures to a single `CommandError`.
+- **`ContainerStatsTableParser`** — dependency-free parser for the ANSI table emitted by `container stats --format table`. It converts table frames into runtime-agnostic snapshots so the app can keep one visible stats stream open instead of spawning repeated JSON stats processes.
 - **`ContainerRuntimeClient`** — the backend-facing operation contract. `RuntimeDescriptor` and `RuntimeCapability` advertise what a selected runtime can do before future Docker-compatible integration reaches the UI.
 
 ## Stores (app)
 
 - **`AppModel`** — root state: locates the CLI, owns the client + feature stores, tracks bootstrap status, wires logging/updating, and runs the per-tick coordination. Focused extensions own image/resource style lookup, image-update sweeps, and configuration import/export.
-- **`ContainersStore`** — the container list, live stats deltas, stats sampling cadence, and lifecycle actions.
-- **`RefreshCoordinator`** — adaptive polling for service/list refreshes. Stats are polled, not truly streamed — the CLI emits one frame then blocks — so `ContainersStore` samples them less often in the background, faster when the Containers UI is visible, and immediately after lifecycle actions or Stats-tab entry.
+- **`ContainersStore`** — the container list, live stats deltas, streamed stats conversion, and lifecycle actions.
+- **`RefreshCoordinator`** — adaptive polling for service/list refreshes. Stats are maintained app-wide by one utility-priority table stream for the running containers, so normal refreshes and lifecycle actions relist containers without forcing vanity stats.
 - **`RestartWatchdog`** — app-managed restart policy (`container` has no native `--restart`); diffs states each tick and re-issues `start` with backoff.
 - **`HealthMonitor`** — app-managed healthchecks: interval-gated `exec` probes with consecutive-failure tracking.
 - **`HistoryStore`** — SwiftData stack for the persistent event log + metric samples (the "rewind" timeline) with bounded retention.

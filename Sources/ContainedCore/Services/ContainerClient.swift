@@ -17,7 +17,14 @@ public struct ContainerClient: Sendable {
     }
 
     public func stats(ids: [String] = []) async throws -> [ContainerStats] {
-        try await decode([ContainerStats].self, ContainerCommands.stats(ids: ids), "stats")
+        try await decode([ContainerStats].self,
+                         ContainerCommands.stats(ids: ids),
+                         "stats",
+                         priority: .utility)
+    }
+
+    public func streamStatsTable(ids: [String] = []) -> AsyncThrowingStream<String, Error> {
+        runner.stream(ContainerCommands.statsTableStream(ids: ids), priority: .utility)
     }
 
     public func diskUsage() async throws -> DiskUsage {
@@ -184,8 +191,11 @@ public struct ContainerClient: Sendable {
 
     // MARK: Helpers
 
-    private func decode<T: Decodable>(_ type: T.Type, _ args: [String], _ name: String) async throws -> T {
-        let data = try await runner.run(args)
+    private func decode<T: Decodable>(_ type: T.Type,
+                                      _ args: [String],
+                                      _ name: String,
+                                      priority: CommandExecutionPriority = .userInitiated) async throws -> T {
+        let data = try await runner.run(args, stdin: nil, priority: priority)
         do {
             return try ContainerJSON.decode(type, from: data)
         } catch {

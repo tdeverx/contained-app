@@ -5,6 +5,13 @@ import Foundation
 public enum ContainerCommands {
     static let jsonFormat = ["--format", "json"]
 
+    public enum StatsFormat: String, Sendable {
+        case json
+        case table
+        case toml
+        case yaml
+    }
+
     // MARK: Containers
 
     public static func list(all: Bool) -> [String] {
@@ -13,10 +20,14 @@ public enum ContainerCommands {
         return args + jsonFormat
     }
 
-    public static func stats(ids: [String] = [], noStream: Bool = true) -> [String] {
+    public static func stats(ids: [String] = [], noStream: Bool = true, format: StatsFormat = .json) -> [String] {
         var args = ["stats"]
         if noStream { args.append("--no-stream") }
-        return args + jsonFormat + ids
+        return args + ["--format", format.rawValue] + ids
+    }
+
+    public static func statsTableStream(ids: [String] = []) -> [String] {
+        stats(ids: ids, noStream: false, format: .table)
     }
 
     public static func start(_ ids: [String]) -> [String] { ["start"] + ids }

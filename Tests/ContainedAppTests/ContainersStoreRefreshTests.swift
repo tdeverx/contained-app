@@ -3,64 +3,54 @@ import Testing
 import ContainedCore
 @testable import Contained
 
-@Suite("Container stats refresh cadence")
+@Suite("Container stats streaming")
 @MainActor
 struct ContainersStoreRefreshTests {
-    @Test func visibleStatsAreSampledNoMoreThanEveryTenSeconds() async {
+    @Test func refreshDoesNotRunStatsCommand() async {
+        let runner = RecordingRunner()
+        let store = ContainersStore()
+        store.client = ContainerClient(runner: runner)
+
+        await store.refresh()
+
+        #expect(await runner.count(firstArgument: "stats") == 0)
+        #expect(store.statsRevision == 0)
+    }
+
+    @Test func streamedStatsUpdateEveryFrameWithoutAppThrottle() async {
         let runner = RecordingRunner()
         let store = ContainersStore()
         store.client = ContainerClient(runner: runner)
         let clock = TestClock(Date(timeIntervalSinceReferenceDate: 1_000))
         store.now = { clock.date }
 
-        await store.refresh(statsDemand: .visible)
-        #expect(await runner.count(firstArgument: "stats") == 1)
-        #expect(store.statsRevision == 0)
+        await store.refresh()
 
-        await store.refresh(statsDemand: .visible)
-        #expect(await runner.count(firstArgument: "stats") == 1)
-
-        clock.advance(by: 9)
-        await store.refresh(statsDemand: .visible)
-        #expect(await runner.count(firstArgument: "stats") == 1)
-
-        clock.advance(by: 1)
-        await store.refresh(statsDemand: .visible)
-        #expect(await runner.count(firstArgument: "stats") == 2)
+        store.applyStreamedStats([Self.streamedStats(cpuCoreFraction: 0.1, networkRxBytes: 10_000)], observedAt: clock.date)
         #expect(store.statsRevision == 1)
+
+        clock.advance(by: 2)
+        store.applyStreamedStats([Self.streamedStats(cpuCoreFraction: 0.2, networkRxBytes: 11_000)], observedAt: clock.date)
+        #expect(store.statsByID["fixture-web"]?.netRxBytesPerSec == 500)
+        #expect(store.statsRevision == 2)
+
+        clock.advance(by: 2)
+        store.applyStreamedStats([Self.streamedStats(cpuCoreFraction: 0.3, networkRxBytes: 12_500)], observedAt: clock.date)
+        #expect(store.statsByID["fixture-web"]?.netRxBytesPerSec == 750)
+        #expect(store.statsRevision == 3)
+        #expect(await runner.count(firstArgument: "stats") == 0)
     }
 
-    @Test func backgroundStatsUseLongerCadence() async {
-        let runner = RecordingRunner()
-        let store = ContainersStore()
-        store.client = ContainerClient(runner: runner)
-        let clock = TestClock(Date(timeIntervalSinceReferenceDate: 2_000))
-        store.now = { clock.date }
-
-        await store.refresh(statsDemand: .background)
-        #expect(await runner.count(firstArgument: "stats") == 1)
-
-        clock.advance(by: 29)
-        await store.refresh(statsDemand: .background)
-        #expect(await runner.count(firstArgument: "stats") == 1)
-
-        clock.advance(by: 1)
-        await store.refresh(statsDemand: .background)
-        #expect(await runner.count(firstArgument: "stats") == 2)
-    }
-
-    @Test func forcedStatsBypassCadence() async {
-        let runner = RecordingRunner()
-        let store = ContainersStore()
-        store.client = ContainerClient(runner: runner)
-        let clock = TestClock(Date(timeIntervalSinceReferenceDate: 3_000))
-        store.now = { clock.date }
-
-        await store.refresh(statsDemand: .visible)
-        await store.refresh(statsDemand: .force)
-
-        #expect(await runner.count(firstArgument: "stats") == 2)
-        #expect(store.statsRevision == 1)
+    private static func streamedStats(cpuCoreFraction: Double, networkRxBytes: UInt64) -> RuntimeStatsSnapshot {
+        RuntimeStatsSnapshot(id: "fixture-web",
+                             cpuCoreFraction: cpuCoreFraction,
+                             memoryUsageBytes: 2_322_432,
+                             memoryLimitBytes: 1_073_741_824,
+                             blockReadBytes: 2_154_496,
+                             blockWriteBytes: 0,
+                             networkRxBytes: networkRxBytes,
+                             networkTxBytes: 516,
+                             numProcesses: 1)
     }
 }
 
@@ -80,7 +70,9 @@ private actor RecordingRunner: CommandRunning {
     private var calls: [[String]] = []
     private var statsRuns = 0
 
-    func run(_ arguments: [String]) async throws -> Data {
+    func run(_ arguments: [String],
+             stdin: Data?,
+             priority: CommandExecutionPriority) async throws -> Data {
         calls.append(arguments)
         switch arguments.first {
         case "list":
@@ -93,7 +85,7 @@ private actor RecordingRunner: CommandRunning {
         }
     }
 
-    nonisolated func stream(_ arguments: [String]) -> AsyncThrowingStream<String, Error> {
+    nonisolated func stream(_ arguments: [String], priority: CommandExecutionPriority) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in continuation.finish() }
     }
 

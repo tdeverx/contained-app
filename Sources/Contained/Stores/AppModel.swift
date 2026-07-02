@@ -38,6 +38,9 @@ final class AppModel {
     private(set) var diskUsage: DiskUsage?
     private(set) var cliVersion: String?
     @ObservationIgnored private var containerStatsVisible = true
+    @ObservationIgnored private var containerStatsStreamTask: Task<Void, Never>?
+    @ObservationIgnored private var containerStatsStreamIDs: [String] = []
+    @ObservationIgnored private var containerStatsStreamGeneration = 0
     @ObservationIgnored private var lastRecordedStatsRevision = 0
     @ObservationIgnored let diagnosticLogger = Logger(subsystem: "app.contained.Contained", category: "diagnostic")
 
@@ -157,7 +160,7 @@ final class AppModel {
             }
         }
 
-        await refreshSystem(statsDemand: .force)
+        await refreshSystem()
     }
 
     /// Re-run CLI/service detection (onboarding "Try again").
@@ -175,7 +178,7 @@ final class AppModel {
     /// Proceed despite an unsupported CLI version (onboarding "Continue anyway").
     func continueUnsupported() async {
         bootstrap = .checking
-        await refreshSystem(statsDemand: .force)
+        await refreshSystem()
     }
 
     func setContainerStatsVisible(_ visible: Bool) {
@@ -184,10 +187,9 @@ final class AppModel {
         if visible { coordinator.wake() }
     }
 
-    func refreshSystem(statsDemand: ContainersStore.StatsRefreshDemand? = nil) async {
+    func refreshSystem() async {
         guard let client else { return }
         let started = Date()
-        let statsDemand = statsDemand ?? currentStatsDemand
         do {
             let status = try await client.systemStatus()
             systemStatus = status
@@ -195,17 +197,20 @@ final class AppModel {
                 bootstrap = .ready
                 logger.record("Container service is running", category: .system, severity: .debug)
                 await refreshDiskUsage()        // throttled; the System panel can force a fresh read
-                await containers.refresh(statsDemand: statsDemand)
+                await containers.refresh()
+                updateContainerStatsStream()
                 // One-time: import legacy contained.* card styles into the local store, now that we
                 // no longer write personalization labels.
                 personalization.migrateLegacyLabelsIfNeeded(containers.snapshots)
             } else {
                 bootstrap = .serviceStopped
+                stopContainerStatsStream()
                 logger.record("Container service is stopped", category: .system, severity: .warning)
             }
         } catch {
             // `system status` exits non-zero when the service isn't running/registered.
             bootstrap = .serviceStopped
+            stopContainerStatsStream()
             logger.record("Couldn't read container service status: \(error.localizedDescription)",
                           category: .system,
                           severity: .error)
@@ -213,7 +218,7 @@ final class AppModel {
         let elapsed = Date().timeIntervalSince(started)
         if elapsed >= 0.75 {
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
-                                 "System refresh finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s with stats demand \(statsDemand.label, privacy: .public)")
+                                 "System refresh finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
         }
     }
 
@@ -279,13 +284,66 @@ final class AppModel {
         }
     }
 
-    private var currentStatsDemand: ContainersStore.StatsRefreshDemand {
-        containerStatsVisible ? .visible : .background
+    func refreshContainerStatsNow() async {
+        await containers.refresh()
+        updateContainerStatsStream()
+        recordFreshMetricsIfNeeded()
     }
 
-    func refreshContainerStatsNow() async {
-        await containers.refresh(statsDemand: .force)
-        recordFreshMetricsIfNeeded()
+    private func updateContainerStatsStream() {
+        guard bootstrap == .ready, let client else {
+            stopContainerStatsStream()
+            return
+        }
+        let ids = containers.running.map(\.id).sorted()
+        guard !ids.isEmpty else {
+            stopContainerStatsStream()
+            return
+        }
+        guard containerStatsStreamTask == nil || ids != containerStatsStreamIDs else { return }
+
+        stopContainerStatsStream()
+        containerStatsStreamGeneration &+= 1
+        let generation = containerStatsStreamGeneration
+        containerStatsStreamIDs = ids
+        diagnosticLogger.info("Stats stream starting for \(ids.count, privacy: .public) container(s)")
+        containerStatsStreamTask = Task(priority: .utility) { [weak self, client, ids, generation] in
+            var parser = ContainerStatsTableParser()
+            do {
+                for try await chunk in client.streamStatsTable(ids: ids) {
+                    guard !Task.isCancelled else { return }
+                    let samples = parser.append(chunk)
+                    guard !samples.isEmpty else { continue }
+                    await MainActor.run {
+                        guard let self,
+                              self.containerStatsStreamGeneration == generation else { return }
+                        self.containers.applyStreamedStats(samples)
+                        self.recordFreshMetricsIfNeeded()
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    guard let self,
+                          self.containerStatsStreamGeneration == generation else { return }
+                    self.diagnosticLogger.error("Stats stream failed: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+
+            await MainActor.run {
+                guard let self,
+                      self.containerStatsStreamGeneration == generation else { return }
+                self.containerStatsStreamTask = nil
+                self.containerStatsStreamIDs = []
+                if self.containerStatsVisible { self.coordinator.wake() }
+            }
+        }
+    }
+
+    private func stopContainerStatsStream() {
+        containerStatsStreamGeneration &+= 1
+        containerStatsStreamTask?.cancel()
+        containerStatsStreamTask = nil
+        containerStatsStreamIDs = []
     }
 
     private func recordFreshMetricsIfNeeded() {
