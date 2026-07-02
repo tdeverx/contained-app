@@ -74,33 +74,35 @@ private struct ContainerHistoryWindow: View {
                     .frame(maxWidth: .infinity, minHeight: 200)
             } else {
                 chartCard("CPU", unit: percentUnit) {
-                Chart(samples) { sample in
-                    LineMark(x: .value("Time", sample.timestamp),
-                             y: .value("CPU", historyValue(.cpu, sample) * 100))
-                    .foregroundStyle(Color.accentColor)
-                    .interpolationMethod(.monotone)
+                    Chart(samples) { sample in
+                        LineMark(x: .value("Time", sample.timestamp),
+                                 y: .value("CPU", percentHistoryValue(.cpu, sample)))
+                            .foregroundStyle(Color.accentColor)
+                            .interpolationMethod(.monotone)
+                    }
+                    .percentHistoryScale()
+                }
+                chartCard("Memory", unit: percentUnit) {
+                    Chart(samples) { sample in
+                        AreaMark(x: .value("Time", sample.timestamp),
+                                 y: .value("Memory", percentHistoryValue(.memory, sample)))
+                            .foregroundStyle(Color.accentColor.opacity(Tokens.Chart.areaOpacity))
+                    }
+                    .percentHistoryScale()
+                }
+                chartCard("Network", unit: "KB/s") {
+                    Chart(samples) { sample in
+                        LineMark(x: .value("Time", sample.timestamp),
+                                 y: .value("Rx", sample.netRxBytesPerSec / 1024),
+                                 series: .value("Dir", "Rx"))
+                            .foregroundStyle(.green)
+                        LineMark(x: .value("Time", sample.timestamp),
+                                 y: .value("Tx", sample.netTxBytesPerSec / 1024),
+                                 series: .value("Dir", "Tx"))
+                            .foregroundStyle(.orange)
+                    }
                 }
             }
-            chartCard("Memory", unit: percentUnit) {
-                Chart(samples) { sample in
-                    AreaMark(x: .value("Time", sample.timestamp),
-                             y: .value("Memory", historyValue(.memory, sample) * 100))
-                    .foregroundStyle(Color.accentColor.opacity(Tokens.Chart.areaOpacity))
-                }
-            }
-            chartCard("Network", unit: "KB/s") {
-                Chart(samples) { sample in
-                    LineMark(x: .value("Time", sample.timestamp),
-                             y: .value("Rx", sample.netRxBytesPerSec / 1024),
-                             series: .value("Dir", "Rx"))
-                    .foregroundStyle(.green)
-                    LineMark(x: .value("Time", sample.timestamp),
-                             y: .value("Tx", sample.netTxBytesPerSec / 1024),
-                             series: .value("Dir", "Tx"))
-                    .foregroundStyle(.orange)
-                }
-            }
-        }
 
             if !events.isEmpty {
                 LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
@@ -123,6 +125,7 @@ private struct ContainerHistoryWindow: View {
             chart()
                 .frame(height: Tokens.Chart.height)
                 .chartXAxis { AxisMarks(values: .automatic(desiredCount: Tokens.Chart.axisDesiredCount)) }
+                .transaction { transaction in transaction.animation = nil }
         }
     }
 
@@ -140,8 +143,28 @@ private struct ContainerHistoryWindow: View {
                      memoryFallbackBytes: memoryFallbackBytes)
     }
 
+    private func percentHistoryValue(_ metric: GraphMetric, _ sample: MetricSample) -> Double {
+        min(max(historyValue(metric, sample), 0), 1) * 100
+    }
+
     private var memoryFallbackBytes: UInt64 {
         UInt64(max(0, samples.map(\.memoryBytes).max() ?? 0))
+    }
+}
+
+private extension View {
+    func percentHistoryScale() -> some View {
+        self
+            .chartYScale(domain: 0...100)
+            .chartYAxis {
+                AxisMarks(position: .leading, values: [0, 25, 50, 75, 100]) { value in
+                    AxisGridLine()
+                    AxisTick()
+                    if let percent = value.as(Double.self) {
+                        AxisValueLabel("\(Int(percent))%")
+                    }
+                }
+            }
     }
 }
 

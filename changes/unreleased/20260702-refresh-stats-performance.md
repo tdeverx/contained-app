@@ -4,6 +4,7 @@
 - Retested always-live card sparklines on Swift Charts after reducing stats update fan-out and per-card history churn.
 - Made live sparkline data read chronologically by plotting a full-width, zero-padded window of latest contiguous samples with linear defaults, while keeping user-selectable smoothing available and preventing one noisy sample from rescaling the whole graph.
 - Anchored CPU and memory sparklines to the real 0...100% scale, while keeping network and disk widgets auto-scaled for readable throughput shapes.
+- Anchored CPU and memory history charts to the real 0...100% scale too, so different percentage levels no longer look identical because of per-window chart auto-scaling.
 - Stopped materializing every metric history array for every card frame; cards now pull only the active widget series from shared sample buffers.
 - Tightened card metric binding so each widget renders only its own per-container series instead of falling back to another graph's samples when a buffer is missing.
 - Normalized card and stats-page CPU/memory values against each container's configured CPU and memory limits while leaving network and disk throughput as raw bytes-per-second rates.

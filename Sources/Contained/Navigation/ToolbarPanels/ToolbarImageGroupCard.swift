@@ -393,7 +393,11 @@ struct ToolbarImageGroupCard: View {
         if case .push = item {} else {
             pushStartedReference = nil
         }
-        withAnimation(spring) { page = item }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            page = item
+        }
     }
 
     private func imageFooterInfo(_ status: ImageUpdateStatus) -> some View {
