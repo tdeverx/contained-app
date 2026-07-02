@@ -175,11 +175,7 @@ struct ContainerCard: View {
         } content: {
             headerTitleBlock
         } trailing: {
-            if isExpanded {
-                headerButtons(controlsReveal: controlsVisible ? 1 : 0)
-            } else {
-                EmptyView()
-            }
+            headerButtons(controlsReveal: isExpanded && controlsVisible ? 1 : 0)
         }
     }
 

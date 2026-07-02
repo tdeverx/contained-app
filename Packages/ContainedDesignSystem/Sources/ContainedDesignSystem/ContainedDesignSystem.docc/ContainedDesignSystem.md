@@ -89,6 +89,8 @@ Feature views should pass plain IDs, labels, metric strings, and actions:
 `ResourceGlassCard` owns card anatomy:
 
 - the header is always sticky and visible
+- page controls stay mounted in the header trailing slot and use `controlsReveal`
+  for visibility, avoiding text reflow during expansion
 - the body appears only when the card is expanded
 - the widget is sticky for `.large` cards and becomes body content for `.medium`
 - the footer is sticky for `.medium` and `.large` cards and becomes body content for `.small`

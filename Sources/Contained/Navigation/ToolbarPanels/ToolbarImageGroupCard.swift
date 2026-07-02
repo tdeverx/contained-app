@@ -348,18 +348,15 @@ struct ToolbarImageGroupCard: View {
                 ResourceCardSubtitleText(text: repositoryOwner(group.primaryReference))
             }
         } trailing: {
-            if isExpanded {
-                imagePageControls
-            } else {
-                EmptyView()
-            }
+            imagePageControls(controlsReveal: isExpanded ? 1 : 0)
         }
     }
 
-    private var imagePageControls: some View {
+    private func imagePageControls(controlsReveal: Double) -> some View {
         ResourceCardPageControls(items: imagePageControlItems,
                                  selection: page,
                                  tint: resolvedImageTint,
+                                 controlsReveal: controlsReveal,
                                  onSelect: selectPage,
                                  onClose: onClose)
     }

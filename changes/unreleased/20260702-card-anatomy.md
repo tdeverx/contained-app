@@ -1,2 +1,2 @@
 - Centralized resource-card anatomy in `ContainedDesignSystem`: headers stay visible, expanded bodies own density-specific embedded content, large widgets remain sticky, medium widgets move into the body, and small footers move into the body.
-- Routed remaining card widget/footer grouping through packaged card primitives, moved expanded page controls into the shared header trailing slot, and updated design-system docs with the sticky/body slot contract.
+- Routed remaining card widget/footer grouping through packaged card primitives, moved expanded page controls into the shared header trailing slot, kept that slot layout-stable during expansion, and updated design-system docs with the sticky/body slot contract.
