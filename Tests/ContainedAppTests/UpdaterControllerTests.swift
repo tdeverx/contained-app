@@ -110,6 +110,27 @@ struct UpdaterControllerTests {
         #expect(html.contains("Version-level note."))
     }
 
+    @Test func inAppReleaseNotesSkipEmptyBuildChanges() throws {
+        let changelog = """
+        # Changelog
+
+        ## [Unreleased]
+
+        ## [1.0.0] - Version Notes
+
+        ### Added
+
+        - Version-level note.
+        """
+
+        let html = try #require(ChangelogSection.releaseNotesHTML(version: "1.0.0-nightly.999+abcdef",
+                                                                  from: changelog))
+
+        #expect(!html.contains("<h2>Changes Since Last Nightly</h2>"))
+        #expect(html.contains("<h2>Full Release Notes</h2>"))
+        #expect(html.contains("Version-level note."))
+    }
+
     @Test func appBundleChangelogURLUsesContentsResources() throws {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("ContainedUpdaterTests-\(UUID().uuidString)")

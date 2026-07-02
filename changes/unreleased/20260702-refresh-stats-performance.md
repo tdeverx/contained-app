@@ -10,6 +10,7 @@
 - Added a metric normalization setting, letting users switch CPU/memory percentages between per-container limits and Apple container's machine CPU/memory resources.
 - Made scrollable and resource-sized app panels lazy by default, including container tabs, settings pages, image/tag panels, system/activity/history views, and package scaffolds that can host long content.
 - Switched singular image detail expansion to the same single-surface card path as containers, leaving morph panels for true toolbar panels instead of wrapping expanded image cards in panel chrome.
+- Kept image detail page switches inside one stable expanded card body and made Push require registry readiness plus explicit confirmation before starting the stream.
 - Warmed container/image customizer sheets from the already-rendered style state and cached local image tag grouping so opening style popovers no longer rebuilds large resource views first.
 - Deferred heavyweight expanded-card pages until their tab selection settles, avoiding transient Logs/Terminal/Stats work while users rapidly switch pages.
 - Kept lightweight History/Files expanded-card pages immediate and shortened heavyweight page deferral so page switching feels snappier without eagerly loading Logs/Terminal/Stats.
@@ -19,4 +20,5 @@
 - Hardened embedded terminal teardown so rapid card/tab switching does not leave stale `container exec --tty` children behind.
 - Coalesced image-panel appearance refreshes so page/panel navigation does not force duplicate image-list reloads while users click through the UI.
 - Reduced runtime layout churn by replacing the container grid's bound card-frame preference with coalesced frame tracking and clamping morph panel geometry before it reaches SwiftUI frames.
+- Skipped empty changelog sections in the in-app What's New parser so nightly builds do not render a blank "Changes Since Last Nightly" block before full release notes.
 - Added diagnostic timing around refresh, stats streaming/sampling, image list refreshes, and image update sweeps so future sluggishness has concrete evidence before tuning.

@@ -20,6 +20,8 @@ struct ToolbarImageGroupCard: View {
     @State private var page: ImageDetailPage = .tags
     @State private var tagTarget = ""
     @State private var tagBusy = false
+    @State private var confirmingPushReference: String?
+    @State private var pushStartedReference: String?
 
     enum ImageDetailPage: Hashable {
         case tags
@@ -28,16 +30,31 @@ struct ToolbarImageGroupCard: View {
         case push(String)
     }
 
+    private enum PushAction {
+        case push
+        case openRegistries
+        case tag
+        case none
+    }
+
+    private struct PushState {
+        var title: String
+        var message: String
+        var detail: String?
+        var symbol: String
+        var tint: Color
+        var action: PushAction
+    }
+
     private var spring: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
 
     var body: some View {
         Group {
             if isExpanded {
-                expandedContent
+                rootCard
                     .resourceCardFloatingControls(when: true) {
                         imagePageControls
                     }
-                    .morphPanelSize(size(for: page))
                     .morphPanelPlacement(.anchored)
                     .animation(spring, value: page)
             } else {
@@ -55,15 +72,14 @@ struct ToolbarImageGroupCard: View {
         } message: {
             Text("Unused images aren't referenced by any container. “All” also removes dangling layers.")
         }
-    }
-
-    @ViewBuilder
-    private var expandedContent: some View {
-        switch page {
-        case .tags:               rootCard
-        case .history(let ref):   historyPage(ref)
-        case .tag(let source):    tagPage(source)
-        case .push(let ref):      pushPage(ref)
+        .confirmationDialog("Push \(Format.shortImage(confirmingPushReference ?? ""))?",
+                            isPresented: pushConfirmationBinding,
+                            presenting: confirmingPushReference) { reference in
+            Button("Push", role: .none) {
+                pushStartedReference = reference
+            }
+        } message: { reference in
+            Text("This publishes \(Format.shortImage(reference)) to its registry. The registry may still reject the push if your account cannot write to that repository.")
         }
     }
 
@@ -82,7 +98,7 @@ struct ToolbarImageGroupCard: View {
                                  onTap: onTap) {
             cardHeader(group, image: image, style: resolved)
         } bodyContent: {
-            tagList(group)
+            imageBody(group)
         } footerLeading: {
             HStack(spacing: Tokens.ResourceCard.padding) {
                 imageFooterTagCount(group)
@@ -96,43 +112,21 @@ struct ToolbarImageGroupCard: View {
 
     // MARK: Detail sub-pages
 
-    private func size(for page: ImageDetailPage) -> CGSize {
-        switch page {
-        case .tags:    return Tokens.PanelSize.imageDetail
-        case .history: return Tokens.SheetSize.inspector
-        case .tag:     return Tokens.PanelSize.imageTag
-        case .push:    return Tokens.SheetSize.console
-        }
-    }
-
-    private func subPageScaffold<C: View>(symbol: String, title: String, subtitle: String?,
-                                          @ViewBuilder content: @escaping () -> C) -> some View {
-        ResourceGlassCard(size: .medium,
-                          isExpanded: true,
-                          showsFooter: false,
-                          elevated: false) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: symbol, tint: .accentColor)
-            } content: {
-                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
-                    ResourceCardTitleText(text: title)
-                    if let subtitle {
-                        ResourceCardMonospacedSubtitleText(text: subtitle)
-                    }
-                }
-            } trailing: {
-                EmptyView()
+    @ViewBuilder
+    private func imageBody(_ group: LocalImageTagGroup) -> some View {
+        if !isExpanded {
+            tagList(group)
+        } else {
+            switch page {
+            case .tags:
+                tagList(group)
+            case .history(let ref):
+                historyPage(ref)
+            case .tag(let source):
+                tagPage(source)
+            case .push(let ref):
+                pushPage(ref)
             }
-        } bodyContent: {
-            content()
-                .padding(Tokens.Space.s)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        } footerLeading: {
-            EmptyView()
-        } footerActions: {
-            EmptyView()
-        } widget: {
-            EmptyView()
         }
     }
 
@@ -140,13 +134,13 @@ struct ToolbarImageGroupCard: View {
         let image = group.images.first { $0.reference == reference } ?? primaryImage(group)
         let variant = image?.variants.first(where: \.isRunnable) ?? image?.variants.first
         let history = variant?.config?.history ?? []
-        return subPageScaffold(symbol: "clock.arrow.circlepath", title: "History",
-                               subtitle: Format.shortImage(reference)) {
+        return imagePageBody(title: "History", subtitle: Format.shortImage(reference)) {
             if history.isEmpty {
                 ContentUnavailableView("No history", systemImage: "clock",
                                        description: Text("This image records no layer history."))
+                    .frame(maxWidth: .infinity, minHeight: 220)
             } else {
-                ScrollView {
+                ResourceCardInsetSection {
                     LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
                         ForEach(Array(history.enumerated()), id: \.offset) { _, entry in
                             LazyVStack(alignment: .leading, spacing: Tokens.Space.xxs) {
@@ -163,46 +157,164 @@ struct ToolbarImageGroupCard: View {
                             .subtleTileBackground()
                         }
                     }
-                    .padding(Tokens.Space.s)
                 }
-                .scrollEdgeEffectStyle(.soft, for: .all)
             }
         }
     }
 
     private func tagPage(_ source: String) -> some View {
-        subPageScaffold(symbol: "tag", title: "Add tag", subtitle: Format.shortImage(source)) {
-            LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
-                PanelSection {
-                    PanelField(label: "Source") {
-                        Text(Format.shortImage(source)).foregroundStyle(.secondary)
-                    }
-                    PanelField(label: "New reference") {
-                        TextField("", text: $tagTarget, prompt: Text("e.g. myrepo/app:v1"))
-                            .textFieldStyle(.roundedBorder)
-                            .onSubmit { submitTag(source: source) }
-                    }
+        imagePageBody(title: "Add tag", subtitle: Format.shortImage(source)) {
+            ResourceCardInsetSection {
+                PanelField(label: "Source") {
+                    Text(Format.shortImage(source)).foregroundStyle(.secondary)
                 }
-                HStack {
-                    Spacer()
-                    if tagBusy { ProgressView().controlSize(.small) }
-                    Button { submitTag(source: source) } label: { Label("Add Tag", systemImage: "checkmark") }
-                        .buttonStyle(.glassProminent)
-                        .disabled(tagTarget.trimmingCharacters(in: .whitespaces).isEmpty || tagBusy)
+                PanelField(label: "New reference") {
+                    TextField("", text: $tagTarget, prompt: Text("e.g. ghcr.io/me/app:v1"))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit { submitTag(source: source) }
                 }
+            }
+            HStack {
+                Spacer()
+                if tagBusy { ProgressView().controlSize(.small) }
+                Button { submitTag(source: source) } label: { Label("Add Tag", systemImage: "checkmark") }
+                    .buttonStyle(.glassProminent)
+                    .disabled(tagTarget.trimmingCharacters(in: .whitespaces).isEmpty || tagBusy)
             }
         }
     }
 
     private func pushPage(_ reference: String) -> some View {
-        subPageScaffold(symbol: "arrow.up.circle", title: "Push image",
-                        subtitle: Format.shortImage(reference)) {
-            if let client = app.client {
+        imagePageBody(title: "Push image", subtitle: Format.shortImage(reference)) {
+            if pushStartedReference == reference, let client = app.client {
                 StreamConsole(stream: { client.streamPush(reference) })
+                    .frame(minHeight: 260)
             } else {
-                ContentUnavailableView("Runtime unavailable", systemImage: "exclamationmark.triangle")
+                pushReadiness(reference)
             }
         }
+        .task { await app.refreshRegistries() }
+    }
+
+    private func imagePageBody<C: View>(title: String, subtitle: String?,
+                                        @ViewBuilder content: @escaping () -> C) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                    ResourceCardTitleText(text: title)
+                    if let subtitle {
+                        ResourceCardMonospacedSubtitleText(text: subtitle)
+                    }
+                }
+                .padding(.horizontal, Tokens.Space.s)
+                content()
+            }
+            .padding(Tokens.Space.s)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .scrollEdgeEffectStyle(.soft, for: .all)
+    }
+
+    private func pushReadiness(_ reference: String) -> some View {
+        let readiness = pushState(for: reference)
+        return ResourceCardInsetSection {
+            HStack(alignment: .top, spacing: Tokens.Space.s) {
+                Image(systemName: readiness.symbol)
+                    .font(.title3)
+                    .foregroundStyle(readiness.tint)
+                    .frame(width: Tokens.IconSize.rowIconColumn)
+                VStack(alignment: .leading, spacing: Tokens.Space.xs) {
+                    Text(readiness.title)
+                        .font(.headline)
+                    Text(readiness.message)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    if let detail = readiness.detail {
+                        Text(detail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: Tokens.Space.s)
+            }
+            HStack {
+                Spacer()
+                switch readiness.action {
+                case .push:
+                    Button {
+                        confirmingPushReference = reference
+                    } label: {
+                        Label("Push", systemImage: "arrow.up.circle")
+                    }
+                    .buttonStyle(.glassProminent)
+                    .disabled(app.client == nil)
+                case .openRegistries:
+                    Button {
+                        onClose()
+                        ui.openSettings(to: .registries)
+                    } label: {
+                        Label("Open Registries", systemImage: "key")
+                    }
+                case .tag:
+                    Button {
+                        withAnimation(spring) { page = .tag(reference) }
+                    } label: {
+                        Label("Add Tag", systemImage: "tag")
+                    }
+                case .none:
+                    EmptyView()
+                }
+            }
+        }
+    }
+
+    private func pushState(for reference: String) -> PushState {
+        guard app.client != nil else {
+            return PushState(title: "Runtime unavailable",
+                             message: "Start the container service before pushing images.",
+                             detail: nil,
+                             symbol: "exclamationmark.triangle",
+                             tint: .orange,
+                             action: .none)
+        }
+
+        let parsed = RegistryImageReference.parse(reference)
+        let registry = displayRegistry(parsed.registry)
+
+        guard !parsed.isDigestReference else {
+            return PushState(title: "Tag required",
+                             message: "Digest references cannot be pushed directly.",
+                             detail: "Add a writable tag such as ghcr.io/me/app:v1, then push that tag.",
+                             symbol: "tag",
+                             tint: .orange,
+                             action: .tag)
+        }
+
+        if normalizedRegistryHost(parsed.registry) == "docker.io",
+           parsed.repository.hasPrefix("library/") {
+            return PushState(title: "Writable namespace required",
+                             message: "This tag points at Docker Hub's library namespace.",
+                             detail: "Add a tag under a namespace you control before pushing.",
+                             symbol: "tag",
+                             tint: .orange,
+                             action: .tag)
+        }
+
+        guard let login = matchingRegistryLogin(for: parsed.registry) else {
+            return PushState(title: "Registry sign-in required",
+                             message: "Sign in to \(registry) before pushing this image.",
+                             detail: "Contained checks for a saved container registry login before starting a push.",
+                             symbol: "key",
+                             tint: .orange,
+                             action: .openRegistries)
+        }
+
+        return PushState(title: "Ready to push",
+                         message: "Signed in to \(registry)\(login.username.map { " as \($0)" } ?? "").",
+                         detail: "The registry will still enforce write permission for \(parsed.repository).",
+                         symbol: "checkmark.circle.fill",
+                         tint: .green,
+                         action: .push)
     }
 
     private func submitTag(source: String) {
@@ -277,6 +389,9 @@ struct ToolbarImageGroupCard: View {
 
     private func selectPage(_ item: ImageDetailPage) {
         guard page != item else { return }
+        if case .push = item {} else {
+            pushStartedReference = nil
+        }
         withAnimation(spring) { page = item }
     }
 
@@ -487,6 +602,37 @@ struct ToolbarImageGroupCard: View {
 
     private var deletingBinding: Binding<Bool> {
         Binding(get: { deletingReference != nil }, set: { if !$0 { deletingReference = nil } })
+    }
+
+    private var pushConfirmationBinding: Binding<Bool> {
+        Binding(get: { confirmingPushReference != nil },
+                set: { if !$0 { confirmingPushReference = nil } })
+    }
+
+    private func matchingRegistryLogin(for registry: String) -> RegistryLogin? {
+        let normalized = normalizedRegistryHost(registry)
+        return app.registries.first { normalizedRegistryHost($0.host) == normalized }
+    }
+
+    private func normalizedRegistryHost(_ host: String) -> String {
+        var value = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if let url = URL(string: value), let urlHost = url.host {
+            value = urlHost
+        }
+        value = value
+            .replacingOccurrences(of: "https://", with: "")
+            .replacingOccurrences(of: "http://", with: "")
+        value = String(value.split(separator: "/").first ?? Substring(value))
+        switch value {
+        case "registry-1.docker.io", "index.docker.io", "docker.io":
+            return "docker.io"
+        default:
+            return value
+        }
+    }
+
+    private func displayRegistry(_ registry: String) -> String {
+        normalizedRegistryHost(registry) == "docker.io" ? "docker.io" : registry
     }
 
     private func delete(_ reference: String) async {
