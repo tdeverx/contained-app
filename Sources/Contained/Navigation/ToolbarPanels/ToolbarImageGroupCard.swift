@@ -52,9 +52,6 @@ struct ToolbarImageGroupCard: View {
         Group {
             if isExpanded {
                 rootCard
-                    .resourceCardFloatingControls(when: true) {
-                        imagePageControls
-                    }
                     .morphPanelPlacement(.anchored)
                     .animation(spring, value: page)
             } else {
@@ -353,7 +350,11 @@ struct ToolbarImageGroupCard: View {
                 ResourceCardSubtitleText(text: repositoryOwner(group.primaryReference))
             }
         } trailing: {
-            EmptyView()
+            if isExpanded {
+                imagePageControls
+            } else {
+                EmptyView()
+            }
         }
     }
 
