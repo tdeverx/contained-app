@@ -15,8 +15,9 @@ models, or feature-specific business rules here. Convert app/domain state into
 plain values before passing it to package views.
 
 The executable app owns localization. Package controls that need visible text,
-help, accessibility labels, or display names take those strings from the caller
-instead of shipping English defaults or localized resources here.
+help, accessibility labels, display names, or error/failure messages take those
+strings from the caller instead of shipping English defaults or localized
+resources here.
 
 ## Configure Shared Policy Once
 

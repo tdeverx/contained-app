@@ -37,6 +37,7 @@ struct BuildWorkspaceView: View {
                 completedLabel: AppText.completed,
                 lineCountLabel: AppText.lineCount,
                 copyLogHelp: AppText.copyLog,
+                failureLabel: AppErrorPresentation.message,
                 onComplete: { ok in if ok { Task { await app.refreshImagesIfStale(force: true) } } })
                 .id(run)
                 .padding(Tokens.Space.s)

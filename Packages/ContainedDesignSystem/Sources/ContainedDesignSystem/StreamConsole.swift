@@ -9,6 +9,7 @@ public struct StreamConsole: View {
     public var completedLabel: String
     public var lineCountLabel: (Int) -> String
     public var copyLogHelp: String
+    public var failureLabel: (Error) -> String
     public var onComplete: (Bool) -> Void = { _ in }
 
     enum RunState: Equatable { case running, done, failed(String) }
@@ -24,12 +25,14 @@ public struct StreamConsole: View {
                 completedLabel: String,
                 lineCountLabel: @escaping (Int) -> String,
                 copyLogHelp: String,
+                failureLabel: @escaping (Error) -> String,
                 onComplete: @escaping (Bool) -> Void = { _ in }) {
         self.stream = stream
         self.workingLabel = workingLabel
         self.completedLabel = completedLabel
         self.lineCountLabel = lineCountLabel
         self.copyLogHelp = copyLogHelp
+        self.failureLabel = failureLabel
         self.onComplete = onComplete
     }
 
@@ -96,7 +99,7 @@ public struct StreamConsole: View {
             // View dismissed mid-stream; nothing to report.
         } catch {
             if !carry.isEmpty { lines.append(carry); carry = "" }
-            state = .failed(error.localizedDescription)
+            state = .failed(failureLabel(error))
             onComplete(false)
         }
     }

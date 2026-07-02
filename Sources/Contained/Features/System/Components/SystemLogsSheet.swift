@@ -27,7 +27,8 @@ struct SystemLogsSheet: View {
                               workingLabel: AppText.working,
                               completedLabel: AppText.completed,
                               lineCountLabel: AppText.lineCount,
-                              copyLogHelp: AppText.copyLog)
+                              copyLogHelp: AppText.copyLog,
+                              failureLabel: AppErrorPresentation.message)
                     .id(session)
                     .padding(.horizontal, Tokens.Space.s)
                     .padding(.bottom, Tokens.Space.s)
