@@ -124,38 +124,48 @@ struct ToolbarTemplatesPanel: View {
     }
 
     private var emptyCard: some View {
-        ResourceGlassCard(size: .small, elevated: false) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: "bookmark",
-                                     tint: .secondary,
-                                     backgroundOpacity: Tokens.ResourceCard.iconEmphasisBackgroundOpacity)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardTitleText(text: "No templates")
-                } subtitle: {
-                    ResourceCardSubtitleText(text: "Save a container's settings as a template from the create form.")
-                }
-            } trailing: {
-                EmptyView()
-            }
+        ResourceCard(size: .small,
+                     elevated: false,
+                     title: "No templates",
+                     subtitle: "Save a container's settings as a template from the create form.") {
+            ResourceCardIconChip(symbol: "bookmark",
+                                 tint: .secondary,
+                                 backgroundOpacity: Tokens.ResourceCard.iconEmphasisBackgroundOpacity)
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            EmptyView()
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            EmptyView()
+        } footerActions: {
+            EmptyView()
+        } widget: {
+            EmptyView()
         }
     }
 
     private func templateCard(_ template: Template) -> some View {
-        ResourceGlassCard(size: .medium, elevated: false, onTap: { use(template) }) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: "bookmark.fill", tint: .accentColor)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardTitleText(text: template.name)
-                } subtitle: {
-                    ResourceCardMonospacedSubtitleText(text: Format.shortImage(template.spec?.image ?? "—"))
-                }
-            } trailing: {
-                // Chevron affordance: tapping the card hands off to the create morph (parity with the
-                // image cards that grow into the morph detail).
-                GlassListRowChevron()
-            }
+        ResourceCard(size: .medium,
+                     elevated: false,
+                     onTap: { use(template) },
+                     title: template.name,
+                     subtitle: Format.shortImage(template.spec?.image ?? "—"),
+                     subtitleStyle: .monospaced) {
+            ResourceCardIconChip(symbol: "bookmark.fill", tint: .accentColor)
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            // Chevron affordance: tapping the card hands off to the create morph (parity with the
+            // image cards that grow into the morph detail).
+            GlassListRowChevron()
+        } bodyContent: {
+            EmptyView()
         } footerLeading: {
             ResourceCardFooterMini {
                 Image(systemName: "bookmark").font(.caption2)
@@ -175,6 +185,8 @@ struct ToolbarTemplatesPanel: View {
             .help("Delete")
             .accessibilityLabel("Delete")
             Button("Use") { use(template) }.buttonStyle(.glassProminent).controlSize(.small)
+        } widget: {
+            EmptyView()
         }
         .contextMenu {
             Button { use(template) } label: { Label("Use", systemImage: "plus.circle") }

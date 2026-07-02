@@ -152,22 +152,28 @@ struct RegistryImageSearch: View {
                                              subtitle: String?,
                                              action: @escaping () -> Void,
                                              @ViewBuilder accessory: @escaping () -> Accessory) -> some View {
-        ResourceGlassCard(size: .small, elevated: false, onTap: action) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: symbol, tint: .accentColor)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardTitleText(text: title)
-                } subtitle: {
-                    if let subtitle, !subtitle.isEmpty {
-                        ResourceCardSubtitleText(text: subtitle)
-                    }
-                }
-            } trailing: {
-                accessory()
-            }
-            .contentShape(Rectangle())
+        ResourceCard(size: .small,
+                     elevated: false,
+                     onTap: action,
+                     title: title,
+                     subtitle: subtitle) {
+            ResourceCardIconChip(symbol: symbol, tint: .accentColor)
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            accessory()
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            EmptyView()
+        } footerActions: {
+            EmptyView()
+        } widget: {
+            EmptyView()
         }
+        .contentShape(Rectangle())
     }
 
     // MARK: Search plumbing

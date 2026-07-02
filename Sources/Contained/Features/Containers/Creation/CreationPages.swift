@@ -247,18 +247,25 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
 
     var body: some View {
         LazyVStack(spacing: Tokens.Space.m) {
-            ResourceGlassCard(size: .small, elevated: false) {
-                ResourceCardHeader {
-                    ResourceCardIconChip(symbol: symbol, tint: .accentColor)
-                } content: {
-                    ResourceCardHeaderTextBlock {
-                        ResourceCardTitleText(text: title)
-                    } subtitle: {
-                        ResourceCardSubtitleText(text: subtitle)
-                    }
-                } trailing: {
-                    ResourceBadgeText(text: "new", font: .caption2.weight(.semibold))
-                }
+            ResourceCard(size: .small,
+                         elevated: false,
+                         title: title,
+                         subtitle: subtitle) {
+                ResourceCardIconChip(symbol: symbol, tint: .accentColor)
+            } titleAccessory: {
+                EmptyView()
+            } subtitleAccessory: {
+                EmptyView()
+            } headerAccessory: {
+                ResourceBadgeText(text: "new", font: .caption2.weight(.semibold))
+            } bodyContent: {
+                EmptyView()
+            } footerLeading: {
+                EmptyView()
+            } footerActions: {
+                EmptyView()
+            } widget: {
+                EmptyView()
             }
 
             fields()
@@ -296,21 +303,28 @@ private struct CreationChoiceCard: View {
     var action: () -> Void
 
     var body: some View {
-        ResourceGlassCard(size: .small, elevated: false, onTap: action) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: symbol, tint: .accentColor)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardTitleText(text: title)
-                } subtitle: {
-                    if let subtitle, !subtitle.isEmpty {
-                        ResourceCardMonospacedSubtitleText(text: subtitle)
-                    }
-                }
-            } trailing: {
-                GlassListRowChevron()
-            }
-            .contentShape(Rectangle())
+        ResourceCard(size: .small,
+                     elevated: false,
+                     onTap: action,
+                     title: title,
+                     subtitle: subtitle,
+                     subtitleStyle: .monospaced) {
+            ResourceCardIconChip(symbol: symbol, tint: .accentColor)
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            GlassListRowChevron()
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            EmptyView()
+        } footerActions: {
+            EmptyView()
+        } widget: {
+            EmptyView()
         }
+        .contentShape(Rectangle())
     }
 }

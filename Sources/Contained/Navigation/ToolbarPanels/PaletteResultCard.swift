@@ -37,37 +37,34 @@ struct PaletteResultCard: View {
     }
 
     private var plainCard: some View {
-        ResourceGlassCard(size: .small,
-                          isSelected: selected,
-                          fill: nil,
-                          fillOpacity: selected ? Tokens.ResourceCard.selectedSubtleFillOpacity : Tokens.ResourceCard.plainFillOpacity,
-                          elevated: false,
-                          onTap: action) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: item.icon,
-                                     tint: item.tint,
-                                     backgroundOpacity: selected
-                                         ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
-                                         : Tokens.ResourceCard.iconBackgroundOpacity)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    HStack(spacing: Tokens.Space.s) {
-                        ResourceCardTitleText(text: item.title)
-                        ResourceBadgeText(text: item.kind.rawValue,
-                                          font: .caption2.weight(.semibold),
-                                          foreground: selected ? .accentColor : .secondary)
-                    }
-                } subtitle: {
-                    if let subtitle = item.subtitle, !subtitle.isEmpty {
-                        ResourceCardSubtitleText(text: subtitle)
-                    }
-                }
-            } trailing: {
-                accessory
-            }
+        ResourceCard(size: .small,
+                     isSelected: selected,
+                     fill: nil,
+                     fillOpacity: selected ? Tokens.ResourceCard.selectedSubtleFillOpacity : Tokens.ResourceCard.plainFillOpacity,
+                     elevated: false,
+                     onTap: action,
+                     title: item.title,
+                     subtitle: item.subtitle) {
+            ResourceCardIconChip(symbol: item.icon,
+                                 tint: item.tint,
+                                 backgroundOpacity: selected
+                                     ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
+                                     : Tokens.ResourceCard.iconBackgroundOpacity)
+        } titleAccessory: {
+            ResourceBadgeText(text: item.kind.rawValue,
+                              font: .caption2.weight(.semibold),
+                              foreground: selected ? .accentColor : .secondary)
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            accessory
+        } bodyContent: {
+            EmptyView()
         } footerLeading: {
             EmptyView()
         } footerActions: {
+            EmptyView()
+        } widget: {
             EmptyView()
         }
         .selectionFill()
@@ -78,35 +75,31 @@ struct PaletteResultCard: View {
         let style = app.containerStyle(for: snapshot)
         let name = style.displayName(fallback: snapshot.id)
         let cardSize: ResourceCardSize = snapshot.state == .running ? .large : .medium
-        return ResourceGlassCard(size: cardSize,
-                                 isSelected: selected,
-                                 fill: style.fillBackground ? style.color : nil,
-                                 fillOpacity: selected ? Tokens.ResourceCard.selectedPersonalizedFillOpacity : style.backgroundOpacity,
-                                 gradient: style.gradient,
-                                 gradientAngle: style.gradientAngle,
-                                 blendMode: style.backgroundBlendMode,
-                                 elevated: false,
-                                 onTap: action) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: style.symbol,
-                                     tint: style.color,
-                                     backgroundOpacity: selected
-                                         ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
-                                         : Tokens.ResourceCard.iconBackgroundOpacity)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    HStack(spacing: Tokens.Space.s) {
-                        ResourceCardTitleText(text: name)
-                        ResourceBadgeText(text: snapshot.state.rawValue.capitalized,
-                                          font: .caption2.weight(.semibold),
-                                          foreground: snapshot.state == .running ? .green : .secondary)
-                    }
-                } subtitle: {
-                    ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
-                }
-            } trailing: {
-                EmptyView()
-            }
+        return ResourceCard(size: cardSize,
+                            isSelected: selected,
+                            fill: style.fillBackground ? style.color : nil,
+                            fillOpacity: selected ? Tokens.ResourceCard.selectedPersonalizedFillOpacity : style.backgroundOpacity,
+                            gradient: style.gradient,
+                            gradientAngle: style.gradientAngle,
+                            blendMode: style.backgroundBlendMode,
+                            elevated: false,
+                            onTap: action,
+                            title: name,
+                            subtitle: Format.shortImage(snapshot.image),
+                            subtitleStyle: .monospaced) {
+            ResourceCardIconChip(symbol: style.symbol,
+                                 tint: style.color,
+                                 backgroundOpacity: selected
+                                     ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
+                                     : Tokens.ResourceCard.iconBackgroundOpacity)
+        } titleAccessory: {
+            ResourceBadgeText(text: snapshot.state.rawValue.capitalized,
+                              font: .caption2.weight(.semibold),
+                              foreground: snapshot.state == .running ? .green : .secondary)
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            EmptyView()
         } bodyContent: {
             EmptyView()
         } footerLeading: {
@@ -130,33 +123,31 @@ struct PaletteResultCard: View {
 
     private func imageTagCard(_ reference: String, groupID: String) -> some View {
         let style = app.imageGroupStyle(forID: groupID)
-        return ResourceGlassCard(size: .medium,
-                                 isSelected: selected,
-                                 fill: style.fillBackground ? style.color : nil,
-                                 fillOpacity: selected ? Tokens.ResourceCard.selectedPersonalizedFillOpacity : style.backgroundOpacity,
-                                 gradient: style.gradient,
-                                 gradientAngle: style.gradientAngle,
-                                 blendMode: style.backgroundBlendMode,
-                                 elevated: false,
-                                 onTap: action) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: "tag",
-                                     tint: style.color,
-                                     backgroundOpacity: selected
-                                         ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
-                                         : Tokens.ResourceCard.iconBackgroundOpacity)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    HStack(spacing: Tokens.Space.s) {
-                        ResourceCardMonospacedTitleText(text: Format.shortImage(reference))
-                        ResourceBadgeText(text: "Tag", font: .caption2.weight(.semibold))
-                    }
-                } subtitle: {
-                    ResourceCardSubtitleText(text: repositoryTitle(reference))
-                }
-            } trailing: {
-                EmptyView()
-            }
+        return ResourceCard(size: .medium,
+                            isSelected: selected,
+                            fill: style.fillBackground ? style.color : nil,
+                            fillOpacity: selected ? Tokens.ResourceCard.selectedPersonalizedFillOpacity : style.backgroundOpacity,
+                            gradient: style.gradient,
+                            gradientAngle: style.gradientAngle,
+                            blendMode: style.backgroundBlendMode,
+                            elevated: false,
+                            onTap: action,
+                            title: Format.shortImage(reference),
+                            subtitle: repositoryTitle(reference),
+                            titleStyle: .monospaced) {
+            ResourceCardIconChip(symbol: "tag",
+                                 tint: style.color,
+                                 backgroundOpacity: selected
+                                     ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
+                                     : Tokens.ResourceCard.iconBackgroundOpacity)
+        } titleAccessory: {
+            ResourceBadgeText(text: "Tag", font: .caption2.weight(.semibold))
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            EmptyView()
+        } bodyContent: {
+            EmptyView()
         } footerLeading: {
             ResourceCardFooterMini {
                 Image(systemName: style.symbol)
@@ -168,64 +159,72 @@ struct PaletteResultCard: View {
             }
         } footerActions: {
             accessory
+        } widget: {
+            EmptyView()
         }
         .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func resourceCard(symbol: String, title: String, subtitle: String, footer: String) -> some View {
-        ResourceGlassCard(size: .small,
-                          isSelected: selected,
-                          fill: nil,
-                          fillOpacity: selected ? Tokens.ResourceCard.selectedResourceFillOpacity : Tokens.ResourceCard.plainFillOpacity,
-                          elevated: false,
-                          onTap: action) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: symbol,
-                                     tint: item.tint,
-                                     backgroundOpacity: selected
-                                         ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
-                                         : Tokens.ResourceCard.iconBackgroundOpacity)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    HStack(spacing: Tokens.Space.s) {
-                        ResourceCardTitleText(text: title)
-                        ResourceBadgeText(text: subtitle, font: .caption2.weight(.semibold))
-                    }
-                } subtitle: {
-                    ResourceCardSubtitleText(text: footer)
-                }
-            } trailing: {
-                accessory
-            }
+        ResourceCard(size: .small,
+                     isSelected: selected,
+                     fill: nil,
+                     fillOpacity: selected ? Tokens.ResourceCard.selectedResourceFillOpacity : Tokens.ResourceCard.plainFillOpacity,
+                     elevated: false,
+                     onTap: action,
+                     title: title,
+                     subtitle: footer) {
+            ResourceCardIconChip(symbol: symbol,
+                                 tint: item.tint,
+                                 backgroundOpacity: selected
+                                     ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
+                                     : Tokens.ResourceCard.iconBackgroundOpacity)
+        } titleAccessory: {
+            ResourceBadgeText(text: subtitle, font: .caption2.weight(.semibold))
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            accessory
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            EmptyView()
+        } footerActions: {
+            EmptyView()
+        } widget: {
+            EmptyView()
         }
         .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func tintCard(_ tint: AppTint) -> some View {
-        ResourceGlassCard(size: .small,
-                          isSelected: selected,
-                          fill: tint.color,
-                          fillOpacity: selected ? Tokens.ResourceCard.selectedTintFillOpacity : Tokens.ResourceCard.selectedSubtleFillOpacity,
-                          elevated: false,
-                          onTap: action) {
-            ResourceCardHeader {
-                DesignTintSwatch(color: tint.color, followsAppAccent: tint.followsAppAccent)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    HStack(spacing: Tokens.Space.s) {
-                        ResourceCardTitleText(text: tint.displayName)
-                        ResourceBadgeText(text: app.settings.accentTint == tint ? "Current" : "Tint",
-                                          font: .caption2.weight(.semibold),
-                                          foreground: app.settings.accentTint == tint ? .accentColor : .secondary)
-                    }
-                } subtitle: {
-                    ResourceCardSubtitleText(text: item.title)
-                }
-            } trailing: {
-                accessory
-            }
+        ResourceCard(size: .small,
+                     isSelected: selected,
+                     fill: tint.color,
+                     fillOpacity: selected ? Tokens.ResourceCard.selectedTintFillOpacity : Tokens.ResourceCard.selectedSubtleFillOpacity,
+                     elevated: false,
+                     onTap: action,
+                     title: tint.displayName,
+                     subtitle: item.title) {
+            DesignTintSwatch(color: tint.color, followsAppAccent: tint.followsAppAccent)
+        } titleAccessory: {
+            ResourceBadgeText(text: app.settings.accentTint == tint ? "Current" : "Tint",
+                              font: .caption2.weight(.semibold),
+                              foreground: app.settings.accentTint == tint ? .accentColor : .secondary)
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            accessory
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            EmptyView()
+        } footerActions: {
+            EmptyView()
+        } widget: {
+            EmptyView()
         }
         .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])

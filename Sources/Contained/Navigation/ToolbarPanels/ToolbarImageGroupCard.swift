@@ -84,16 +84,31 @@ struct ToolbarImageGroupCard: View {
         let image = primaryImage(group)
         let status = app.imageUpdateStatus(for: group.primaryReference)
         let resolved = app.imageGroupStyle(for: group)
-        return ResourceGlassCard(size: .medium,
-                                 isExpanded: isExpanded,
-                                 fill: resolved.fillBackground ? resolved.color : nil,
-                                 fillOpacity: resolved.backgroundOpacity,
-                                 gradient: resolved.gradient,
-                                 gradientAngle: resolved.gradientAngle,
-                                 blendMode: resolved.backgroundBlendMode,
-                                 elevated: false,
-                                 onTap: onTap) {
-            cardHeader(group, image: image, style: resolved)
+        return ResourceCard(size: .medium,
+                            isExpanded: isExpanded,
+                            fill: resolved.fillBackground ? resolved.color : nil,
+                            fillOpacity: resolved.backgroundOpacity,
+                            gradient: resolved.gradient,
+                            gradientAngle: resolved.gradientAngle,
+                            blendMode: resolved.backgroundBlendMode,
+                            elevated: false,
+                            onTap: onTap,
+                            title: repositoryTitle(group.primaryReference),
+                            subtitle: repositoryOwner(group.primaryReference),
+                            pages: imagePages) {
+            if let image {
+                ImageStyleButton(reference: image.reference,
+                                 style: resolved,
+                                 target: .imageGroup(id: group.id, reference: group.primaryReference))
+            } else {
+                imageChip(resolved)
+            }
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            EmptyView()
         } bodyContent: {
             imageBody(group)
         } footerLeading: {
@@ -101,6 +116,8 @@ struct ToolbarImageGroupCard: View {
             imageFooterInfo(status)
         } footerActions: {
             imageFooterActions(group)
+        } widget: {
+            EmptyView()
         }
         .contextMenu { cardMenu(group) }
     }
@@ -332,36 +349,6 @@ struct ToolbarImageGroupCard: View {
         }
     }
 
-    private func cardHeader(_ group: LocalImageTagGroup, image: ContainedCore.ImageResource?,
-                            style: Personalization) -> some View {
-        ResourceCardHeader {
-            if let image {
-                ImageStyleButton(reference: image.reference,
-                                 style: style,
-                                 target: .imageGroup(id: group.id, reference: group.primaryReference))
-            } else {
-                imageChip(style)
-            }
-        } content: {
-            ResourceCardHeaderTextBlock {
-                ResourceCardTitleText(text: repositoryTitle(group.primaryReference))
-            } subtitle: {
-                ResourceCardSubtitleText(text: repositoryOwner(group.primaryReference))
-            }
-        } trailing: {
-            imagePageControls(controlsReveal: isExpanded ? 1 : 0)
-        }
-    }
-
-    private func imagePageControls(controlsReveal: Double) -> some View {
-        ResourceCardPageControls(items: imagePageControlItems,
-                                 selection: page,
-                                 tint: resolvedImageTint,
-                                 controlsReveal: controlsReveal,
-                                 onSelect: selectPage,
-                                 onClose: onClose)
-    }
-
     private var imagePageControlItems: [ResourceCardPageControlItem<ImageDetailPage>] {
         let reference = primaryImage(group)?.reference ?? group.primaryReference
         return [
@@ -378,6 +365,15 @@ struct ToolbarImageGroupCard: View {
                                         title: "Push",
                                         systemImage: "arrow.up.circle")
         ]
+    }
+
+    private var imagePages: ResourceCardPages<ImageDetailPage> {
+        ResourceCardPages(items: imagePageControlItems,
+                          selection: page,
+                          tint: resolvedImageTint,
+                          controlsReveal: isExpanded ? 1 : 0,
+                          onSelect: selectPage,
+                          onClose: onClose)
     }
 
     private var resolvedImageTint: Color {
@@ -456,26 +452,27 @@ struct ToolbarImageGroupCard: View {
 
     private func tagRow(_ reference: String, in group: LocalImageTagGroup) -> some View {
         let style = app.imageStyle(for: reference)
-        return ResourceGlassCard(size: .medium,
-                                 fill: style.fillBackground ? style.color : nil,
-                                 fillOpacity: style.backgroundOpacity,
-                                 gradient: style.gradient,
-                                 gradientAngle: style.gradientAngle,
-                                 blendMode: style.backgroundBlendMode,
-                                 elevated: false) {
-            ResourceCardHeader {
-                ImageStyleButton(reference: reference,
-                                 style: style,
-                                 target: .imageTag(reference: reference, groupID: group.id))
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardMonospacedTitleText(text: Format.shortImage(reference))
-                } subtitle: {
-                    ResourceCardSubtitleText(text: repositoryName(reference))
-                }
-            } trailing: {
-                EmptyView()
-            }
+        return ResourceCard(size: .medium,
+                            fill: style.fillBackground ? style.color : nil,
+                            fillOpacity: style.backgroundOpacity,
+                            gradient: style.gradient,
+                            gradientAngle: style.gradientAngle,
+                            blendMode: style.backgroundBlendMode,
+                            elevated: false,
+                            title: Format.shortImage(reference),
+                            subtitle: repositoryName(reference),
+                            titleStyle: .monospaced) {
+            ImageStyleButton(reference: reference,
+                             style: style,
+                             target: .imageTag(reference: reference, groupID: group.id))
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            EmptyView()
+        } bodyContent: {
+            EmptyView()
         } footerLeading: {
             ResourceCardFooterMini {
                 Image(systemName: "tag").font(.caption2)
@@ -489,6 +486,8 @@ struct ToolbarImageGroupCard: View {
             }
             footerAction("doc.on.doc", help: "Copy reference") { copyToPasteboard(reference) }
             footerAction("trash", help: "Delete tag", role: .destructive) { deletingReference = reference }
+        } widget: {
+            EmptyView()
         }
         .contextMenu { tagMenu(reference, in: group) }
     }

@@ -212,30 +212,33 @@ struct EventRow: View {
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
-        ResourceGlassCard(size: .small,
-                          isSelected: isUnread,
-                          elevated: elevated) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: event.kind.symbol,
-                                     tint: event.kind.tint,
-                                     backgroundOpacity: Tokens.ResourceCard.iconEmphasisBackgroundOpacity)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardTitleText(text: event.message)
-                } subtitle: {
-                    HStack(spacing: Tokens.Space.xs) {
-                        ResourceBadgeText(text: event.kind.rawValue.capitalized)
-                        ResourceCardSubtitleText(text: subtitle)
-                    }
-                }
-            } trailing: {
-                if isUnread {
-                    DesignStatusDot(color: .accentColor)
-                        .accessibilityLabel("Unread")
-                } else {
-                    EmptyView()
-                }
+        ResourceCard(size: .small,
+                     isSelected: isUnread,
+                     elevated: elevated,
+                     title: event.message,
+                     subtitle: subtitle) {
+            ResourceCardIconChip(symbol: event.kind.symbol,
+                                 tint: event.kind.tint,
+                                 backgroundOpacity: Tokens.ResourceCard.iconEmphasisBackgroundOpacity)
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            ResourceBadgeText(text: event.kind.rawValue.capitalized)
+        } headerAccessory: {
+            if isUnread {
+                DesignStatusDot(color: .accentColor)
+                    .accessibilityLabel("Unread")
+            } else {
+                EmptyView()
             }
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            EmptyView()
+        } footerActions: {
+            EmptyView()
+        } widget: {
+            EmptyView()
         }
         .selectionFill()
         .contextMenu { rowMenu }

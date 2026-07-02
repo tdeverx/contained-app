@@ -97,18 +97,25 @@ struct ToolbarUpdatesPanel: View {
     }
 
     private var emptyCard: some View {
-        ResourceGlassCard(size: .small, elevated: false) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: "checkmark.circle.fill", tint: .green)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardTitleText(text: "No images")
-                } subtitle: {
-                    ResourceCardSubtitleText(text: "Pull or build an image to see it here")
-                }
-            } trailing: {
-                EmptyView()
-            }
+        ResourceCard(size: .small,
+                     elevated: false,
+                     title: "No images",
+                     subtitle: "Pull or build an image to see it here") {
+            ResourceCardIconChip(symbol: "checkmark.circle.fill", tint: .green)
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            EmptyView()
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            EmptyView()
+        } footerActions: {
+            EmptyView()
+        } widget: {
+            EmptyView()
         }
     }
 

@@ -58,19 +58,26 @@ struct DesignSystemExample: View {
                     }
                 }
 
-                ResourceGlassCard(size: .small, elevated: false) {
-                    ResourceCardHeader {
-                        ResourceCardIconChip(symbol: "shippingbox.fill",
-                                             tint: tint.color)
-                    } content: {
-                        ResourceCardHeaderTextBlock {
-                            ResourceCardTitleText(text: "web")
-                        } subtitle: {
-                            ResourceCardSubtitleText(text: "nginx:latest")
-                        }
-                    } trailing: {
-                        GlassListRowChevron()
-                    }
+                ResourceCard(size: .small,
+                             elevated: false,
+                             title: "web",
+                             subtitle: "nginx:latest") {
+                    ResourceCardIconChip(symbol: "shippingbox.fill",
+                                         tint: tint.color)
+                } titleAccessory: {
+                    EmptyView()
+                } subtitleAccessory: {
+                    EmptyView()
+                } headerAccessory: {
+                    GlassListRowChevron()
+                } bodyContent: {
+                    EmptyView()
+                } footerLeading: {
+                    EmptyView()
+                } footerActions: {
+                    EmptyView()
+                } widget: {
+                    EmptyView()
                 }
                 .selectionFill()
             }
@@ -83,14 +90,15 @@ struct DesignSystemExample: View {
 
 ## Resource Card Controls
 
-Use the packaged card controls for page rails, widget chips, and icon actions.
-Feature views should pass plain IDs, labels, metric strings, and actions:
+Use `ResourceCard` for cards. Feature views pass plain titles, subtitles, page
+IDs, labels, metric strings, and actions; the package owns header/body/widget/footer
+placement:
 
-`ResourceGlassCard` owns card anatomy:
+`ResourceCard` owns card anatomy:
 
 - the header is always sticky and visible
-- page controls stay mounted in the header trailing slot and use `controlsReveal`
-  for visibility, avoiding text reflow during expansion
+- page controls are declared through `ResourceCardPages`, stay mounted in the
+  header trailing slot, and use `controlsReveal` for visibility
 - the body appears only when the card is expanded
 - the widget is sticky for `.large` cards and becomes body content for `.medium`
 - the footer is sticky for `.medium` and `.large` cards and becomes body content for `.small`
@@ -110,20 +118,21 @@ struct CardControlsExample: View {
     ]
 
     var body: some View {
-        ResourceGlassCard(size: .large) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: "shippingbox.fill")
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardTitleText(text: "web")
-                }
-            } trailing: {
-                ResourceCardPageControls(items: pages,
-                                         selection: page,
-                                         tint: .accentColor,
-                                         onSelect: { page = $0 },
-                                         onClose: {})
-            }
+        ResourceCard(size: .large,
+                     title: "web",
+                     subtitle: "nginx:latest",
+                     pages: ResourceCardPages(items: pages,
+                                              selection: page,
+                                              tint: .accentColor,
+                                              onSelect: { page = $0 },
+                                              onClose: {})) {
+            ResourceCardIconChip(symbol: "shippingbox.fill")
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            EmptyView()
         } bodyContent: {
             ResourceCardInsetSection(title: "Details") {
                 ResourceCardSubtitleText(text: "Ready")
@@ -198,6 +207,10 @@ DesignInputSurface {
 
 ### Resource Cards
 
+- ``ResourceCard``
+- ``ResourceCardPages``
+- ``ResourceCardNoPage``
+- ``ResourceCardTextStyle``
 - ``ResourceGlassCard``
 - ``ResourceCardHeader``
 - ``ResourceCardHeaderTextBlock``

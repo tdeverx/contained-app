@@ -29,10 +29,9 @@ resource panel, it should be discoverable from `CommandPalette.swift`.
 
 Results should use the design system rather than custom row chrome:
 
-- use `ResourceGlassCard` for every result card
-- use `ResourceCardHeader`, `ResourceCardHeaderTextBlock`, `ResourceCardIconChip`,
-  `ResourceCardTitleText`, `ResourceCardSubtitleText`, and `ResourceBadgeText`
-  inside cards
+- use `ResourceCard` for every result card
+- pass badges, chevrons, return hints, and unread dots through the card's named
+  accessory slots instead of building custom headers
 - use `PaletteItemVisual` for anything that can be represented visually
 - render containers, image groups, tags, volumes, networks, and tints as mini
   cards using their actual app styling
