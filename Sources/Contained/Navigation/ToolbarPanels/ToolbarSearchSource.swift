@@ -12,33 +12,20 @@ struct ToolbarSearchSource: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return GlassButton(singleItem: true) {
-            GlassButtonInputItem {
-                Image(systemName: "magnifyingglass")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                TextField(paletteEnabled ? "Search this page, or ⌘K for commands" : "Search this page",
-                          text: $ui.searchText)
-                    .textFieldStyle(.plain)
-                    .font(.body).fontWeight(.medium)
-                    .focused($focused)
-                    .onSubmit { if paletteEnabled { ui.activeMorph = .palette } }
-                if !ui.searchText.isEmpty {
-                    Button { ui.searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .help("Clear search")
-                        .accessibilityLabel("Clear search")
-                } else if paletteEnabled {
-                    Text("⌘K")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.tertiary)
-                }
+        return DesignToolbarSearchField(text: $ui.searchText,
+                                        prompt: paletteEnabled
+                                            ? "Search this page, or ⌘K for commands"
+                                            : "Search this page",
+                                        focused: $focused,
+                                        onSubmit: { if paletteEnabled { ui.activeMorph = .palette } },
+                                        onClear: { ui.searchText = "" }) {
+            if paletteEnabled {
+                Text("⌘K")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.tertiary)
             }
         }
-        .toolbarControlContentShape()
-        .simultaneousGesture(TapGesture().onEnded { focused = true })
         .onChange(of: ui.searchText) { _, _ in escalateIfEmpty() }
         .onChange(of: ui.pageResultCount) { _, _ in escalateIfEmpty() }
         .onChange(of: ui.searchFocusToken) { _, _ in focused = true }

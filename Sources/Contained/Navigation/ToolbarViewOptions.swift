@@ -3,31 +3,6 @@ import ContainedDesignSystem
 import SwiftData
 import ContainedCore
 
-private struct ToolbarGlassMenuButton<LabelContent: View, MenuContent: View>: View {
-    @ViewBuilder var menuContent: () -> MenuContent
-    @ViewBuilder var labelContent: () -> LabelContent
-
-    init(@ViewBuilder menuContent: @escaping () -> MenuContent,
-         @ViewBuilder labelContent: @escaping () -> LabelContent) {
-        self.menuContent = menuContent
-        self.labelContent = labelContent
-    }
-
-    var body: some View {
-        Menu {
-            menuContent()
-        } label: {
-            GlassButton(singleItem: true) {
-                labelContent()
-            }
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize(horizontal: true, vertical: false)
-    }
-}
-
 /// The toolbar page switcher. In the experimental toolbar shell it complements the sidebar, and when
 /// the sidebar is hidden it becomes the compact page-jump control.
 struct ToolbarPageSwitcher: View {
@@ -37,7 +12,7 @@ struct ToolbarPageSwitcher: View {
     @Query private var templates: [Template]
 
     var body: some View {
-        ToolbarGlassMenuButton {
+        DesignGlassMenuButton {
             ForEach(AppSectionGroup.allCases) { group in
                 let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
                     .filter { $0.group == group && ($0 != .build || app.settings.imageBuildEnabled) }
@@ -106,7 +81,7 @@ struct ToolbarViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return ToolbarGlassMenuButton {
+        return DesignGlassMenuButton {
             Picker("Group by", selection: $ui.grouping) {
                 ForEach(ContainerGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
@@ -153,98 +128,97 @@ struct ToolbarPageContextOptions: View {
         case .containers:
             EmptyView()
         case .images:
-            GlassButton {
-                GlassButtonItem(systemName: "square.and.arrow.down", help: "Load Image Tar") {
+            DesignActionGroup([
+                DesignAction(systemName: "square.and.arrow.down", help: "Load Image Tar") {
                     ui.dispatch(.loadImage)
-                }
-                GlassButtonItem(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
+                },
+                DesignAction(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
                     Task { await app.runImageUpdateSweepNow() }
-                }
-                GlassButtonItem(systemName: "trash", role: .destructive, help: "Prune Images") {
+                },
+                DesignAction(systemName: "trash", help: "Prune Images", role: .destructive) {
                     ui.dispatch(.pruneImages)
                 }
-            }
+            ])
             .help(imagesSubtitle)
         case .build:
             EmptyView()
         case .networks:
-            GlassButton {
-                GlassButtonItem(systemName: "plus", help: "New Network") {
+            DesignActionGroup([
+                DesignAction(systemName: "plus", help: "New Network") {
                     ui.dispatch(.createNetwork)
-                }
-                GlassButtonItem(systemName: "arrow.clockwise", help: "Refresh Networks") {
+                },
+                DesignAction(systemName: "arrow.clockwise", help: "Refresh Networks") {
                     Task { await app.refreshNetworks() }
                 }
-            }
+            ])
             .help("\(app.networks.count) network\(app.networks.count == 1 ? "" : "s")")
         case .volumes:
-            GlassButton {
-                GlassButtonItem(systemName: "plus", help: "New Volume") {
+            DesignActionGroup([
+                DesignAction(systemName: "plus", help: "New Volume") {
                     ui.dispatch(.createVolume)
-                }
-                GlassButtonItem(systemName: "arrow.clockwise", help: "Refresh Volumes") {
+                },
+                DesignAction(systemName: "arrow.clockwise", help: "Refresh Volumes") {
                     Task { await app.refreshSystemResources() }
                 }
-            }
+            ])
             .help("\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")")
         case .system:
             HStack(spacing: Tokens.Toolbar.groupSpacing) {
-                GlassButton {
-                    if app.serviceHealthy {
-                        GlassButtonItem(systemName: "stop.fill", role: .destructive, help: "Stop service") {
-                            Task { await app.stopService() }
-                        }
-                    } else {
-                        GlassButtonItem(systemName: "play.fill", help: "Start service") {
-                            Task { await app.startService() }
-                        }
-                    }
-                    GlassButtonItem(systemName: "arrow.clockwise", help: "Restart service") {
-                        Task { await app.restartService() }
-                    }
-                }
-                GlassButton {
-                    ForEach(SystemContent.SystemPage.allCases) { page in
-                        GlassButtonItem(tint: ui.systemPage == page ? .accentColor : nil,
-                                        help: page.rawValue,
-                                        isIcon: true,
-                                        action: { ui.systemPage = page }) {
-                            Image(systemName: page.systemImage)
-                                .opacity(ui.systemPage == page ? 1 : 0.62)
-                        }
-                    }
-                    GlassButtonItem(systemName: "text.alignleft", help: "System Logs") {
+                DesignActionGroup(serviceActions)
+                DesignActionGroup(systemPageActions + [
+                    DesignAction(systemName: "text.alignleft", help: "System Logs") {
                         ui.dispatch(.systemLogs)
                     }
-                }
+                ])
             }
         case .activity:
-            GlassButton {
-                GlassButtonItem(systemName: "checkmark.circle", help: "Mark all read") {
+            DesignActionGroup([
+                DesignAction(systemName: "checkmark.circle", help: "Mark all read") {
                     app.historyStore.markAllEventsRead()
-                }
-                GlassButtonItem(systemName: "trash", role: .destructive, help: "Clear activity") {
+                },
+                DesignAction(systemName: "trash", help: "Clear activity", role: .destructive) {
                     app.historyStore.clearEvents()
                 }
-            }
+            ])
         case .registries:
             EmptyView()
         case .settings:
-            GlassButton {
-                ForEach(SettingsContent.SettingsPage.allCases) { page in
-                    GlassButtonItem(tint: ui.settingsPage == page ? .accentColor : nil,
-                                    help: page.rawValue,
-                                    isIcon: true,
-                                    action: {
-                        ui.settingsPage = page
-                        ui.navigate(to: .settings)
-                    }) {
-                        Image(systemName: page.systemImage)
-                    }
+            DesignActionGroup(SettingsContent.SettingsPage.allCases.map { page in
+                DesignAction(systemName: page.systemImage,
+                             help: page.rawValue,
+                             tint: ui.settingsPage == page ? .accentColor : nil) {
+                    ui.settingsPage = page
+                    ui.navigate(to: .settings)
                 }
-            }
+            })
         case .templates:
             EmptyView()
+        }
+    }
+
+    private var serviceActions: [DesignAction] {
+        let power = app.serviceHealthy
+            ? DesignAction(systemName: "stop.fill", help: "Stop service", role: .destructive) {
+                Task { await app.stopService() }
+            }
+            : DesignAction(systemName: "play.fill", help: "Start service") {
+                Task { await app.startService() }
+            }
+        return [
+            power,
+            DesignAction(systemName: "arrow.clockwise", help: "Restart service") {
+                        Task { await app.restartService() }
+            }
+        ]
+    }
+
+    private var systemPageActions: [DesignAction] {
+        SystemContent.SystemPage.allCases.map { page in
+            DesignAction(systemName: page.systemImage,
+                         help: page.rawValue,
+                         tint: ui.systemPage == page ? .accentColor : nil) {
+                ui.systemPage = page
+            }
         }
     }
 
@@ -273,7 +247,7 @@ struct ToolbarPageFilterOptions: View {
             NetworkViewOptions()
         case .activity:
             @Bindable var ui = ui
-            ToolbarGlassMenuButton {
+            DesignGlassMenuButton {
                 Picker("Filter", selection: $ui.activityFilter) {
                     Label("All events", systemImage: "tray.full").tag(EventKind?.none)
                     Divider()
@@ -304,7 +278,7 @@ private struct ImageViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return ToolbarGlassMenuButton {
+        return DesignGlassMenuButton {
             Picker("Group by", selection: $ui.imageGrouping) {
                 ForEach(ImageGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
@@ -344,7 +318,7 @@ private struct TemplateViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return ToolbarGlassMenuButton {
+        return DesignGlassMenuButton {
             Picker("Group by", selection: $ui.templateGrouping) {
                 ForEach(TemplateGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
@@ -371,7 +345,7 @@ private struct NetworkViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return ToolbarGlassMenuButton {
+        return DesignGlassMenuButton {
             Picker("Group by", selection: $ui.networkGrouping) {
                 ForEach(NetworkGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)

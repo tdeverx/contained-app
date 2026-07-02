@@ -40,8 +40,10 @@ This package currently depends only on platform frameworks available to a macOS
   helpers for all reusable glass treatment.
 - `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `SheetHeader`, and
   `PageScaffold` for app-neutral scaffolding.
-- `GlassButton`, `GlassButtonItem`, `GlassButtonInputItem`, `GlassRowMenu`, and
-  toolbar control helpers.
+- `DesignActionGroup`, `DesignTextActionButton`, `DesignGlassToggle`,
+  `DesignSelectionActionBar`, `DesignStatusBanner`, and toolbar controls for
+  package-owned command chrome. `GlassButton`, `GlassButtonItem`, and
+  `GlassButtonInputItem` are lower-level package composition pieces.
 - `ResourceCard`, `ResourceCardPages`, `ResourceCardFooterChip`,
   `ResourceCardFooterButton`, `ResourceCardWidgetGroup`, `ResourceCardInsetSection`,
   and other `ResourceCard*` pieces for repeated card layouts and card-local controls.
@@ -231,6 +233,54 @@ DesignInputSurface {
         TextField("Search", text: $query)
             .textFieldStyle(.plain)
     }
+}
+```
+
+## Action and Toolbar Controls
+
+Feature views should pass action intent into package controls. Do not restate
+glass button styles, capsule surfaces, hover treatment, or toolbar search chrome
+in the app target.
+
+```swift
+DesignActionGroup([
+    DesignAction(systemName: "doc.on.doc", help: "Copy") {
+        copyToPasteboard(output)
+    },
+    DesignAction(systemName: "trash",
+                 help: "Clear",
+                 role: .destructive) {
+        clear()
+    }
+])
+
+DesignTextActionButton(title: "Import",
+                       systemName: "arrow.down.doc",
+                       prominence: .prominent,
+                       isEnabled: canImport) {
+    importArchive()
+}
+
+DesignGlassToggle(isOn: $following,
+                  title: "Follow",
+                  systemName: "arrow.down.to.line")
+
+DesignSelectionActionBar(count: selection.count, actions: [
+    DesignAction(systemName: "play.fill", title: "Start") { startSelection() },
+    DesignAction(systemName: "trash",
+                 title: "Delete",
+                 role: .destructive) { deleteSelection() }
+])
+```
+
+Toolbar-specific controls follow the same rule:
+
+```swift
+DesignToolbarSearchField(text: $query,
+                         prompt: "Search this page",
+                         focused: $focused,
+                         onClear: { query = "" }) {
+    DesignKeyboardHint("command", "K")
 }
 ```
 

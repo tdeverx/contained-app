@@ -109,8 +109,9 @@ struct RegistryImageSearch: View {
                     Image(systemName: "wifi.exclamationmark").font(.title2).foregroundStyle(.orange)
                     Text("Couldn't search Docker Hub").font(.callout.weight(.medium))
                     Text(errorMessage).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    Button { searchNow() } label: { Label("Retry", systemImage: "arrow.clockwise") }
-                        .buttonStyle(.glass)
+                    DesignTextActionButton(title: "Retry", systemName: "arrow.clockwise") {
+                        searchNow()
+                    }
                 } else {
                     Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.tertiary)
                     Text("No images found for “\(trimmedQuery)”").font(.callout).foregroundStyle(.secondary)

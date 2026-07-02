@@ -19,12 +19,13 @@ struct RegistryLoginSheet: View {
                 if busy {
                     ProgressView().controlSize(.small).frame(width: Tokens.IconSize.control, height: Tokens.IconSize.control)
                 } else {
-                    GlassButton(singleItem: true) {
-                        GlassButtonItem(systemName: "checkmark", help: "Log in") { submit() }
-                            .disabled(server.trimmingCharacters(in: .whitespaces).isEmpty
-                                      || username.trimmingCharacters(in: .whitespaces).isEmpty
-                                      || password.isEmpty)
-                    }
+                    DesignActionGroup(DesignAction(systemName: "checkmark",
+                                                   help: "Log in",
+                                                   isEnabled: !server.trimmingCharacters(in: .whitespaces).isEmpty
+                                                       && !username.trimmingCharacters(in: .whitespaces).isEmpty
+                                                       && !password.isEmpty) {
+                        submit()
+                    })
                 }
             }
             VStack(spacing: Tokens.Space.l) {

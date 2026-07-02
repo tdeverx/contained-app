@@ -185,11 +185,12 @@ struct CreationPastedComposeContent: View {
 
             HStack {
                 Spacer()
-                Button(action: onImport) {
-                    Label("Import", systemImage: "arrow.down.doc")
+                DesignTextActionButton(title: "Import",
+                                       systemName: "arrow.down.doc",
+                                       prominence: .prominent,
+                                       isEnabled: !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                    onImport()
                 }
-                .buttonStyle(.glassProminent)
-                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
     }
@@ -226,11 +227,12 @@ private struct CreationSubmitBar: View {
         HStack(spacing: Tokens.Space.s) {
             Spacer()
             if working { ProgressView().controlSize(.small) }
-            Button(action: action) {
-                Label(title, systemImage: systemImage)
+            DesignTextActionButton(title: title,
+                                   systemName: systemImage,
+                                   prominence: .prominent,
+                                   isEnabled: canSubmit && !working) {
+                action()
             }
-            .buttonStyle(.glassProminent)
-            .disabled(!canSubmit || working)
         }
         .padding(Tokens.Space.s)
         .background(.clear)

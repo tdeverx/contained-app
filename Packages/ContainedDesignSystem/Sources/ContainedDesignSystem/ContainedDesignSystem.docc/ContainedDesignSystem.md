@@ -176,6 +176,36 @@ DesignInputSurface {
 }
 ```
 
+## Action and Toolbar Controls
+
+Feature views pass action intent into package-owned controls. The package owns
+glass button grouping, hover, tint, destructive/cancel treatment, toggle chrome,
+selection-bar capsules, status banners, and toolbar search shape.
+
+```swift
+DesignActionGroup([
+    DesignAction(systemName: "doc.on.doc", help: "Copy") {
+        copyToPasteboard(output)
+    },
+    DesignAction(systemName: "trash",
+                 help: "Clear",
+                 role: .destructive) {
+        clear()
+    }
+])
+
+DesignTextActionButton(title: "Import",
+                       systemName: "arrow.down.doc",
+                       prominence: .prominent,
+                       isEnabled: canImport) {
+    importArchive()
+}
+
+DesignGlassToggle(isOn: $following,
+                  title: "Follow",
+                  systemName: "arrow.down.to.line")
+```
+
 ## Topics
 
 ### Tokens and Theme
@@ -200,6 +230,21 @@ DesignInputSurface {
 
 ### Toolbar Controls
 
+- ``DesignAction``
+- ``DesignActionGroup``
+- ``DesignActionItems``
+- ``DesignMenuActionLabel``
+- ``DesignTextActionButton``
+- ``DesignTextActionProminence``
+- ``DesignGlassToggle``
+- ``DesignSelectionActionBar``
+- ``DesignStatusBanner``
+- ``DesignProgressActionCapsule``
+- ``DesignGlassMenuButton``
+- ``DesignToolbarSearchField``
+- ``DesignToolbarVanitySlot``
+- ``DesignToolbarStatusButton``
+- ``DesignToolbarActionCluster``
 - ``GlassButton``
 - ``GlassButtonItem``
 - ``GlassButtonInputItem``

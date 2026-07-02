@@ -16,13 +16,13 @@ Package-local docs:
 
 The package owns the shared tokens, visual-effect background bridge, exterior
 shadow, glass surface modifier, panel/page/sheet scaffolds, toolbar controls,
-option tiles, transient error banner, resource-card chrome, activity status,
-JSON and stream-console surfaces, sparklines, clipboard helper, gradient-angle
-control, and micro primitives such as status dots, badges, keycaps, metric
-tiles, terminal chrome, and card-selection overlays. Components that read
-`AppModel`, settings stores, feature routes, or runtime models stay in the app
-target, but they should pass values into package components instead of
-recreating style locally.
+option tiles, transient status/error banners, resource-card chrome, action
+buttons, toggles, selection bars, activity status, JSON and stream-console
+surfaces, sparklines, clipboard helper, gradient-angle control, and micro
+primitives such as status dots, badges, keycaps, metric tiles, terminal chrome,
+and card-selection overlays. Components that read `AppModel`, settings stores,
+feature routes, or runtime models stay in the app target, but they should pass
+values into package components instead of recreating style locally.
 
 ## Core principles
 
@@ -110,6 +110,25 @@ available through their toolbar/menu entry points.
 Expanded resource cards opened from full pages should receive the same toolbar
 safe-area contract as morph panels, clearing both top and bottom toolbar bands.
 
+## Action and toolbar chrome
+
+Use package-owned semantic controls for command chrome:
+
+- `DesignActionGroup` and `DesignActionItems` for icon action groups
+- `DesignTextActionButton` for labeled standard or prominent actions
+- `DesignGlassToggle` for glass toggle buttons
+- `DesignSelectionActionBar` for floating selection bars
+- `DesignStatusBanner` for transient bottom banners
+- `DesignToolbarSearchField`, `DesignGlassMenuButton`,
+  `DesignToolbarStatusButton`, `DesignToolbarActionCluster`, and
+  `DesignToolbarVanitySlot` for toolbar-specific slots
+
+Feature views should not call `GlassButton`, `GlassButtonItem`,
+`GlassButtonInputItem`, `glassSurface`, `glassCapsuleSurface`, or
+`.buttonStyle(.glass/.glassProminent)` directly. Those are package composition
+pieces. If a view needs a new command shape, add a named design-system route and
+then consume it from the app.
+
 ## Resource cards
 
 Use `ResourceCard` for containers, images, tags, volumes, networks, and
@@ -173,10 +192,11 @@ Plain rows are reserved for generic actions such as refresh or opening a page.
 Use `Tokens` for spacing, radius, toolbar dimensions, panel sizes, icon sizes,
 form widths, chart sizes, badge/keycap insets, resource-card opacities, terminal
 chrome, and shadows. Feature views should not call low-level surface modifiers
-such as `glassSurface`; use named package routes such as `ResourceCard`,
-`PanelSection`, `DesignContentSurface`, `DesignInputSurface`, and
-`ResourceCardInsetSection`. If a new visual value appears, add a token or package
-primitive before using it in the app.
+or glass button styles; use named package routes such as `ResourceCard`,
+`PanelSection`, `DesignContentSurface`, `DesignInputSurface`,
+`DesignActionGroup`, `DesignTextActionButton`, and `ResourceCardInsetSection`.
+If a new visual value appears, add a token or package primitive before using it
+in the app.
 
 Important groups:
 

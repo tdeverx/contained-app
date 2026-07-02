@@ -134,51 +134,54 @@ struct SystemContent: View {
             HStack(spacing: Tokens.Toolbar.groupSpacing) {
                 engineControls
                 GlassButton {
-                    pageButtons
+                    DesignActionItems(pageActions)
                     storageMenu
                     if showClose {
-                        GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                        DesignActionItems([DesignAction(systemName: "xmark",
+                                                        help: "Close",
+                                                        isCancel: true,
+                                                        action: onClose)])
                     }
                 }
             }
         }
     }
 
-    @ViewBuilder
-    private var pageButtons: some View {
-        ForEach(SystemPage.allCases) { item in
-            GlassButtonItem(tint: activePage == item ? .accentColor : nil,
-                            help: item.rawValue,
-                            isIcon: true,
-                            action: { setPage(item) }) {
-                Image(systemName: item.systemImage)
-                    .opacity(activePage == item ? 1 : 0.62)
+    private var pageActions: [DesignAction] {
+        SystemPage.allCases.map { item in
+            DesignAction(systemName: item.systemImage,
+                         help: item.rawValue,
+                         tint: activePage == item ? .accentColor : nil) {
+                setPage(item)
             }
         }
     }
 
     private var engineControls: some View {
-        GlassButton {
-            servicePowerButton
-            GlassButtonItem(systemName: "arrow.clockwise", help: "Restart service") {
+        DesignActionGroup([
+            servicePowerAction,
+            DesignAction(systemName: "arrow.clockwise",
+                         help: "Restart service",
+                         isEnabled: !working) {
                 run { await app.restartService() }
             }
-            .disabled(working)
-        }
+        ])
     }
 
-    @ViewBuilder
-    private var servicePowerButton: some View {
+    private var servicePowerAction: DesignAction {
         if app.serviceHealthy {
-            GlassButtonItem(systemName: "stop.fill", role: .destructive, help: "Stop service") {
+            return DesignAction(systemName: "stop.fill",
+                                help: "Stop service",
+                                role: .destructive,
+                                isEnabled: !working) {
                 run { await app.stopService() }
             }
-            .disabled(working)
         } else {
-            GlassButtonItem(systemName: "play.fill", help: "Start service") {
+            return DesignAction(systemName: "play.fill",
+                                help: "Start service",
+                                isEnabled: !working) {
                 run { await app.startService() }
             }
-            .disabled(working)
         }
     }
 
@@ -194,8 +197,9 @@ struct SystemContent: View {
             Button { pruneTarget = .volumes } label: { Label("Unused volumes", systemImage: "externaldrive") }
             Button { pruneTarget = .networks } label: { Label("Unused networks", systemImage: "network") }
         } label: {
-            GlassButtonItem(systemName: "trash", role: .destructive,
-                            help: "Storage cleanup")
+            DesignMenuActionLabel(systemName: "trash",
+                                  help: "Storage cleanup",
+                                  role: .destructive)
         }
         .buttonStyle(.plain)
     }
@@ -215,14 +219,12 @@ struct SystemContent: View {
                 Text("Volumes").font(.headline)
                 ResourceBadgeText(text: "\(volumeInventory.count)")
                 Spacer()
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(help: "New volume", action: {
+                DesignActionGroup(DesignAction(systemName: "plus",
+                                               title: "New",
+                                               help: "New volume") {
                         onClose()
                         ui.dispatch(.createVolume)
-                    }) {
-                        Label("New", systemImage: "plus")
-                    }
-                }
+                })
             }
             if volumeInventory.isEmpty {
                 Text("No named volumes or container mounts found.")
@@ -307,13 +309,11 @@ struct SystemContent: View {
                     if app.settings.imageUpdateChecksEnabled {
                         Text(countdown(to: app.imageUpdateNextRunDate, now: context.date))
                             .font(.system(.caption, design: .monospaced).weight(.semibold)).monospacedDigit()
-                        GlassButton(singleItem: true) {
-                            GlassButtonItem(help: "Run image update check now", action: {
+                        DesignActionGroup(DesignAction(systemName: "arrow.triangle.2.circlepath",
+                                                       title: "Run now",
+                                                       help: "Run image update check now") {
                                 Task { await app.runImageUpdateSweepNow() }
-                            }) {
-                                Label("Run now", systemImage: "arrow.triangle.2.circlepath")
-                            }
-                        }
+                        })
                     }
                 }
             }
@@ -324,14 +324,13 @@ struct SystemContent: View {
                               ? "Sparkle · \(app.settings.updateChannel.rawValue.capitalized) channel"
                               : "Unavailable in this build",
                           isOn: appUpdateBinding) {
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(help: "Check for app updates now", action: {
+                DesignActionGroup(DesignAction(systemName: "arrow.down.app",
+                                               title: "Check now",
+                                               help: "Check for app updates now",
+                                               isEnabled: app.updater.canCheckForUpdates
+                                                   && app.settings.appUpdateChecksEnabled) {
                         app.updater.checkForUpdates()
-                    }) {
-                        Label("Check now", systemImage: "arrow.down.app")
-                    }
-                }
-                    .disabled(!app.updater.canCheckForUpdates || !app.settings.appUpdateChecksEnabled)
+                })
             }
             Divider()
             automationRow(icon: "arrow.clockwise.circle",

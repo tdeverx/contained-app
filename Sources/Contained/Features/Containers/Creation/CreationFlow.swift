@@ -323,9 +323,7 @@ struct CreationFlow: View {
         MorphPanelScaffold(width: 0, scrolls: false) {
             VStack(spacing: 0) {
                 PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
-                    GlassButton(singleItem: true) {
-                        leadingControl(leading)
-                    }
+                    DesignActionGroup(leadingAction(leading))
                 }
                 Divider()
             }
@@ -343,13 +341,12 @@ struct CreationFlow: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: contentAlignment)
     }
 
-    @ViewBuilder
-    private func leadingControl(_ leading: Leading) -> some View {
+    private func leadingAction(_ leading: Leading) -> DesignAction {
         switch leading {
         case .close:
-            GlassButtonItem(systemName: "xmark", help: "Cancel", isCancel: true) { onClose() }
+            return DesignAction(systemName: "xmark", help: "Cancel", isCancel: true) { onClose() }
         case .back(let action):
-            GlassButtonItem(systemName: "chevron.left", help: "Back", action: action)
+            return DesignAction(systemName: "chevron.left", help: "Back", action: action)
         }
     }
 

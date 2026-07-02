@@ -189,9 +189,12 @@ struct ToolbarImageGroupCard: View {
             HStack {
                 Spacer()
                 if tagBusy { ProgressView().controlSize(.small) }
-                Button { submitTag(source: source) } label: { Label("Add Tag", systemImage: "checkmark") }
-                    .buttonStyle(.glassProminent)
-                    .disabled(tagTarget.trimmingCharacters(in: .whitespaces).isEmpty || tagBusy)
+                DesignTextActionButton(title: "Add Tag",
+                                       systemName: "checkmark",
+                                       prominence: .prominent,
+                                       isEnabled: !tagTarget.trimmingCharacters(in: .whitespaces).isEmpty && !tagBusy) {
+                    submitTag(source: source)
+                }
             }
         }
     }
@@ -253,13 +256,12 @@ struct ToolbarImageGroupCard: View {
                 Spacer()
                 switch readiness.action {
                 case .push:
-                    Button {
+                    DesignTextActionButton(title: "Push",
+                                           systemName: "arrow.up.circle",
+                                           prominence: .prominent,
+                                           isEnabled: app.client != nil) {
                         confirmingPushReference = reference
-                    } label: {
-                        Label("Push", systemImage: "arrow.up.circle")
                     }
-                    .buttonStyle(.glassProminent)
-                    .disabled(app.client == nil)
                 case .openRegistries:
                     Button {
                         onClose()

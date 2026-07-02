@@ -61,12 +61,9 @@ struct RunSpecForm: View {
                 PanelRow(title: "Image defaults",
                          subtitle: "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config.",
                          info: "Images can define default startup settings. Adopt copies those defaults into this form so you can see and edit them before running.") {
-                    Button {
+                    DesignTextActionButton(title: "Adopt", systemName: "wand.and.stars") {
                         adoptImageDefaults()
-                    } label: {
-                        Label("Adopt", systemImage: "wand.and.stars")
                     }
-                    .buttonStyle(.glass)
                 }
             }
             PanelRow(title: "Platform", info: "Use this only when an image supports more than one CPU type. Leave Default unless you specifically need arm64 or amd64.") {
@@ -553,17 +550,16 @@ struct RunSpecForm: View {
     }
 
     private func addButton(_ title: String, action: @escaping () -> Void) -> some View {
-        GlassButton(singleItem: true) {
-            GlassButtonItem(help: title, action: action) {
-                Label(title, systemImage: "plus.circle")
-            }
-        }
+        DesignActionGroup(DesignAction(systemName: "plus.circle",
+                                       title: title,
+                                       help: title,
+                                       action: action))
     }
 
     private func removeButton(action: @escaping () -> Void) -> some View {
-        GlassButton(singleItem: true) {
-            GlassButtonItem(systemName: "minus.circle.fill", help: "Remove", action: action)
-        }
+        DesignActionGroup(DesignAction(systemName: "minus.circle.fill",
+                                       help: "Remove",
+                                       action: action))
     }
 
     private func sourcePicker(source: Binding<String>) -> some View {
