@@ -139,6 +139,7 @@ false` for cards inside already-elevated morph panels.
 `ResourceGlassCard` owns the card anatomy:
 
 - the header is always visible and stays outside the expanding body
+- page controls belong in the header trailing slot, not in app-local overlays
 - the body appears only while expanded
 - widgets stay sticky on `.large` cards and move into the expanded body on
   `.medium`

@@ -158,14 +158,18 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 0) {
             stickyHeader
+                .layoutPriority(1)
             if isExpanded {
                 expandedBody
+                    .layoutPriority(0)
             }
             if shouldShowStickyWidget {
                 stickyWidget
+                    .layoutPriority(1)
             }
             if shouldShowStickyFooter {
                 stickyFooter(showActions: isExpanded ? controlsVisible : hovering)
+                    .layoutPriority(1)
             }
         }
     }
@@ -184,6 +188,7 @@ public struct ResourceGlassCard<Header: View, BodyContent: View, FooterLeading: 
             }
             if shouldEmbedFooterInBody {
                 stickyFooter(showActions: controlsVisible)
+                    .layoutPriority(1)
             }
         }
     }

@@ -114,7 +114,11 @@ struct CardControlsExample: View {
             } content: {
                 ResourceCardTitleText(text: "web")
             } trailing: {
-                EmptyView()
+                ResourceCardPageControls(items: pages,
+                                         selection: page,
+                                         tint: .accentColor,
+                                         onSelect: { page = $0 },
+                                         onClose: {})
             }
         } bodyContent: {
             ResourceCardInsetSection(title: "Details") {
@@ -138,13 +142,6 @@ struct CardControlsExample: View {
                           color: .accentColor,
                           scale: .fraction)
                 .frame(height: Tokens.ResourceCard.sparklineHeight)
-        }
-        .resourceCardFloatingControls(when: true) {
-            ResourceCardPageControls(items: pages,
-                                     selection: page,
-                                     tint: .accentColor,
-                                     onSelect: { page = $0 },
-                                     onClose: {})
         }
     }
 }

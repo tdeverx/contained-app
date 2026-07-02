@@ -328,6 +328,7 @@ public struct ResourceCardFooter<Leading: View, Trailing: View, Widget: View>: V
             .padding(.top, topPadding)
             .padding(.bottom, bottomPadding)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
