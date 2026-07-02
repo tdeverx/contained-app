@@ -207,7 +207,8 @@ struct ToolbarImageGroupCard: View {
                               workingLabel: AppText.working,
                               completedLabel: AppText.completed,
                               lineCountLabel: AppText.lineCount,
-                              copyLogHelp: AppText.copyLog)
+                              copyLogHelp: AppText.copyLog,
+                              failureLabel: AppErrorPresentation.message)
                     .frame(minHeight: 260)
             } else {
                 pushReadiness(reference)
