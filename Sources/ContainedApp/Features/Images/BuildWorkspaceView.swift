@@ -175,8 +175,8 @@ struct BuildWorkspaceView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Choose"
-        panel.message = "Choose the build context folder"
+        panel.prompt = AppText.choose
+        panel.message = AppText.chooseBuildContextFolder
         if panel.runModal() == .OK { contextDir = panel.url }
     }
 }

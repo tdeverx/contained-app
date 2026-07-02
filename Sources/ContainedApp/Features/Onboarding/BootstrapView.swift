@@ -67,7 +67,7 @@ struct BootstrapView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.message = "Select the `container` binary"
+        panel.message = AppText.selectContainerBinary
         panel.directoryURL = URL(fileURLWithPath: "/usr/local/bin")
         if panel.runModal() == .OK, let url = panel.url {
             Task { await app.useCLIPath(url.path) }

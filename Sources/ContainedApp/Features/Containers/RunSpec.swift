@@ -112,13 +112,13 @@ struct RunSpec: Codable {
     var validationMessages: [String] {
         var messages: [String] = []
         if image.trimmingCharacters(in: .whitespaces).isEmpty {
-            messages.append("Choose an image to run.")
+            messages.append(AppText.runSpecChooseImageToRun)
         }
         for port in ports {
             let hasHost = !port.hostPort.trimmingCharacters(in: .whitespaces).isEmpty
             let hasContainer = !port.containerPort.trimmingCharacters(in: .whitespaces).isEmpty
             if hasHost != hasContainer {
-                messages.append("Complete or remove partial port mappings.")
+                messages.append(AppText.runSpecCompletePortMappings)
                 break
             }
         }
@@ -126,7 +126,7 @@ struct RunSpec: Codable {
             let hasSource = !volume.source.trimmingCharacters(in: .whitespaces).isEmpty
             let hasTarget = !volume.target.trimmingCharacters(in: .whitespaces).isEmpty
             if hasSource != hasTarget {
-                messages.append("Complete or remove partial volume mounts.")
+                messages.append(AppText.runSpecCompleteVolumeMounts)
                 break
             }
         }
@@ -134,11 +134,11 @@ struct RunSpec: Codable {
             $0.key.trimmingCharacters(in: .whitespaces).isEmpty &&
             !$0.value.trimmingCharacters(in: .whitespaces).isEmpty
         }) {
-            messages.append("Environment variables with values need names.")
+            messages.append(AppText.runSpecEnvironmentNeedsNames)
         }
         if !memory.trimmingCharacters(in: .whitespaces).isEmpty,
            RunSpec.parseMemoryBytes(memory) == nil {
-            messages.append("Memory must use a value like 512M or 2G.")
+            messages.append(AppText.runSpecMemoryFormat)
         }
         return messages
     }

@@ -64,7 +64,7 @@ struct ConfigTransferControls: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try app.exportConfiguration(to: url, sections: sections)
-            app.flash("Exported backup")
+            app.flash(AppText.exportedBackup)
         } catch {
             app.flash(error.appDisplayMessage)
         }
@@ -80,7 +80,7 @@ struct ConfigTransferControls: View {
             try app.importConfiguration(from: url,
                                         sections: sections,
                                         replace: importMode.replacesExistingData)
-            app.flash("Imported backup")
+            app.flash(AppText.importedBackup)
         } catch {
             app.flash(error.appDisplayMessage)
         }

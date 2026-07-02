@@ -116,12 +116,12 @@ struct FilesTab: View {
     private func copyOut(_ name: String) {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = name
-        panel.message = "Copy \(name) from the container"
+        panel.message = AppText.copyFileFromContainerPanel(name)
         guard panel.runModal() == .OK, let dest = panel.url else { return }
         Task {
             do {
                 _ = try await app.client?.copy(source: "\(snapshot.id):\(joined(name))", destination: dest.path)
-                app.flash("Copied \(name) to host")
+                app.flash(AppText.copiedFileToHost(name))
             } catch let e as CommandError { app.flash(e.appDisplayMessage) }
             catch { app.flash(error.appDisplayMessage) }
         }
@@ -132,13 +132,13 @@ struct FilesTab: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.message = "Copy a file into \(path)"
+        panel.message = AppText.copyFileIntoContainerPanel(path)
         guard panel.runModal() == .OK, let src = panel.url else { return }
         Task {
             do {
                 _ = try await app.client?.copy(source: src.path,
                                                destination: "\(snapshot.id):\(joined(src.lastPathComponent))")
-                app.flash("Copied \(src.lastPathComponent) into container")
+                app.flash(AppText.copiedFileIntoContainer(src.lastPathComponent))
                 await load()
             } catch let e as CommandError { app.flash(e.appDisplayMessage) }
             catch { app.flash(error.appDisplayMessage) }

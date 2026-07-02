@@ -173,9 +173,9 @@ struct RunSpecForm: View {
         guard let imageDefaults else { return }
         let applied = spec.adoptImageDefaults(from: imageDefaults)
         if applied > 0 {
-            app.flash("Adopted \(applied) image default\(applied == 1 ? "" : "s")")
+            app.flash(AppText.adoptedImageDefaults(applied))
         } else {
-            app.flash("Image defaults are already represented")
+            app.flash(AppText.imageDefaultsAlreadyRepresented)
         }
     }
 
@@ -615,7 +615,7 @@ struct RunSpecForm: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a host file or folder"
+        panel.message = AppText.chooseHostFileOrFolder
         guard panel.runModal() == .OK, let url = panel.url else { return }
         source.wrappedValue = url.path
     }

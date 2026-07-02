@@ -133,7 +133,7 @@ final class AppModel {
             guard let self else { return }
             let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
-            self.flash("Restarted \(name) (attempt \(attempt))")
+            self.flash(AppText.restartedContainer(name, attempt: attempt))
             self.logger.record("Restarted \(name) (attempt \(attempt))",
                                category: .health,
                                severity: .warning,
@@ -154,7 +154,7 @@ final class AppModel {
             guard let self else { return }
             let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
-            self.flash("\(name) is unhealthy")
+            self.flash(AppText.containerUnhealthy(name))
             self.logger.record("\(name) failed its healthcheck",
                                category: .health,
                                severity: .warning,
@@ -492,7 +492,7 @@ final class AppModel {
             if !spec.personalization.isDefault { personalization.setOverride(spec.personalization, for: newID) }
             healthChecks.setCheck(spec.healthCheck, for: newID)
             logger.record("Created \(newID)", category: .lifecycle, containerID: newID)
-            flash("Created \(newID)")
+            flash(AppText.createdContainer(newID))
         }
         return newID
     }
@@ -543,7 +543,7 @@ final class AppModel {
                                      severity: .error)
             } else {
                 await refreshImagesIfStale(force: true)
-                flash("Loaded \(url.lastPathComponent)")
+                flash(AppText.loadedFile(url.lastPathComponent))
                 logger.record("Loaded image archive \(url.lastPathComponent)", category: .image)
             }
         }
@@ -564,7 +564,7 @@ final class AppModel {
                                  severity: .error)
             return false
         }
-        flash("Created volume \(name)")
+        flash(AppText.createdVolume(name))
         logger.record("Created volume \(name)", category: .system)
         return true
     }
@@ -584,7 +584,7 @@ final class AppModel {
                                  severity: .error)
             return false
         }
-        flash("Created network \(name)")
+        flash(AppText.createdNetwork(name))
         logger.record("Created network \(name)", category: .system)
         return true
     }
