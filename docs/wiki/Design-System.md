@@ -123,6 +123,7 @@ Recommended internal pieces:
 - `ResourceCardSubtitleText` or `ResourceCardMonospacedSubtitleText` for metadata
 - `ResourceBadgeText` for compact state or kind labels
 - `ResourceCardFooterMini` for small footer actions and metrics
+- `ResourceCardWidgetGroup` for horizontal widget metadata
 - `ResourceCardFooterChip`, `ResourceCardFooterButton`, and
   `ResourceCardPageControls` for card-local controls
 - `ResourceCardInsetSection` for charts, lists, and read-only groups inside an
@@ -134,6 +135,15 @@ Recommended internal pieces:
 
 Use `isSelected` instead of inventing a second selection ring. Use `elevated:
 false` for cards inside already-elevated morph panels.
+
+`ResourceGlassCard` owns the card anatomy:
+
+- the header is always visible and stays outside the expanding body
+- the body appears only while expanded
+- widgets stay sticky on `.large` cards and move into the expanded body on
+  `.medium`
+- footers stay sticky on `.medium` and `.large` cards and move into the
+  expanded body on `.small`
 
 Do not create a second `ResourceGlassCard` or direct surface modifier inside an
 expanded card body unless the nested object is itself an independent resource

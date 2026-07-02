@@ -227,7 +227,7 @@ struct PaletteResultCard: View {
     }
 
     private func containerPaletteWidget(_ snapshot: ContainerSnapshot) -> some View {
-        HStack(spacing: Tokens.ResourceCard.padding) {
+        ResourceCardWidgetGroup {
             ResourceCardFooterMini {
                 Image(systemName: "clock").font(.caption2)
             } text: {
@@ -244,8 +244,6 @@ struct PaletteResultCard: View {
                 ResourceCardMetricText(text: Format.shortImage(snapshot.image))
             }
         }
-        .foregroundStyle(.secondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

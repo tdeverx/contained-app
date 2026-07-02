@@ -86,6 +86,13 @@ struct DesignSystemExample: View {
 Use the packaged card controls for page rails, widget chips, and icon actions.
 Feature views should pass plain IDs, labels, metric strings, and actions:
 
+`ResourceGlassCard` owns card anatomy:
+
+- the header is always sticky and visible
+- the body appears only when the card is expanded
+- the widget is sticky for `.large` cards and becomes body content for `.medium`
+- the footer is sticky for `.medium` and `.large` cards and becomes body content for `.small`
+
 ```swift
 struct CardControlsExample: View {
     @State private var page = "overview"
@@ -132,13 +139,12 @@ struct CardControlsExample: View {
                           scale: .fraction)
                 .frame(height: Tokens.ResourceCard.sparklineHeight)
         }
-        .overlay(alignment: .topTrailing) {
+        .resourceCardFloatingControls(when: true) {
             ResourceCardPageControls(items: pages,
                                      selection: page,
                                      tint: .accentColor,
                                      onSelect: { page = $0 },
                                      onClose: {})
-                .padding(Tokens.Space.s)
         }
     }
 }
@@ -196,6 +202,7 @@ DesignInputSurface {
 - ``ResourceCardIconChip``
 - ``ResourceBadgeText``
 - ``ResourceCardFooterMini``
+- ``ResourceCardWidgetGroup``
 - ``ResourceCardFooterChip``
 - ``ResourceCardFooterButton``
 - ``ResourceCardInsetSection``

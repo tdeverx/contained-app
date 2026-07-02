@@ -97,10 +97,8 @@ struct ToolbarImageGroupCard: View {
         } bodyContent: {
             imageBody(group)
         } footerLeading: {
-            HStack(spacing: Tokens.ResourceCard.padding) {
-                imageFooterTagCount(group)
-                imageFooterInfo(status)
-            }
+            imageFooterTagCount(group)
+            imageFooterInfo(status)
         } footerActions: {
             imageFooterActions(group)
         }
