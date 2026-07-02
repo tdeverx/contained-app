@@ -125,6 +125,11 @@ struct ImageWorkflowTests {
         await #expect(throws: RegistryManifestError.notFound) {
             _ = try await RegistryManifestClient(session: notFound).remoteDigest(for: "nginx")
         }
+
+        let status = RegistryManifestError.httpStatus(500)
+        #expect(status.packageName == "ContainedCore")
+        #expect(status.packageErrorCode == "registryHTTPStatus")
+        #expect(status.packageErrorContext["status"] == "500")
     }
 
     private static func session(_ handler: @escaping @Sendable (URLRequest) throws -> (HTTPURLResponse, Data)) -> URLSession {

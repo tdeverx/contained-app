@@ -98,8 +98,8 @@ struct FilesTab: View {
             entries = out.split(separator: "\n").map(String.init)
                 .filter { $0 != "./" && $0 != "../" && !$0.isEmpty }
                 .sorted { ($0.hasSuffix("/") ? 0 : 1, $0.lowercased()) < ($1.hasSuffix("/") ? 0 : 1, $1.lowercased()) }
-        } catch let e as CommandError { error = e.userMessage }
-        catch { self.error = error.localizedDescription }
+        } catch let e as CommandError { error = e.appDisplayMessage }
+        catch { self.error = error.appDisplayMessage }
     }
 
     private func goUp() {
@@ -122,8 +122,8 @@ struct FilesTab: View {
             do {
                 _ = try await app.client?.copy(source: "\(snapshot.id):\(joined(name))", destination: dest.path)
                 app.flash("Copied \(name) to host")
-            } catch let e as CommandError { app.flash(e.userMessage) }
-            catch { app.flash(error.localizedDescription) }
+            } catch let e as CommandError { app.flash(e.appDisplayMessage) }
+            catch { app.flash(error.appDisplayMessage) }
         }
     }
 
@@ -140,8 +140,8 @@ struct FilesTab: View {
                                                destination: "\(snapshot.id):\(joined(src.lastPathComponent))")
                 app.flash("Copied \(src.lastPathComponent) into container")
                 await load()
-            } catch let e as CommandError { app.flash(e.userMessage) }
-            catch { app.flash(error.localizedDescription) }
+            } catch let e as CommandError { app.flash(e.appDisplayMessage) }
+            catch { app.flash(error.appDisplayMessage) }
         }
     }
 }

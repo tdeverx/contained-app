@@ -66,7 +66,7 @@ struct ConfigTransferControls: View {
             try app.exportConfiguration(to: url, sections: sections)
             app.flash("Exported backup")
         } catch {
-            app.flash(error.localizedDescription)
+            app.flash(error.appDisplayMessage)
         }
     }
 
@@ -82,7 +82,7 @@ struct ConfigTransferControls: View {
                                         replace: importMode.replacesExistingData)
             app.flash("Imported backup")
         } catch {
-            app.flash(error.localizedDescription)
+            app.flash(error.appDisplayMessage)
         }
     }
 }

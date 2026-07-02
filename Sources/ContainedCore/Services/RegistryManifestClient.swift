@@ -1,6 +1,6 @@
 import Foundation
 
-public enum RegistryManifestError: Error, LocalizedError, Equatable {
+public enum RegistryManifestError: ContainedPackageError, Equatable {
     case invalidResponse
     case unauthorized
     case notFound
@@ -8,14 +8,23 @@ public enum RegistryManifestError: Error, LocalizedError, Equatable {
     case httpStatus(Int)
     case tokenUnavailable
 
-    public var errorDescription: String? {
+    public var packageName: String { "ContainedCore" }
+
+    public var packageErrorCode: String {
         switch self {
-        case .invalidResponse: return "The registry returned an invalid response."
-        case .unauthorized: return "The registry requires authentication."
-        case .notFound: return "The image or tag was not found."
-        case .missingDigest: return "The registry response did not include a content digest."
-        case .httpStatus(let code): return "The registry returned HTTP \(code)."
-        case .tokenUnavailable: return "Couldn't get a registry authorization token."
+        case .invalidResponse: return "registryInvalidResponse"
+        case .unauthorized: return "registryUnauthorized"
+        case .notFound: return "registryNotFound"
+        case .missingDigest: return "registryMissingDigest"
+        case .httpStatus: return "registryHTTPStatus"
+        case .tokenUnavailable: return "registryTokenUnavailable"
+        }
+    }
+
+    public var packageErrorContext: [String: String] {
+        switch self {
+        case .httpStatus(let code): return ["status": String(code)]
+        case .invalidResponse, .unauthorized, .notFound, .missingDigest, .tokenUnavailable: return [:]
         }
     }
 }

@@ -30,6 +30,21 @@ define their own stable identifiers without editing the shared runtime target.
 Use `RuntimeCapability` and `RuntimeDescriptor` to advertise support before a UI
 route enables a command.
 
+## Error Boundary
+
+Runtime and core packages throw typed errors. They expose stable package names,
+error codes, and machine-readable context through `ContainedPackageError`; they
+do not decide how those failures are displayed to users.
+
+The app target maps package errors through `AppErrorPresentation` and `AppText`.
+That keeps toast copy, inline messages, alerts, and Activity history wording in
+`Sources/Contained`, while reusable packages remain suitable for other hosts.
+Backend stderr is not translated wholesale; non-zero CLI output is preserved as
+runtime-provided detail unless the adapter maps it to a known typed case.
+
+When adding a new adapter or package error, prefer a specific error case with a
+stable `packageErrorCode` over throwing a preformatted English sentence.
+
 ## Stats
 
 The shared runtime protocol exposes typed `RuntimeStatsSnapshot` batches from

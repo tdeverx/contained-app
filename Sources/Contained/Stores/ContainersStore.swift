@@ -153,9 +153,9 @@ final class ContainersStore {
             errorMessage = nil
             pruneStatsForCurrentRunningSet()
         } catch let error as CommandError {
-            errorMessage = error.userMessage
+            errorMessage = error.appDisplayMessage
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.appDisplayMessage
         }
     }
 
@@ -289,21 +289,14 @@ final class ContainersStore {
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .last(where: { !$0.isEmpty })
             return printed
-        } catch let error as CommandError {
-            errorMessage = error.userMessage
-            let elapsed = Date().timeIntervalSince(started)
-            logger?.record("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage)",
-                           category: .lifecycle,
-                           severity: .warning)
-            diagnosticLogger.error("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage, privacy: .public)")
-            return nil
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.appDisplayMessage
             let elapsed = Date().timeIntervalSince(started)
-            logger?.record("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription)",
-                           category: .lifecycle,
-                           severity: .warning)
-            diagnosticLogger.error("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription, privacy: .public)")
+            logger?.recordFailure("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
+                                  error: error,
+                                  category: .lifecycle,
+                                  severity: .warning)
+            diagnosticLogger.error("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .public)")
             return nil
         }
     }
@@ -334,24 +327,15 @@ final class ContainersStore {
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
                                  "Recreated \(originalID, privacy: .public) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
             return true
-        } catch let error as CommandError {
-            errorMessage = error.userMessage
-            let elapsed = Date().timeIntervalSince(started)
-            logger?.record("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage)",
-                           category: .lifecycle,
-                           severity: .warning,
-                           containerID: originalID)
-            diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage, privacy: .public)")
-            await refresh()
-            return false
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.appDisplayMessage
             let elapsed = Date().timeIntervalSince(started)
-            logger?.record("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription)",
-                           category: .lifecycle,
-                           severity: .warning,
-                           containerID: originalID)
-            diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription, privacy: .public)")
+            logger?.recordFailure("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
+                                  error: error,
+                                  category: .lifecycle,
+                                  severity: .warning,
+                                  containerID: originalID)
+            diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .public)")
             await refresh()
             return false
         }
@@ -377,22 +361,15 @@ final class ContainersStore {
                            containerID: id)
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
                                  "\(verb) finished for \(id, privacy: .public) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
-        } catch let error as CommandError {
-            errorMessage = error.userMessage
-            let elapsed = Date().timeIntervalSince(started)
-            logger?.record("\(verb) failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage)",
-                           category: .lifecycle,
-                           severity: .warning,
-                           containerID: id)
-            diagnosticLogger.error("\(verb) failed for \(id, privacy: .public) after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage, privacy: .public)")
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = error.appDisplayMessage
             let elapsed = Date().timeIntervalSince(started)
-            logger?.record("\(verb) failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription)",
-                           category: .lifecycle,
-                           severity: .warning,
-                           containerID: id)
-            diagnosticLogger.error("\(verb) failed for \(id, privacy: .public) after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription, privacy: .public)")
+            logger?.recordFailure("\(verb) failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
+                                  error: error,
+                                  category: .lifecycle,
+                                  severity: .warning,
+                                  containerID: id)
+            diagnosticLogger.error("\(verb) failed for \(id, privacy: .public) after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .public)")
         }
     }
 }

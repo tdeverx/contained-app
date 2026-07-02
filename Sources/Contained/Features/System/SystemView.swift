@@ -417,8 +417,8 @@ struct SystemContent: View {
             }
             await app.refreshSystemResources()
             await app.refreshSystem()
-        } catch let error as CommandError { app.flash(error.userMessage) }
-        catch { app.flash(error.localizedDescription) }
+        } catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        catch { app.flash(error.appDisplayMessage) }
     }
 
     private func reclaimAll() async {

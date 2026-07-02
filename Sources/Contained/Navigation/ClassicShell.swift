@@ -342,9 +342,9 @@ private struct NetworksPage: View {
             _ = try await client.deleteNetworks([network.name])
             await app.refreshNetworks()
         } catch let error as CommandError {
-            app.flash(error.userMessage)
+            app.flash(error.appDisplayMessage)
         } catch {
-            app.flash(error.localizedDescription)
+            app.flash(error.appDisplayMessage)
         }
     }
 }

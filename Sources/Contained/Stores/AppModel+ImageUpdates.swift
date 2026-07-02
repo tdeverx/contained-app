@@ -98,12 +98,13 @@ extension AppModel {
                 }
             }
         } catch {
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            let message = error.appDisplayMessage
             imageUpdates[key] = .failed(localDigest: localDigest, message: message)
             if notify { flash(message) }
-            logger.record("Failed checking image update for \(Format.shortImage(reference)): \(message)",
-                          category: .image,
-                          severity: .error)
+            logger.recordFailure("Failed checking image update for \(Format.shortImage(reference))",
+                                 error: error,
+                                 category: .image,
+                                 severity: .error)
         }
     }
 
@@ -129,10 +130,10 @@ extension AppModel {
                 images = try await client.images()
                 imagesError = nil
             } catch let error as CommandError {
-                imagesError = error.userMessage
+                imagesError = error.appDisplayMessage
                 return
             } catch {
-                imagesError = error.localizedDescription
+                imagesError = error.appDisplayMessage
                 return
             }
         }

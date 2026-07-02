@@ -51,7 +51,7 @@ extension AppModel {
             downgradeSchemaVersion = nil
             flash("Exported backup and reset local state")
         } catch {
-            flash(error.localizedDescription)
+            flash(error.appDisplayMessage)
         }
     }
 

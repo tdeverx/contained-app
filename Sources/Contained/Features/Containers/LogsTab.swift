@@ -105,7 +105,7 @@ struct LogsTab: View {
         } catch is CancellationError {
             // Expected on tab/container switch — the child process is terminated for us.
         } catch {
-            failed = (error as? CommandError)?.userMessage ?? error.localizedDescription
+            failed = (error as? CommandError)?.appDisplayMessage ?? error.appDisplayMessage
         }
     }
 

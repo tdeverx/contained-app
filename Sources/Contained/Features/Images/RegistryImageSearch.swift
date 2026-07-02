@@ -225,7 +225,7 @@ struct RegistryImageSearch: View {
         } catch {
             guard !Task.isCancelled, searchQuery == query else { return }
             results = []
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            errorMessage = error.appDisplayMessage
         }
     }
 }

@@ -246,9 +246,10 @@ final class AppModel {
             // `system status` exits non-zero when the service isn't running/registered.
             bootstrap = .serviceStopped
             stopContainerStatsStream()
-            logger.record("Couldn't read container service status: \(error.localizedDescription)",
-                          category: .system,
-                          severity: .error)
+            logger.recordFailure("Couldn't read container service status",
+                                 error: error,
+                                 category: .system,
+                                 severity: .error)
         }
         let elapsed = Date().timeIntervalSince(started)
         if elapsed >= 0.75 {
@@ -291,9 +292,17 @@ final class AppModel {
     /// Run a throwing CLI action, returning a user-facing error string on failure (nil on success).
     /// Collapses the repeated `do / catch CommandError / catch` blocks across the stores and sheets.
     func captured(_ work: () async throws -> Void) async -> String? {
-        do { try await work(); return nil }
-        catch let error as CommandError { return error.userMessage }
-        catch { return error.localizedDescription }
+        await capturedError(work)?.appDisplayMessage
+    }
+
+    /// Run a throwing action while preserving the original error for Activity/package metadata.
+    func capturedError(_ work: () async throws -> Void) async -> Error? {
+        do {
+            try await work()
+            return nil
+        } catch {
+            return error
+        }
     }
 
     /// One polling tick: refresh system + containers, run the restart watchdog, and keep the cached
@@ -352,7 +361,7 @@ final class AppModel {
                 await MainActor.run {
                     guard let self,
                           self.containerStatsStreamGeneration == generation else { return }
-                    self.diagnosticLogger.error("Stats stream failed: \(error.localizedDescription, privacy: .public)")
+                    self.diagnosticLogger.error("Stats stream failed: \(error.appDisplayMessage, privacy: .public)")
                 }
             }
 
@@ -478,11 +487,12 @@ final class AppModel {
     func loadImageTar(at url: URL) {
         guard let client else { return }
         Task {
-            if let error = await captured({ _ = try await client.loadImages(from: url.path) }) {
-                flash(error)
-                logger.record("Failed loading image archive \(url.lastPathComponent): \(error)",
-                              category: .image,
-                              severity: .error)
+            if let error = await capturedError({ _ = try await client.loadImages(from: url.path) }) {
+                flash(error.appDisplayMessage)
+                logger.recordFailure("Failed loading image archive \(url.lastPathComponent)",
+                                     error: error,
+                                     category: .image,
+                                     severity: .error)
             } else {
                 await refreshImagesIfStale(force: true)
                 flash("Loaded \(url.lastPathComponent)")
@@ -494,13 +504,16 @@ final class AppModel {
     @discardableResult
     func createVolume(name: String, size: String?) async -> Bool {
         guard let client else { return false }
-        let error = await captured {
+        let error = await capturedError {
             _ = try await client.createVolume(name: name, size: size)
             await refreshVolumes()
         }
         if let error {
-            flash(error)
-            logger.record("Failed creating volume \(name): \(error)", category: .system, severity: .error)
+            flash(error.appDisplayMessage)
+            logger.recordFailure("Failed creating volume \(name)",
+                                 error: error,
+                                 category: .system,
+                                 severity: .error)
             return false
         }
         flash("Created volume \(name)")
@@ -511,13 +524,16 @@ final class AppModel {
     @discardableResult
     func createNetwork(name: String, subnet: String?, internalOnly: Bool) async -> Bool {
         guard let client else { return false }
-        let error = await captured {
+        let error = await capturedError {
             _ = try await client.createNetwork(name: name, subnet: subnet, internalOnly: internalOnly)
             await refreshNetworks()
         }
         if let error {
-            flash(error)
-            logger.record("Failed creating network \(name): \(error)", category: .system, severity: .error)
+            flash(error.appDisplayMessage)
+            logger.recordFailure("Failed creating network \(name)",
+                                 error: error,
+                                 category: .system,
+                                 severity: .error)
             return false
         }
         flash("Created network \(name)")
@@ -549,17 +565,12 @@ final class AppModel {
             await refreshImagesIfStale(force: true)
             logger.record("Pulled \(Format.shortImage(reference))", category: .image)
             return true
-        } catch let error as CommandError {
-            flash(error.userMessage)
-            logger.record("Failed pulling \(Format.shortImage(reference)): \(error.userMessage)",
-                          category: .image,
-                          severity: .error)
-            return false
         } catch {
-            flash(error.localizedDescription)
-            logger.record("Failed pulling \(Format.shortImage(reference)): \(error.localizedDescription)",
-                          category: .image,
-                          severity: .error)
+            flash(error.appDisplayMessage)
+            logger.recordFailure("Failed pulling \(Format.shortImage(reference))",
+                                 error: error,
+                                 category: .image,
+                                 severity: .error)
             return false
         }
     }

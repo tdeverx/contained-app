@@ -349,9 +349,9 @@ struct ToolbarImageGroupCard: View {
                 tagTarget = ""
                 withAnimation(spring) { page = .tags }
             } catch let error as CommandError {
-                app.flash(error.userMessage); tagBusy = false
+                app.flash(error.appDisplayMessage); tagBusy = false
             } catch {
-                app.flash(error.localizedDescription); tagBusy = false
+                app.flash(error.appDisplayMessage); tagBusy = false
             }
         }
     }
@@ -651,15 +651,15 @@ struct ToolbarImageGroupCard: View {
             await app.refreshImagesIfStale(force: true)
             app.flash("Deleted \(Format.shortImage(reference))")
             deletingReference = nil
-        } catch let error as CommandError { app.flash(error.userMessage) }
-        catch { app.flash(error.localizedDescription) }
+        } catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        catch { app.flash(error.appDisplayMessage) }
     }
 
     private func prune(all: Bool) async {
         guard let client = app.client else { return }
         do { _ = try await client.pruneImages(all: all); await app.refreshImagesIfStale(force: true) }
-        catch let error as CommandError { app.flash(error.userMessage) }
-        catch { app.flash(error.localizedDescription) }
+        catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        catch { app.flash(error.appDisplayMessage) }
     }
 
     private func save(_ image: ContainedCore.ImageResource) {

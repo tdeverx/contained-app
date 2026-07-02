@@ -105,9 +105,14 @@ public struct UnsupportedRuntimeCapability: Error, Equatable, Sendable {
     }
 }
 
-extension UnsupportedRuntimeCapability: LocalizedError {
-    public var errorDescription: String? {
-        "The selected runtime does not support this operation."
+extension UnsupportedRuntimeCapability: ContainedPackageError {
+    public var packageName: String { "ContainedRuntime" }
+    public var packageErrorCode: String { "unsupportedRuntimeCapability" }
+    public var packageErrorContext: [String: String] {
+        [
+            "kind": kind.rawValue,
+            "capability": String(capability.rawValue),
+        ]
     }
 }
 
