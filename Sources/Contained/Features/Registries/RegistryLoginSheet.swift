@@ -71,8 +71,8 @@ struct RegistryLoginSheet: View {
                                                    password: password)
                 await app.refreshRegistries()
                 dismiss()
-            } catch let e as CommandError { error = e.userMessage; busy = false }
-            catch { self.error = error.localizedDescription; busy = false }
+            } catch let e as CommandError { error = e.appDisplayMessage; busy = false }
+            catch { self.error = error.appDisplayMessage; busy = false }
         }
     }
 }

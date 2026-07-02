@@ -315,8 +315,8 @@ struct ContainersGridView: View {
     private func deleteNetwork(_ network: NetworkResource) async {
         guard let client = app.client else { return }
         do { _ = try await client.deleteNetworks([network.name]); await app.refreshNetworks() }
-        catch let error as CommandError { app.flash(error.userMessage) }
-        catch { app.flash(error.localizedDescription) }
+        catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        catch { app.flash(error.appDisplayMessage) }
     }
 
     @ViewBuilder

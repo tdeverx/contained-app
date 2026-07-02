@@ -60,7 +60,7 @@ struct RegistriesTab: View {
     private func logout(_ login: RegistryLogin) async {
         guard let client = app.client else { return }
         do { _ = try await client.registryLogout(server: login.host); await app.refreshRegistries() }
-        catch let error as CommandError { app.flash(error.userMessage) }
-        catch { app.flash(error.localizedDescription) }
+        catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        catch { app.flash(error.appDisplayMessage) }
     }
 }

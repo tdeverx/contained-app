@@ -65,6 +65,11 @@ This file is the working contract for coding agents in this repository. Follow i
   defaults or localized resource bundles. Use `AppText` for reusable app copy
   and dynamic templates; plain SwiftUI literals are acceptable when SwiftUI keeps
   them localization-ready.
+- Keep package errors display-neutral. Reusable targets should throw typed errors
+  with stable codes/context, preferably `ContainedPackageError`, while
+  `Sources/Contained` maps them through `AppErrorPresentation`/`AppText` before
+  showing toasts, alerts, inline errors, or Activity entries. Preserve arbitrary
+  backend stderr as runtime detail rather than pretending to localize it.
 - Do not write app personalization back as `contained.*` labels. Only `contained.restart` and `contained.stack` may round-trip through container labels.
 - Keep helper scripts in `scripts/` and prefer hyphenated file names for multi-word shell scripts.
 - Keep comments human and useful. Explain surprising intent, not obvious syntax.

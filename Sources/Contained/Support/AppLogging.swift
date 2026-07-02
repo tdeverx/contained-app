@@ -144,4 +144,15 @@ final class AppLogger {
             logger.log(level: severity.osLogType, "\(message, privacy: .public)")
         }
     }
+
+    func recordFailure(_ prefix: String,
+                       error: Error,
+                       category: AppLogCategory,
+                       severity: AppLogSeverity = .error,
+                       containerID: String? = nil) {
+        record(AppErrorPresentation.activityMessage(prefix, error: error),
+               category: category,
+               severity: severity,
+               containerID: containerID)
+    }
 }

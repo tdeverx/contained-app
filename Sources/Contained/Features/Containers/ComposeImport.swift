@@ -28,7 +28,7 @@ enum ComposeImport {
         } catch let error as ComposeError {
             app.flash({ if case .invalid(let message) = error { return message }; return "Invalid compose file." }())
         } catch {
-            app.flash(error.localizedDescription)
+            app.flash(error.appDisplayMessage)
         }
     }
 
@@ -61,15 +61,12 @@ enum ComposeImport {
             app.logger.record("Imported compose project \(parsed.name) with \(specs.count) service\(specs.count == 1 ? "" : "s")",
                               category: .compose)
             ui.beginPrefillQueue(specs, using: app)
-        } catch let error as ComposeError {
-            let message = { if case .invalid(let message) = error { return message }; return "Invalid compose file." }()
-            app.flash(message)
-            app.logger.record("Compose import failed: \(message)", category: .compose, severity: .error)
         } catch {
-            app.flash(error.localizedDescription)
-            app.logger.record("Compose import failed: \(error.localizedDescription)",
-                              category: .compose,
-                              severity: .error)
+            app.flash(error.appDisplayMessage)
+            app.logger.recordFailure("Compose import failed",
+                                     error: error,
+                                     category: .compose,
+                                     severity: .error)
         }
     }
 

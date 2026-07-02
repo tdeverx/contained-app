@@ -26,6 +26,13 @@ package parameters and routes reusable enum labels/dynamic templates through
 language-free unless they expose technical identifiers such as raw values,
 runtime descriptors, or command output.
 
+Package errors follow the same ownership boundary. Core/runtime packages expose
+stable codes and compact context through `ContainedPackageError`; the app maps
+those failures through `AppErrorPresentation` and `AppText` before showing
+toasts, inline errors, alerts, or Activity history. Arbitrary backend stderr is
+preserved as runtime-provided detail unless an adapter maps it to a known typed
+case.
+
 Package-local docs:
 
 - [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md)
@@ -39,6 +46,7 @@ remains the source of truth for builds, tests, and release scripts.
 
 - **`ContainerCommands`** — pure argv builders, side-effect-free so golden tests assert the exact arguments (the "Reveal CLI" affordances read from the same source of truth).
 - **`CommandRunner`** — shared command-execution primitive used by CLI-backed adapters. It runs one-shot commands (`run`) or streaming commands (`stream`, an `AsyncThrowingStream`) at the requested priority. Passwords are piped via `--password-stdin`, never argv.
+- **`ContainedPackageError`** — display-neutral error metadata shared by reusable packages. It gives the app a package name, stable code, and context without forcing packages to own localized copy.
 - **`AppleContainerClient`** — the Apple `container` implementation of `ContainerRuntimeClient`; returns decoded models and maps decode failures to a single `CommandError`.
 - **`ContainerStatsTableParser`** — Apple-adapter parser for the ANSI table emitted by `container stats --format table`. It converts table frames into runtime-agnostic snapshots inside `AppleContainerRuntime`.
 - **`ContainerRuntimeClient`** — the backend-facing operation contract. `RuntimeDescriptor`, open-ended `RuntimeKind`, and `RuntimeCapability` advertise what a selected runtime can do before adapter-specific UI routes enable a command. See [[Runtime Adapters|Runtime-Adapters]].

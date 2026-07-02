@@ -18,6 +18,23 @@ struct AppleContainerRuntimeTests {
         #expect(throws: UnsupportedRuntimeCapability.self) {
             try descriptor.require(.imageBuild)
         }
+        do {
+            try descriptor.require(.imageBuild)
+        } catch let error as UnsupportedRuntimeCapability {
+            #expect(error.packageName == "ContainedRuntime")
+            #expect(error.packageErrorCode == "unsupportedRuntimeCapability")
+            #expect(error.packageErrorContext["kind"] == "future-engine")
+        }
+    }
+
+    @Test func commandErrorsExposePackageCodesAndContext() {
+        let error = CommandError.nonZeroExit(code: 42, stderr: "boom", command: "container list")
+
+        #expect(error.packageName == "ContainedRuntime")
+        #expect(error.packageErrorCode == "nonZeroExit")
+        #expect(error.packageErrorContext["code"] == "42")
+        #expect(error.packageErrorContext["stderr"] == "boom")
+        #expect(error.packageErrorContext["command"] == "container list")
     }
 
     @Test func appleCLIVersionParsingAndSupport() {

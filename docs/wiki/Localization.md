@@ -17,6 +17,14 @@ adding an English default in the package. Examples include action help, close
 labels, search clear labels, page-control titles, selection-count text, and
 color/tint display names.
 
+Package failures follow the same ownership rule. Reusable targets should throw
+typed errors with stable codes/context, usually by conforming to
+`ContainedPackageError`. The app maps those errors through
+`AppErrorPresentation` and `AppText`, then decides whether to show a toast,
+inline error, alert, or Activity entry. Do not attempt to localize arbitrary
+backend stderr; preserve it as runtime-provided detail unless an adapter can map
+it to a known typed case.
+
 ## App Strings
 
 Use `AppText` for reusable app-owned labels and dynamic templates:
@@ -37,6 +45,15 @@ TintSelector(selection: $settings.accentTint) {
 DesignSelectionActionBar(count: selection.count,
                          countLabel: AppText.selectedCount,
                          actions: actions)
+
+do {
+    try await runtime.performSystemAction("start")
+} catch {
+    app.flash(error.appDisplayMessage)
+    app.logger.recordFailure("Start service failed",
+                             error: error,
+                             category: .system)
+}
 ```
 
 Plain SwiftUI literals such as `Text("Settings")`, `Button("Refresh")`, and

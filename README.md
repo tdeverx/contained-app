@@ -83,6 +83,7 @@ The root package has the app/core targets and consumes local reusable packages:
 - [`Packages/ContainedNavigation`](Packages/ContainedNavigation/README.md): reusable navigation and layout infrastructure shared by app chrome.
 
 Integration is intentionally CLI-based rather than private-framework based. Personalization and app-managed metadata stay local to Contained so the user's container resources remain clean when used directly from the terminal.
+Reusable packages expose display-neutral errors with stable package codes/context; the app owns localized messages, alerts, and Activity history presentation.
 
 ## License
 

@@ -92,7 +92,17 @@ public struct ComposeHealthcheck: Sendable, Hashable {
     }
 }
 
-public enum ComposeError: Error, Sendable { case invalid(String) }
+public enum ComposeError: ContainedPackageError, Equatable {
+    case invalid(String)
+
+    public var packageName: String { "ContainedCore" }
+    public var packageErrorCode: String { "composeInvalid" }
+    public var packageErrorContext: [String: String] {
+        switch self {
+        case .invalid(let reason): return ["reason": reason]
+        }
+    }
+}
 
 /// Dependency ordering for a stack launch. Pure + testable (factored like `RestartDecision`).
 public enum ComposeOrder {

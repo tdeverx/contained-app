@@ -421,7 +421,7 @@ struct ToolbarCommandPalette: View {
         } catch {
             guard !Task.isCancelled else { return }
             hubResults = []
-            hubError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            hubError = error.appDisplayMessage
         }
     }
 

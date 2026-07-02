@@ -83,6 +83,12 @@ appcast.xml              Sparkle feed at the root of each release branch
   component needs text, add an explicit parameter and pass app-owned strings
   from `Sources/Contained`; reusable enum labels and dynamic templates should
   flow through `AppText` with English fallbacks.
+- **The app owns package error presentation.** Reusable targets should throw
+  typed errors with stable codes/context, preferably `ContainedPackageError`.
+  Map those failures through `AppErrorPresentation`/`AppText` in
+  `Sources/Contained` before showing toasts, inline errors, alerts, or Activity
+  entries. Preserve arbitrary backend stderr as runtime detail unless an adapter
+  can classify it as a known typed case.
 - **Package docs live with the package.** Keep package-local import/setup/examples in [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md) and [`Packages/ContainedNavigation/README.md`](../../Packages/ContainedNavigation/README.md), with DocC landing pages under each target's `.docc` catalog. Keep `docs/wiki` focused on app-level architecture and workflow guidance.
 - **Xcode opens the workspace.** `Contained.xcworkspace` points at the root and local package manifests. SwiftPM package manifests remain the build graph source of truth; do not hand-maintain generated `.xcodeproj` state.
 - **Navigation infrastructure belongs in `ContainedNavigation` only when it is generic.** App sections, pending actions, concrete toolbar panels, and `UIState` stay in the executable target until they can cross the boundary without app policy.
