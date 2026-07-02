@@ -10,8 +10,8 @@ enum PaletteScope: Hashable {
 
     var title: String {
         switch self {
-        case .dockerHub:   return "Docker Hub"
-        case .localImages: return "Local images"
+        case .dockerHub:   return AppText.paletteDockerHub
+        case .localImages: return AppText.paletteLocalImages
         }
     }
 
@@ -24,8 +24,8 @@ enum PaletteScope: Hashable {
 
     var placeholder: String {
         switch self {
-        case .dockerHub:   return "Search Docker Hub…"
-        case .localImages: return "Filter local images…"
+        case .dockerHub:   return AppText.paletteSearchDockerHubPlaceholder
+        case .localImages: return AppText.paletteFilterLocalImagesPlaceholder
         }
     }
 }
@@ -55,7 +55,7 @@ struct PaletteItem: Identifiable {
         for section in AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
             where section != .build || app.settings.imageBuildEnabled {
             items.append(PaletteItem(title: section.title,
-                                     subtitle: section.group.rawValue,
+                                     subtitle: section.group.title,
                                      kind: .navigation,
                                      icon: section.symbol,
                                      tint: .secondary) {
@@ -65,22 +65,26 @@ struct PaletteItem: Identifiable {
         // Add anything, from anywhere. (Pulling an image is covered by the Docker Hub search scope
         // below, so there's no separate "Pull an image" entry.)
         let adds: [(String, String, PendingAction)] = [
-            ("Run a container", "shippingbox", .runContainer),
-            ("New volume", "externaldrive.badge.plus", .createVolume),
-            ("New network", "network", .createNetwork),
+            (AppText.paletteRunContainer, "shippingbox", .runContainer),
+            (AppText.paletteNewVolume, "externaldrive.badge.plus", .createVolume),
+            (AppText.paletteNewNetwork, "network", .createNetwork),
         ]
         for (title, icon, action) in adds {
-            items.append(PaletteItem(title: title, subtitle: "create", kind: .create, icon: icon, tint: .accentColor) {
+            items.append(PaletteItem(title: title, subtitle: AppText.paletteCreateSubtitle, kind: .create, icon: icon, tint: .accentColor) {
                 ui.dispatch(action)
             })
         }
         if app.settings.composeImportEnabled {
-            items.append(PaletteItem(title: "Import compose…", subtitle: "create", kind: .create, icon: "square.on.square", tint: .accentColor) {
+            items.append(PaletteItem(title: AppText.paletteImportCompose,
+                                     subtitle: AppText.paletteCreateSubtitle,
+                                     kind: .create,
+                                     icon: "square.on.square",
+                                     tint: .accentColor) {
                 ComposeImport.pickAndImport(app: app, ui: ui)
             })
         }
         // Registry credentials live on the Settings → Registries page, not as a standalone app page.
-        items.append(PaletteItem(title: "Registry login", subtitle: "create",
+        items.append(PaletteItem(title: AppText.paletteRegistryLogin, subtitle: AppText.paletteCreateSubtitle,
                                  keywords: ["registry", "credentials", "docker login", "sign in"],
                                  kind: .create, icon: "person.badge.key", tint: .accentColor) {
             ui.openSettings(to: .registries)
@@ -88,27 +92,31 @@ struct PaletteItem: Identifiable {
         // Search scopes: these pin a chip to the search field and search in-place (they keep the
         // palette open) instead of opening another panel.
         if app.settings.hubSearchEnabled {
-            items.append(PaletteItem(title: "Search Docker Hub", subtitle: "scope",
+            items.append(PaletteItem(title: AppText.paletteSearchDockerHub, subtitle: AppText.paletteScopeSubtitle,
                                      keywords: ["registry", "pull", "dockerhub", "image"],
                                      kind: .search, keepsPaletteOpen: true,
                                      icon: "globe", tint: .accentColor) {
                 ui.paletteScope = .dockerHub
             })
         }
-        items.append(PaletteItem(title: "Search local images", subtitle: "scope",
+        items.append(PaletteItem(title: AppText.paletteSearchLocalImages, subtitle: AppText.paletteScopeSubtitle,
                                  keywords: ["image", "tag", "local", "filter"],
                                  kind: .search, keepsPaletteOpen: true,
                                  icon: "square.stack.3d.up", tint: .accentColor) {
             ui.paletteScope = .localImages
         })
         // Page / global actions.
-        items.append(PaletteItem(title: "Refresh", subtitle: "action", kind: .action, icon: "arrow.clockwise", tint: .secondary) {
+        items.append(PaletteItem(title: AppText.paletteRefresh,
+                                 subtitle: AppText.paletteActionSubtitle,
+                                 kind: .action,
+                                 icon: "arrow.clockwise",
+                                 tint: .secondary) {
             app.coordinator.wake()
         })
-        items.append(PaletteItem(title: "Check for app updates…", subtitle: "updates",
+        items.append(PaletteItem(title: AppText.paletteCheckAppUpdates, subtitle: AppText.paletteUpdatesSubtitle,
                                  keywords: ["sparkle", "software", "release"],
                                  kind: .action,
-                                 accessory: app.updater.canCheckForUpdates ? .run : .disabled("Unavailable"),
+                                 accessory: app.updater.canCheckForUpdates ? .run : .disabled(AppText.paletteUnavailable),
                                  icon: "arrow.down.app", tint: .blue) {
             if app.updater.canCheckForUpdates {
                 app.updater.checkForUpdates()
@@ -116,37 +124,39 @@ struct PaletteItem: Identifiable {
                 app.flash(AppText.appUpdateChecksUnavailable)
             }
         })
-        items.append(PaletteItem(title: "Check all image updates", subtitle: app.imageUpdateIntervalDescription,
+        items.append(PaletteItem(title: AppText.paletteCheckAllImageUpdates, subtitle: app.imageUpdateIntervalDescription,
                                  keywords: ["updates", "tags", "registry", "all images"],
                                  kind: .image, icon: "arrow.triangle.2.circlepath", tint: .blue) {
             Task { await app.runImageUpdateSweepNow() }
         })
-        items.append(PaletteItem(title: "Update all images with available updates", subtitle: "pull newer tags",
+        items.append(PaletteItem(title: AppText.paletteUpdateAllImages, subtitle: AppText.palettePullNewerTagsSubtitle,
                                  keywords: ["pull", "updates", "tags", "all images"],
                                  kind: .image, icon: "arrow.down.circle", tint: .orange) {
             Task { await app.pullAvailableImageUpdates(manual: true) }
         })
-        items.append(PaletteItem(title: "Check all container images for updates", subtitle: "\(app.containers.snapshots.count) containers",
+        items.append(PaletteItem(title: AppText.paletteCheckAllContainerImages,
+                                 subtitle: AppText.paletteContainerCountSubtitle(app.containers.snapshots.count),
                                  keywords: ["container updates", "check all containers", "image updates"],
                                  kind: .container, icon: "shippingbox.and.arrow.backward", tint: .blue) {
             Task { await app.checkContainerImageUpdates() }
         })
-        items.append(PaletteItem(title: "Pull available container image updates", subtitle: "does not recreate containers",
+        items.append(PaletteItem(title: AppText.palettePullContainerImageUpdates,
+                                 subtitle: AppText.paletteDoesNotRecreateContainersSubtitle,
                                  keywords: ["update all containers", "pull container images", "container image updates"],
                                  kind: .container, icon: "arrow.down.circle", tint: .orange) {
             Task { await app.pullAvailableContainerImageUpdates() }
         })
         // Maintenance actions. Load uses a native open panel and Prune a native confirmation.
         let pageActions: [(String, String, PendingAction)] = [
-            ("Load image tar…", "square.and.arrow.down", .loadImage),
-            ("Prune images…", "trash", .pruneImages),
+            (AppText.paletteLoadImageTar, "square.and.arrow.down", .loadImage),
+            (AppText.palettePruneImages, "trash", .pruneImages),
         ]
         for (title, icon, action) in pageActions {
-            items.append(PaletteItem(title: title, subtitle: "action", kind: .action, icon: icon, tint: .secondary) {
+            items.append(PaletteItem(title: title, subtitle: AppText.paletteActionSubtitle, kind: .action, icon: icon, tint: .secondary) {
                 ui.dispatch(action)
             })
         }
-        items.append(PaletteItem(title: "System logs", subtitle: "action",
+        items.append(PaletteItem(title: AppText.paletteSystemLogs, subtitle: AppText.paletteActionSubtitle,
                                  keywords: ["service", "runtime", "diagnostics"],
                                  kind: .action, icon: "text.alignleft", tint: .secondary) {
             ui.dispatch(.systemLogs)
@@ -158,13 +168,15 @@ struct PaletteItem: Identifiable {
         for snapshot in app.containers.snapshots {
             let name = app.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
-            items.append(PaletteItem(title: "Edit \(name)", subtitle: "container", keywords: [snapshot.id, snapshot.image],
+            items.append(PaletteItem(title: AppText.paletteEditContainer(name),
+                                     subtitle: AppText.paletteContainerSubtitle,
+                                     keywords: [snapshot.id, snapshot.image],
                                      kind: .container,
                                      visual: .container(snapshot),
                                      icon: "slider.horizontal.3", tint: .secondary) {
                 ui.openCreationPanel(editing: snapshot)
             })
-            items.append(PaletteItem(title: "Update image for \(name)", subtitle: snapshot.image, keywords: [snapshot.id, snapshot.image],
+            items.append(PaletteItem(title: AppText.paletteUpdateContainerImage(name), subtitle: snapshot.image, keywords: [snapshot.id, snapshot.image],
                                      kind: .container,
                                      visual: .container(snapshot),
                                      icon: "arrow.down.circle", tint: .blue) {
@@ -175,14 +187,20 @@ struct PaletteItem: Identifiable {
                 }
             })
             if snapshot.state == .running {
-                items.append(PaletteItem(title: "Stop \(name)", subtitle: "container", kind: .container, visual: .container(snapshot), icon: "stop.fill", tint: .orange) {
+                items.append(PaletteItem(title: AppText.paletteStopContainer(name),
+                                         subtitle: AppText.paletteContainerSubtitle,
+                                         kind: .container, visual: .container(snapshot), icon: "stop.fill", tint: .orange) {
                     Task { await app.containers.stop(snapshot.id) }
                 })
-                items.append(PaletteItem(title: "Restart \(name)", subtitle: "container", kind: .container, visual: .container(snapshot), icon: "arrow.clockwise", tint: .blue) {
+                items.append(PaletteItem(title: AppText.paletteRestartContainer(name),
+                                         subtitle: AppText.paletteContainerSubtitle,
+                                         kind: .container, visual: .container(snapshot), icon: "arrow.clockwise", tint: .blue) {
                     Task { await app.containers.restart(snapshot.id) }
                 })
             } else {
-                items.append(PaletteItem(title: "Start \(name)", subtitle: "container", kind: .container, visual: .container(snapshot), icon: "play.fill", tint: .green) {
+                items.append(PaletteItem(title: AppText.paletteStartContainer(name),
+                                         subtitle: AppText.paletteContainerSubtitle,
+                                         kind: .container, visual: .container(snapshot), icon: "play.fill", tint: .green) {
                     Task { await app.containers.start(snapshot.id) }
                 })
             }
@@ -208,24 +226,24 @@ struct PaletteItem: Identifiable {
             (.about, "info.circle"),
         ]
         var items = settingsPages.map { page, icon in
-            PaletteItem(title: "\(page.rawValue) Settings", subtitle: "settings",
+            PaletteItem(title: AppText.paletteSettingsTitle(page.rawValue), subtitle: AppText.paletteSettingsSubtitle,
                         keywords: ["preferences", page.rawValue.lowercased()],
                         kind: .settings, icon: icon, tint: .secondary) {
                 ui.openSettings(to: page)
             }
         }
         items.append(PaletteItem(title: app.settings.runningOnlyTitle(ui.runningOnly),
-                                 subtitle: "toggle",
+                                 subtitle: AppText.paletteToggleSubtitle,
                                  keywords: ["filter", "containers"],
                                  kind: .toggle,
                                  accessory: .toggle(isOn: { ui.runningOnly },
                                                     set: { ui.runningOnly = $0 }),
                                  icon: "play.circle",
                                  tint: .secondary) {
-            ui.runningOnly.toggle()
+                ui.runningOnly.toggle()
         })
-        items.append(PaletteItem(title: app.settings.keepInMenuBar ? "Hide Menu Bar Item" : "Show Menu Bar Item",
-                                 subtitle: "toggle",
+        items.append(PaletteItem(title: app.settings.keepInMenuBar ? AppText.paletteHideMenuBarItem : AppText.paletteShowMenuBarItem,
+                                 subtitle: AppText.paletteToggleSubtitle,
                                  keywords: ["setting", "menubar", "menu bar"],
                                  kind: .toggle,
                                  accessory: .toggle(isOn: { app.settings.keepInMenuBar },
@@ -234,8 +252,8 @@ struct PaletteItem: Identifiable {
                                  tint: .secondary) {
             app.settings.keepInMenuBar.toggle()
         })
-        items.append(PaletteItem(title: app.settings.revealCLI ? "Hide CLI Previews" : "Show CLI Previews",
-                                 subtitle: "toggle",
+        items.append(PaletteItem(title: app.settings.revealCLI ? AppText.paletteHideCLIPreviews : AppText.paletteShowCLIPreviews,
+                                 subtitle: AppText.paletteToggleSubtitle,
                                  keywords: ["setting", "command", "terminal"],
                                  kind: .toggle,
                                  accessory: .toggle(isOn: { app.settings.revealCLI },
@@ -244,8 +262,8 @@ struct PaletteItem: Identifiable {
                                  tint: .secondary) {
             app.settings.revealCLI.toggle()
         })
-        items.append(PaletteItem(title: app.settings.showInfoTips ? "Hide Info Tips" : "Show Info Tips",
-                                 subtitle: "toggle",
+        items.append(PaletteItem(title: app.settings.showInfoTips ? AppText.paletteHideInfoTips : AppText.paletteShowInfoTips,
+                                 subtitle: AppText.paletteToggleSubtitle,
                                  keywords: ["setting", "help", "popover"],
                                  kind: .toggle,
                                  accessory: .toggle(isOn: { app.settings.showInfoTips },
@@ -256,7 +274,7 @@ struct PaletteItem: Identifiable {
         })
         for tint in DesignTint.allCases {
             items.append(PaletteItem(title: AppText.setDesignTintTitle(tint.localizedDisplayName),
-                                     subtitle: "appearance",
+                                     subtitle: AppText.paletteAppearanceSubtitle,
                                      keywords: ["accent", "color", "theme", "tint", tint.rawValue] + tint.localizedSearchAliases,
                                      kind: .settings,
                                      visual: .tint(tint),
@@ -273,8 +291,8 @@ struct PaletteItem: Identifiable {
         var items: [PaletteItem] = []
         let groups = app.localImageGroups()
         for group in groups {
-            items.append(PaletteItem(title: "Run \(Format.shortImage(group.primaryReference))",
-                                     subtitle: "local image",
+            items.append(PaletteItem(title: AppText.paletteRunImage(Format.shortImage(group.primaryReference)),
+                                     subtitle: AppText.paletteLocalImageSubtitle,
                                      keywords: group.references,
                                      kind: .image,
                                      visual: .imageGroup(group),
@@ -282,8 +300,8 @@ struct PaletteItem: Identifiable {
                                      tint: .green) {
                 ui.runImage(group.primaryReference)
             })
-            items.append(PaletteItem(title: "Check update for \(Format.shortImage(group.primaryReference))",
-                                     subtitle: "image",
+            items.append(PaletteItem(title: AppText.paletteCheckImageUpdate(Format.shortImage(group.primaryReference)),
+                                     subtitle: AppText.paletteImageSubtitle,
                                      keywords: group.references,
                                      kind: .image,
                                      visual: .imageGroup(group),
@@ -292,8 +310,8 @@ struct PaletteItem: Identifiable {
                 Task { await app.checkImageUpdate(group.primaryReference) }
             })
             if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
-                items.append(PaletteItem(title: "Pull update for \(Format.shortImage(group.primaryReference))",
-                                         subtitle: "image",
+                items.append(PaletteItem(title: AppText.palettePullImageUpdate(Format.shortImage(group.primaryReference)),
+                                         subtitle: AppText.paletteImageSubtitle,
                                          keywords: group.references,
                                          kind: .image,
                                          visual: .imageGroup(group),
@@ -303,8 +321,8 @@ struct PaletteItem: Identifiable {
                 })
             }
             for reference in group.references where reference != group.primaryReference {
-                items.append(PaletteItem(title: "Run \(Format.shortImage(reference))",
-                                         subtitle: "image tag",
+                items.append(PaletteItem(title: AppText.paletteRunImage(Format.shortImage(reference)),
+                                         subtitle: AppText.paletteImageTagSubtitle,
                                          keywords: [group.primaryReference, reference],
                                          kind: .image,
                                          visual: .imageTag(reference, groupID: group.id),
@@ -321,8 +339,8 @@ struct PaletteItem: Identifiable {
     private static func volumeItems(app: AppModel, ui: UIState) -> [PaletteItem] {
         app.volumes.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             .map { volume in
-                PaletteItem(title: "Use volume \(volume.name)",
-                            subtitle: "volume",
+                PaletteItem(title: AppText.paletteUseVolume(volume.name),
+                            subtitle: AppText.paletteVolumeSubtitle,
                             keywords: ["storage", volume.name],
                             kind: .resource,
                             visual: .volume(volume),
@@ -339,8 +357,8 @@ struct PaletteItem: Identifiable {
     private static func networkItems(app: AppModel, ui: UIState) -> [PaletteItem] {
         app.networks.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             .map { network in
-                PaletteItem(title: "Run on network \(network.name)",
-                            subtitle: network.isBuiltin ? "built-in network" : "network",
+                PaletteItem(title: AppText.paletteRunOnNetwork(network.name),
+                            subtitle: network.isBuiltin ? AppText.paletteBuiltInNetworkSubtitle : AppText.paletteNetworkSubtitle,
                             keywords: ["network", network.name],
                             kind: .resource,
                             visual: .network(network),
@@ -390,13 +408,27 @@ enum PaletteItemKind: String {
     /// palette into labelled sections when there's no active query.
     var section: (order: Int, title: String) {
         switch self {
-        case .navigation:        return (0, "Navigate")
-        case .create, .search:   return (1, "Create & Search")
-        case .container:         return (2, "Containers")
-        case .image:             return (3, "Images")
-        case .resource:          return (4, "Volumes & Networks")
-        case .settings, .toggle: return (5, "Settings")
-        case .action:            return (6, "Actions")
+        case .navigation:        return (0, AppText.paletteKindNavigate)
+        case .create, .search:   return (1, AppText.paletteSectionCreateSearch)
+        case .container:         return (2, AppText.paletteSectionContainers)
+        case .image:             return (3, AppText.paletteSectionImages)
+        case .resource:          return (4, AppText.paletteSectionVolumesNetworks)
+        case .settings, .toggle: return (5, AppText.paletteKindSettings)
+        case .action:            return (6, AppText.paletteSectionActions)
+        }
+    }
+
+    var localizedTitle: String {
+        switch self {
+        case .action: AppText.paletteKindAction
+        case .create: AppText.paletteKindCreate
+        case .navigation: AppText.paletteKindNavigate
+        case .settings: AppText.paletteKindSettings
+        case .toggle: AppText.paletteKindToggle
+        case .image: AppText.paletteKindImage
+        case .container: AppText.paletteKindContainer
+        case .resource: AppText.paletteKindResource
+        case .search: AppText.paletteKindSearch
         }
     }
 }
@@ -419,6 +451,6 @@ enum PaletteItemVisual {
 
 private extension SettingsStore {
     func runningOnlyTitle(_ runningOnly: Bool) -> String {
-        runningOnly ? "Show All Containers" : "Show Running Containers Only"
+        runningOnly ? AppText.paletteShowAllContainers : AppText.paletteShowRunningContainersOnly
     }
 }

@@ -51,7 +51,7 @@ struct PaletteResultCard: View {
                                      ? DesignTokens.DesignCard.iconSelectedBackgroundOpacity
                                      : DesignTokens.DesignCard.iconBackgroundOpacity)
         } titleAccessory: {
-            DesignBadgeText(text: item.kind.rawValue,
+            DesignBadgeText(text: item.kind.localizedTitle,
                               font: .caption2.weight(.semibold),
                               foreground: selected ? .accentColor : .secondary)
         } subtitleAccessory: {
