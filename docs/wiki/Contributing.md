@@ -57,9 +57,12 @@ enforced without breaking appcast publishing.
 ```
 Sources/ContainedCore/   pure logic — models, CLI wrapper, decoding, compose (no SwiftUI)
 Sources/Contained/       the SwiftUI app
-  DesignSystem/          glass helpers, tokens, shared components
+  DesignSystem/          core-dependent presentation mappings only
   Features/<Domain>/     one folder per sidebar domain
   Navigation/ Stores/ Support/ History/
+Packages/ContainedDesignSystem/ reusable SwiftUI/AppKit visual primitives and tokens
+Packages/ContainedNavigation/ reusable navigation/layout infrastructure
+Contained.xcworkspace/   optional Xcode entry point over the SwiftPM packages
 Tests/ContainedCoreTests/  golden-argv + decode + decision tests
 Tests/ContainedAppTests/   RunSpec argv + compose mapping
 scripts/                 bundle.sh, release.sh, appcast.sh
@@ -71,11 +74,16 @@ appcast.xml              Sparkle feed at the root of each release branch
 
 - **Agents start at `AGENTS.md`.** Coding agents should read the root agent guide before editing; it summarizes branch, update, release-note, design-system, and verification rules.
 - **Directory names are intentional.** SwiftPM folders stay `Sources` and `Tests`, Swift source domains use PascalCase, and repository infrastructure uses lowercase names such as `docs` and `scripts`. Put helper scripts in `scripts/` and use hyphenated names for multi-word shell scripts.
+- **Reusable packages live under `Packages/`.** Keep app-agnostic design primitives, tokens, spacing, material, opacity, and micro-chrome in `ContainedDesignSystem`; keep app state, stores, Sparkle, SwiftData, persistence, and feature routing in the executable target.
+- **Package docs live with the package.** Keep package-local import/setup/examples in [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md) and [`Packages/ContainedNavigation/README.md`](../../Packages/ContainedNavigation/README.md), with DocC landing pages under each target's `.docc` catalog. Keep `docs/wiki` focused on app-level architecture and workflow guidance.
+- **Xcode opens the workspace.** `Contained.xcworkspace` points at the root and local package manifests. SwiftPM package manifests remain the build graph source of truth; do not hand-maintain generated `.xcodeproj` state.
+- **Navigation infrastructure belongs in `ContainedNavigation` only when it is generic.** App sections, pending actions, concrete toolbar panels, and `UIState` stay in the executable target until they can cross the boundary without app policy.
 - **Every CLI action goes through a `ContainerCommands` builder** + a `ContainerClient` wrapper, with a golden-argv test. The UI never assembles argv inline — this keeps "Reveal CLI" honest.
+- **Runtime-facing code should depend on `ContainerRuntimeClient` where a backend choice matters.** The Apple `container` implementation remains the default; future Docker-compatible behavior should advertise capability differences through `RuntimeDescriptor`.
 - **Pure decision logic is factored into `ContainedCore`** (`RestartDecision`, `HealthDecision`, compose ordering) and unit-tested without spawning processes.
 - **No `contained.*` personalization labels.** Card styles and healthchecks live in local stores. Only `contained.restart` and `contained.stack` are written (they must round-trip through the container).
 - **Never put secrets or personal data in test fixtures.** Fixtures are captured CLI output — scrub tokens, domains, and paths before committing. (`.gitignore` blocks signing material; push protection is on.)
-- **Match the surrounding style** — comment density, naming, Liquid Glass idioms. Prefer shared primitives such as `PanelHeader`, `PanelSection`, `MorphPanelScaffold`, `ResourceGlassCard`, `CommandPreviewBar`, and `Tokens`.
+- **Match the surrounding style** — comment density, naming, Liquid Glass idioms. Prefer shared primitives such as `PanelHeader`, `PanelSection`, `MorphPanelScaffold`, `ResourceGlassCard`, `GlassButton`, `CommandPreviewBar`, and `Tokens`. Do not add app-local spacing, padding, radius, shadow, material, opacity, or badge/keycap/status-dot recipes; add them to `ContainedDesignSystem` first.
 - **Gate debug-only tools at compile time.** Use `#if CONTAINED_DEBUG_TOOLS` for debug menus, diagnostics, fixtures, or local-only inspection surfaces. SwiftPM defines that flag only for debug builds, so release bundles exclude the code instead of merely hiding it at runtime.
 - **Keep the sidebar fallback working.** Toolbar-first UI and toolbar panel navigation are experimental gates, not replacements for the classic shell.
 - **Sync docs with behavior.** If behavior, settings, routes, or user-facing wording changes, update the matching page under `docs/wiki` and keep README links current.

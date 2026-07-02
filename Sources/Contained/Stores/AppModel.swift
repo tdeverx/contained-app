@@ -1,5 +1,6 @@
 import SwiftUI
 import ContainedCore
+import OSLog
 
 /// Root app state: locates the CLI, owns the typed client and the feature stores, and tracks the
 /// service/CLI bootstrap status that gates plugin-dependent screens.
@@ -36,6 +37,9 @@ final class AppModel {
     private(set) var systemStatus: SystemStatus?
     private(set) var diskUsage: DiskUsage?
     private(set) var cliVersion: String?
+    @ObservationIgnored private var containerStatsVisible = true
+    @ObservationIgnored private var lastRecordedStatsRevision = 0
+    @ObservationIgnored let diagnosticLogger = Logger(subsystem: "app.contained.Contained", category: "diagnostic")
 
     // Resource caches shared by toolbar panels, creation pages, and the container grid.
     private(set) var volumes: [VolumeResource] = []
@@ -153,7 +157,7 @@ final class AppModel {
             }
         }
 
-        await refreshSystem()
+        await refreshSystem(statsDemand: .force)
     }
 
     /// Re-run CLI/service detection (onboarding "Try again").
@@ -171,11 +175,19 @@ final class AppModel {
     /// Proceed despite an unsupported CLI version (onboarding "Continue anyway").
     func continueUnsupported() async {
         bootstrap = .checking
-        await refreshSystem()
+        await refreshSystem(statsDemand: .force)
     }
 
-    func refreshSystem() async {
+    func setContainerStatsVisible(_ visible: Bool) {
+        guard containerStatsVisible != visible else { return }
+        containerStatsVisible = visible
+        if visible { coordinator.wake() }
+    }
+
+    func refreshSystem(statsDemand: ContainersStore.StatsRefreshDemand? = nil) async {
         guard let client else { return }
+        let started = Date()
+        let statsDemand = statsDemand ?? currentStatsDemand
         do {
             let status = try await client.systemStatus()
             systemStatus = status
@@ -183,7 +195,7 @@ final class AppModel {
                 bootstrap = .ready
                 logger.record("Container service is running", category: .system, severity: .debug)
                 await refreshDiskUsage()        // throttled; the System panel can force a fresh read
-                await containers.refresh()
+                await containers.refresh(statsDemand: statsDemand)
                 // One-time: import legacy contained.* card styles into the local store, now that we
                 // no longer write personalization labels.
                 personalization.migrateLegacyLabelsIfNeeded(containers.snapshots)
@@ -197,6 +209,11 @@ final class AppModel {
             logger.record("Couldn't read container service status: \(error.localizedDescription)",
                           category: .system,
                           severity: .error)
+        }
+        let elapsed = Date().timeIntervalSince(started)
+        if elapsed >= 0.75 {
+            diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
+                                 "System refresh finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s with stats demand \(statsDemand.label, privacy: .public)")
         }
     }
 
@@ -220,8 +237,15 @@ final class AppModel {
     func refreshImagesIfStale(force: Bool = false) async {
         guard let client, bootstrap == .ready else { return }
         if !force, let last = lastImagesDate, Date().timeIntervalSince(last) < Self.imagesThrottle { return }
+        let started = Date()
         imagesError = await captured { self.images = try await client.images() }
         lastImagesDate = Date()
+        let elapsed = Date().timeIntervalSince(started)
+        if elapsed >= 0.75 || force {
+            let mode = force ? "force" : "stale"
+            diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
+                                 "Image refresh \(mode, privacy: .public) finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s with \(self.images.count, privacy: .public) image(s)")
+        }
     }
 
     /// Run a throwing CLI action, returning a user-facing error string on failure (nil on success).
@@ -235,18 +259,39 @@ final class AppModel {
     /// One polling tick: refresh system + containers, run the restart watchdog, and keep the cached
     /// resources warm. Called by `RefreshCoordinator`.
     func tick() async {
+        let started = Date()
         await refreshSystem()
         guard bootstrap == .ready, let client else { return }
         if settings.autoRestartEnabled {
             await watchdog.evaluate(snapshots: containers.snapshots, store: containers, client: client)
         }
         await health.evaluate(snapshots: containers.snapshots, store: healthChecks, client: client)
-        historyStore.recordMetrics(containers.statsByID)
+        recordFreshMetricsIfNeeded()
         await refreshNetworks()
         // Keep the image list warm app-wide (throttled), so the toolbar Images panel and the
         // update badges populate without first opening the Images panel.
         await refreshImagesIfStale()
         await checkImageUpdatesIfNeeded()
+        let elapsed = Date().timeIntervalSince(started)
+        if elapsed >= 0.75 {
+            diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
+                                 "Refresh tick finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
+        }
+    }
+
+    private var currentStatsDemand: ContainersStore.StatsRefreshDemand {
+        containerStatsVisible ? .visible : .background
+    }
+
+    func refreshContainerStatsNow() async {
+        await containers.refresh(statsDemand: .force)
+        recordFreshMetricsIfNeeded()
+    }
+
+    private func recordFreshMetricsIfNeeded() {
+        guard containers.statsRevision != lastRecordedStatsRevision else { return }
+        lastRecordedStatsRevision = containers.statsRevision
+        historyStore.recordMetrics(containers.statsByID)
     }
 
     /// Refresh the data behind the System toolbar panel (volumes + a forced `system df`). Called from

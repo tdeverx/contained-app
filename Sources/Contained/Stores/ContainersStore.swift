@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import OSLog
 import ContainedCore
 
@@ -8,15 +9,38 @@ import ContainedCore
 @MainActor
 @Observable
 final class ContainersStore {
+    enum StatsRefreshDemand: Int, Comparable {
+        case background
+        case visible
+        case force
+
+        static func < (lhs: StatsRefreshDemand, rhs: StatsRefreshDemand) -> Bool {
+            lhs.rawValue < rhs.rawValue
+        }
+
+        var label: String {
+            switch self {
+            case .background: "background"
+            case .visible: "visible"
+            case .force: "force"
+            }
+        }
+    }
+
     var snapshots: [ContainerSnapshot] = []
     var statsByID: [String: StatsDelta] = [:]
     /// Per-container, per-metric sparkline history.
     var historyByID: [String: [GraphMetric: SampleBuffer]] = [:]
+    private(set) var statsRevision = 0
     var errorMessage: String?
     var busyIDs: Set<String> = []
     @ObservationIgnored var logger: AppLogger?
+    @ObservationIgnored var now: () -> Date = Date.init
 
     var client: ContainerClient?
+
+    private static let visibleStatsInterval: TimeInterval = 10
+    private static let backgroundStatsInterval: TimeInterval = 30
 
     private var lastRawStats: [String: ContainerStats] = [:]
     private var lastStatsDate: Date?
@@ -28,6 +52,7 @@ final class ContainersStore {
     /// of redundant `list` + `stats` runs when a container is busy starting up.
     private var refreshTask: Task<Void, Never>?
     private var refreshRequested = false
+    private var pendingStatsDemand: StatsRefreshDemand = .background
     private let diagnosticLogger = Logger(subsystem: "app.contained.Contained", category: "diagnostic")
 
     var running: [ContainerSnapshot] { snapshots.filter { $0.state == .running } }
@@ -37,11 +62,12 @@ final class ContainersStore {
         intentionalStops.remove(id) != nil
     }
 
-    /// Re-list containers and resample stats. Serialized: if a refresh is already running, this one is
-    /// coalesced into the trailing pass once the current one finishes (never concurrently), and the
-    /// caller awaits that combined pass.
-    func refresh() async {
+    /// Re-list containers and opportunistically resample stats. Serialized: if a refresh is already
+    /// running, this one is coalesced into the trailing pass once the current one finishes (never
+    /// concurrently), and the caller awaits that combined pass.
+    func refresh(statsDemand: StatsRefreshDemand = .background) async {
         refreshRequested = true
+        pendingStatsDemand = max(pendingStatsDemand, statsDemand)
         if refreshTask != nil {
             logger?.record("Refresh already in flight; coalescing another pass",
                            category: .system,
@@ -65,8 +91,10 @@ final class ContainersStore {
         var passes = 0
         repeat {
             passes += 1
+            let statsDemand = pendingStatsDemand
+            pendingStatsDemand = .background
             refreshRequested = false
-            await performRefresh()
+            await performRefresh(statsDemand: statsDemand)
         } while refreshRequested
         refreshTask = nil
         let elapsed = Date().timeIntervalSince(started)
@@ -80,7 +108,7 @@ final class ContainersStore {
         }
     }
 
-    private func performRefresh() async {
+    private func performRefresh(statsDemand: StatsRefreshDemand) async {
         guard let client else { return }
         do {
             let listed = try await client.listContainers(all: true)
@@ -92,7 +120,7 @@ final class ContainersStore {
             // unbounded as containers are recreated/removed over a long session.
             intentionalStops.formIntersection(Set(snapshots.map(\.id)))
             errorMessage = nil
-            await refreshStats()
+            await refreshStats(statsDemand)
         } catch let error as CommandError {
             errorMessage = error.userMessage
         } catch {
@@ -100,34 +128,65 @@ final class ContainersStore {
         }
     }
 
-    private func refreshStats() async {
+    private func refreshStats(_ demand: StatsRefreshDemand) async {
         guard let client else { return }
         let runningIDs = running.map(\.id)
+        let runningSet = Set(runningIDs)
+        let prunedStats = statsByID.filter { runningSet.contains($0.key) }
+        if prunedStats.count != statsByID.count { statsByID = prunedStats }
+        lastRawStats = lastRawStats.filter { runningSet.contains($0.key) }
         guard !runningIDs.isEmpty else {
-            statsByID.removeAll(); lastRawStats.removeAll(); return
+            if !historyByID.isEmpty { historyByID.removeAll() }
+            lastStatsDate = nil
+            return
         }
+        let now = now()
+        guard shouldSampleStats(demand, now: now) else { return }
+        let started = Date()
         do {
             let samples = try await client.stats(ids: runningIDs)
-            let now = Date()
             let interval = lastStatsDate.map { now.timeIntervalSince($0) } ?? 1
+            var nextStats = statsByID
+            var nextHistory = historyByID
+            var producedDelta = false
             for sample in samples {
                 if let previous = lastRawStats[sample.id] {
                     let delta = StatsDelta.between(previous: previous, current: sample, interval: interval)
-                    statsByID[sample.id] = delta
-                    var metrics = historyByID[sample.id] ?? [:]
+                    nextStats[sample.id] = delta
+                    var metrics = nextHistory[sample.id] ?? [:]
                     for metric in GraphMetric.allCases {
                         var buffer = metrics[metric] ?? SampleBuffer()
                         buffer.append(metric.value(from: delta))
                         metrics[metric] = buffer
                     }
-                    historyByID[sample.id] = metrics
+                    nextHistory[sample.id] = metrics
+                    producedDelta = true
                 }
                 lastRawStats[sample.id] = sample
             }
+            if nextStats != statsByID { statsByID = nextStats }
+            if nextHistory != historyByID { historyByID = nextHistory }
             lastStatsDate = now
+            if producedDelta { statsRevision &+= 1 }
+            let elapsed = Date().timeIntervalSince(started)
+            if elapsed >= 0.75 || demand == .force {
+                diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
+                                     "Stats sample \(demand.label, privacy: .public) finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s for \(runningIDs.count, privacy: .public) container(s)")
+            }
         } catch {
             // Stats are best-effort; a failure here shouldn't blank the list.
         }
+    }
+
+    private func shouldSampleStats(_ demand: StatsRefreshDemand, now: Date) -> Bool {
+        guard demand != .force else { return true }
+        guard let lastStatsDate else { return true }
+        let interval = switch demand {
+        case .background: Self.backgroundStatsInterval
+        case .visible: Self.visibleStatsInterval
+        case .force: TimeInterval.zero
+        }
+        return now.timeIntervalSince(lastStatsDate) >= interval
     }
 
     // MARK: Lifecycle
@@ -159,7 +218,7 @@ final class ContainersStore {
         do {
             let output = try await client.runner.run(spec.arguments())
             performHaptic()
-            await refresh()
+            await refresh(statsDemand: .force)
             let elapsed = Date().timeIntervalSince(started)
             logger?.record("Run finished in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
                            category: .lifecycle,
@@ -208,7 +267,7 @@ final class ContainersStore {
             _ = try await client.deleteContainers([originalID], force: true)
             _ = try await client.runner.run(spec.arguments())
             performHaptic()
-            await refresh()
+            await refresh(statsDemand: .force)
             let elapsed = Date().timeIntervalSince(started)
             logger?.record("Recreated \(originalID) in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
                            category: .lifecycle,
@@ -225,7 +284,7 @@ final class ContainersStore {
                            severity: .warning,
                            containerID: originalID)
             diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.userMessage, privacy: .public)")
-            await refresh()
+            await refresh(statsDemand: .force)
             return false
         } catch {
             errorMessage = error.localizedDescription
@@ -235,7 +294,7 @@ final class ContainersStore {
                            severity: .warning,
                            containerID: originalID)
             diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.localizedDescription, privacy: .public)")
-            await refresh()
+            await refresh(statsDemand: .force)
             return false
         }
     }
@@ -250,7 +309,7 @@ final class ContainersStore {
         do {
             try await body(client)
             performHaptic()
-            await refresh()
+            await refresh(statsDemand: .force)
             let elapsed = Date().timeIntervalSince(started)
             logger?.record("\(verb) finished in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
                            category: .lifecycle,

@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 /// A personalized clear-glass card for one container. The same component renders both the compact
@@ -158,7 +159,7 @@ struct ContainerCard: View {
                           pointSize: activeWidget.pointSize,
                           barWidth: activeWidget.barWidth)
                 .frame(maxWidth: .infinity)
-                .frame(height: 58)
+                .frame(height: Tokens.ResourceCard.sparklineHeight)
         }
         .overlay { if isBusy { ProgressView().controlSize(.small) } }
     }
@@ -200,11 +201,11 @@ struct ContainerCard: View {
     }
 
     private var headerTitleBlock: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            HStack(alignment: .top, spacing: 4) {
+        VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+            HStack(alignment: .top, spacing: Tokens.Space.xs) {
                 ResourceCardTitleText(text: name)
             }
-            HStack(alignment: .top, spacing: 4) {
+            HStack(alignment: .top, spacing: Tokens.Space.xs) {
                 ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
             }
         }

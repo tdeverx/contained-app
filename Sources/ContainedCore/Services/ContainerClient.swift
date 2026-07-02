@@ -4,6 +4,7 @@ import Foundation
 /// `CommandError.decodingFailed` so callers handle one error type.
 public struct ContainerClient: Sendable {
     public let runner: any CommandRunning
+    public var descriptor: RuntimeDescriptor { .appleContainer }
 
     public init(runner: any CommandRunning) {
         self.runner = runner
@@ -192,3 +193,5 @@ public struct ContainerClient: Sendable {
         }
     }
 }
+
+extension ContainerClient: ContainerRuntimeClient {}

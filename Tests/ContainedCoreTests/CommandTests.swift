@@ -117,6 +117,34 @@ struct CommandTests {
         #expect(!CLILocator.isSupported(nil))
     }
 
+    @Test func appleRuntimeDescriptorAdvertisesCurrentCapabilities() throws {
+        let descriptor = RuntimeDescriptor.appleContainer
+        #expect(descriptor.kind == .appleContainer)
+        #expect(descriptor.displayName == "Apple container")
+        #expect(descriptor.executableName == "container")
+        #expect(descriptor.supports([.containers, .images, .volumes, .networks]))
+        #expect(descriptor.supports([.systemStatus, .systemLogs, .exec, .copy]))
+        try descriptor.require([.imageBuild, .imagePush, .registries])
+
+        let readOnly = RuntimeDescriptor(kind: .dockerCompatible,
+                                         displayName: "Read-only runtime",
+                                         executableName: "container",
+                                         capabilities: [.containers])
+        #expect(!readOnly.supports(.imageBuild))
+        #expect(throws: UnsupportedRuntimeCapability.self) {
+            try readOnly.require(.imageBuild)
+        }
+    }
+
+    @Test func containerClientConformsToRuntimeClient() async throws {
+        let runner = MockCommandRunner(result: .success(try Fixture.data("list")))
+        let runtime: any ContainerRuntimeClient = ContainerClient(runner: runner)
+        #expect(runtime.descriptor == .appleContainer)
+
+        let containers = try await runtime.listContainers(all: true)
+        #expect(containers.first?.id == "fixture-web")
+    }
+
     @Test func clientDecodesThroughMock() async throws {
         let runner = MockCommandRunner(result: .success(try Fixture.data("list")))
         let client = ContainerClient(runner: runner)

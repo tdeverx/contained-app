@@ -145,6 +145,15 @@ extension AppModel {
     /// reference quietly, then (when `manual`) summarize how many have updates.
     private func runUpdateCheck(over references: [String], emptyMessage: String,
                                 summaryNoun: String, manual: Bool) async {
+        let started = Date()
+        defer {
+            let elapsed = Date().timeIntervalSince(started)
+            if elapsed >= 0.75 || manual {
+                let mode = manual ? "manual" : "background"
+                diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
+                                     "Image update sweep \(mode, privacy: .public) finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s across \(references.count, privacy: .public) \(summaryNoun, privacy: .public)(s)")
+            }
+        }
         guard !references.isEmpty else {
             if manual { flash(emptyMessage) }
             return

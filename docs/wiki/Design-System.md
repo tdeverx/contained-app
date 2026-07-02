@@ -3,6 +3,27 @@
 Contained's UI is built around a small Liquid Glass design system. Prefer these
 components before adding one-off surfaces.
 
+App-agnostic SwiftUI/AppKit primitives live in the local `ContainedDesignSystem`
+package under `Packages/`. App-specific views, stores, settings, routing, and
+domain presentation mappings stay in the executable target until they have a
+clean reusable boundary.
+
+Package-local docs:
+
+- [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md)
+- [`ContainedDesignSystem` DocC landing page](../../Packages/ContainedDesignSystem/Sources/ContainedDesignSystem/ContainedDesignSystem.docc/ContainedDesignSystem.md)
+- [`Packages/ContainedNavigation/README.md`](../../Packages/ContainedNavigation/README.md)
+
+The package owns the shared tokens, visual-effect background bridge, exterior
+shadow, glass surface modifier, panel/page/sheet scaffolds, toolbar controls,
+option tiles, transient error banner, resource-card chrome, activity status,
+JSON and stream-console surfaces, sparklines, clipboard helper, gradient-angle
+control, and micro primitives such as status dots, badges, keycaps, metric
+tiles, terminal chrome, and card-selection overlays. Components that read
+`AppModel`, settings stores, feature routes, or runtime models stay in the app
+target, but they should pass values into package components instead of
+recreating style locally.
+
 ## Core principles
 
 - A morph panel is one stable shell. Content can swap inside it, but the shell
@@ -18,8 +39,8 @@ components before adding one-off surfaces.
 Style ownership:
 
 - `Personalization` is the resolved card style.
-- `WidgetConfiguration`, `GraphStyle`, and `WidgetInterpolation` own card
-  metric-widget schema and graph options.
+- `WidgetConfiguration` owns app-side metric-widget schema. `GraphStyle` and
+  `WidgetInterpolation` live in the design package as graph rendering options.
 - `PersonalizationStore` owns persistence, inheritance, backup, and legacy
   `contained.*` label migration.
 
@@ -102,6 +123,8 @@ Recommended internal pieces:
 - `ResourceCardSubtitleText` or `ResourceCardMonospacedSubtitleText` for metadata
 - `ResourceBadgeText` for compact state or kind labels
 - `ResourceCardFooterMini` for small footer actions and metrics
+- `DesignStatusDot`, `DesignStatusBadge`, `DesignKeyCap`, and
+  `DesignKeyboardHint` for micro chrome
 
 Use `isSelected` instead of inventing a second selection ring. Use `elevated:
 false` for cards inside already-elevated morph panels.
@@ -122,8 +145,10 @@ Plain rows are reserved for generic actions such as refresh or opening a page.
 ## Tokens
 
 Use `Tokens` for spacing, radius, toolbar dimensions, panel sizes, icon sizes,
-and shadows. If a new value appears repeatedly, add a token before duplicating
-magic numbers.
+form widths, chart sizes, badge/keycap insets, resource-card opacities, terminal
+chrome, and shadows. Use `glassSurface` and `glassCapsuleSurface` for standalone
+glass surfaces so feature views do not call `.glassEffect` directly. If a new
+visual value appears, add a token or package primitive before using it in the app.
 
 Important groups:
 
@@ -132,6 +157,12 @@ Important groups:
 - `Tokens.Space` for layout rhythm
 - `Tokens.Radius` for card and control rounding
 - `Tokens.IconSize` for chips and toolbar controls
+- `Tokens.ResourceCard`, `Tokens.Badge`, `Tokens.Keyboard`, `Tokens.Chart`,
+  `Tokens.FormWidth`, and `Tokens.Terminal` for smaller repeated chrome values
+
+Feature views can choose semantic content, domain colors, and app data, but
+should not create app-local spacing, padding, radius, shadow, material, opacity,
+badge, keycap, status-dot, or terminal-surface recipes.
 
 ## Verification
 

@@ -1,0 +1,1 @@
+- Added the first backend runtime abstraction in `ContainedCore`, with Apple `container` capabilities advertised through `ContainerRuntimeClient` and `RuntimeDescriptor`.

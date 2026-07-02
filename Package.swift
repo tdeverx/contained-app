@@ -9,6 +9,8 @@ let package = Package(
         .library(name: "ContainedCore", targets: ["ContainedCore"]),
     ],
     dependencies: [
+        .package(path: "Packages/ContainedDesignSystem"),
+        .package(path: "Packages/ContainedNavigation"),
         // The in-container terminal (Phase 5): a mature VT100/xterm emulator + PTY host, far safer
         // than re-implementing one. AppKit-backed, bridged via NSViewRepresentable.
         .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.2.0"),
@@ -30,6 +32,8 @@ let package = Package(
             name: "Contained",
             dependencies: [
                 "ContainedCore",
+                .product(name: "ContainedDesignSystem", package: "ContainedDesignSystem"),
+                .product(name: "ContainedNavigation", package: "ContainedNavigation"),
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
                 .product(name: "Sparkle", package: "Sparkle"),
             ],

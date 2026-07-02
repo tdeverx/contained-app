@@ -6,26 +6,38 @@ Contained is a SwiftUI-native macOS app that wraps Apple's `container` CLI. It s
  SwiftUI Views  ──>  @Observable Stores  ──>  ContainerClient  ──>  CommandRunner  ──>  `container` CLI
  (Features/*)        (AppModel, …)            (typed facade)        (run / stream)       (--format json)
        ^                    │                       ^                                          │
-       └──── design system, tokens ────────────────┘                                          │
+       └──── ContainedDesignSystem ────────────────┘                                          │
                             └───────────────────  decoded models (ContainedCore)  ◀───────────┘
 ```
 
 ## Targets
 
 - **`ContainedCore`** — pure, testable logic: models, the CLI wrapper, JSON decoding, compose parsing, and ordering/decision helpers. Depends only on Yams. No SwiftUI.
-- **`Contained`** — the SwiftUI executable: views, `@Observable` stores, the design system, and the SwiftData history stack. Depends on `ContainedCore` + SwiftTerm + Sparkle.
+- **`ContainedDesignSystem`** — a local reusable Swift package for app-agnostic SwiftUI/AppKit visual primitives. It must not depend on stores, Sparkle, SwiftData, app routing, or feature modules.
+- **`ContainedNavigation`** — a local reusable Swift package for navigation and layout infrastructure that should not own app-specific routing. It currently owns toolbar safe-area policy/measurement primitives.
+- **`Contained`** — the SwiftUI executable: views, `@Observable` stores, app-specific presentation mappings, navigation, and the SwiftData history stack. Depends on `ContainedCore`, `ContainedDesignSystem`, `ContainedNavigation`, SwiftTerm, and Sparkle.
+
+Package-local docs:
+
+- [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md)
+- [`Packages/ContainedNavigation/README.md`](../../Packages/ContainedNavigation/README.md)
+
+`Contained.xcworkspace` is the optional Xcode entry point. It references the
+root `Package.swift` and local package manifests; the SwiftPM package graph
+remains the source of truth for builds, tests, and release scripts.
 
 ## CLI wrapper (core)
 
 - **`ContainerCommands`** — pure argv builders, side-effect-free so golden tests assert the exact arguments (the "Reveal CLI" affordances read from the same source of truth).
 - **`CommandRunner`** — runs a one-shot command (`run`) or a streaming one (`stream`, an `AsyncThrowingStream`). Passwords are piped via `--password-stdin`, never argv.
-- **`ContainerClient`** — a typed facade returning decoded models; maps decode failures to a single `CommandError`.
+- **`ContainerClient`** — the Apple `container` implementation of `ContainerRuntimeClient`; returns decoded models and maps decode failures to a single `CommandError`.
+- **`ContainerRuntimeClient`** — the backend-facing operation contract. `RuntimeDescriptor` and `RuntimeCapability` advertise what a selected runtime can do before future Docker-compatible integration reaches the UI.
 
 ## Stores (app)
 
 - **`AppModel`** — root state: locates the CLI, owns the client + feature stores, tracks bootstrap status, wires logging/updating, and runs the per-tick coordination. Focused extensions own image/resource style lookup, image-update sweeps, and configuration import/export.
-- **`ContainersStore`** — the container list, live stats deltas, and lifecycle actions.
-- **`RefreshCoordinator`** — adaptive polling (stats are polled, not truly streamed — the CLI emits one frame then blocks).
+- **`ContainersStore`** — the container list, live stats deltas, stats sampling cadence, and lifecycle actions.
+- **`RefreshCoordinator`** — adaptive polling for service/list refreshes. Stats are polled, not truly streamed — the CLI emits one frame then blocks — so `ContainersStore` samples them less often in the background, faster when the Containers UI is visible, and immediately after lifecycle actions or Stats-tab entry.
 - **`RestartWatchdog`** — app-managed restart policy (`container` has no native `--restart`); diffs states each tick and re-issues `start` with backoff.
 - **`HealthMonitor`** — app-managed healthchecks: interval-gated `exec` probes with consecutive-failure tracking.
 - **`HistoryStore`** — SwiftData stack for the persistent event log + metric samples (the "rewind" timeline) with bounded retention.
@@ -35,7 +47,7 @@ Contained is a SwiftUI-native macOS app that wraps Apple's `container` CLI. It s
 
 ## Design system
 
-Liquid Glass helpers and reusable primitives include `MorphPanelScaffold`, `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `ResourceGlassCard`, `GlassSurface`, `CommandPreviewBar`, `InfoButton`, `ToolbarIconButton`, and `Tokens` groups for toolbar, panel, spacing, radius, and icon sizing. See [[Design System|Design-System]].
+Liquid Glass helpers and reusable primitives include `MorphPanelScaffold`, `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `ResourceGlassCard`, `GlassSurface`, `CommandPreviewBar`, `InfoButton`, `GlassButton`, `ToolbarMenuButton`, `DesignStatusBadge`, `DesignKeyCap`, `LiveSparkline`, and `Tokens` groups for toolbar, panel, spacing, radius, icon sizing, resource cards, badges, charts, terminal chrome, and form widths. `ContainedDesignSystem` owns app-agnostic visual tokens and primitives; feature code should not introduce local spacing, radius, material, shadow, opacity, or micro-chrome recipes. App-state-aware mappings such as runtime status and graph metric extraction stay in the executable until they can cross the boundary without depending on app/core policy. Use the package READMEs for import instructions and copy-pasteable examples, and see [[Design System|Design-System]] for app-level conventions.
 
 ## Local-only personalization
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 // MARK: - Appearance
@@ -58,7 +59,8 @@ struct AppearanceTab: View {
                 }
                 PanelRow(title: "Opacity") {
                     HStack(spacing: Tokens.Space.s) {
-                        Slider(value: $settings.buttonTintOpacity, in: 0.05...0.6).frame(width: 140)
+                        Slider(value: $settings.buttonTintOpacity, in: 0.05...0.6)
+                            .frame(width: Tokens.FormWidth.compactSlider)
                         Text(Format.percent(settings.buttonTintOpacity))
                             .monospacedDigit()
                             .frame(width: Tokens.FormWidth.shortReadout)
@@ -103,7 +105,7 @@ private struct ImageDefaultStyleSection: View {
                      enabled: $settings.imageDefaultStyleEnabled) {
             HStack(spacing: Tokens.Space.m) {
                 ResourceCardIconChip(symbol: style.symbol, tint: style.color)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     Text(style.displayName(fallback: "Image cards"))
                     Text("Inherited unless an image, group, tag, or container overrides it")
                         .font(.caption)
@@ -119,14 +121,15 @@ private struct ImageDefaultStyleSection: View {
                 PanelRow(title: "Icon") {
                     TextField("", text: styleBinding(\.icon), prompt: Text("SF Symbol, e.g. shippingbox.fill"))
                         .textFieldStyle(.roundedBorder)
-                        .frame(width: 220)
+                        .frame(width: Tokens.FormWidth.tintColorHex)
                 }
             }
             PanelToggleRow(title: "Color the card background", isOn: styleBinding(\.fillBackground))
             if style.fillBackground {
                 PanelRow(title: "Opacity") {
                     HStack(spacing: Tokens.Space.s) {
-                        Slider(value: styleBinding(\.backgroundOpacity), in: 0.05...0.6).frame(width: 140)
+                        Slider(value: styleBinding(\.backgroundOpacity), in: 0.05...0.6)
+                            .frame(width: Tokens.FormWidth.compactSlider)
                         Text(Format.percent(style.backgroundOpacity))
                             .monospacedDigit()
                             .frame(width: Tokens.FormWidth.shortReadout)

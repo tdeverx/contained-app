@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import AppKit
 import ContainedCore
 
@@ -204,7 +206,6 @@ struct ContainersGridView: View {
                 }
             }
             .coordinateSpace(.named("grid"))
-            .onPreferenceChange(CardFrameKey.self) { cardFrames = $0 }
         }
         .overlay(alignment: .bottom) {
             if selecting && !selection.isEmpty { batchBar } else if let message = store.errorMessage { ErrorToast(message: message) }
@@ -324,14 +325,23 @@ struct ContainersGridView: View {
             // while the promoted overlay grows out of it — no second card to see double.
             .opacity(selected ? 0 : 1)
             .allowsHitTesting(detail == nil)
-            .background(
+            .background {
                 GeometryReader { proxy in
-                    Color.clear.preference(
-                        key: CardFrameKey.self,
-                        value: [snapshot.id: proxy.frame(in: .named("grid"))]
-                    )
+                    Color.clear
+                        .onAppear {
+                            updateCardFrame(proxy.frame(in: .named("grid")), for: snapshot.id)
+                        }
+                        .onChange(of: proxy.frame(in: .named("grid"))) { _, frame in
+                            updateCardFrame(frame, for: snapshot.id)
+                        }
                 }
-            )
+            }
+    }
+
+    private func updateCardFrame(_ frame: CGRect, for id: String) {
+        guard frame.isUsableForMorph else { return }
+        guard cardFrames[id]?.isClose(to: frame) != true else { return }
+        cardFrames[id] = frame
     }
 
     private func compactCard(_ snapshot: ContainerSnapshot) -> some View {
@@ -441,7 +451,7 @@ struct ContainersGridView: View {
         .buttonStyle(.glass)
         .padding(.horizontal, Tokens.Space.l)
         .padding(.vertical, Tokens.Space.s)
-        .glassEffect(.regular, in: Capsule())
+        .glassCapsuleSurface(shadow: false)
         .padding(.bottom, Tokens.Space.l)
     }
 
@@ -494,17 +504,15 @@ struct ContainersGridView: View {
     }
 }
 
-/// Collects each grid card's frame (in the "grid" coordinate space) so a tapped card can grow from
-/// the exact slot it lives in.
-private struct CardFrameKey: PreferenceKey {
-    static let defaultValue: [String: CGRect] = [:]
-    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
-        value.merge(nextValue()) { _, new in new }
-    }
-}
-
 private extension CGRect {
     var isUsableForMorph: Bool {
         width.isFinite && height.isFinite && minX.isFinite && minY.isFinite && width > 1 && height > 1
+    }
+
+    func isClose(to other: CGRect, tolerance: CGFloat = 0.5) -> Bool {
+        abs(minX - other.minX) <= tolerance &&
+        abs(minY - other.minY) <= tolerance &&
+        abs(width - other.width) <= tolerance &&
+        abs(height - other.height) <= tolerance
     }
 }

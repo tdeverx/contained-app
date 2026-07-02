@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 
 struct DowngradeDecisionView: View {
     let schemaVersion: Int
@@ -26,6 +27,6 @@ struct DowngradeDecisionView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(Tokens.Space.l)
-        .frame(width: 460)
+        .frame(width: Tokens.SheetSize.dialogWidth)
     }
 }

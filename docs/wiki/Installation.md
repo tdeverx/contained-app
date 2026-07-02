@@ -16,12 +16,14 @@ On first launch, the bootstrap screen checks for the `container` CLI and the run
 
 ## Build from source
 
-This is a Swift Package — there is no `.xcodeproj`.
+Contained is SwiftPM-first. The checked-in workspace is a convenience wrapper
+over the root package and local packages; there is no generated `.xcodeproj` to
+maintain.
 
 ```sh
 git clone https://github.com/tdeverx/contained-app.git
 cd contained-app
-open Package.swift        # open in Xcode
+open Contained.xcworkspace # open in Xcode
 ```
 
 Or from the command line:

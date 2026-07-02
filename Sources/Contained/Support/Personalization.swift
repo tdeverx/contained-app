@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import AppKit
 
 /// Resolved visual style for a container card: a colored icon plus an optional colored glass

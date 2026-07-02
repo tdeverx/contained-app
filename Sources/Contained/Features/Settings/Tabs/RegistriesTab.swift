@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 // MARK: - Registries
@@ -20,7 +21,7 @@ struct RegistriesTab: View {
                 } else {
                     ForEach(app.registries) { login in
                         HStack {
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: Tokens.Space.xxs) {
                                 Text(login.host)
                                 if let user = login.username {
                                     Text("as \(user)").font(.caption).foregroundStyle(.secondary)
@@ -62,4 +63,3 @@ struct RegistriesTab: View {
         catch { app.flash(error.localizedDescription) }
     }
 }
-

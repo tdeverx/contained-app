@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 /// The Overview tab of the container detail: grouped, read-only configuration (general, resources,

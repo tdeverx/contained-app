@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import SwiftData
 import AppKit
 import ContainedCore
@@ -124,9 +126,11 @@ struct ToolbarTemplatesPanel: View {
     private var emptyCard: some View {
         ResourceGlassCard(size: .small, elevated: false) {
             ResourceCardHeader {
-                ResourceCardIconChip(symbol: "bookmark", tint: .secondary, backgroundOpacity: 0.22)
+                ResourceCardIconChip(symbol: "bookmark",
+                                     tint: .secondary,
+                                     backgroundOpacity: Tokens.ResourceCard.iconEmphasisBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     ResourceCardTitleText(text: "No templates")
                     ResourceCardSubtitleText(text: "Save a container's settings as a template from the create form.")
                 }
@@ -141,7 +145,7 @@ struct ToolbarTemplatesPanel: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: "bookmark.fill", tint: .accentColor)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     ResourceCardTitleText(text: template.name)
                     ResourceCardMonospacedSubtitleText(text: Format.shortImage(template.spec?.image ?? "—"))
                 }

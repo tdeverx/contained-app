@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 /// Reusable Docker Hub image search. Before the user types it offers ready-to-run **starters** and a
@@ -155,7 +156,7 @@ struct RegistryImageSearch: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: symbol, tint: .accentColor)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     ResourceCardTitleText(text: title)
                     if let subtitle, !subtitle.isEmpty {
                         ResourceCardSubtitleText(text: subtitle)

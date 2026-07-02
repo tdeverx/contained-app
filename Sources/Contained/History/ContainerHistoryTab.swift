@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import SwiftData
 import Charts
 import ContainedCore
@@ -76,7 +77,7 @@ private struct ContainerHistoryWindow: View {
                 Chart(samples) { sample in
                     AreaMark(x: .value("Time", sample.timestamp),
                              y: .value("Memory", sample.memoryBytes / 1_048_576))
-                    .foregroundStyle(Color.accentColor.opacity(0.3))
+                    .foregroundStyle(Color.accentColor.opacity(Tokens.Chart.areaOpacity))
                 }
             }
             chartCard("Network", unit: "KB/s") {
@@ -112,8 +113,8 @@ private struct ContainerHistoryWindow: View {
                 Text(unit).font(.caption).foregroundStyle(.secondary)
             }
             chart()
-                .frame(height: 140)
-                .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) }
+                .frame(height: Tokens.Chart.height)
+                .chartXAxis { AxisMarks(values: .automatic(desiredCount: Tokens.Chart.axisDesiredCount)) }
         }
     }
 }
@@ -134,9 +135,9 @@ struct EventRow: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: event.kind.symbol,
                                      tint: event.kind.tint,
-                                     backgroundOpacity: 0.22)
+                                     backgroundOpacity: Tokens.ResourceCard.iconEmphasisBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     ResourceCardTitleText(text: event.message)
                     HStack(spacing: Tokens.Space.xs) {
                         ResourceBadgeText(text: event.kind.rawValue.capitalized)
@@ -145,7 +146,7 @@ struct EventRow: View {
                 }
             } trailing: {
                 if isUnread {
-                    Circle().fill(Color.accentColor).frame(width: 8, height: 8)
+                    DesignStatusDot(color: .accentColor)
                         .accessibilityLabel("Unread")
                 } else {
                     EmptyView()

@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 /// Edits local card personalization for containers, images, image groups, tags, and volumes.

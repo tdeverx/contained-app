@@ -1,4 +1,5 @@
 import AppKit
+import ContainedDesignSystem
 
 struct WidgetConfiguration: Codable, Hashable, Sendable {
     static let schemaVersion = 4
@@ -89,85 +90,5 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
             return metric.systemImage
         }
         return icon
-    }
-}
-
-enum GraphStyle: String, CaseIterable, Identifiable, Codable, Sendable {
-    case area
-    case line
-    case bar
-    case points
-    case multiLine
-    case range
-    case scatter
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .area: return "Area"
-        case .line: return "Line"
-        case .bar: return "Bar"
-        case .points: return "Points"
-        case .multiLine: return "Multi-Line"
-        case .range: return "Range"
-        case .scatter: return "Scatter"
-        }
-    }
-
-    var requiresSecondaryMetric: Bool {
-        switch self {
-        case .multiLine, .range, .scatter: return true
-        case .area, .line, .bar, .points: return false
-        }
-    }
-
-    func resolvedSecondaryMetric(primary: GraphMetric,
-                                 requested: GraphMetric?,
-                                 options: [GraphMetric]) -> GraphMetric? {
-        guard requiresSecondaryMetric else { return nil }
-        if let requested, requested != primary, options.contains(requested) {
-            return requested
-        }
-        return options.first { $0 != primary }
-    }
-
-    var usesLineOptions: Bool {
-        switch self {
-        case .area, .line, .multiLine: return true
-        case .bar, .points, .range, .scatter: return false
-        }
-    }
-
-    var usesPointOptions: Bool {
-        switch self {
-        case .points, .scatter: return true
-        case .area, .line, .bar, .multiLine, .range: return false
-        }
-    }
-
-    var usesBarOptions: Bool {
-        switch self {
-        case .bar, .range: return true
-        case .area, .line, .points, .multiLine, .scatter: return false
-        }
-    }
-}
-
-enum WidgetInterpolation: String, CaseIterable, Identifiable, Codable, Sendable {
-    case linear, catmullRom, cardinal, monotone, stepStart, stepCenter, stepEnd
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .linear: return "Linear"
-        case .catmullRom: return "Smooth"
-        case .cardinal: return "Cardinal"
-        case .monotone: return "Monotone"
-        case .stepStart: return "Step Start"
-        case .stepCenter: return "Step Center"
-        case .stepEnd: return "Step End"
-        }
     }
 }

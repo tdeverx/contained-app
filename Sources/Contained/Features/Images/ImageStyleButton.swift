@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 /// Image row identity chip. If the image has a saved default style, this displays it and opens the

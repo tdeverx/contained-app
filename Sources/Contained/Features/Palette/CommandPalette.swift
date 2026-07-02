@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 /// A palette search scope. Pins a chip to the search field and searches in-place instead of leaving

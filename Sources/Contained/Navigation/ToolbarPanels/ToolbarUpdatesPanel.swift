@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import SwiftData
 import AppKit
 import ContainedCore
@@ -98,7 +100,7 @@ struct ToolbarUpdatesPanel: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: "checkmark.circle.fill", tint: .green)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     ResourceCardTitleText(text: "No images")
                     ResourceCardSubtitleText(text: "Pull or build an image to see it here")
                 }
@@ -119,13 +121,18 @@ struct ToolbarUpdatesPanel: View {
                 GeometryReader { proxy in
                     Color.clear
                         .onAppear {
-                            imageFrames[group.id] = proxy.frame(in: .named(coordinateSpaceName))
+                            updateImageFrame(proxy.frame(in: .named(coordinateSpaceName)), for: group.id)
                         }
                         .onChange(of: proxy.frame(in: .named(coordinateSpaceName))) { _, frame in
-                            imageFrames[group.id] = frame
+                            updateImageFrame(frame, for: group.id)
                         }
                 }
             }
+    }
+
+    private func updateImageFrame(_ frame: CGRect, for id: LocalImageTagGroup.ID) {
+        guard imageFrames[id]?.isClose(to: frame) != true else { return }
+        imageFrames[id] = frame
     }
 
     private func imageRank(_ group: LocalImageTagGroup) -> Int {
@@ -190,4 +197,13 @@ struct ToolbarUpdatesPanel: View {
         }
     }
 
+}
+
+private extension CGRect {
+    func isClose(to other: CGRect, tolerance: CGFloat = 0.5) -> Bool {
+        abs(minX - other.minX) <= tolerance &&
+        abs(minY - other.minY) <= tolerance &&
+        abs(width - other.width) <= tolerance &&
+        abs(height - other.height) <= tolerance
+    }
 }

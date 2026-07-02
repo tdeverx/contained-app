@@ -5,8 +5,12 @@ This file is the working contract for coding agents in this repository. Follow i
 ## Project Shape
 
 - This is a SwiftPM-first macOS 26 SwiftUI app.
+- Local reusable packages live under `Packages/` and are consumed by the root SwiftPM package.
+- `Contained.xcworkspace` is an Xcode convenience entry point over the SwiftPM manifests. Do not hand-maintain generated `.xcodeproj` state.
 - `Sources/ContainedCore` is pure/testable logic. Keep SwiftUI, app state, Sparkle, and persistence out of it.
-- `Sources/Contained` is the app: SwiftUI screens, design system, navigation, stores, history, settings, and update support.
+- `Sources/Contained` is the app: SwiftUI screens, app-specific presentation mappings, navigation, stores, history, settings, and update support.
+- `Packages/ContainedDesignSystem` is the reusable SwiftUI/AppKit design-system package. Keep app state, stores, Sparkle, SwiftData, persistence, and feature routing out of it.
+- `Packages/ContainedNavigation` is the reusable navigation/layout package. Keep app sections, toolbar panels, stores, and concrete routing state in `Sources/Contained`.
 - `docs/wiki` mirrors the GitHub wiki. User-facing behavior or workflow changes should update the matching page.
 - Keep directory names intentional: SwiftPM-owned folders stay `Sources` and `Tests`, Swift source domain folders use PascalCase, and repo infrastructure uses lowercase names such as `docs` and `scripts`.
 
@@ -44,7 +48,8 @@ This file is the working contract for coding agents in this repository. Follow i
 
 ## Design And UI Rules
 
-- Reuse design-system primitives before adding local styling: `PanelHeader`, `PanelSection`, `PanelField`, `ResourceGlassCard`, `CommandPreviewBar`, `TintSelector`, `ToolbarIconButton`, and `Tokens`.
+- Reuse design-system primitives before adding local styling: `PanelHeader`, `PanelSection`, `PanelField`, `ResourceGlassCard`, `CommandPreviewBar`, `TintSelector`, `GlassButton`, `ToolbarMenuButton`, and `Tokens`.
+- Do not add app-local spacing, padding, radius, shadow, material, opacity, or micro-chrome constants. Add or extend a `ContainedDesignSystem` token/primitive first, then consume it from the app.
 - Keep the classic sidebar fallback working. Toolbar-first UI and toolbar panel navigation are experimental gates, not replacements.
 - Prefer native macOS/Liquid Glass behavior over custom chrome when the system primitive fits.
 - Do not make broad visual changes without a product reason.

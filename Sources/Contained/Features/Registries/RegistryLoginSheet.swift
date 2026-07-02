@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import ContainedCore
 
 /// Sign in to a registry. The user types their own credentials; the password is sent via stdin.

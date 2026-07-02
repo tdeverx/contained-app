@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import SwiftData
 import AppKit
 import ContainedCore
@@ -81,7 +83,7 @@ struct ToolbarImageGroupCard: View {
         } bodyContent: {
             tagList(group)
         } footerLeading: {
-            HStack(spacing: 10) {
+            HStack(spacing: Tokens.ResourceCard.padding) {
                 imageFooterTagCount(group)
                 imageFooterInfo(status)
             }
@@ -97,7 +99,7 @@ struct ToolbarImageGroupCard: View {
         switch page {
         case .root:    return Tokens.PanelSize.imageDetail
         case .inspect, .history: return Tokens.SheetSize.inspector
-        case .tag:     return CGSize(width: 560, height: 360)
+        case .tag:     return Tokens.PanelSize.imageTag
         case .push:    return Tokens.SheetSize.console
         }
     }
@@ -147,7 +149,7 @@ struct ToolbarImageGroupCard: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Tokens.Space.s) {
                         ForEach(Array(history.enumerated()), id: \.offset) { _, entry in
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: Tokens.Space.xxs) {
                                 Text(entry.createdBy ?? entry.comment ?? "—")
                                     .font(.system(.caption, design: .monospaced))
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -158,9 +160,7 @@ struct ToolbarImageGroupCard: View {
                             }
                             .padding(Tokens.Space.s)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.quaternary.opacity(0.25),
-                                        in: RoundedRectangle(cornerRadius: Tokens.Radius.control,
-                                                             style: .continuous))
+                            .subtleTileBackground()
                         }
                     }
                     .padding(Tokens.Space.s)
@@ -236,7 +236,7 @@ struct ToolbarImageGroupCard: View {
                 imageChip(style)
             }
         } content: {
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                 ResourceCardTitleText(text: repositoryTitle(group.primaryReference))
                 ResourceCardSubtitleText(text: repositoryOwner(group.primaryReference))
             }
@@ -327,7 +327,7 @@ struct ToolbarImageGroupCard: View {
                                  style: style,
                                  target: .imageTag(reference: reference, groupID: group.id))
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     ResourceCardMonospacedTitleText(text: Format.shortImage(reference))
                     ResourceCardSubtitleText(text: repositoryName(reference))
                 }

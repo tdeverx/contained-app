@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import AppKit
 import ContainedCore
 
@@ -39,13 +40,17 @@ struct PaletteResultCard: View {
         ResourceGlassCard(size: .small,
                           isSelected: selected,
                           fill: nil,
-                          fillOpacity: selected ? 0.10 : 0.18,
+                          fillOpacity: selected ? Tokens.ResourceCard.selectedSubtleFillOpacity : Tokens.ResourceCard.plainFillOpacity,
                           elevated: false,
                           onTap: action) {
             ResourceCardHeader {
-                ResourceCardIconChip(symbol: item.icon, tint: item.tint, backgroundOpacity: selected ? 0.24 : 0.16)
+                ResourceCardIconChip(symbol: item.icon,
+                                     tint: item.tint,
+                                     backgroundOpacity: selected
+                                         ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
+                                         : Tokens.ResourceCard.iconBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: item.title)
                         ResourceBadgeText(text: item.kind.rawValue,
@@ -75,16 +80,20 @@ struct PaletteResultCard: View {
         return ResourceGlassCard(size: cardSize,
                                  isSelected: selected,
                                  fill: style.fillBackground ? style.color : nil,
-                                 fillOpacity: selected ? 0.14 : style.backgroundOpacity,
+                                 fillOpacity: selected ? Tokens.ResourceCard.selectedPersonalizedFillOpacity : style.backgroundOpacity,
                                  gradient: style.gradient,
                                  gradientAngle: style.gradientAngle,
                                  blendMode: style.backgroundBlendMode,
                                  elevated: false,
                                  onTap: action) {
             ResourceCardHeader {
-                ResourceCardIconChip(symbol: style.symbol, tint: style.color, backgroundOpacity: selected ? 0.24 : 0.16)
+                ResourceCardIconChip(symbol: style.symbol,
+                                     tint: style.color,
+                                     backgroundOpacity: selected
+                                         ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
+                                         : Tokens.ResourceCard.iconBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: name)
                         ResourceBadgeText(text: snapshot.state.rawValue.capitalized,
@@ -105,8 +114,8 @@ struct PaletteResultCard: View {
         } widget: {
             if snapshot.state == .running {
                 containerPaletteWidget(snapshot)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
+                    .padding(.horizontal, Tokens.ResourceCard.padding)
+                    .padding(.bottom, Tokens.ResourceCard.padding)
             }
         }
         .selectionFill()
@@ -115,13 +124,7 @@ struct PaletteResultCard: View {
 
     private func imageGroupCard(_ group: LocalImageTagGroup) -> some View {
         ToolbarImageGroupCard(group: group, isExpanded: false, onTap: action, onClose: {})
-            .overlay {
-                if selected {
-                    RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
-                        .fill(AppMaterial.toolbarHoverFill)
-                        .allowsHitTesting(false)
-                }
-            }
+            .designCardSelectionOverlay(when: selected)
             .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -130,16 +133,20 @@ struct PaletteResultCard: View {
         return ResourceGlassCard(size: .medium,
                                  isSelected: selected,
                                  fill: style.fillBackground ? style.color : nil,
-                                 fillOpacity: selected ? 0.14 : style.backgroundOpacity,
+                                 fillOpacity: selected ? Tokens.ResourceCard.selectedPersonalizedFillOpacity : style.backgroundOpacity,
                                  gradient: style.gradient,
                                  gradientAngle: style.gradientAngle,
                                  blendMode: style.backgroundBlendMode,
                                  elevated: false,
                                  onTap: action) {
             ResourceCardHeader {
-                ResourceCardIconChip(symbol: "tag", tint: style.color, backgroundOpacity: selected ? 0.24 : 0.16)
+                ResourceCardIconChip(symbol: "tag",
+                                     tint: style.color,
+                                     backgroundOpacity: selected
+                                         ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
+                                         : Tokens.ResourceCard.iconBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardMonospacedTitleText(text: Format.shortImage(reference))
                         ResourceBadgeText(text: "Tag", font: .caption2.weight(.semibold))
@@ -169,13 +176,17 @@ struct PaletteResultCard: View {
         ResourceGlassCard(size: .small,
                           isSelected: selected,
                           fill: nil,
-                          fillOpacity: selected ? 0.12 : 0.18,
+                          fillOpacity: selected ? Tokens.ResourceCard.selectedResourceFillOpacity : Tokens.ResourceCard.plainFillOpacity,
                           elevated: false,
                           onTap: action) {
             ResourceCardHeader {
-                ResourceCardIconChip(symbol: symbol, tint: item.tint, backgroundOpacity: selected ? 0.24 : 0.16)
+                ResourceCardIconChip(symbol: symbol,
+                                     tint: item.tint,
+                                     backgroundOpacity: selected
+                                         ? Tokens.ResourceCard.iconSelectedBackgroundOpacity
+                                         : Tokens.ResourceCard.iconBackgroundOpacity)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: title)
                         ResourceBadgeText(text: subtitle, font: .caption2.weight(.semibold))
@@ -194,21 +205,13 @@ struct PaletteResultCard: View {
         ResourceGlassCard(size: .small,
                           isSelected: selected,
                           fill: tint.color,
-                          fillOpacity: selected ? 0.18 : 0.10,
+                          fillOpacity: selected ? Tokens.ResourceCard.selectedTintFillOpacity : Tokens.ResourceCard.selectedSubtleFillOpacity,
                           elevated: false,
                           onTap: action) {
             ResourceCardHeader {
-                ZStack {
-                    Circle().fill(tint.color)
-                    if tint.followsAppAccent {
-                        Image(systemName: "link")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
+                DesignTintSwatch(color: tint.color, followsAppAccent: tint.followsAppAccent)
             } content: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: tint.displayName)
                         ResourceBadgeText(text: app.settings.accentTint == tint ? "Current" : "Tint",
@@ -226,7 +229,7 @@ struct PaletteResultCard: View {
     }
 
     private func containerPaletteWidget(_ snapshot: ContainerSnapshot) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Tokens.ResourceCard.padding) {
             ResourceCardFooterMini {
                 Image(systemName: "clock").font(.caption2)
             } text: {

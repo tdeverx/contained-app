@@ -1,4 +1,5 @@
 import Foundation
+import ContainedDesignSystem
 
 /// Portable snapshot of user preferences for config export/import.
 struct SettingsBackup: Codable, Equatable {

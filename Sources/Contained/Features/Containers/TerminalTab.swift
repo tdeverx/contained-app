@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import AppKit
 import SwiftTerm
 import ContainedCore
@@ -38,10 +39,7 @@ struct TerminalTab: View {
                         ended = Ended(code: code)
                     }
                     .id(session)        // recreating the view tears down the old exec + starts fresh
-                    .padding(Tokens.Space.s)
-                    .background(.black.opacity(0.22),
-                                in: RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
-                    .padding(Tokens.Space.s)
+                    .terminalSurfaceChrome()
                     if let ended {
                         endedOverlay(code: ended.code)
                     }
@@ -59,7 +57,7 @@ struct TerminalTab: View {
                 ForEach(shells, id: \.self) { Text($0).tag($0) }
             }
             .labelsHidden()
-            .frame(width: 140)
+            .frame(width: Tokens.FormWidth.shellPicker)
             .onChange(of: shell) { _, _ in reconnect() }
             Text("exec into \(snapshot.id)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
             Spacer()
@@ -81,7 +79,7 @@ struct TerminalTab: View {
             }
         }
         .padding(Tokens.Space.xl)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
+        .glassSurface(.regular, cornerRadius: Tokens.Radius.card, shadow: false)
     }
 
     private func reconnect() {
@@ -103,9 +101,9 @@ struct TerminalSurface: NSViewRepresentable {
     func makeNSView(context: Context) -> LocalProcessTerminalView {
         let view = LocalProcessTerminalView(frame: .zero)
         view.processDelegate = context.coordinator
-        view.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        view.nativeBackgroundColor = NSColor.black.withAlphaComponent(0.82)
-        view.nativeForegroundColor = NSColor(white: 0.92, alpha: 1)
+        view.font = NSFont.monospacedSystemFont(ofSize: Tokens.Terminal.fontSize, weight: .regular)
+        view.nativeBackgroundColor = NSColor.black.withAlphaComponent(Tokens.Terminal.nativeBackgroundOpacity)
+        view.nativeForegroundColor = NSColor(white: Tokens.Terminal.nativeForegroundWhite, alpha: 1)
 
         // `container exec -i -t <id> <shell>` — PTY is provided by SwiftTerm; -t requests a TTY
         // inside the container, -i keeps stdin attached. We must inherit the *host* environment

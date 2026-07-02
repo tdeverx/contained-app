@@ -1,4 +1,6 @@
 import SwiftUI
+import ContainedNavigation
+import ContainedDesignSystem
 import SwiftData
 import ContainedCore
 
@@ -64,7 +66,7 @@ struct AppToolbar: View {
                 .zIndex(toolbarImageDetail == nil ? 0 : 350)
         }
         .coordinateSpace(.named(Self.space))
-        .onPreferenceChange(ToolbarSlotKey.self) { slots = $0 }
+        .onPreferenceChange(ToolbarSlotKey.self) { updateSlots($0) }
         .onChange(of: ui.activeMorph) { _, morph in
             if morph == nil { setMorphBackdropExpanded(false) }
         }
@@ -161,15 +163,18 @@ struct AppToolbar: View {
                 openGlobalSectionOrPanel(.system, morph: .system)
             }) {
                 if let activity = app.activity {
-                    ActivityStatusView(activity: activity, style: .inline)
+                    ActivityStatusView(activity: ActivityStatusPresentation(title: activity.title,
+                                                                            detail: activity.detail,
+                                                                            fraction: activity.fraction),
+                                       style: .inline)
                 } else {
                     HStack(spacing: Tokens.Toolbar.searchIconGap) {
                         Image(systemName: systemStatusIcon)
                             .foregroundStyle(systemStatusColor)
-                            .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
+                            .frame(width: Tokens.Toolbar.iconContentWidth)
                         Text(app.serviceLabel)
                             .foregroundStyle(.secondary)
-                            .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
+                            .padding(.trailing, Tokens.Toolbar.statusLabelTrailingPadding)
                     }
                 }
             }
@@ -354,6 +359,11 @@ struct AppToolbar: View {
         morphBackdropExpanded = isExpanded
     }
 
+    private func updateSlots(_ next: [UIState.ToolbarMorph: CGRect]) {
+        guard !slots.isClose(to: next) else { return }
+        slots = next
+    }
+
     private var toolbarImageDetailBinding: Binding<Bool> {
         Binding(get: { toolbarImageDetailPresented }, set: {
             guard !$0 else {
@@ -514,5 +524,24 @@ private struct ToolbarSlotKey: PreferenceKey {
     static func reduce(value: inout [UIState.ToolbarMorph: CGRect],
                        nextValue: () -> [UIState.ToolbarMorph: CGRect]) {
         value.merge(nextValue()) { _, new in new }
+    }
+}
+
+private extension Dictionary where Key == UIState.ToolbarMorph, Value == CGRect {
+    func isClose(to other: [UIState.ToolbarMorph: CGRect], tolerance: CGFloat = 0.5) -> Bool {
+        guard count == other.count else { return false }
+        return allSatisfy { key, frame in
+            guard let otherFrame = other[key] else { return false }
+            return frame.isClose(to: otherFrame, tolerance: tolerance)
+        }
+    }
+}
+
+private extension CGRect {
+    func isClose(to other: CGRect, tolerance: CGFloat = 0.5) -> Bool {
+        abs(minX - other.minX) <= tolerance &&
+        abs(minY - other.minY) <= tolerance &&
+        abs(width - other.width) <= tolerance &&
+        abs(height - other.height) <= tolerance
     }
 }

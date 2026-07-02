@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedDesignSystem
 import AppKit
 import ContainedCore
 
@@ -56,7 +57,7 @@ struct FilesTab: View {
             } description: { Text(error) }
         } else {
             ScrollView {
-                LazyVStack(spacing: 1) {
+                LazyVStack(spacing: Tokens.Space.hairline) {
                     ForEach(entries, id: \.self) { entry in row(entry) }
                 }
                 .padding(Tokens.Space.s)
