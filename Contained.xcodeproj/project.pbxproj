@@ -1,0 +1,164 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXFileReference section */
+		0E1000010000000000000001 /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = text; path = Package.swift; sourceTree = "<group>"; };
+		0E1000010000000000000002 /* Sources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Sources; sourceTree = "<group>"; };
+		0E1000010000000000000003 /* Tests */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Tests; sourceTree = "<group>"; };
+		0E1000010000000000000004 /* Packages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Packages; sourceTree = "<group>"; };
+		0E1000010000000000000005 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = docs; sourceTree = "<group>"; };
+		0E1000010000000000000006 /* scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = scripts; sourceTree = "<group>"; };
+		0E1000010000000000000007 /* CHANGELOG.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHANGELOG.md; sourceTree = "<group>"; };
+		0E1000010000000000000008 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0E1000020000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				0E1000010000000000000001 /* Package.swift */,
+				0E1000010000000000000002 /* Sources */,
+				0E1000010000000000000003 /* Tests */,
+				0E1000010000000000000004 /* Packages */,
+				0E1000010000000000000005 /* docs */,
+				0E1000010000000000000006 /* scripts */,
+				0E1000010000000000000008 /* README.md */,
+				0E1000010000000000000007 /* CHANGELOG.md */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		0E1000030000000000000001 /* Contained */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "build Contained";
+			buildConfigurationList = 0E1000040000000000000002 /* Build configuration list for PBXLegacyTarget "Contained" */;
+			buildPhases = (
+			);
+			buildToolPath = scripts/xcode-swiftpm-build.sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = Contained;
+			passBuildSettingsInEnvironment = 1;
+			productName = Contained;
+		};
+		0E1000030000000000000002 /* Contained Package Tests */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = test;
+			buildConfigurationList = 0E1000040000000000000003 /* Build configuration list for PBXLegacyTarget "Contained Package Tests" */;
+			buildPhases = (
+			);
+			buildToolPath = scripts/xcode-swiftpm-build.sh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = "Contained Package Tests";
+			passBuildSettingsInEnvironment = 1;
+			productName = ContainedPackageTests;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXProject section */
+		0E1000050000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 2600;
+			};
+			buildConfigurationList = 0E1000040000000000000001 /* Build configuration list for PBXProject "Contained" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 0E1000020000000000000001;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0E1000030000000000000001 /* Contained */,
+				0E1000030000000000000002 /* Contained Package Tests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		0E1000060000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+			};
+			name = Debug;
+		};
+		0E1000060000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+			};
+			name = Release;
+		};
+		0E1000060000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		0E1000060000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		0E1000060000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		0E1000060000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0E1000040000000000000001 /* Build configuration list for PBXProject "Contained" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0E1000060000000000000001 /* Debug */,
+				0E1000060000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		0E1000040000000000000002 /* Build configuration list for PBXLegacyTarget "Contained" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0E1000060000000000000003 /* Debug */,
+				0E1000060000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		0E1000040000000000000003 /* Build configuration list for PBXLegacyTarget "Contained Package Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0E1000060000000000000005 /* Debug */,
+				0E1000060000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0E1000050000000000000001 /* Project object */;
+}

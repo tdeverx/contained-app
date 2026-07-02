@@ -34,12 +34,15 @@ Requirements:
 
 ## Build
 
-Contained is a SwiftPM-first app with an Xcode workspace over the package graph.
+Contained is SwiftPM-first. The checked-in Xcode workspace is for manual editing
+and SwiftUI iteration; its shared schemes delegate back to SwiftPM so CI/release
+behavior stays identical to the command line.
 
 ```sh
 open Contained.xcworkspace
 swift build
 swift test
+xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug build
 ./scripts/bundle.sh debug
 open Contained.app
 ```
@@ -75,9 +78,9 @@ instead.
 
 The root package has the app/core targets and consumes local reusable packages:
 
-- `ContainedCore`: models, Apple `container` argv builders, real `container --format json` decoders, compose parsing, and testable service logic.
-- `ContainedRuntime`: shared runtime contracts, descriptors, capabilities, command errors, and command execution primitives.
-- `AppleContainerRuntime`: the current Apple `container` adapter. Future Docker-compatible, Podman, Lima-backed, remote, or other runtime engines should be sibling adapter targets.
+- `ContainedCore`: models, runtime-neutral create/recreate request fields, Apple `container` argv builders, real `container --format json` decoders, compose parsing, and testable service logic.
+- `ContainedRuntime`: shared runtime contracts, descriptors, capabilities, translation plans, command errors, and command execution primitives.
+- `AppleContainerRuntime`: the current Apple `container` adapter, including translation from shared create/import models to Apple CLI commands. Future Docker-compatible, Podman, Lima-backed, remote, or other runtime engines should be sibling adapter targets.
 - `Contained`: SwiftUI app shell, navigation, feature views, stores, history, settings, Sparkle support, app state migration, and app-specific presentation mappings.
 - [`Packages/ContainedDesignSystem`](Packages/ContainedDesignSystem/README.md): reusable SwiftUI/AppKit visual primitives, tokens, spacing, material, and micro-chrome shared by the app.
 - [`Packages/ContainedNavigation`](Packages/ContainedNavigation/README.md): reusable navigation and layout infrastructure shared by app chrome.
