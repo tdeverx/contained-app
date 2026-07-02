@@ -21,6 +21,44 @@ public struct ContainerStats: Codable, Sendable, Identifiable, Hashable {
     }
 }
 
+/// Runtime-agnostic resource counters parsed from a streaming source.
+///
+/// Apple container's live table stream reports CPU as an already-computed percent and reports
+/// memory/network/block values as current cumulative counters. Keeping this separate from
+/// `ContainerStats` lets future runtime adapters, including Docker Engine API streams, publish the
+/// same shape without pretending they came from Apple container's JSON schema.
+public struct RuntimeStatsSnapshot: Sendable, Identifiable, Hashable {
+    public let id: String
+    public let cpuCoreFraction: Double?
+    public let memoryUsageBytes: UInt64?
+    public let memoryLimitBytes: UInt64?
+    public let blockReadBytes: UInt64?
+    public let blockWriteBytes: UInt64?
+    public let networkRxBytes: UInt64?
+    public let networkTxBytes: UInt64?
+    public let numProcesses: UInt64?
+
+    public init(id: String,
+                cpuCoreFraction: Double?,
+                memoryUsageBytes: UInt64?,
+                memoryLimitBytes: UInt64?,
+                blockReadBytes: UInt64?,
+                blockWriteBytes: UInt64?,
+                networkRxBytes: UInt64?,
+                networkTxBytes: UInt64?,
+                numProcesses: UInt64?) {
+        self.id = id
+        self.cpuCoreFraction = cpuCoreFraction
+        self.memoryUsageBytes = memoryUsageBytes
+        self.memoryLimitBytes = memoryLimitBytes
+        self.blockReadBytes = blockReadBytes
+        self.blockWriteBytes = blockWriteBytes
+        self.networkRxBytes = networkRxBytes
+        self.networkTxBytes = networkTxBytes
+        self.numProcesses = numProcesses
+    }
+}
+
 /// A computed delta between two `ContainerStats` samples, the form the UI actually graphs.
 public struct StatsDelta: Sendable, Hashable {
     public let id: String
@@ -91,6 +129,32 @@ public struct StatsDelta: Sendable, Hashable {
             blockReadBytesPerSec: rate(previous.blockReadBytes, current.blockReadBytes),
             blockWriteBytesPerSec: rate(previous.blockWriteBytes, current.blockWriteBytes),
             numProcesses: current.numProcesses ?? 0
+        )
+    }
+
+    /// Convert a streaming runtime snapshot into the UI delta shape.
+    ///
+    /// CPU is already a point-in-time fraction in streaming table/API sources. Throughput metrics
+    /// are still cumulative counters, so they need the previous streamed snapshot and interval.
+    public static func from(snapshot: RuntimeStatsSnapshot,
+                            previous: RuntimeStatsSnapshot?,
+                            interval: TimeInterval) -> StatsDelta {
+        let dt = max(interval, 0.001)
+        func rate(_ previous: UInt64?, _ current: UInt64?) -> Double {
+            guard let previous, let current, current >= previous else { return 0 }
+            return Double(current - previous) / dt
+        }
+
+        return StatsDelta(
+            id: snapshot.id,
+            cpuCoreFraction: snapshot.cpuCoreFraction ?? 0,
+            memoryUsageBytes: snapshot.memoryUsageBytes ?? 0,
+            memoryLimitBytes: snapshot.memoryLimitBytes ?? 0,
+            netRxBytesPerSec: rate(previous?.networkRxBytes, snapshot.networkRxBytes),
+            netTxBytesPerSec: rate(previous?.networkTxBytes, snapshot.networkTxBytes),
+            blockReadBytesPerSec: rate(previous?.blockReadBytes, snapshot.blockReadBytes),
+            blockWriteBytesPerSec: rate(previous?.blockWriteBytes, snapshot.blockWriteBytes),
+            numProcesses: snapshot.numProcesses ?? 0
         )
     }
 }

@@ -104,6 +104,7 @@ public protocol ContainerRuntimeClient: Sendable {
 
     func listContainers(all: Bool) async throws -> [ContainerSnapshot]
     func stats(ids: [String]) async throws -> [ContainerStats]
+    func streamStatsTable(ids: [String]) -> AsyncThrowingStream<String, Error>
     func diskUsage() async throws -> DiskUsage
     func systemProperties() async throws -> SystemProperties
     func dnsDomains() async throws -> [String]
