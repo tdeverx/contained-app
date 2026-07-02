@@ -17,7 +17,7 @@ on:
       - 'LICENSE'
       - 'NOTICE'
       - '.gitignore'
-      - 'Sources/Contained/Resources/CHANGELOG.md'
+      - 'Sources/ContainedApp/Resources/CHANGELOG.md'
       - 'appcast.xml'
       - 'changes/**'
   push:
@@ -33,7 +33,7 @@ on:
       - 'LICENSE'
       - 'NOTICE'
       - '.gitignore'
-      - 'Sources/Contained/Resources/CHANGELOG.md'
+      - 'Sources/ContainedApp/Resources/CHANGELOG.md'
       - 'appcast.xml'
       - 'changes/**'
   schedule:

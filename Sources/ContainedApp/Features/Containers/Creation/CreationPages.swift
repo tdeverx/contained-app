@@ -1,0 +1,336 @@
+import SwiftUI
+import ContainedDesignSystem
+import ContainedCore
+
+struct CreationNetworkFields: View {
+    @Binding var name: String
+    @Binding var subnet: String
+    @Binding var internalOnly: Bool
+    let working: Bool
+    var onSubmit: () -> Void
+
+    var body: some View {
+        CreationResourceForm(symbol: "network",
+                             title: networkName,
+                             subtitle: networkSubtitle,
+                             command: previewCommand) {
+            PanelSection(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
+                PanelField(label: AppText.string("creation.name", defaultValue: "Name"),
+                           info: AppText.string("creation.network.name.info", defaultValue: "A readable name used by containers with `--network`."),
+                           error: nameError) {
+                    TextField("", text: $name, prompt: Text("my-network"))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(submitIfReady)
+                }
+                PanelField(label: AppText.string("creation.subnet", defaultValue: "Subnet"),
+                           info: AppText.string("creation.network.subnet.info", defaultValue: "Optional CIDR range for the network, for example `10.0.0.0/24`.")) {
+                    TextField("", text: $subnet, prompt: Text("optional, e.g. 10.0.0.0/24"))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(submitIfReady)
+                }
+                PanelToggleRow(title: AppText.string("creation.network.internalOnly", defaultValue: "Internal only"),
+                               subtitle: AppText.string("creation.network.internalOnly.subtitle", defaultValue: "Restrict containers on this network from external access."),
+                               isOn: $internalOnly)
+            }
+        } footer: {
+            CreationSubmitBar(title: AppText.string("creation.network.create", defaultValue: "Create network"),
+                              systemImage: "network.badge.plus",
+                              canSubmit: canSubmit,
+                              working: working,
+                              action: onSubmit)
+        }
+    }
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    private var trimmedSubnet: String { subnet.trimmingCharacters(in: .whitespaces) }
+    private var canSubmit: Bool { !trimmedName.isEmpty && !working }
+    private var hasValues: Bool { !trimmedName.isEmpty || !trimmedSubnet.isEmpty || internalOnly }
+    private var nameError: String? { trimmedName.isEmpty ? AppText.string("creation.network.name.required", defaultValue: "A network name is required.") : nil }
+    private var networkName: String { trimmedName.isEmpty ? AppText.string("creation.network.new", defaultValue: "New network") : trimmedName }
+    private var networkSubtitle: String {
+        var parts = [internalOnly ? AppText.string("creation.network.mode.internal", defaultValue: "internal") : AppText.string("creation.network.mode.bridge", defaultValue: "bridge")]
+        if !trimmedSubnet.isEmpty { parts.append(trimmedSubnet) }
+        return parts.joined(separator: "  ·  ")
+    }
+    private var previewCommand: [String] {
+        ContainerCommands.networkCreate(name: trimmedName.isEmpty ? "<name>" : trimmedName,
+                                        subnet: trimmedSubnet.isEmpty ? nil : trimmedSubnet,
+                                        internalOnly: internalOnly)
+    }
+
+    private func submitIfReady() {
+        guard canSubmit else { return }
+        onSubmit()
+    }
+}
+
+struct CreationVolumeFields: View {
+    @Binding var name: String
+    @Binding var size: String
+    let working: Bool
+    var onSubmit: () -> Void
+
+    var body: some View {
+        CreationResourceForm(symbol: "externaldrive",
+                             title: volumeName,
+                             subtitle: volumeSubtitle,
+                             command: previewCommand) {
+            PanelSection(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
+                PanelField(label: AppText.string("creation.name", defaultValue: "Name"),
+                           info: AppText.string("creation.volume.name.info", defaultValue: "A persistent storage name you can mount into containers."),
+                           error: nameError) {
+                    TextField("", text: $name, prompt: Text("my-volume"))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(submitIfReady)
+                }
+                PanelField(label: AppText.string("creation.volume.size", defaultValue: "Size"),
+                           info: AppText.string("creation.volume.size.info", defaultValue: "Optional runtime-specific size hint, such as `10G`. Leave blank for default.")) {
+                    TextField("", text: $size, prompt: Text("optional, e.g. 10G"))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(submitIfReady)
+                }
+            }
+        } footer: {
+            CreationSubmitBar(title: AppText.string("creation.volume.create", defaultValue: "Create volume"),
+                              systemImage: "externaldrive.badge.plus",
+                              canSubmit: canSubmit,
+                              working: working,
+                              action: onSubmit)
+        }
+    }
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    private var trimmedSize: String { size.trimmingCharacters(in: .whitespaces) }
+    private var canSubmit: Bool { !trimmedName.isEmpty && !working }
+    private var hasValues: Bool { !trimmedName.isEmpty || !trimmedSize.isEmpty }
+    private var nameError: String? { trimmedName.isEmpty ? AppText.string("creation.volume.name.required", defaultValue: "A volume name is required.") : nil }
+    private var volumeName: String { trimmedName.isEmpty ? AppText.string("creation.volume.new", defaultValue: "New volume") : trimmedName }
+    private var volumeSubtitle: String { trimmedSize.isEmpty ? AppText.string("creation.volume.defaultSize", defaultValue: "default size") : trimmedSize }
+    private var previewCommand: [String] {
+        ContainerCommands.volumeCreate(name: trimmedName.isEmpty ? "<name>" : trimmedName,
+                                       size: trimmedSize.isEmpty ? nil : trimmedSize)
+    }
+
+    private func submitIfReady() {
+        guard canSubmit else { return }
+        onSubmit()
+    }
+}
+
+struct CreationLocalImagesContent: View {
+    @Environment(AppModel.self) private var app
+    @Binding var query: String
+    var onSelect: (RunSpec) -> Void
+
+    var body: some View {
+        LazyVStack(spacing: DesignTokens.Space.m) {
+            DesignInputSurface {
+                HStack(spacing: DesignTokens.Space.s) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField(AppText.string("creation.localImages.filter", defaultValue: "Filter local images"), text: $query)
+                        .textFieldStyle(.plain)
+                    if !query.isEmpty {
+                        Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                            .buttonStyle(.plain).foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if filteredLocalImages.isEmpty {
+                ContentUnavailableView {
+                    Label(AppText.string("creation.localImages.noMatches", defaultValue: "No matching images"), systemImage: "square.stack.3d.up")
+                } description: {
+                    Text(query.isEmpty
+                         ? AppText.string("creation.localImages.empty", defaultValue: "Pull or build an image first.")
+                         : AppText.string("creation.localImages.tryDifferentFilter", defaultValue: "Try a different filter."))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: DesignTokens.Space.xs) {
+                        ForEach(filteredLocalImages) { image in
+                            CreationLocalImageRow(image: image) {
+                                onSelect(RecommendedImage.spec(for: image.reference))
+                            }
+                            .accessibilityAddTraits(.isButton)
+                        }
+                    }
+                }
+            }
+        }
+        .task { await app.refreshImagesIfStale() }
+    }
+
+    private var filteredLocalImages: [ContainedCore.ImageResource] {
+        let images = app.images
+            .filter { $0.variants.contains(where: \.isRunnable) || $0.variants.isEmpty }
+            .sorted { $0.reference.localizedCaseInsensitiveCompare($1.reference) == .orderedAscending }
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return images }
+        return images.filter { $0.reference.localizedCaseInsensitiveContains(trimmed) }
+    }
+}
+
+struct CreationPastedComposeContent: View {
+    @Binding var text: String
+    var onImport: () -> Void
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: DesignTokens.Space.m) {
+            DesignInputSurface(horizontalPadding: DesignTokens.Space.s,
+                               verticalPadding: DesignTokens.Space.s,
+                               minHeight: 260) {
+                TextEditor(text: $text)
+                    .font(.system(.callout, design: .monospaced))
+                    .scrollContentBackground(.hidden)
+            }
+
+            HStack {
+                Spacer()
+            DesignTextActionButton(title: AppText.string("common.import", defaultValue: "Import"),
+                                       systemName: "arrow.down.doc",
+                                       prominence: .prominent,
+                                       isEnabled: !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                    onImport()
+                }
+            }
+        }
+    }
+}
+
+struct CreationTemplatesContent: View {
+    let templates: [Template]
+    var onSelect: (RunSpec) -> Void
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: DesignTokens.Space.s) {
+                ForEach(templates) { template in
+                    CreationChoiceCard(symbol: "bookmark",
+                                       title: template.name,
+                                       subtitle: Format.shortImage(template.spec?.image ?? "—")) {
+                        if let spec = template.spec { onSelect(spec) }
+                    }
+                    .accessibilityAddTraits(.isButton)
+                }
+            }
+        }
+    }
+}
+
+private struct CreationSubmitBar: View {
+    let title: String
+    let systemImage: String
+    let canSubmit: Bool
+    let working: Bool
+    var action: () -> Void
+
+    var body: some View {
+        HStack(spacing: DesignTokens.Space.s) {
+            Spacer()
+            if working { ProgressView().controlSize(.small) }
+            DesignTextActionButton(title: title,
+                                   systemName: systemImage,
+                                   prominence: .prominent,
+                                   isEnabled: canSubmit && !working) {
+                action()
+            }
+        }
+        .padding(DesignTokens.Space.s)
+        .background(.clear)
+    }
+}
+
+private struct CreationResourceForm<Fields: View, Footer: View>: View {
+    let symbol: String
+    let title: String
+    let subtitle: String
+    let command: [String]
+    @ViewBuilder var fields: () -> Fields
+    @ViewBuilder var footer: () -> Footer
+
+    var body: some View {
+        LazyVStack(spacing: DesignTokens.Space.m) {
+            DesignCard(size: .small,
+                         elevated: false,
+                         title: title,
+                         subtitle: subtitle) {
+                DesignCardIconChip(symbol: symbol, tint: .accentColor)
+            } titleAccessory: {
+                EmptyView()
+            } subtitleAccessory: {
+                EmptyView()
+            } headerAccessory: {
+                DesignBadgeText(text: AppText.string("creation.badge.new", defaultValue: "new"), font: .caption2.weight(.semibold))
+            } bodyContent: {
+                EmptyView()
+            } footerLeading: {
+                EmptyView()
+            } footerActions: {
+                EmptyView()
+            } widget: {
+                EmptyView()
+            }
+
+            fields()
+
+            CommandPreviewBar(command: command,
+                              copyHelp: AppText.copyCommand,
+                              copiedAccessibilityLabel: AppText.copied)
+                .frame(maxWidth: .infinity)
+
+            footer()
+        }
+    }
+}
+
+private struct CreationLocalImageRow: View {
+    let image: ContainedCore.ImageResource
+    var onSelect: () -> Void
+
+    var body: some View {
+        let runnable = image.variants.filter(\.isRunnable)
+        let size = runnable.compactMap(\.size).max() ?? image.variants.compactMap(\.size).max()
+        let arches = runnable.map(\.platform.architecture).joined(separator: ", ")
+        let subtitle = [size.map { Format.bytes(UInt64($0)) }, arches.isEmpty ? nil : arches]
+            .compactMap { $0 }.joined(separator: "  ·  ")
+
+        CreationChoiceCard(symbol: "square.stack.3d.up",
+                           title: Format.shortImage(image.reference),
+                           subtitle: subtitle,
+                           action: onSelect)
+    }
+}
+
+private struct CreationChoiceCard: View {
+    let symbol: String
+    let title: String
+    let subtitle: String?
+    var action: () -> Void
+
+    var body: some View {
+        DesignCard(size: .small,
+                     elevated: false,
+                     onTap: action,
+                     title: title,
+                     subtitle: subtitle,
+                     subtitleStyle: .monospaced) {
+            DesignCardIconChip(symbol: symbol, tint: .accentColor)
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            DesignListRowChevron()
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            EmptyView()
+        } footerActions: {
+            EmptyView()
+        } widget: {
+            EmptyView()
+        }
+        .contentShape(Rectangle())
+    }
+}

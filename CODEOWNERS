@@ -2,8 +2,14 @@
 * @tdeverx
 
 # Core app areas.
-/Sources/ContainedCore/ @tdeverx
+/Packages/ContainedCore/ @tdeverx
+/Packages/ContainedRuntime/ @tdeverx
+/Packages/AppleContainerRuntime/ @tdeverx
+/Packages/ContainedDesignSystem/ @tdeverx
+/Packages/ContainedNavigation/ @tdeverx
+/Packages/ContainedPreviewSupport/ @tdeverx
 /Sources/Contained/ @tdeverx
+/Sources/ContainedApp/ @tdeverx
 /Tests/ @tdeverx
 
 # Repository operations.
@@ -11,7 +17,7 @@
 /scripts/ @tdeverx
 /docs/ @tdeverx
 /CHANGELOG.md @tdeverx
-/Sources/Contained/Resources/CHANGELOG.md @tdeverx
+/Sources/ContainedApp/Resources/CHANGELOG.md @tdeverx
 
 # Release channels and update feeds.
 /appcast.xml @tdeverx

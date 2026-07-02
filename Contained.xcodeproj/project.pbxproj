@@ -1,0 +1,414 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0E2000010000000000000001 /* ContainedXcodeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2000020000000000000001 /* ContainedXcodeApp.swift */; };
+		0E2000010000000000000002 /* ContainedApp in Frameworks */ = {isa = PBXBuildFile; productRef = 0E20000B0000000000000001 /* ContainedApp */; };
+		0E2100010000000000000001 /* AppLoggingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000001 /* AppLoggingTests.swift */; };
+		0E2100010000000000000002 /* ContainersStoreRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000002 /* ContainersStoreRefreshTests.swift */; };
+		0E2100010000000000000003 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000003 /* MigrationTests.swift */; };
+		0E2100010000000000000004 /* PaletteSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000004 /* PaletteSearchTests.swift */; };
+		0E2100010000000000000005 /* RunSpecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000005 /* RunSpecTests.swift */; };
+		0E2100010000000000000006 /* SystemVolumeInventoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000006 /* SystemVolumeInventoryTests.swift */; };
+		0E2100010000000000000007 /* UpdaterControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000007 /* UpdaterControllerTests.swift */; };
+		0E2100010000000000000008 /* ContainedApp in Frameworks */ = {isa = PBXBuildFile; productRef = 0E20000B0000000000000001 /* ContainedApp */; };
+		0E2100010000000000000009 /* AppErrorPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000009 /* AppErrorPresentationTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0E2000020000000000000001 /* ContainedXcodeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainedXcodeApp.swift; sourceTree = "<group>"; };
+		0E2000020000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0E2000020000000000000003 /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = text; path = Package.swift; sourceTree = "<group>"; };
+		0E2000020000000000000004 /* Sources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Sources; sourceTree = "<group>"; };
+		0E2000020000000000000005 /* Tests */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Tests; sourceTree = "<group>"; };
+		0E2000020000000000000006 /* Packages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Packages; sourceTree = "<group>"; };
+		0E2000020000000000000007 /* Xcode */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Xcode; sourceTree = "<group>"; };
+		0E2000020000000000000008 /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
+		0E2000020000000000000009 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = docs; sourceTree = "<group>"; };
+		0E200002000000000000000A /* scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = scripts; sourceTree = "<group>"; };
+		0E200002000000000000000B /* CHANGELOG.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHANGELOG.md; sourceTree = "<group>"; };
+		0E200002000000000000000C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		0E200002000000000000000D /* Contained.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Contained.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0E2100020000000000000001 /* AppLoggingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLoggingTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000002 /* ContainersStoreRefreshTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainersStoreRefreshTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000003 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000004 /* PaletteSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteSearchTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000005 /* RunSpecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunSpecTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000006 /* SystemVolumeInventoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVolumeInventoryTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000007 /* UpdaterControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterControllerTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000008 /* ContainedAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ContainedAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0E2100020000000000000009 /* AppErrorPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorPresentationTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0E2000030000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E2000010000000000000002 /* ContainedApp in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0E2100030000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E2100010000000000000008 /* ContainedApp in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0E2000040000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				0E2000040000000000000002 /* Contained Xcode App */,
+				0E2100040000000000000001 /* ContainedAppTests */,
+				0E2000020000000000000003 /* Package.swift */,
+				0E2000020000000000000004 /* Sources */,
+				0E2000020000000000000005 /* Tests */,
+				0E2000020000000000000006 /* Packages */,
+				0E2000020000000000000007 /* Xcode */,
+				0E2000020000000000000008 /* Resources */,
+				0E2000020000000000000009 /* docs */,
+				0E200002000000000000000A /* scripts */,
+				0E200002000000000000000C /* README.md */,
+				0E200002000000000000000B /* CHANGELOG.md */,
+				0E2000040000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0E2000040000000000000002 /* Contained Xcode App */ = {
+			isa = PBXGroup;
+			children = (
+				0E2000020000000000000001 /* ContainedXcodeApp.swift */,
+				0E2000020000000000000002 /* Info.plist */,
+			);
+			path = Xcode/Contained;
+			sourceTree = "<group>";
+		};
+		0E2000040000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0E200002000000000000000D /* Contained.app */,
+				0E2100020000000000000008 /* ContainedAppTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0E2100040000000000000001 /* ContainedAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				0E2100020000000000000009 /* AppErrorPresentationTests.swift */,
+				0E2100020000000000000001 /* AppLoggingTests.swift */,
+				0E2100020000000000000002 /* ContainersStoreRefreshTests.swift */,
+				0E2100020000000000000003 /* MigrationTests.swift */,
+				0E2100020000000000000004 /* PaletteSearchTests.swift */,
+				0E2100020000000000000005 /* RunSpecTests.swift */,
+				0E2100020000000000000006 /* SystemVolumeInventoryTests.swift */,
+				0E2100020000000000000007 /* UpdaterControllerTests.swift */,
+			);
+			path = Tests/ContainedAppTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0E2000050000000000000001 /* Contained */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0E2000060000000000000002 /* Build configuration list for PBXNativeTarget "Contained" */;
+			buildPhases = (
+				0E2000070000000000000001 /* Sources */,
+				0E2000030000000000000001 /* Frameworks */,
+				0E2000080000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Contained;
+			packageProductDependencies = (
+				0E20000B0000000000000001 /* ContainedApp */,
+			);
+			productName = Contained;
+			productReference = 0E200002000000000000000D /* Contained.app */;
+			productType = "com.apple.product-type.application";
+		};
+		0E2100050000000000000001 /* ContainedAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0E2100060000000000000001 /* Build configuration list for PBXNativeTarget "ContainedAppTests" */;
+			buildPhases = (
+				0E2100070000000000000001 /* Sources */,
+				0E2100030000000000000001 /* Frameworks */,
+				0E2100080000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ContainedAppTests;
+			packageProductDependencies = (
+				0E20000B0000000000000001 /* ContainedApp */,
+			);
+			productName = ContainedAppTests;
+			productReference = 0E2100020000000000000008 /* ContainedAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0E2000090000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					0E2000050000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					0E2100050000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = 0E2000060000000000000001 /* Build configuration list for PBXProject "Contained" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 0E2000040000000000000001;
+			packageReferences = (
+				0E20000A0000000000000001 /* XCLocalSwiftPackageReference "." */,
+			);
+			productRefGroup = 0E2000040000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0E2000050000000000000001 /* Contained */,
+				0E2100050000000000000001 /* ContainedAppTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0E2000080000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0E2100080000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0E2000070000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E2000010000000000000001 /* ContainedXcodeApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0E2100070000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E2100010000000000000009 /* AppErrorPresentationTests.swift in Sources */,
+				0E2100010000000000000001 /* AppLoggingTests.swift in Sources */,
+				0E2100010000000000000002 /* ContainersStoreRefreshTests.swift in Sources */,
+				0E2100010000000000000003 /* MigrationTests.swift in Sources */,
+				0E2100010000000000000004 /* PaletteSearchTests.swift in Sources */,
+				0E2100010000000000000005 /* RunSpecTests.swift in Sources */,
+				0E2100010000000000000006 /* SystemVolumeInventoryTests.swift in Sources */,
+				0E2100010000000000000007 /* UpdaterControllerTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0E20000C0000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		0E20000C0000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		0E20000C0000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = Contained;
+				ARCHS = arm64;
+				CODE_SIGN_ENTITLEMENTS = scripts/Contained.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 0;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Xcode/Contained/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "1.0.0-nightly";
+				PRODUCT_BUNDLE_IDENTIFIER = com.contained.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG CONTAINED_DEBUG_TOOLS";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		0E20000C0000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = Contained;
+				ARCHS = arm64;
+				CODE_SIGN_ENTITLEMENTS = scripts/Contained.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 0;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Xcode/Contained/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = "1.0.0-nightly";
+				PRODUCT_BUNDLE_IDENTIFIER = com.contained.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		0E21000C0000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 0;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.contained.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				TESTING_FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+			};
+			name = Debug;
+		};
+		0E21000C0000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 0;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.contained.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+				TESTING_FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0E2000060000000000000001 /* Build configuration list for PBXProject "Contained" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0E20000C0000000000000001 /* Debug */,
+				0E20000C0000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		0E2000060000000000000002 /* Build configuration list for PBXNativeTarget "Contained" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0E20000C0000000000000003 /* Debug */,
+				0E20000C0000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		0E2100060000000000000001 /* Build configuration list for PBXNativeTarget "ContainedAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0E21000C0000000000000001 /* Debug */,
+				0E21000C0000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		0E20000A0000000000000001 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0E20000B0000000000000001 /* ContainedApp */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0E20000A0000000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = ContainedApp;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0E2000090000000000000001 /* Project object */;
+}

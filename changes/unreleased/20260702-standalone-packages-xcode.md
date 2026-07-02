@@ -1,0 +1,6 @@
+- Moved core, runtime, Apple adapter, design-system, navigation, and preview fixtures into standalone local packages with package-local docs, DocC landing pages, and tests.
+- Split the SwiftUI app implementation into `ContainedApp` with a tiny SwiftPM launcher, while keeping app-owned localization, stores, Sparkle, SwiftData, settings, and feature routing out of reusable packages.
+- Replaced the legacy Xcode shell wrapper with a checked-in native macOS app target that links `ContainedApp`, builds/runs `Contained.app` directly, and includes an app test bundle for SwiftUI-focused functional checks.
+- Reorganized docs into app, feature, architecture, development, and release sections, updated package boundary guidance, and removed stale flat-wiki and wrapper-build wording.
+- Tightened final boundary leaks by routing terminal `exec` through `ContainerCommands`, making service lifecycle actions typed runtime values, and removing app-specific wording from reusable package comments/previews.
+- Updated ownership and release-note enforcement so `Packages/**` changes are covered by repository housekeeping after the package split.

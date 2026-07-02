@@ -1,9 +1,10 @@
 import Foundation
 import Testing
 import ContainedCore
-@testable import Contained
+import AppleContainerRuntime
+@testable import ContainedApp
 
-@Suite("RunSpec argv + compose mapping")
+@Suite("RunSpec create requests + runtime mapping")
 @MainActor
 struct RunSpecTests {
 
@@ -119,14 +120,28 @@ struct RunSpecTests {
         #expect(!args.contains { $0.hasPrefix("contained.tint") || $0.hasPrefix("contained.icon") })
     }
 
-    @Test func composeServiceMapping() {
-        let service = ComposeService(
-            key: "db", name: "db", image: "postgres:16", platform: "linux/arm64", command: nil,
-            ports: ["5432:5432"], volumes: ["pgdata:/var/lib/postgresql/data"],
-            environment: ["POSTGRES_PASSWORD=secret"], restart: "always",
-            dependsOn: [], healthcheck: ComposeHealthcheck(test: ["sh", "-c", "pg_isready"],
-                                                           intervalSeconds: 10, retries: 5))
-        let spec = RunSpec(service: service, projectName: "demo")
+    @Test func composeServiceMapping() throws {
+        let yaml = """
+        services:
+          db:
+            image: postgres:16
+            platform: linux/arm64
+            ports:
+              - "5432:5432"
+            volumes:
+              - "pgdata:/var/lib/postgresql/data"
+            environment:
+              POSTGRES_PASSWORD: secret
+            restart: always
+            healthcheck:
+              test: ["CMD-SHELL", "pg_isready"]
+              interval: 10s
+              retries: 5
+        """
+        let project = try ComposeParser.parse(yaml, projectName: "demo")
+        let plan = AppleContainerCreateTranslator.composePlan(for: project, baseDirectory: nil)
+        let item = try #require(plan.items.first)
+        let spec = RunSpec(request: item.request, healthCheck: item.healthCheck)
         #expect(spec.image == "postgres:16")
         #expect(spec.platform == "linux/arm64")
         #expect(spec.name == "db")
@@ -140,13 +155,25 @@ struct RunSpecTests {
     }
 
     @Test func composeImportResolvesRelativeBindMountsFromComposeDirectory() {
-        let volume = VolumeMap(source: "../configs/bazarr", target: "/config")
+        let yaml = """
+        services:
+          app:
+            image: example/app:1
+            volumes:
+              - "../configs/bazarr:/config"
+        """
         let base = URL(filePath: "/Volumes/Vault/.Docker/compose", directoryHint: .isDirectory)
-        let resolved = ComposeImport.resolveRelativeVolume(volume, baseDirectory: base)
+        let project = try! ComposeParser.parse(yaml, projectName: "demo")
+        let resolved = AppleContainerCreateTranslator.composePlan(for: project, baseDirectory: base)
+            .items
+            .first?
+            .request
+            .volumes
+            .first
 
-        #expect(resolved.source == "/Volumes/Vault/.Docker/configs/bazarr")
-        #expect(resolved.target == "/config")
-        #expect(!resolved.readOnly)
+        #expect(resolved?.source == "/Volumes/Vault/.Docker/configs/bazarr")
+        #expect(resolved?.target == "/config")
+        #expect(resolved?.readOnly == false)
     }
 
     @Test func composeImportMapsAvailableRunOptions() throws {
@@ -205,11 +232,12 @@ struct RunSpecTests {
         """
 
         let project = try ComposeParser.parse(yaml, projectName: "demo")
-        let service = try #require(project.services.first)
-        var spec = RunSpec(service: service, projectName: project.name)
-        spec.volumes = spec.volumes.map {
-            ComposeImport.resolveRelativeVolume($0, baseDirectory: URL(filePath: "/opt/stacks/demo", directoryHint: .isDirectory))
-        }
+        let plan = AppleContainerCreateTranslator.composePlan(
+            for: project,
+            baseDirectory: URL(filePath: "/opt/stacks/demo", directoryHint: .isDirectory)
+        )
+        let item = try #require(plan.items.first)
+        let spec = RunSpec(request: item.request, healthCheck: item.healthCheck)
         let args = spec.arguments()
 
         #expect(spec.image == "example/app:1")
@@ -275,7 +303,7 @@ struct RunSpecTests {
         var spec = RunSpec()
         spec.image = "alpine"
 
-        let defaults = try #require(spec.imageDefaults(in: images))
+        let defaults = try #require(AppleContainerCreateTranslator.imageDefaults(for: spec.createRequest, in: images))
         let applied = spec.adoptImageDefaults(from: defaults)
 
         #expect(applied >= 3)
@@ -296,7 +324,7 @@ struct RunSpecTests {
         spec.workingDir = "/app"
         spec.env = [KeyValue(key: "PATH", value: "/custom")]
 
-        let defaults = try #require(spec.imageDefaults(in: images))
+        let defaults = try #require(AppleContainerCreateTranslator.imageDefaults(for: spec.createRequest, in: images))
         _ = spec.adoptImageDefaults(from: defaults)
 
         #expect(spec.command == "custom")
@@ -397,9 +425,16 @@ struct RunSpecTests {
     }
 
     private var fixturesURL: URL {
-        URL(filePath: #filePath)
+        let testsDirectory = URL(filePath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appending(path: "ContainedCoreTests/Fixtures", directoryHint: .isDirectory)
+        let repositoryRoot = testsDirectory.deletingLastPathComponent()
+        let packageFixtures = repositoryRoot
+            .appending(path: "Packages/AppleContainerRuntime/Tests/AppleContainerRuntimeTests/Fixtures",
+                       directoryHint: .isDirectory)
+        if FileManager.default.fileExists(atPath: packageFixtures.path) {
+            return packageFixtures
+        }
+        return testsDirectory.appending(path: "ContainedCoreTests/Fixtures", directoryHint: .isDirectory)
     }
 }

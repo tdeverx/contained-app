@@ -34,13 +34,13 @@ while IFS= read -r file; do
   [ -n "$file" ] || continue
 
   case "$file" in
-    CHANGELOG.md|Sources/Contained/Resources/CHANGELOG.md|RELEASE_NOTES.md|CHANGES.md|changes/*.md|changes/*/*.md)
+    CHANGELOG.md|Sources/ContainedApp/Resources/CHANGELOG.md|RELEASE_NOTES.md|CHANGES.md|changes/*.md|changes/*/*.md)
       has_note=true
       ;;
   esac
 
   case "$file" in
-    Package.swift|Package.resolved|VERSION|Sources/**|Tests/**|Resources/**|scripts/**|.github/workflows/**)
+    Package.swift|Package.resolved|VERSION|Sources/**|Tests/**|Packages/**|Resources/**|scripts/**|.github/workflows/**)
       has_material_change=true
       ;;
   esac
@@ -55,7 +55,7 @@ if $has_material_change && ! $has_note; then
   done <<< "$changed_files"
   echo >&2
   echo "Add one of:" >&2
-  echo "  - CHANGELOG.md plus synced Sources/Contained/Resources/CHANGELOG.md" >&2
+  echo "  - CHANGELOG.md plus synced Sources/ContainedApp/Resources/CHANGELOG.md" >&2
   echo "  - changes/unreleased/YYYYMMDD-short-slug.md" >&2
   echo "  - RELEASE_NOTES.md / CHANGES.md when the release train uses split files" >&2
   echo >&2

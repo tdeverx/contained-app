@@ -1,0 +1,3 @@
+import ContainedApp
+
+ContainedApplication.main()

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Contained
+@testable import ContainedApp
 
 @Suite("App logging settings")
 @MainActor
@@ -31,6 +31,18 @@ struct AppLoggingTests {
         #expect(reloaded.enabledLogDestinations == [.activity, .console])
         #expect(reloaded.enabledLogCategories == [.compose, .image])
         #expect(reloaded.loggingLevel.includes(.debug))
+    }
+
+    @Test func statsNormalizationSettingPersistsRoundTrip() {
+        let defaults = suiteDefaults()
+        var settings: SettingsStore? = SettingsStore(defaults: defaults)
+        #expect(settings?.statsNormalizationMode == .container)
+
+        settings?.statsNormalizationMode = .machine
+        settings = nil
+
+        let reloaded = SettingsStore(defaults: defaults)
+        #expect(reloaded.statsNormalizationMode == .machine)
     }
 
     @Test func errorOnlyLoggingFiltersLowerSeverity() {
