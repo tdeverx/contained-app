@@ -68,7 +68,7 @@ Contained.xcworkspace/   optional Xcode entry point over the SwiftPM packages
 Contained.xcodeproj/     small Xcode scheme wrapper that delegates to SwiftPM
 Tests/ContainedCoreTests/    golden-argv + decode + decision tests
 Tests/ContainedRuntimeTests/ runtime adapter contract + Apple adapter tests
-Tests/ContainedAppTests/     RunSpec argv + compose mapping
+Tests/ContainedAppTests/     RunSpec form state + runtime mapping
 scripts/                 bundle.sh, release.sh, appcast.sh
 docs/wiki/               local mirror of the GitHub wiki pages
 appcast.xml              Sparkle feed at the root of each release branch

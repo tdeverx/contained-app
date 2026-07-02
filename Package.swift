@@ -74,7 +74,8 @@ let package = Package(
             path: "Tests/ContainedRuntimeTests",
             resources: [.copy("Fixtures")]
         ),
-        // Tests for app-target value types (RunSpec argv, compose→spec mapping). Imports the
+        // Tests for app-target value types (RunSpec form state and runtime-translated create mapping).
+        // Imports the
         // executable target with @testable.
         .testTarget(
             name: "ContainedAppTests",
