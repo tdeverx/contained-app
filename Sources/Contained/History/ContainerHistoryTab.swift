@@ -67,37 +67,41 @@ private struct ContainerHistoryWindow: View {
     }
 
     var body: some View {
+        let chartPoints = HistoryChartPoint.points(from: samples.map(MetricSampleSnapshot.init),
+                                                   snapshot: snapshot,
+                                                   normalization: normalization)
+
         LazyVStack(alignment: .leading, spacing: Tokens.Space.l) {
-            if samples.isEmpty {
+            if chartPoints.isEmpty {
                 ContentUnavailableView("No history yet", systemImage: "chart.xyaxis.line",
                                        description: Text("Resource samples accumulate while the container runs."))
                     .frame(maxWidth: .infinity, minHeight: 200)
             } else {
                 chartCard("CPU", unit: percentUnit) {
-                    Chart(samples) { sample in
-                        LineMark(x: .value("Time", sample.timestamp),
-                                 y: .value("CPU", percentHistoryValue(.cpu, sample)))
+                    Chart(chartPoints) { point in
+                        LineMark(x: .value("Time", point.timestamp),
+                                 y: .value("CPU", point.cpuPercent))
                             .foregroundStyle(Color.accentColor)
                             .interpolationMethod(.monotone)
                     }
                     .percentHistoryScale()
                 }
                 chartCard("Memory", unit: percentUnit) {
-                    Chart(samples) { sample in
-                        AreaMark(x: .value("Time", sample.timestamp),
-                                 y: .value("Memory", percentHistoryValue(.memory, sample)))
+                    Chart(chartPoints) { point in
+                        AreaMark(x: .value("Time", point.timestamp),
+                                 y: .value("Memory", point.memoryPercent))
                             .foregroundStyle(Color.accentColor.opacity(Tokens.Chart.areaOpacity))
                     }
                     .percentHistoryScale()
                 }
                 chartCard("Network", unit: "KB/s") {
-                    Chart(samples) { sample in
-                        LineMark(x: .value("Time", sample.timestamp),
-                                 y: .value("Rx", sample.netRxBytesPerSec / 1024),
+                    Chart(chartPoints) { point in
+                        LineMark(x: .value("Time", point.timestamp),
+                                 y: .value("Rx", point.netRxKBPerSec),
                                  series: .value("Dir", "Rx"))
                             .foregroundStyle(.green)
-                        LineMark(x: .value("Time", sample.timestamp),
-                                 y: .value("Tx", sample.netTxBytesPerSec / 1024),
+                        LineMark(x: .value("Time", point.timestamp),
+                                 y: .value("Tx", point.netTxKBPerSec),
                                  series: .value("Dir", "Tx"))
                             .foregroundStyle(.orange)
                     }
@@ -135,20 +139,50 @@ private struct ContainerHistoryWindow: View {
         case .machine: return "% of machine"
         }
     }
+}
 
-    private func historyValue(_ metric: GraphMetric, _ sample: MetricSample) -> Double {
-        metric.value(from: sample,
-                     snapshot: snapshot,
-                     normalization: normalization,
-                     memoryFallbackBytes: memoryFallbackBytes)
+struct HistoryChartPoint: Identifiable, Equatable {
+    let id: Int
+    let timestamp: Date
+    let cpuPercent: Double
+    let memoryPercent: Double
+    let netRxKBPerSec: Double
+    let netTxKBPerSec: Double
+
+    static func points(from samples: [MetricSampleSnapshot],
+                       snapshot: ContainerSnapshot,
+                       normalization: StatsNormalizationContext) -> [HistoryChartPoint] {
+        guard !samples.isEmpty else { return [] }
+
+        let memoryFallbackBytes = samples.reduce(UInt64(0)) { current, sample in
+            max(current, bytes(from: sample.memoryBytes))
+        }
+        let cpuLimit = normalization.cpuLimit(for: snapshot)
+        let memoryLimit = normalization.memoryLimitBytes(for: snapshot, fallback: memoryFallbackBytes)
+
+        return samples.enumerated().map { index, sample in
+            let cpu = sanitized(sample.cpuFraction) / cpuLimit
+            let memory = memoryLimit > 0 ? sanitized(sample.memoryBytes) / Double(memoryLimit) : 0
+            return HistoryChartPoint(id: index,
+                                     timestamp: sample.timestamp,
+                                     cpuPercent: percent(cpu),
+                                     memoryPercent: percent(memory),
+                                     netRxKBPerSec: sanitized(sample.netRxBytesPerSec) / 1024,
+                                     netTxKBPerSec: sanitized(sample.netTxBytesPerSec) / 1024)
+        }
     }
 
-    private func percentHistoryValue(_ metric: GraphMetric, _ sample: MetricSample) -> Double {
-        min(max(historyValue(metric, sample), 0), 1) * 100
+    private static func percent(_ fraction: Double) -> Double {
+        min(max(sanitized(fraction), 0), 1) * 100
     }
 
-    private var memoryFallbackBytes: UInt64 {
-        UInt64(max(0, samples.map(\.memoryBytes).max() ?? 0))
+    private static func sanitized(_ value: Double) -> Double {
+        guard value.isFinite, value > 0 else { return 0 }
+        return value
+    }
+
+    private static func bytes(from value: Double) -> UInt64 {
+        UInt64(min(sanitized(value), Double(UInt64.max)))
     }
 }
 

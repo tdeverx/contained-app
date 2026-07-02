@@ -226,6 +226,45 @@ struct ContainersStoreRefreshTests {
                                          memoryFallbackBytes: 2_048) == 0.125)
     }
 
+    @Test func historyChartPointsUsePlainSamplesWithCurrentNormalization() {
+        let snapshot = Self.snapshot(id: "web", cpus: 2, memoryInBytes: 0)
+        let samples = [
+            MetricSample(timestamp: Date(timeIntervalSinceReferenceDate: 1_000),
+                         containerID: "web",
+                         cpuFraction: 1,
+                         memoryBytes: 512,
+                         netRxBytesPerSec: 1_024,
+                         netTxBytesPerSec: 2_048,
+                         diskReadBytesPerSec: 0,
+                         diskWriteBytesPerSec: 0),
+            MetricSample(timestamp: Date(timeIntervalSinceReferenceDate: 1_060),
+                         containerID: "web",
+                         cpuFraction: 0.5,
+                         memoryBytes: 1_024,
+                         netRxBytesPerSec: 2_048,
+                         netTxBytesPerSec: 4_096,
+                         diskReadBytesPerSec: 0,
+                         diskWriteBytesPerSec: 0)
+        ].map(MetricSampleSnapshot.init)
+
+        let containerPoints = HistoryChartPoint.points(from: samples,
+                                                       snapshot: snapshot,
+                                                       normalization: .containerSpecific)
+        #expect(containerPoints.map { $0.cpuPercent } == [50, 25])
+        #expect(containerPoints.map { $0.memoryPercent } == [50, 100])
+        #expect(containerPoints.map { $0.netRxKBPerSec } == [1, 2])
+        #expect(containerPoints.map { $0.netTxKBPerSec } == [2, 4])
+
+        let machine = StatsNormalizationContext(mode: .machine,
+                                                machineCPUs: 4,
+                                                machineMemoryBytes: 2_048)
+        let machinePoints = HistoryChartPoint.points(from: samples,
+                                                     snapshot: snapshot,
+                                                     normalization: machine)
+        #expect(machinePoints.map { $0.cpuPercent } == [25, 12.5])
+        #expect(machinePoints.map { $0.memoryPercent } == [25, 50])
+    }
+
     @Test func changingStatsNormalizationRebuildsDisplayHistories() {
         let store = ContainersStore()
         let start = Date(timeIntervalSinceReferenceDate: 1_000)
