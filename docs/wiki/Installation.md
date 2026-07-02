@@ -17,8 +17,9 @@ On first launch, the bootstrap screen checks for the `container` CLI and the run
 ## Build from source
 
 Contained is SwiftPM-first. The checked-in workspace is a convenience wrapper
-over the root package and local packages; there is no generated `.xcodeproj` to
-maintain.
+over the root package, local packages, and shared Xcode schemes. The small
+`Contained.xcodeproj` delegates build/test actions to SwiftPM; it is not the
+release or CI source of truth.
 
 ```sh
 git clone https://github.com/tdeverx/contained-app.git
@@ -31,6 +32,7 @@ Or from the command line:
 ```sh
 swift build              # debug build
 swift test               # run the unit tests
+xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug build
 ./scripts/bundle.sh debug # assemble a runnable development Contained.app
 open Contained.app
 ```

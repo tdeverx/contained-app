@@ -1,8 +1,8 @@
 # Run / Edit Form
 
-The Run / Edit form is intentionally UI-first. It bridges Apple's `container run`
-flags into controls that feel native on macOS, while the live CLI preview remains
-the source of truth for exactly what will execute.
+The Run / Edit form is intentionally UI-first. It fills a runtime-neutral create
+request with controls that feel native on macOS, while the selected runtime
+adapter provides the live command preview for exactly what will execute.
 
 ## Design rule
 
@@ -27,7 +27,7 @@ strings, paths, names, or raw specs.
 The form uses native grouped macOS settings-style sections rather than mirroring
 CLI flag order:
 
-- Essentials: image, platform, name, command, and basic run behavior
+- Essentials: core, image, platform, name, command, and basic run behavior
 - Resources: CPU and memory limits
 - Networking: published ports, network attachment, and socket forwarding
 - Storage: volume mounts
@@ -52,6 +52,7 @@ These controls deliberately do not mirror the CLI one-to-one:
 
 | UI control | CLI output | Notes |
 | --- | --- | --- |
+| Core picker | runtime adapter selection | Apple container is currently the only available core, so the picker is disabled. Future adapters fill the same form fields through `ContainerCreateRequest` instead of adding backend-specific forms. |
 | Platform picker | `--platform <os/arch[/variant]>` | The UI offers common Apple-silicon presets plus Custom. Separate `--os` and `--arch` controls are omitted to avoid duplicate platform concepts because `--platform` takes precedence. |
 | Memory limit toggle + slider | `--memory <size>` | The user chooses a host-bounded amount; the app formats it as `M` or `G`. |
 | Shared memory toggle + slider | `--shm-size <size>` | Same UI pattern as memory, with a small default of `64M`. |
@@ -81,10 +82,11 @@ the app should not pretend to know every valid shape:
 
 ## Compose import behavior
 
-Compose import follows the same UI-first rule: it fills editable Run forms rather
-than directly launching an opaque stack. The importer maps every Compose service
-field that has a Run form equivalent and warns for fields it cannot safely
-translate.
+Compose import follows the same UI-first rule: it asks the selected runtime
+adapter to translate parsed Compose services into standardized create fields,
+then fills editable Run forms rather than directly launching an opaque stack.
+The importer maps every Compose service field that has a Run form equivalent and
+warns for fields it cannot safely translate.
 
 Important translations:
 

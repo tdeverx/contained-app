@@ -12,9 +12,9 @@ Contained is a SwiftUI-native macOS app that wraps Apple's `container` CLI. It s
 
 ## Targets
 
-- **`ContainedCore`** — pure, testable logic: models, JSON decoding, compose parsing, Apple `container` argv builders, and ordering/decision helpers. Depends only on Yams. No SwiftUI.
-- **`ContainedRuntime`** — shared runtime contracts: `ContainerRuntimeClient`, `RuntimeDescriptor`, `RuntimeKind`, `RuntimeCapability`, `CommandError`, and command execution primitives. It is adapter-neutral and should not contain Apple-, Docker-, or UI-specific policy.
-- **`AppleContainerRuntime`** — the current Apple `container` adapter: `AppleContainerClient`, `AppleContainerCLILocator`, `CommandRunner` usage, and the Apple stats-table parser. Future runtime engines should be sibling adapter targets that conform to `ContainerRuntimeClient`.
+- **`ContainedCore`** — pure, testable logic: models, open-ended `RuntimeKind`, runtime-neutral create/recreate request fields, JSON decoding, compose parsing, Apple `container` argv builders, and ordering/decision helpers. Depends only on Yams. No SwiftUI.
+- **`ContainedRuntime`** — shared runtime contracts: `ContainerRuntimeClient`, `RuntimeDescriptor`, `RuntimeCapability`, translation plans, `CommandError`, and command execution primitives. It is adapter-neutral and should not contain Apple-, Docker-, or UI-specific policy.
+- **`AppleContainerRuntime`** — the current Apple `container` adapter: `AppleContainerClient`, `AppleContainerCLILocator`, `CommandRunner` usage, Apple create/import/default translation, and the Apple stats-table parser. Future runtime engines should be sibling adapter targets that conform to `ContainerRuntimeClient`.
 - **`ContainedDesignSystem`** — a local reusable Swift package for app-agnostic SwiftUI/AppKit visual primitives. It must not depend on stores, Sparkle, SwiftData, app routing, or feature modules.
 - **`ContainedNavigation`** — a local reusable Swift package for navigation and layout infrastructure that should not own app-specific routing. It currently owns toolbar safe-area policy/measurement primitives.
 - **`Contained`** — the SwiftUI executable: views, `@Observable` stores, app-specific presentation mappings, navigation, and the SwiftData history stack. Depends on `ContainedCore`, `ContainedRuntime`, `AppleContainerRuntime`, `ContainedDesignSystem`, `ContainedNavigation`, SwiftTerm, and Sparkle.
@@ -38,8 +38,10 @@ Package-local docs:
 - [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md)
 - [`Packages/ContainedNavigation/README.md`](../../Packages/ContainedNavigation/README.md)
 
-`Contained.xcworkspace` is the optional Xcode entry point. It references the
-root `Package.swift` and local package manifests; the SwiftPM package graph
+`Contained.xcworkspace` is the optional Xcode entry point. It contains a small
+checked-in `Contained.xcodeproj` with shared schemes that call SwiftPM through
+`scripts/xcode-swiftpm-build.sh`, and it also references the root and local
+package manifests for manual SwiftUI/package editing. The SwiftPM package graph
 remains the source of truth for builds, tests, and release scripts.
 
 ## Runtime wrapper
@@ -47,6 +49,7 @@ remains the source of truth for builds, tests, and release scripts.
 - **`ContainerCommands`** — pure argv builders, side-effect-free so golden tests assert the exact arguments (the "Reveal CLI" affordances read from the same source of truth).
 - **`CommandRunner`** — shared command-execution primitive used by CLI-backed adapters. It runs one-shot commands (`run`) or streaming commands (`stream`, an `AsyncThrowingStream`) at the requested priority. Passwords are piped via `--password-stdin`, never argv.
 - **`ContainedPackageError`** — display-neutral error metadata shared by reusable packages. It gives the app a package name, stable code, and context without forcing packages to own localized copy.
+- **`ContainerCreateRequest`** — runtime-neutral create/recreate fields used by the app form and adapter import/default translation. It carries the intended `RuntimeKind` per container so future adapters can fill the same global run/edit form without making the core choice app-wide.
 - **`AppleContainerClient`** — the Apple `container` implementation of `ContainerRuntimeClient`; returns decoded models and maps decode failures to a single `CommandError`.
 - **`ContainerStatsTableParser`** — Apple-adapter parser for the ANSI table emitted by `container stats --format table`. It converts table frames into runtime-agnostic snapshots inside `AppleContainerRuntime`.
 - **`ContainerRuntimeClient`** — the backend-facing operation contract. `RuntimeDescriptor`, open-ended `RuntimeKind`, and `RuntimeCapability` advertise what a selected runtime can do before adapter-specific UI routes enable a command. See [[Runtime Adapters|Runtime-Adapters]].
@@ -73,4 +76,4 @@ Card styles and healthchecks are stored locally (keyed by container id / image r
 
 ## Testing
 
-`Tests/ContainedCoreTests` holds golden-argv tests (every `ContainerCommands` builder), decode tests against captured real CLI fixtures, and pure decision tests (`RestartDecision`, `HealthDecision`, compose ordering). `Tests/ContainedRuntimeTests` covers runtime descriptors, future-kind extensibility, Apple adapter decoding/streaming, and typed stats snapshots. `Tests/ContainedAppTests` covers `RunSpec` argv + compose mapping. Run with `swift test`.
+`Tests/ContainedCoreTests` holds golden-argv tests (every `ContainerCommands` builder), decode tests against captured real CLI fixtures, and pure decision tests (`RestartDecision`, `HealthDecision`, compose ordering). `Tests/ContainedRuntimeTests` covers runtime descriptors, future-kind extensibility, Apple adapter decoding/streaming, create/import translation, unsupported capabilities, and typed stats snapshots. `Tests/ContainedAppTests` covers `RunSpec` argv, form round-trips, and runtime-translated compose mapping. Run with `swift test`.

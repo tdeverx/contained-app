@@ -65,6 +65,7 @@ Sources/Contained/       the SwiftUI app
 Packages/ContainedDesignSystem/ reusable SwiftUI/AppKit visual primitives and tokens
 Packages/ContainedNavigation/ reusable navigation/layout infrastructure
 Contained.xcworkspace/   optional Xcode entry point over the SwiftPM packages
+Contained.xcodeproj/     small Xcode scheme wrapper that delegates to SwiftPM
 Tests/ContainedCoreTests/    golden-argv + decode + decision tests
 Tests/ContainedRuntimeTests/ runtime adapter contract + Apple adapter tests
 Tests/ContainedAppTests/     RunSpec argv + compose mapping
@@ -90,10 +91,10 @@ appcast.xml              Sparkle feed at the root of each release branch
   entries. Preserve arbitrary backend stderr as runtime detail unless an adapter
   can classify it as a known typed case.
 - **Package docs live with the package.** Keep package-local import/setup/examples in [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md) and [`Packages/ContainedNavigation/README.md`](../../Packages/ContainedNavigation/README.md), with DocC landing pages under each target's `.docc` catalog. Keep `docs/wiki` focused on app-level architecture and workflow guidance.
-- **Xcode opens the workspace.** `Contained.xcworkspace` points at the root and local package manifests. SwiftPM package manifests remain the build graph source of truth; do not hand-maintain generated `.xcodeproj` state.
+- **Xcode opens the workspace.** `Contained.xcworkspace` points at the SwiftPM root package, local package manifests, and a small committed `Contained.xcodeproj` wrapper with shared schemes. Keep `Contained.xcodeproj` limited to Xcode entry-point metadata that delegates to `scripts/xcode-swiftpm-build.sh`; do not duplicate the SwiftPM source graph as hand-maintained native compile phases.
 - **Navigation infrastructure belongs in `ContainedNavigation` only when it is generic.** App sections, pending actions, concrete toolbar panels, and `UIState` stay in the executable target until they can cross the boundary without app policy.
 - **Every Apple `container` CLI action goes through a `ContainerCommands` builder** + `AppleContainerRuntime`, with a golden-argv test. The UI never assembles argv inline — this keeps "Reveal CLI" honest.
-- **Runtime-facing code should depend on `ContainerRuntimeClient` where a backend choice matters.** The Apple `container` implementation remains the default adapter; future Docker-compatible, Podman, Lima-backed, remote, or other runtimes should be sibling adapter targets that advertise capability differences through `RuntimeDescriptor`.
+- **Runtime-facing code should depend on `ContainerRuntimeClient` where a backend choice matters.** The Apple `container` implementation remains the default adapter; future Docker-compatible, Podman, Lima-backed, remote, or other runtimes should be sibling adapter targets that advertise capability differences through `RuntimeDescriptor`. Create/import flows should translate through `ContainerCreateRequest` and carry `RuntimeKind` per container, not as a global app setting.
 - **Pure decision logic is factored into `ContainedCore`** (`RestartDecision`, `HealthDecision`, compose ordering) and unit-tested without spawning processes.
 - **No `contained.*` personalization labels.** Card styles and healthchecks live in local stores. Only `contained.restart` and `contained.stack` are written (they must round-trip through the container).
 - **Never put secrets or personal data in test fixtures.** Fixtures are captured CLI output — scrub tokens, domains, and paths before committing. (`.gitignore` blocks signing material; push protection is on.)

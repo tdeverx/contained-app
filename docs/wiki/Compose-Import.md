@@ -17,8 +17,10 @@ Compose import can start from:
 ## Behavior
 
 Compose import fills one or more editable [[Run / Edit Form|Run-Edit-Form]]
-entries instead of launching an opaque stack. Services with images become
-prefilled runs; unsupported or ambiguous fields produce warnings.
+entries instead of launching an opaque stack. The selected runtime adapter
+translates parsed services into standardized create fields, then the app fills
+the global Run/Edit form. Services with images become prefilled runs;
+unsupported or ambiguous fields produce warnings.
 
 Important translations:
 
@@ -38,3 +40,8 @@ provide a host port to publish for this runtime.
 The importer should preserve user control: imported values remain editable, the
 CLI preview stays visible, and unsupported values are reported rather than
 silently guessed.
+
+Runtime-specific import rules belong in the adapter. Apple container currently
+owns the Compose-to-`ContainerCreateRequest` translation; future Docker-compatible
+or other adapters should return the same standardized fields with their own
+warnings and unsupported-operation plans.
