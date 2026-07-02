@@ -12,7 +12,7 @@ struct ContainerCard: View {
     var history: [Double]
     /// Every metric's recent history, so the expanded footer's chips can flip the graph instantly
     /// without waiting for the parent to recompute. The compact card just uses `history`.
-    var histories: [GraphMetric: [Double]] = [:]
+    var histories: [GraphMetric: SampleBuffer] = [:]
     var isBusy: Bool
     var hasImageUpdate: Bool = false
     var isExpanded: Bool = false
@@ -149,8 +149,8 @@ struct ContainerCard: View {
         } footerActions: {
             footerActions
         } widget: {
-            LiveSparkline(samples: histories[activeWidget.metric] ?? history,
-                          comparisonSamples: activeWidgetComparisonMetric.flatMap { histories[$0] } ?? [],
+            LiveSparkline(samples: histories[activeWidget.metric]?.values ?? history,
+                          comparisonSamples: activeWidgetComparisonMetric.flatMap { histories[$0]?.values } ?? [],
                           color: activeWidgetColor,
                           lineWidth: activeWidget.lineWidth,
                           style: activeWidget.style,

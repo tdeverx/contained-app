@@ -3,6 +3,7 @@ import ContainedDesignSystem
 import AppKit
 import SwiftTerm
 import ContainedCore
+import Darwin
 
 /// An interactive shell inside a running container, via `container exec -it <id> <shell>`.
 ///
@@ -38,7 +39,9 @@ struct TerminalTab: View {
                     TerminalSurface(executableURL: url, containerID: snapshot.id, shell: shell) { code in
                         ended = Ended(code: code)
                     }
-                    .id(session)        // recreating the view tears down the old exec + starts fresh
+                    // Recreating the view tears down the old exec. Include container/shell so rapid
+                    // card switches cannot reuse a terminal process for a different target.
+                    .id("\(snapshot.id)-\(shell)-\(session)")
                     .terminalSurfaceChrome()
                     if let ended {
                         endedOverlay(code: ended.code)
@@ -89,7 +92,8 @@ struct TerminalTab: View {
 }
 
 /// `NSViewRepresentable` wrapper around SwiftTerm's `LocalProcessTerminalView`, which owns the PTY
-/// and child process. Tearing down the view (`dismantleNSView`) terminates the `exec` child.
+/// and child process. Tearing down the view (`dismantleNSView`) terminates the `exec` child and
+/// escalates stale `container exec --tty` children that do not exit from SwiftTerm's SIGTERM.
 struct TerminalSurface: NSViewRepresentable {
     let executableURL: URL
     let containerID: String
@@ -122,7 +126,9 @@ struct TerminalSurface: NSViewRepresentable {
     func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {}
 
     static func dismantleNSView(_ nsView: LocalProcessTerminalView, coordinator: Coordinator) {
+        let pid = nsView.process?.shellPid ?? 0
         nsView.terminate()
+        TerminalProcessReaper.terminate(pid)
     }
 
     final class Coordinator: NSObject, LocalProcessTerminalViewDelegate {
@@ -133,5 +139,16 @@ struct TerminalSurface: NSViewRepresentable {
         func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
         func setTerminalTitle(source: LocalProcessTerminalView, title: String) {}
         func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
+    }
+}
+
+private enum TerminalProcessReaper {
+    static func terminate(_ pid: pid_t) {
+        guard pid > 0 else { return }
+        kill(pid, SIGTERM)
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.7) {
+            guard kill(pid, 0) == 0 else { return }
+            kill(pid, SIGKILL)
+        }
     }
 }

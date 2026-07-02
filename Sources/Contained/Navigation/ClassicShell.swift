@@ -362,7 +362,6 @@ private struct ImagesPage: View {
                                     coordinateSpaceName: pageImageSpace,
                                     onOpenImage: openImageDetail,
                                     onClose: {})
-                    .task { await app.refreshImagesIfStale(force: true) }
 
                 if let detail, presented {
                     MorphingExpander(isPresented: detailBinding,

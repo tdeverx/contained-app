@@ -126,7 +126,7 @@ struct DesignSystemExample: View {
 
 - ``ActivityStatusView``
 - ``ActivityStatusPresentation``
-- ``LiveSparkline``
+- ``LiveSparkline`` for lightweight Canvas-backed live graph widgets
 - ``GraphStyle``
 - ``WidgetInterpolation``
 - ``MetricTile``

@@ -69,7 +69,7 @@ struct ToolbarUpdatesPanel: View {
             }
             .padding(Tokens.Space.s)
         }
-        .task { await app.refreshImagesIfStale(force: true) }
+        .task { await app.refreshImagesIfStale() }
     }
 
     private var header: some View {

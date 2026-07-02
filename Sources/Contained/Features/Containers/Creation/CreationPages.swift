@@ -157,7 +157,7 @@ struct CreationLocalImagesContent: View {
                 }
             }
         }
-        .task { await app.refreshImagesIfStale(force: true) }
+        .task { await app.refreshImagesIfStale() }
     }
 
     private var filteredLocalImages: [ContainedCore.ImageResource] {
