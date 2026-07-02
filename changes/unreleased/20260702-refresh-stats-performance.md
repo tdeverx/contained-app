@@ -1,4 +1,9 @@
 - Reduced idle UI churn by decoupling container stats from the main refresh tick: metrics now use one app-wide low-priority `container stats --format table` stream for all running containers.
 - Lifecycle actions now relist containers without forcing vanity stats, so start/stop/run/recreate flows do not wait on Apple container's two-second stats sampling path.
+- Narrowed stats-driven SwiftUI invalidation by moving per-container metric reads into each card renderer instead of the grid parent.
+- Kept long-form History/Stats charts on Swift Charts while moving always-live card sparklines to a lightweight native Canvas renderer.
+- Stopped materializing every metric history array for every card frame; cards now pull only the active widget series from shared sample buffers.
+- Hardened embedded terminal teardown so rapid card/tab switching does not leave stale `container exec --tty` children behind.
+- Coalesced image-panel appearance refreshes so page/panel navigation does not force duplicate image-list reloads while users click through the UI.
 - Reduced runtime layout churn by replacing the container grid's bound card-frame preference with coalesced frame tracking and clamping morph panel geometry before it reaches SwiftUI frames.
 - Added diagnostic timing around refresh, stats streaming/sampling, image list refreshes, and image update sweeps so future sluggishness has concrete evidence before tuning.

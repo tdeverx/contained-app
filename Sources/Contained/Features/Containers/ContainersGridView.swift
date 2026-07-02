@@ -363,13 +363,11 @@ struct ContainersGridView: View {
                                cornerRadiusOverride: CGFloat? = nil,
                                controlsVisible: Bool = true, onTap: @escaping () -> Void) -> some View {
         let style = app.containerStyle(for: snapshot)
-        return ContainerCard(
+        return ContainerCardMetricsRenderer(
+            store: store,
             snapshot: snapshot,
             style: style,
             density: app.settings.density,
-            stats: store.statsByID[snapshot.id],
-            history: store.historyByID[snapshot.id]?[style.graphMetric]?.values ?? [],
-            histories: (store.historyByID[snapshot.id] ?? [:]).mapValues(\.values),
             isBusy: store.busyIDs.contains(snapshot.id),
             hasImageUpdate: app.imageUpdateStatus(for: snapshot.image).state == .updateAvailable,
             isExpanded: isExpanded,
@@ -501,6 +499,64 @@ struct ContainersGridView: View {
         } actions: {
             Button("Run a container") { ui.openCreationPanel(entry: .chooser) }
         }
+    }
+}
+
+private struct ContainerCardMetricsRenderer: View {
+    let store: ContainersStore
+    let snapshot: ContainerSnapshot
+    let style: Personalization
+    let density: CardDensity
+    let isBusy: Bool
+    let hasImageUpdate: Bool
+    let isExpanded: Bool
+    let cornerRadiusOverride: CGFloat?
+    let controlsVisible: Bool
+    let onTap: () -> Void
+    let onStart: () -> Void
+    let onStop: () -> Void
+    let onRestart: () -> Void
+    let onEdit: () -> Void
+    let onUpdate: () -> Void
+    let onDelete: () -> Void
+    let onClose: () -> Void
+    let onSelectMultiple: () -> Void
+    let onToggleSelected: () -> Void
+    let onEndSelecting: () -> Void
+    let revealCLI: Bool
+    let health: HealthStatus
+    let selecting: Bool
+    let isSelected: Bool
+
+    var body: some View {
+        ContainerCard(
+            snapshot: snapshot,
+            style: style,
+            density: density,
+            stats: store.statsByID[snapshot.id],
+            history: store.historyByID[snapshot.id]?[style.graphMetric]?.values ?? [],
+            histories: store.historyByID[snapshot.id] ?? [:],
+            isBusy: isBusy,
+            hasImageUpdate: hasImageUpdate,
+            isExpanded: isExpanded,
+            cornerRadiusOverride: cornerRadiusOverride,
+            controlsVisible: controlsVisible,
+            onTap: onTap,
+            onStart: onStart,
+            onStop: onStop,
+            onRestart: onRestart,
+            onEdit: onEdit,
+            onUpdate: onUpdate,
+            onDelete: onDelete,
+            onClose: onClose,
+            onSelectMultiple: onSelectMultiple,
+            onToggleSelected: onToggleSelected,
+            onEndSelecting: onEndSelecting,
+            revealCLI: revealCLI,
+            health: health,
+            selecting: selecting,
+            isSelected: isSelected
+        )
     }
 }
 

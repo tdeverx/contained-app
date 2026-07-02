@@ -45,8 +45,8 @@ This package currently depends only on platform frameworks available to a macOS
 - `ResourceGlassCard` and `ResourceCard*` pieces for repeated card layouts.
 - `ActivityStatusView` with `ActivityStatusPresentation`, where callers provide
   plain status text/progress instead of app model objects.
-- `LiveSparkline`, `GraphStyle`, and `WidgetInterpolation` for graph rendering
-  options.
+- `LiveSparkline`, `GraphStyle`, and `WidgetInterpolation` for lightweight,
+  Canvas-backed live graph widgets.
 - Micro-primitives such as `DesignStatusDot`, `DesignStatusBadge`,
   `DesignKeyCap`, `DesignKeyboardHint`, `DesignTintSwatch`, and
   `DesignMetricTile`.
