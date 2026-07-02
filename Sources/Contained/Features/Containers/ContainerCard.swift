@@ -128,18 +128,28 @@ struct ContainerCard: View {
     }
 
     private var cardSurface: some View {
-        ResourceGlassCard(size: cardSize,
-                          isExpanded: isExpanded,
-                          cornerRadiusOverride: cornerRadiusOverride,
-                          controlsVisible: controlsVisible,
-                          isSelected: isSelected,
-                          fill: styleForDisplay.fillBackground ? styleForDisplay.color : nil,
-                          fillOpacity: styleForDisplay.backgroundOpacity,
-                          gradient: styleForDisplay.gradient,
-                          gradientAngle: styleForDisplay.gradientAngle,
-                          blendMode: styleForDisplay.backgroundBlendMode,
-                          onTap: onTap) {
-            compactHeaderRow
+        ResourceCard(size: cardSize,
+                     isExpanded: isExpanded,
+                     cornerRadiusOverride: cornerRadiusOverride,
+                     controlsVisible: controlsVisible,
+                     isSelected: isSelected,
+                     fill: styleForDisplay.fillBackground ? styleForDisplay.color : nil,
+                     fillOpacity: styleForDisplay.backgroundOpacity,
+                     gradient: styleForDisplay.gradient,
+                     gradientAngle: styleForDisplay.gradientAngle,
+                     blendMode: styleForDisplay.backgroundBlendMode,
+                     onTap: onTap,
+                     title: name,
+                     subtitle: Format.shortImage(snapshot.image),
+                     subtitleStyle: .monospaced,
+                     pages: cardPages) {
+            iconChip
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            EmptyView()
         } bodyContent: {
             detailBody
         } footerLeading: {
@@ -169,31 +179,13 @@ struct ContainerCard: View {
         .resourceCardProgressOverlay(when: isBusy)
     }
 
-    private var compactHeaderRow: some View {
-        ResourceCardHeader {
-            iconChip
-        } content: {
-            headerTitleBlock
-        } trailing: {
-            headerButtons(controlsReveal: isExpanded && controlsVisible ? 1 : 0)
-        }
-    }
-
-    private func headerButtons(controlsReveal: Double) -> some View {
-        ResourceCardPageControls(items: pageControlItems,
-                                 selection: tab,
-                                 tint: tint,
-                                 controlsReveal: controlsReveal,
-                                 onSelect: selectTab,
-                                 onClose: onClose)
-    }
-
-    private var headerTitleBlock: some View {
-        ResourceCardHeaderTextBlock {
-            ResourceCardTitleText(text: name)
-        } subtitle: {
-            ResourceCardMonospacedSubtitleText(text: Format.shortImage(snapshot.image))
-        }
+    private var cardPages: ResourceCardPages<Tab> {
+        ResourceCardPages(items: pageControlItems,
+                          selection: tab,
+                          tint: tint,
+                          controlsReveal: isExpanded && controlsVisible ? 1 : 0,
+                          onSelect: selectTab,
+                          onClose: onClose)
     }
 
     private var iconChip: some View {

@@ -42,10 +42,11 @@ This package currently depends only on platform frameworks available to a macOS
   `PageScaffold` for app-neutral scaffolding.
 - `GlassButton`, `GlassButtonItem`, `GlassButtonInputItem`, `GlassRowMenu`, and
   toolbar control helpers.
-- `ResourceGlassCard`, `ResourceCardHeaderTextBlock`, `ResourceCardPageControls`,
-  `ResourceCardFooterChip`, `ResourceCardFooterButton`, `ResourceCardWidgetGroup`,
-  `ResourceCardInsetSection`, and other `ResourceCard*` pieces for repeated
-  card layouts and card-local controls.
+- `ResourceCard`, `ResourceCardPages`, `ResourceCardFooterChip`,
+  `ResourceCardFooterButton`, `ResourceCardWidgetGroup`, `ResourceCardInsetSection`,
+  and other `ResourceCard*` pieces for repeated card layouts and card-local controls.
+  App code should use `ResourceCard`; `ResourceGlassCard` and header primitives are
+  lower-level package composition pieces.
   Use `resourceCardFloatingControls` and `resourceCardProgressOverlay` for
   card overlays instead of app-local `.overlay` recipes.
 - `ActivityStatusView` with `ActivityStatusPresentation`, where callers provide
@@ -107,19 +108,26 @@ struct DesignSystemExample: View {
                     }
                 }
 
-                ResourceGlassCard(size: .small, elevated: false) {
-                    ResourceCardHeader {
-                        ResourceCardIconChip(symbol: "shippingbox.fill",
-                                             tint: tint.color)
-                    } content: {
-                        ResourceCardHeaderTextBlock {
-                            ResourceCardTitleText(text: "web")
-                        } subtitle: {
-                            ResourceCardSubtitleText(text: "nginx:latest")
-                        }
-                    } trailing: {
-                        GlassListRowChevron()
-                    }
+                ResourceCard(size: .small,
+                             elevated: false,
+                             title: "web",
+                             subtitle: "nginx:latest") {
+                    ResourceCardIconChip(symbol: "shippingbox.fill",
+                                         tint: tint.color)
+                } titleAccessory: {
+                    EmptyView()
+                } subtitleAccessory: {
+                    EmptyView()
+                } headerAccessory: {
+                    GlassListRowChevron()
+                } bodyContent: {
+                    EmptyView()
+                } footerLeading: {
+                    EmptyView()
+                } footerActions: {
+                    EmptyView()
+                } widget: {
+                    EmptyView()
                 }
                 .selectionFill()
 
@@ -140,14 +148,14 @@ struct DesignSystemExample: View {
 
 ## Resource Card Controls
 
-Keep card-local controls in the package. Feature views should provide plain
-values and actions instead of restyling footer chips or expanded-card page rails:
+Keep card-local controls in the package. Feature views provide plain values and
+actions instead of assembling headers, footer groups, or expanded-card page rails:
 
-`ResourceGlassCard` owns card anatomy:
+`ResourceCard` owns card anatomy:
 
 - the header is always sticky and visible
-- page controls stay mounted in the header trailing slot and use `controlsReveal`
-  for visibility, avoiding text reflow during expansion
+- page controls are declared through `ResourceCardPages`, stay mounted in the
+  header trailing slot, and use `controlsReveal` for visibility
 - the body appears only when the card is expanded
 - the widget is sticky for `.large` cards and becomes body content for `.medium`
 - the footer is sticky for `.medium` and `.large` cards and becomes body content for `.small`
@@ -167,20 +175,21 @@ struct CardControlsExample: View {
     ]
 
     var body: some View {
-        ResourceGlassCard(size: .large) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: "shippingbox.fill")
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardTitleText(text: "web")
-                }
-            } trailing: {
-                ResourceCardPageControls(items: pages,
-                                         selection: page,
-                                         tint: .accentColor,
-                                         onSelect: { page = $0 },
-                                         onClose: {})
-            }
+        ResourceCard(size: .large,
+                     title: "web",
+                     subtitle: "nginx:latest",
+                     pages: ResourceCardPages(items: pages,
+                                              selection: page,
+                                              tint: .accentColor,
+                                              onSelect: { page = $0 },
+                                              onClose: {})) {
+            ResourceCardIconChip(symbol: "shippingbox.fill")
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            EmptyView()
         } bodyContent: {
             ResourceCardInsetSection(title: "Details") {
                 ResourceCardSubtitleText(text: "Ready")

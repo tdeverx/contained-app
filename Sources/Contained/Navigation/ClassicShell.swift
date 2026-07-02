@@ -261,19 +261,20 @@ private struct NetworksPage: View {
     }
 
     private func networkRow(_ network: NetworkResource) -> some View {
-        ResourceGlassCard(size: .medium, elevated: false) {
-            ResourceCardHeader {
-                ResourceCardIconChip(symbol: network.isBuiltin ? "network.badge.shield.half.filled" : "network",
-                                     tint: network.isBuiltin ? .secondary : .accentColor)
-            } content: {
-                ResourceCardHeaderTextBlock {
-                    ResourceCardTitleText(text: network.name)
-                } subtitle: {
-                    ResourceCardSubtitleText(text: networkSubtitle(network))
-                }
-            } trailing: {
-                GlassRowMenu { networkMenu(network) }
-            }
+        ResourceCard(size: .medium,
+                     elevated: false,
+                     title: network.name,
+                     subtitle: networkSubtitle(network)) {
+            ResourceCardIconChip(symbol: network.isBuiltin ? "network.badge.shield.half.filled" : "network",
+                                 tint: network.isBuiltin ? .secondary : .accentColor)
+        } titleAccessory: {
+            EmptyView()
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
+            GlassRowMenu { networkMenu(network) }
+        } bodyContent: {
+            EmptyView()
         } footerLeading: {
             if network.isBuiltin {
                 ResourceCardFooterMini {
@@ -283,6 +284,8 @@ private struct NetworksPage: View {
                 }
             }
         } footerActions: {
+            EmptyView()
+        } widget: {
             EmptyView()
         }
         .contextMenu { networkMenu(network) }

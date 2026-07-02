@@ -112,21 +112,18 @@ safe-area contract as morph panels, clearing both top and bottom toolbar bands.
 
 ## Resource cards
 
-Use `ResourceGlassCard` for containers, images, tags, volumes, networks, and
+Use `ResourceCard` for containers, images, tags, volumes, networks, and
 palette result cards.
 
-Recommended internal pieces:
+Recommended inputs and package pieces:
 
-- `ResourceCardHeader` for the top row
-- `ResourceCardHeaderTextBlock` for sticky title/subtitle lanes inside headers
+- `ResourceCardPages` for expanded-card page rails
 - `ResourceCardIconChip` for icons and symbols
-- `ResourceCardTitleText` for names
-- `ResourceCardSubtitleText` or `ResourceCardMonospacedSubtitleText` for metadata
+- `ResourceCardTextStyle` for standard versus monospaced title/subtitle text
 - `ResourceBadgeText` for compact state or kind labels
 - `ResourceCardFooterMini` for small footer actions and metrics
 - `ResourceCardWidgetGroup` for horizontal widget metadata
-- `ResourceCardFooterChip`, `ResourceCardFooterButton`, and
-  `ResourceCardPageControls` for card-local controls
+- `ResourceCardFooterChip` and `ResourceCardFooterButton` for card-local controls
 - `ResourceCardInsetSection` for charts, lists, and read-only groups inside an
   expanded card body
 - `resourceCardFloatingControls` and `resourceCardProgressOverlay` for
@@ -137,18 +134,23 @@ Recommended internal pieces:
 Use `isSelected` instead of inventing a second selection ring. Use `elevated:
 false` for cards inside already-elevated morph panels.
 
-`ResourceGlassCard` owns the card anatomy:
+`ResourceCard` owns the card anatomy:
 
 - the header is always visible and stays outside the expanding body
-- page controls belong in the header trailing slot, stay mounted, and use
-  `controlsReveal` instead of app-local overlays or conditional trailing views
+- page controls are declared with `ResourceCardPages`, stay mounted in the header
+  trailing slot, and use `controlsReveal` instead of app-local overlays or
+  conditional trailing views
 - the body appears only while expanded
 - widgets stay sticky on `.large` cards and move into the expanded body on
   `.medium`
 - footers stay sticky on `.medium` and `.large` cards and move into the
   expanded body on `.small`
 
-Do not create a second `ResourceGlassCard` or direct surface modifier inside an
+Feature views should not call `ResourceGlassCard`, `ResourceCardHeader`, or
+`ResourceCardPageControls` directly. Those are package composition pieces used by
+`ResourceCard`.
+
+Do not create a second `ResourceCard` or direct surface modifier inside an
 expanded card body unless the nested object is itself an independent resource
 card, such as an image tag row. In-card content should go through
 `ResourceCardInsetSection`.
@@ -171,7 +173,7 @@ Plain rows are reserved for generic actions such as refresh or opening a page.
 Use `Tokens` for spacing, radius, toolbar dimensions, panel sizes, icon sizes,
 form widths, chart sizes, badge/keycap insets, resource-card opacities, terminal
 chrome, and shadows. Feature views should not call low-level surface modifiers
-such as `glassSurface`; use named package routes such as `ResourceGlassCard`,
+such as `glassSurface`; use named package routes such as `ResourceCard`,
 `PanelSection`, `DesignContentSurface`, `DesignInputSurface`, and
 `ResourceCardInsetSection`. If a new visual value appears, add a token or package
 primitive before using it in the app.
