@@ -17,6 +17,11 @@ and lightweight package tests.
 - Production app state or persistence.
 - Live runtime calls.
 
+## Source Layout
+
+- `Sources/ContainedPreviewSupport/Samples` contains deterministic fixture
+  models and values used by package examples and app previews.
+
 ## Example
 
 ```swift
