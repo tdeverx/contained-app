@@ -1,3 +1,11 @@
+>[!warning]
+>Major Refactor in Progress
+>
+>A large foundation refactor is currently under review in PR #48. This introduces significant changes across the codebase and will likely require existing branches to be rebased with manual conflict resolution.
+>
+>If you’re planning to contribute, it’s recommended that you base new work on this branch until it has been merged.
+
+
 <p align="center">
   <img src=".github/assets/icon.png" width="128" alt="Contained icon">
 </p>
