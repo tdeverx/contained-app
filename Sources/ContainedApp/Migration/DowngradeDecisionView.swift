@@ -9,20 +9,20 @@ struct DowngradeDecisionView: View {
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: DesignTokens.Space.l) {
-            SheetHeader(title: "This data was created by a newer version",
-                        subtitle: "Stored schema \(schemaVersion), this app supports \(StateMigrator.currentSchemaVersion).",
+            SheetHeader(title: AppText.string("downgrade.title", defaultValue: "This data was created by a newer version"),
+                        subtitle: AppText.string("downgrade.subtitle", defaultValue: "Stored schema \(schemaVersion), this app supports \(StateMigrator.currentSchemaVersion)."),
                         cancelHelp: AppText.quit,
                         onCancel: onQuit)
 
-            Text("You can export a backup before resetting incompatible local data, try to keep what this build can still read, or quit and install the newer build again.")
+            Text(AppText.string("downgrade.description", defaultValue: "You can export a backup before resetting incompatible local data, try to keep what this build can still read, or quit and install the newer build again."))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             LazyVStack(alignment: .leading, spacing: DesignTokens.Space.s) {
-                Button("Export Backup, Then Reset") { onExportAndReset() }
+                Button(AppText.string("downgrade.exportBackupThenReset", defaultValue: "Export Backup, Then Reset")) { onExportAndReset() }
                     .buttonStyle(.borderedProminent)
-                Button("Try to Keep Readable Data") { onKeep() }
-                Button("Quit Contained", role: .cancel) { onQuit() }
+                Button(AppText.string("downgrade.keepReadableData", defaultValue: "Try to Keep Readable Data")) { onKeep() }
+                Button(AppText.string("downgrade.quitContained", defaultValue: "Quit Contained"), role: .cancel) { onQuit() }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

@@ -23,24 +23,24 @@ struct RunSpecForm: View {
 
     var body: some View {
         LazyVStack(spacing: DesignTokens.Space.l) {
-            Text("Blue sections contain explicit values from an import, edit, template, or manual change.")
+            Text(AppText.string("runSpec.importedValuesHint", defaultValue: "Blue sections contain explicit values from an import, edit, template, or manual change."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            PanelSection(header: "Essentials", highlighted: spec.hasGeneralOptions) { generalSection }
-            PanelSection(header: "Resources", highlighted: spec.hasResourceOptions) { resourcesSection }
-            PanelSection(header: "Networking", highlighted: spec.hasNetworkingOptions) {
+            PanelSection(header: AppText.string("runSpec.section.essentials", defaultValue: "Essentials"), highlighted: spec.hasGeneralOptions) { generalSection }
+            PanelSection(header: AppText.string("runSpec.section.resources", defaultValue: "Resources"), highlighted: spec.hasResourceOptions) { resourcesSection }
+            PanelSection(header: AppText.string("runSpec.section.networking", defaultValue: "Networking"), highlighted: spec.hasNetworkingOptions) {
                 portsSection
                 networkSection
                 socketsSection
             }
-            PanelSection(header: "Storage", highlighted: spec.hasStorageOptions) { volumesSection }
-            PanelSection(header: "Environment", highlighted: spec.hasEnvironmentOptions) { environmentSection }
-            PanelSection(header: "App Managed", highlighted: spec.hasAppManagedOptions) {
+            PanelSection(header: AppText.string("runSpec.section.storage", defaultValue: "Storage"), highlighted: spec.hasStorageOptions) { volumesSection }
+            PanelSection(header: AppText.string("runSpec.section.environment", defaultValue: "Environment"), highlighted: spec.hasEnvironmentOptions) { environmentSection }
+            PanelSection(header: AppText.string("runSpec.section.appManaged", defaultValue: "App Managed"), highlighted: spec.hasAppManagedOptions) {
                 restartSection
                 healthSection
             }
-            PanelSection(header: "Appearance", highlighted: spec.hasPersonalizationOptions) { personalizationSection }
+            PanelSection(header: AppText.sectionSettingsAppearance, highlighted: spec.hasPersonalizationOptions) { personalizationSection }
             advancedOptionsSection
         }
         .onChange(of: spec.hasAdvancedOptions) { _, hasValues in if hasValues { advancedExpanded = true } }
@@ -63,22 +63,23 @@ struct RunSpecForm: View {
                 .fixedSize()
                 .disabled(!app.runtimeCoreSelectorIsEnabled)
             }
-            PanelField(label: "Image",
-                       info: "The container image to start, such as `nginx:latest`. If it is not on this Mac yet, Contained pulls it before running.",
-                       error: spec.image.trimmingCharacters(in: .whitespaces).isEmpty ? "An image reference is required." : nil) {
+            PanelField(label: AppText.string("runSpec.image", defaultValue: "Image"),
+                       info: AppText.string("runSpec.image.info", defaultValue: "The container image to start, such as `nginx:latest`. If it is not on this Mac yet, Contained pulls it before running."),
+                       error: spec.image.trimmingCharacters(in: .whitespaces).isEmpty ? AppText.string("runSpec.image.required", defaultValue: "An image reference is required.") : nil) {
                 TextField("", text: $spec.image, prompt: Text("e.g. nginx:latest")).textFieldStyle(.roundedBorder)
             }
             if imageDefaults != nil {
-                PanelRow(title: "Image defaults",
-                         subtitle: "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config.",
-                         info: "Images can define default startup settings. Adopt copies those defaults into this form so you can see and edit them before running.") {
+                PanelRow(title: AppText.string("runSpec.imageDefaults", defaultValue: "Image defaults"),
+                         subtitle: AppText.string("runSpec.imageDefaults.subtitle", defaultValue: "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config."),
+                         info: AppText.string("runSpec.imageDefaults.info", defaultValue: "Images can define default startup settings. Adopt copies those defaults into this form so you can see and edit them before running.")) {
                     DesignTextActionButton(title: AppText.string("runSpec.adopt", defaultValue: "Adopt"),
                                            systemName: "wand.and.stars") {
                         adoptImageDefaults()
                     }
                 }
             }
-            PanelRow(title: "Platform", info: "Use this only when an image supports more than one CPU type. Leave Default unless you specifically need arm64 or amd64.") {
+            PanelRow(title: AppText.string("runSpec.platform", defaultValue: "Platform"),
+                     info: AppText.string("runSpec.platform.info", defaultValue: "Use this only when an image supports more than one CPU type. Leave Default unless you specifically need arm64 or amd64.")) {
                 Picker("", selection: platformPresetBinding) {
                     Text("Default").tag("")
                     Text("Linux arm64").tag("linux/arm64")
@@ -89,36 +90,40 @@ struct RunSpecForm: View {
                 .labelsHidden().fixedSize()
             }
             if platformPresetBinding.wrappedValue == "custom" {
-                PanelField(label: "Custom platform", info: "Advanced platform value in `os/arch` form, for example `linux/arm64`.") {
+                PanelField(label: AppText.string("runSpec.customPlatform", defaultValue: "Custom platform"),
+                           info: AppText.string("runSpec.customPlatform.info", defaultValue: "Advanced platform value in `os/arch` form, for example `linux/arm64`.")) {
                     TextField("", text: $spec.platform, prompt: Text("os/arch[/variant]")).textFieldStyle(.roundedBorder)
                 }
             }
-            PanelField(label: "Name", info: "Optional friendly runtime name. Leave it blank and the container runtime will generate one.") {
+            PanelField(label: AppText.string("runSpec.name", defaultValue: "Name"),
+                       info: AppText.string("runSpec.name.info", defaultValue: "Optional friendly runtime name. Leave it blank and the container runtime will generate one.")) {
                 TextField("", text: $spec.name, prompt: Text("optional")).textFieldStyle(.roundedBorder)
             }
-            PanelField(label: "Command", info: "Optional command to run instead of the image's normal startup command.") {
+            PanelField(label: AppText.string("runSpec.command", defaultValue: "Command"),
+                       info: AppText.string("runSpec.command.info", defaultValue: "Optional command to run instead of the image's normal startup command.")) {
                 TextField("", text: $spec.command, prompt: Text("override the default command (optional)")).textFieldStyle(.roundedBorder)
             }
-            PanelToggleRow(title: "Run in the background",
-                           info: "Detached (-d): runs without attaching to its output.", isOn: $spec.detach)
-            PanelToggleRow(title: "Remove when stopped",
-                           info: "Deletes the container record when it stops. Use volumes if you need data to survive.", isOn: $spec.removeOnExit)
+            PanelToggleRow(title: AppText.string("runSpec.detach", defaultValue: "Run in the background"),
+                           info: AppText.string("runSpec.detach.info", defaultValue: "Detached (-d): runs without attaching to its output."), isOn: $spec.detach)
+            PanelToggleRow(title: AppText.string("runSpec.removeWhenStopped", defaultValue: "Remove when stopped"),
+                           info: AppText.string("runSpec.removeWhenStopped.info", defaultValue: "Deletes the container record when it stops. Use volumes if you need data to survive."), isOn: $spec.removeOnExit)
         }
     }
 
     private var resourcesSection: some View {
         Group {
-            PanelRow(title: "CPUs", info: "Limit how much CPU the container can use. Default lets the runtime decide. This Mac has \(hostCPUs) cores.") {
+            PanelRow(title: AppText.string("runSpec.cpus", defaultValue: "CPUs"),
+                     info: AppText.string("runSpec.cpus.info", defaultValue: "Limit how much CPU the container can use. Default lets the runtime decide. This Mac has \(hostCPUs) cores.")) {
                 Picker("", selection: cpuBinding) {
                     Text("Default").tag(0)
                     ForEach(1...max(1, hostCPUs), id: \.self) { Text("\($0)").tag($0) }
                 }
                 .labelsHidden().fixedSize()
             }
-            PanelToggleRow(title: "Limit memory",
-                           info: "Set a memory ceiling for the container. If it goes past the limit, the runtime may stop it.", isOn: memoryLimitBinding)
+            PanelToggleRow(title: AppText.string("runSpec.limitMemory", defaultValue: "Limit memory"),
+                           info: AppText.string("runSpec.limitMemory.info", defaultValue: "Set a memory ceiling for the container. If it goes past the limit, the runtime may stop it."), isOn: memoryLimitBinding)
             if !spec.memory.isEmpty {
-                PanelField(label: "Memory") {
+                PanelField(label: AppText.string("runSpec.memory", defaultValue: "Memory")) {
                     HStack(spacing: DesignTokens.Space.s) {
                         Slider(value: memoryGBBinding, in: 0.5...max(0.5, maxMemoryGB), step: 0.5)
                         Text(memoryReadout).monospacedDigit().frame(width: DesignTokens.FormWidth.memoryReadout)
@@ -200,7 +205,7 @@ struct RunSpecForm: View {
                     removeButton { spec.ports.removeAll { $0.id == port.id } }
                 }
             }
-            addButton("Add port") { spec.ports.append(PortMap()) }
+            addButton(AppText.string("runSpec.addPort", defaultValue: "Add port")) { spec.ports.append(PortMap()) }
         }
     }
 
@@ -219,7 +224,7 @@ struct RunSpecForm: View {
                     }
                 }
             }
-            addButton("Add volume") { spec.volumes.append(VolumeMap()) }
+            addButton(AppText.string("runSpec.addVolume", defaultValue: "Add volume")) { spec.volumes.append(VolumeMap()) }
         }
     }
 
@@ -233,9 +238,9 @@ struct RunSpecForm: View {
                     removeButton { spec.env.removeAll { $0.id == variable.id } }
                 }
             }
-            addButton("Add variable") { spec.env.append(KeyValue()) }
-            stringList("Add env file", $spec.envFiles, prompt: "/path/to/.env",
-                       info: "Read environment variables from a file (--env-file).")
+            addButton(AppText.string("runSpec.addVariable", defaultValue: "Add variable")) { spec.env.append(KeyValue()) }
+            stringList(AppText.string("runSpec.addEnvFile", defaultValue: "Add env file"), $spec.envFiles, prompt: "/path/to/.env",
+                       info: AppText.string("runSpec.addEnvFile.info", defaultValue: "Read environment variables from a file (--env-file)."))
         }
     }
 
@@ -250,7 +255,7 @@ struct RunSpecForm: View {
                     TextField("Container socket path", text: $socket.containerPath).textFieldStyle(.roundedBorder)
                 }
             }
-            addButton("Add socket") { spec.sockets.append(SocketMap()) }
+            addButton(AppText.string("runSpec.addSocket", defaultValue: "Add socket")) { spec.sockets.append(SocketMap()) }
         }
     }
 
@@ -264,26 +269,29 @@ struct RunSpecForm: View {
                     removeButton { spec.labels.removeAll { $0.id == label.id } }
                 }
             }
-            addButton("Add label") { spec.labels.append(KeyValue()) }
+            addButton(AppText.string("runSpec.addLabel", defaultValue: "Add label")) { spec.labels.append(KeyValue()) }
         }
     }
 
     private var personalizationSection: some View {
         Group {
-            PanelField(label: "Nickname", info: "A display name for the card only. It does not rename the real container.") {
+            PanelField(label: AppText.string("runSpec.nickname", defaultValue: "Nickname"),
+                       info: AppText.string("runSpec.nickname.info", defaultValue: "A display name for the card only. It does not rename the real container.")) {
                 TextField("", text: $spec.personalization.nickname, prompt: Text("display name (optional)")).textFieldStyle(.roundedBorder)
             }
-            PanelField(label: "Icon", info: "An SF Symbol name for the card icon, such as `shippingbox` or `bolt`.") {
+            PanelField(label: AppText.string("runSpec.icon", defaultValue: "Icon"),
+                       info: AppText.string("runSpec.icon.info", defaultValue: "An SF Symbol name for the card icon, such as `shippingbox` or `bolt`.")) {
                 TextField("", text: $spec.personalization.icon, prompt: Text("SF Symbol, e.g. globe, bolt")).textFieldStyle(.roundedBorder)
             }
-            PanelRow(title: "Color", info: "Sets the card icon color. If background color is enabled, it also tints the glass card.") {
+            PanelRow(title: AppText.string("runSpec.color", defaultValue: "Color"),
+                     info: AppText.string("runSpec.color.info", defaultValue: "Sets the card icon color. If background color is enabled, it also tints the glass card.")) {
                 TintSelector(selection: $spec.personalization.tint) { $0.localizedDisplayName }
             }
-            PanelToggleRow(title: "Color the card background",
-                           info: "Adds a soft color wash behind the glass. Turn it off for clear glass with only a colored icon.",
+            PanelToggleRow(title: AppText.string("runSpec.colorCardBackground", defaultValue: "Color the card background"),
+                           info: AppText.string("runSpec.colorCardBackground.info", defaultValue: "Adds a soft color wash behind the glass. Turn it off for clear glass with only a colored icon."),
                            isOn: $spec.personalization.fillBackground)
             if spec.personalization.fillBackground {
-                PanelField(label: "Opacity") {
+                PanelField(label: AppText.string("runSpec.opacity", defaultValue: "Opacity")) {
                     HStack(spacing: DesignTokens.Space.s) {
                         Slider(value: $spec.personalization.backgroundOpacity, in: 0.05...0.6)
                         Text(Format.percent(spec.personalization.backgroundOpacity))
@@ -291,14 +299,14 @@ struct RunSpecForm: View {
                             .frame(width: DesignTokens.FormWidth.shortReadout)
                     }
                 }
-                PanelToggleRow(title: "Gradient",
-                               info: "Blends the color across the card instead of using one flat wash.",
+                PanelToggleRow(title: AppText.string("runSpec.gradient", defaultValue: "Gradient"),
+                               info: AppText.string("runSpec.gradient.info", defaultValue: "Blends the color across the card instead of using one flat wash."),
                                isOn: $spec.personalization.gradient)
                 if spec.personalization.gradient {
                     GradientAngleControl(angle: $spec.personalization.gradientAngle, title: AppText.direction)
                 }
-                PanelRow(title: "Blend mode",
-                         info: "Controls how the card color wash blends with the glass behind it.") {
+                PanelRow(title: AppText.string("runSpec.blendMode", defaultValue: "Blend mode"),
+                         info: AppText.string("runSpec.blendMode.info", defaultValue: "Controls how the card color wash blends with the glass behind it.")) {
                     Picker("", selection: $spec.personalization.backgroundBlendMode) {
                         ForEach(ColorLayerBlendMode.allCases) { mode in
                             Text(mode.localizedDisplayName).tag(mode)
@@ -312,7 +320,8 @@ struct RunSpecForm: View {
     }
 
     private var restartSection: some View {
-        PanelRow(title: "Restart policy", info: "Contained restarts the container automatically based on this setting.") {
+        PanelRow(title: AppText.string("runSpec.restartPolicy", defaultValue: "Restart policy"),
+                 info: AppText.string("runSpec.restartPolicy.info", defaultValue: "Contained restarts the container automatically based on this setting.")) {
             Picker("", selection: $spec.restart) {
                 ForEach(RestartPolicy.allCases) { Text($0.localizedDisplayName).tag($0) }
             }
@@ -322,11 +331,12 @@ struct RunSpecForm: View {
 
     private var healthSection: some View {
         Group {
-            PanelToggleRow(title: "Enable healthcheck",
-                           info: "Contained probes the container on an interval (app-managed; the runtime has no native healthcheck).",
+            PanelToggleRow(title: AppText.string("runSpec.enableHealthcheck", defaultValue: "Enable healthcheck"),
+                           info: AppText.string("runSpec.enableHealthcheck.info", defaultValue: "Contained probes the container on an interval (app-managed; the runtime has no native healthcheck)."),
                            isOn: $spec.healthCheck.enabled)
             if spec.healthCheck.enabled {
-                PanelField(label: "Probe command", info: "Run inside the container via `sh -c`; a zero exit = healthy. Needs a shell in the image.") {
+                PanelField(label: AppText.string("runSpec.probeCommand", defaultValue: "Probe command"),
+                           info: AppText.string("runSpec.probeCommand.info", defaultValue: "Run inside the container via `sh -c`; a zero exit = healthy. Needs a shell in the image.")) {
                     TextField("", text: healthCommandBinding, prompt: Text("curl -f http://localhost/ || exit 1")).textFieldStyle(.roundedBorder)
                 }
                 Stepper("Interval: \(spec.healthCheck.intervalSeconds)s",
@@ -352,30 +362,34 @@ struct RunSpecForm: View {
     @ViewBuilder
     private var runtimeSection: some View {
         Group {
-            PanelField(label: "Entrypoint", info: "Override the image's entrypoint program.") {
+            PanelField(label: AppText.string("runSpec.entrypoint", defaultValue: "Entrypoint"),
+                       info: AppText.string("runSpec.entrypoint.info", defaultValue: "Override the image's entrypoint program.")) {
                 TextField("", text: $spec.entrypoint, prompt: Text("optional")).textFieldStyle(.roundedBorder)
             }
-            PanelToggleRow(title: "Keep stdin open",
-                           info: "Keep standard input open even when detached (--interactive).", isOn: $spec.interactive)
-            PanelToggleRow(title: "Allocate TTY",
-                           info: "Allocate a terminal for the process (--tty).", isOn: $spec.tty)
-            PanelField(label: "Working directory", info: "Initial working directory inside the container (-w).") {
+            PanelToggleRow(title: AppText.string("runSpec.keepStdinOpen", defaultValue: "Keep stdin open"),
+                           info: AppText.string("runSpec.keepStdinOpen.info", defaultValue: "Keep standard input open even when detached (--interactive)."), isOn: $spec.interactive)
+            PanelToggleRow(title: AppText.string("runSpec.allocateTTY", defaultValue: "Allocate TTY"),
+                           info: AppText.string("runSpec.allocateTTY.info", defaultValue: "Allocate a terminal for the process (--tty)."), isOn: $spec.tty)
+            PanelField(label: AppText.string("runSpec.workingDirectory", defaultValue: "Working directory"),
+                       info: AppText.string("runSpec.workingDirectory.info", defaultValue: "Initial working directory inside the container (-w).")) {
                 TextField("", text: $spec.workingDir, prompt: Text("optional, e.g. /app")).textFieldStyle(.roundedBorder)
             }
-            PanelField(label: "User", info: "Run the process as this user (-u). Or set UID/GID below.") {
+            PanelField(label: AppText.string("runSpec.user", defaultValue: "User"),
+                       info: AppText.string("runSpec.user.info", defaultValue: "Run the process as this user (-u). Or set UID/GID below.")) {
                 TextField("", text: $spec.user, prompt: Text("name | uid[:gid]")).textFieldStyle(.roundedBorder)
             }
-            PanelField(label: "User ID", info: "Numeric user / group IDs (--uid / --gid).") {
+            PanelField(label: AppText.string("runSpec.userID", defaultValue: "User ID"),
+                       info: AppText.string("runSpec.userID.info", defaultValue: "Numeric user / group IDs (--uid / --gid).")) {
                 HStack {
                     TextField("UID", text: $spec.uid).textFieldStyle(.roundedBorder).frame(width: DesignTokens.FormWidth.userID)
                     TextField("GID", text: $spec.gid).textFieldStyle(.roundedBorder).frame(width: DesignTokens.FormWidth.userID)
                     Spacer()
                 }
             }
-            PanelToggleRow(title: "Set shared memory size",
-                           info: "Size of /dev/shm (--shm-size).", isOn: shmLimitBinding)
+            PanelToggleRow(title: AppText.string("runSpec.setSharedMemorySize", defaultValue: "Set shared memory size"),
+                           info: AppText.string("runSpec.setSharedMemorySize.info", defaultValue: "Size of /dev/shm (--shm-size)."), isOn: shmLimitBinding)
             if !spec.shmSize.isEmpty {
-                PanelField(label: "Shared memory") {
+                PanelField(label: AppText.string("runSpec.sharedMemory", defaultValue: "Shared memory")) {
                     HStack(spacing: DesignTokens.Space.s) {
                         Slider(value: shmGBBinding, in: 0.0625...max(0.0625, maxMemoryGB), step: 0.0625)
                         Text(memoryReadout(spec.shmSize, fallbackGB: 0.0625))
@@ -385,39 +399,41 @@ struct RunSpecForm: View {
                 }
             }
 
-            stringList("Add capability", $spec.capAdd, prompt: "CAP_NET_RAW or ALL",
-                       info: "Add a Linux capability (--cap-add).")
-            stringList("Drop capability", $spec.capDrop, prompt: "CAP_NET_RAW or ALL",
-                       info: "Drop a Linux capability (--cap-drop).")
-            PanelField(label: "Container ID file", info: "Write the new container ID to a file (--cidfile).") {
+            stringList(AppText.string("runSpec.addCapability", defaultValue: "Add capability"), $spec.capAdd, prompt: "CAP_NET_RAW or ALL",
+                       info: AppText.string("runSpec.addCapability.info", defaultValue: "Add a Linux capability (--cap-add)."))
+            stringList(AppText.string("runSpec.dropCapability", defaultValue: "Drop capability"), $spec.capDrop, prompt: "CAP_NET_RAW or ALL",
+                       info: AppText.string("runSpec.dropCapability.info", defaultValue: "Drop a Linux capability (--cap-drop)."))
+            PanelField(label: AppText.string("runSpec.containerIDFile", defaultValue: "Container ID file"),
+                       info: AppText.string("runSpec.containerIDFile.info", defaultValue: "Write the new container ID to a file (--cidfile).")) {
                 TextField("", text: $spec.cidFile, prompt: Text("optional path")).textFieldStyle(.roundedBorder)
             }
-            stringList("Add tmpfs mount", $spec.tmpfs, prompt: "/path",
-                       info: "Mount a tmpfs at this path (--tmpfs).")
-            stringList("Add ulimit", $spec.ulimits, prompt: "nofile=1024:2048",
-                       info: "Resource limit, type=soft[:hard] (--ulimit).")
+            stringList(AppText.string("runSpec.addTmpfsMount", defaultValue: "Add tmpfs mount"), $spec.tmpfs, prompt: "/path",
+                       info: AppText.string("runSpec.addTmpfsMount.info", defaultValue: "Mount a tmpfs at this path (--tmpfs)."))
+            stringList(AppText.string("runSpec.addUlimit", defaultValue: "Add ulimit"), $spec.ulimits, prompt: "nofile=1024:2048",
+                       info: AppText.string("runSpec.addUlimit.info", defaultValue: "Resource limit, type=soft[:hard] (--ulimit)."))
         }
     }
 
     @ViewBuilder
     private var securitySection: some View {
         Group {
-            PanelToggleRow(title: "Read-only filesystem",
-                           info: "Mounts the container's root filesystem as read-only.", isOn: $spec.readOnly)
-            PanelToggleRow(title: "Use an init process",
-                           info: "Runs a tiny init that forwards signals and cleans up zombie processes.", isOn: $spec.useInit)
-            PanelToggleRow(title: "Rosetta (x86 apps)",
-                           info: "Lets the container run x86-64 binaries via Rosetta.", isOn: $spec.rosetta)
-            PanelToggleRow(title: "Forward SSH agent",
-                           info: "Forwards your host SSH agent into the container.", isOn: $spec.ssh)
-            PanelToggleRow(title: "Expose virtualization",
-                           info: "Exposes nested virtualization (needs host + guest support).", isOn: $spec.virtualization)
+            PanelToggleRow(title: AppText.string("runSpec.readOnlyFilesystem", defaultValue: "Read-only filesystem"),
+                           info: AppText.string("runSpec.readOnlyFilesystem.info", defaultValue: "Mounts the container's root filesystem as read-only."), isOn: $spec.readOnly)
+            PanelToggleRow(title: AppText.string("runSpec.useInitProcess", defaultValue: "Use an init process"),
+                           info: AppText.string("runSpec.useInitProcess.info", defaultValue: "Runs a tiny init that forwards signals and cleans up zombie processes."), isOn: $spec.useInit)
+            PanelToggleRow(title: AppText.string("runSpec.rosetta", defaultValue: "Rosetta (x86 apps)"),
+                           info: AppText.string("runSpec.rosetta.info", defaultValue: "Lets the container run x86-64 binaries via Rosetta."), isOn: $spec.rosetta)
+            PanelToggleRow(title: AppText.string("runSpec.forwardSSHAgent", defaultValue: "Forward SSH agent"),
+                           info: AppText.string("runSpec.forwardSSHAgent.info", defaultValue: "Forwards your host SSH agent into the container."), isOn: $spec.ssh)
+            PanelToggleRow(title: AppText.string("runSpec.exposeVirtualization", defaultValue: "Expose virtualization"),
+                           info: AppText.string("runSpec.exposeVirtualization.info", defaultValue: "Exposes nested virtualization (needs host + guest support)."), isOn: $spec.virtualization)
         }
     }
 
     @ViewBuilder
     private var networkSection: some View {
-        PanelRow(title: "Network", info: "Attach the container to a network (--network).") {
+        PanelRow(title: AppText.string("runSpec.network", defaultValue: "Network"),
+                 info: AppText.string("runSpec.network.info", defaultValue: "Attach the container to a network (--network).")) {
             Menu(networkMenuTitle) {
                 Button {
                     spec.network = ""
@@ -449,16 +465,20 @@ struct RunSpecForm: View {
     @ViewBuilder
     private var fetchSection: some View {
         Group {
-            PanelField(label: "Runtime", info: "Runtime handler (--runtime).") {
+            PanelField(label: AppText.string("runSpec.runtime", defaultValue: "Runtime"),
+                       info: AppText.string("runSpec.runtime.info", defaultValue: "Runtime handler (--runtime).")) {
                 TextField("", text: $spec.runtime, prompt: Text("optional")).textFieldStyle(.roundedBorder)
             }
-            PanelField(label: "Init image", info: "Use a custom init image (--init-image).") {
+            PanelField(label: AppText.string("runSpec.initImage", defaultValue: "Init image"),
+                       info: AppText.string("runSpec.initImage.info", defaultValue: "Use a custom init image (--init-image).")) {
                 TextField("", text: $spec.initImage, prompt: Text("optional image")).textFieldStyle(.roundedBorder)
             }
-            PanelField(label: "Kernel", info: "Use a custom kernel path (--kernel).") {
+            PanelField(label: AppText.string("runSpec.kernel", defaultValue: "Kernel"),
+                       info: AppText.string("runSpec.kernel.info", defaultValue: "Use a custom kernel path (--kernel).")) {
                 TextField("", text: $spec.kernel, prompt: Text("optional path")).textFieldStyle(.roundedBorder)
             }
-            PanelRow(title: "Registry scheme", info: "Registry connection scheme for image fetches (--scheme).") {
+            PanelRow(title: AppText.string("runSpec.registryScheme", defaultValue: "Registry scheme"),
+                     info: AppText.string("runSpec.registryScheme.info", defaultValue: "Registry connection scheme for image fetches (--scheme).")) {
                 Picker("", selection: $spec.scheme) {
                     Text("Default").tag("")
                     Text("Auto").tag("auto")
@@ -467,7 +487,8 @@ struct RunSpecForm: View {
                 }
                 .labelsHidden().fixedSize()
             }
-            PanelRow(title: "Progress", info: "Progress display mode for image fetches (--progress).") {
+            PanelRow(title: AppText.string("runSpec.progress", defaultValue: "Progress"),
+                     info: AppText.string("runSpec.progress.info", defaultValue: "Progress display mode for image fetches (--progress).")) {
                 Picker("", selection: $spec.progress) {
                     Text("Default").tag("")
                     Text("Auto").tag("auto")
@@ -478,8 +499,8 @@ struct RunSpecForm: View {
                 }
                 .labelsHidden().fixedSize()
             }
-            PanelToggleRow(title: "Limit parallel downloads",
-                           info: "Maximum concurrent image downloads (--max-concurrent-downloads).", isOn: maxDownloadsBinding)
+            PanelToggleRow(title: AppText.string("runSpec.limitParallelDownloads", defaultValue: "Limit parallel downloads"),
+                           info: AppText.string("runSpec.limitParallelDownloads.info", defaultValue: "Maximum concurrent image downloads (--max-concurrent-downloads)."), isOn: maxDownloadsBinding)
             if !spec.maxConcurrentDownloads.isEmpty {
                 Stepper("Max downloads: \(maxConcurrentDownloadsBinding.wrappedValue)",
                         value: maxConcurrentDownloadsBinding, in: 1...16)
@@ -490,18 +511,19 @@ struct RunSpecForm: View {
     @ViewBuilder
     private var dnsSection: some View {
         Group {
-            PanelToggleRow(title: "Disable DNS",
-                           info: "Do not configure DNS inside the container (--no-dns).", isOn: $spec.noDNS)
+            PanelToggleRow(title: AppText.string("runSpec.disableDNS", defaultValue: "Disable DNS"),
+                           info: AppText.string("runSpec.disableDNS.info", defaultValue: "Do not configure DNS inside the container (--no-dns)."), isOn: $spec.noDNS)
             if !spec.noDNS {
-                stringList("Add nameserver", $spec.dns, prompt: "1.1.1.1",
-                           info: "DNS nameserver IP (--dns).")
-                PanelField(label: "Search domain", info: "Default DNS domain (--dns-domain).") {
+                stringList(AppText.string("runSpec.addNameserver", defaultValue: "Add nameserver"), $spec.dns, prompt: "1.1.1.1",
+                           info: AppText.string("runSpec.addNameserver.info", defaultValue: "DNS nameserver IP (--dns)."))
+                PanelField(label: AppText.string("runSpec.searchDomain", defaultValue: "Search domain"),
+                           info: AppText.string("runSpec.searchDomain.info", defaultValue: "Default DNS domain (--dns-domain).")) {
                     TextField("", text: $spec.dnsDomain, prompt: Text("optional")).textFieldStyle(.roundedBorder)
                 }
-                stringList("Add search domain", $spec.dnsSearch, prompt: "example.com",
-                           info: "DNS search domain (--dns-search).")
-                stringList("Add DNS option", $spec.dnsOption, prompt: "ndots:2",
-                           info: "DNS resolver option (--dns-option).")
+                stringList(AppText.string("runSpec.addSearchDomain", defaultValue: "Add search domain"), $spec.dnsSearch, prompt: "example.com",
+                           info: AppText.string("runSpec.addSearchDomain.info", defaultValue: "DNS search domain (--dns-search)."))
+                stringList(AppText.string("runSpec.addDNSOption", defaultValue: "Add DNS option"), $spec.dnsOption, prompt: "ndots:2",
+                           info: AppText.string("runSpec.addDNSOption.info", defaultValue: "DNS resolver option (--dns-option)."))
             }
         }
     }
@@ -510,16 +532,16 @@ struct RunSpecForm: View {
     private var advancedOptionsSection: some View {
         // The header switch shows/hides the less-common run settings (Compose import and Edit flip it on
         // automatically when advanced values are present).
-        PanelSection(header: "Advanced Options",
-                     footer: "Less-common run settings. Compose import and Edit reveal these automatically when advanced values are present.",
+        PanelSection(header: AppText.string("runSpec.section.advancedOptions", defaultValue: "Advanced Options"),
+                     footer: AppText.string("runSpec.section.advancedOptions.footer", defaultValue: "Less-common run settings. Compose import and Edit reveal these automatically when advanced values are present."),
                      highlighted: spec.hasAdvancedOptions,
                      enabled: $advancedExpanded) {
             runtimeSection
             securitySection
             fetchSection
             dnsSection
-            stringList("Add mount", $spec.mounts, prompt: "type=bind,source=/host,target=/container",
-                       info: "Raw mount spec for advanced mount types (--mount).")
+            stringList(AppText.string("runSpec.addMount", defaultValue: "Add mount"), $spec.mounts, prompt: "type=bind,source=/host,target=/container",
+                       info: AppText.string("runSpec.addMount.info", defaultValue: "Raw mount spec for advanced mount types (--mount)."))
             labelsSection
         }
     }
@@ -545,7 +567,7 @@ struct RunSpecForm: View {
     }
 
     private var networkMenuTitle: String {
-        spec.network.trimmingCharacters(in: .whitespaces).isEmpty ? "Default" : spec.network
+        spec.network.trimmingCharacters(in: .whitespaces).isEmpty ? AppText.string("runSpec.default", defaultValue: "Default") : spec.network
     }
 
     /// A repeatable single-string list editor (capabilities, DNS servers, tmpfs, ulimits…).
@@ -584,7 +606,7 @@ struct RunSpecForm: View {
             Button {
                 pickHostSource(into: source)
             } label: {
-                Label("Choose File or Folder…", systemImage: "folder")
+                Label(AppText.string("runSpec.chooseFileOrFolder", defaultValue: "Choose File or Folder..."), systemImage: "folder")
             }
             if !app.volumes.isEmpty {
                 Divider()
@@ -600,13 +622,13 @@ struct RunSpecForm: View {
             Button {
                 ui.dispatch(.createVolume)
             } label: {
-                Label("Create New Volume…", systemImage: "plus")
+                Label(AppText.string("runSpec.createNewVolume", defaultValue: "Create New Volume..."), systemImage: "plus")
             }
         } label: {
             Image(systemName: "folder.badge.gearshape")
         }
         .buttonStyle(.borderless)
-        .help("Choose a host path, existing volume, or create a new volume")
+        .help(AppText.string("runSpec.sourcePicker.help", defaultValue: "Choose a host path, existing volume, or create a new volume"))
         .task { await app.refreshVolumes() }
     }
 

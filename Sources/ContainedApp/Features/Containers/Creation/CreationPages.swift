@@ -14,26 +14,26 @@ struct CreationNetworkFields: View {
                              title: networkName,
                              subtitle: networkSubtitle,
                              command: previewCommand) {
-            PanelSection(header: "Details", highlighted: hasValues) {
-                PanelField(label: "Name",
-                           info: "A readable name used by containers with `--network`.",
+            PanelSection(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
+                PanelField(label: AppText.string("creation.name", defaultValue: "Name"),
+                           info: AppText.string("creation.network.name.info", defaultValue: "A readable name used by containers with `--network`."),
                            error: nameError) {
                     TextField("", text: $name, prompt: Text("my-network"))
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(submitIfReady)
                 }
-                PanelField(label: "Subnet",
-                           info: "Optional CIDR range for the network, for example `10.0.0.0/24`.") {
+                PanelField(label: AppText.string("creation.subnet", defaultValue: "Subnet"),
+                           info: AppText.string("creation.network.subnet.info", defaultValue: "Optional CIDR range for the network, for example `10.0.0.0/24`.")) {
                     TextField("", text: $subnet, prompt: Text("optional, e.g. 10.0.0.0/24"))
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(submitIfReady)
                 }
-                PanelToggleRow(title: "Internal only",
-                               subtitle: "Restrict containers on this network from external access.",
+                PanelToggleRow(title: AppText.string("creation.network.internalOnly", defaultValue: "Internal only"),
+                               subtitle: AppText.string("creation.network.internalOnly.subtitle", defaultValue: "Restrict containers on this network from external access."),
                                isOn: $internalOnly)
             }
         } footer: {
-            CreationSubmitBar(title: "Create network",
+            CreationSubmitBar(title: AppText.string("creation.network.create", defaultValue: "Create network"),
                               systemImage: "network.badge.plus",
                               canSubmit: canSubmit,
                               working: working,
@@ -45,10 +45,10 @@ struct CreationNetworkFields: View {
     private var trimmedSubnet: String { subnet.trimmingCharacters(in: .whitespaces) }
     private var canSubmit: Bool { !trimmedName.isEmpty && !working }
     private var hasValues: Bool { !trimmedName.isEmpty || !trimmedSubnet.isEmpty || internalOnly }
-    private var nameError: String? { trimmedName.isEmpty ? "A network name is required." : nil }
-    private var networkName: String { trimmedName.isEmpty ? "New network" : trimmedName }
+    private var nameError: String? { trimmedName.isEmpty ? AppText.string("creation.network.name.required", defaultValue: "A network name is required.") : nil }
+    private var networkName: String { trimmedName.isEmpty ? AppText.string("creation.network.new", defaultValue: "New network") : trimmedName }
     private var networkSubtitle: String {
-        var parts = [internalOnly ? "internal" : "bridge"]
+        var parts = [internalOnly ? AppText.string("creation.network.mode.internal", defaultValue: "internal") : AppText.string("creation.network.mode.bridge", defaultValue: "bridge")]
         if !trimmedSubnet.isEmpty { parts.append(trimmedSubnet) }
         return parts.joined(separator: "  ·  ")
     }
@@ -75,23 +75,23 @@ struct CreationVolumeFields: View {
                              title: volumeName,
                              subtitle: volumeSubtitle,
                              command: previewCommand) {
-            PanelSection(header: "Details", highlighted: hasValues) {
-                PanelField(label: "Name",
-                           info: "A persistent storage name you can mount into containers.",
+            PanelSection(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
+                PanelField(label: AppText.string("creation.name", defaultValue: "Name"),
+                           info: AppText.string("creation.volume.name.info", defaultValue: "A persistent storage name you can mount into containers."),
                            error: nameError) {
                     TextField("", text: $name, prompt: Text("my-volume"))
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(submitIfReady)
                 }
-                PanelField(label: "Size",
-                           info: "Optional runtime-specific size hint, such as `10G`. Leave blank for default.") {
+                PanelField(label: AppText.string("creation.volume.size", defaultValue: "Size"),
+                           info: AppText.string("creation.volume.size.info", defaultValue: "Optional runtime-specific size hint, such as `10G`. Leave blank for default.")) {
                     TextField("", text: $size, prompt: Text("optional, e.g. 10G"))
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(submitIfReady)
                 }
             }
         } footer: {
-            CreationSubmitBar(title: "Create volume",
+            CreationSubmitBar(title: AppText.string("creation.volume.create", defaultValue: "Create volume"),
                               systemImage: "externaldrive.badge.plus",
                               canSubmit: canSubmit,
                               working: working,
@@ -103,9 +103,9 @@ struct CreationVolumeFields: View {
     private var trimmedSize: String { size.trimmingCharacters(in: .whitespaces) }
     private var canSubmit: Bool { !trimmedName.isEmpty && !working }
     private var hasValues: Bool { !trimmedName.isEmpty || !trimmedSize.isEmpty }
-    private var nameError: String? { trimmedName.isEmpty ? "A volume name is required." : nil }
-    private var volumeName: String { trimmedName.isEmpty ? "New volume" : trimmedName }
-    private var volumeSubtitle: String { trimmedSize.isEmpty ? "default size" : trimmedSize }
+    private var nameError: String? { trimmedName.isEmpty ? AppText.string("creation.volume.name.required", defaultValue: "A volume name is required.") : nil }
+    private var volumeName: String { trimmedName.isEmpty ? AppText.string("creation.volume.new", defaultValue: "New volume") : trimmedName }
+    private var volumeSubtitle: String { trimmedSize.isEmpty ? AppText.string("creation.volume.defaultSize", defaultValue: "default size") : trimmedSize }
     private var previewCommand: [String] {
         ContainerCommands.volumeCreate(name: trimmedName.isEmpty ? "<name>" : trimmedName,
                                        size: trimmedSize.isEmpty ? nil : trimmedSize)
@@ -127,7 +127,7 @@ struct CreationLocalImagesContent: View {
             DesignInputSurface {
                 HStack(spacing: DesignTokens.Space.s) {
                     Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                    TextField("Filter local images", text: $query)
+                    TextField(AppText.string("creation.localImages.filter", defaultValue: "Filter local images"), text: $query)
                         .textFieldStyle(.plain)
                     if !query.isEmpty {
                         Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
@@ -138,9 +138,11 @@ struct CreationLocalImagesContent: View {
 
             if filteredLocalImages.isEmpty {
                 ContentUnavailableView {
-                    Label("No matching images", systemImage: "square.stack.3d.up")
+                    Label(AppText.string("creation.localImages.noMatches", defaultValue: "No matching images"), systemImage: "square.stack.3d.up")
                 } description: {
-                    Text(query.isEmpty ? "Pull or build an image first." : "Try a different filter.")
+                    Text(query.isEmpty
+                         ? AppText.string("creation.localImages.empty", defaultValue: "Pull or build an image first.")
+                         : AppText.string("creation.localImages.tryDifferentFilter", defaultValue: "Try a different filter."))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -259,7 +261,7 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
             } subtitleAccessory: {
                 EmptyView()
             } headerAccessory: {
-                DesignBadgeText(text: "new", font: .caption2.weight(.semibold))
+                DesignBadgeText(text: AppText.string("creation.badge.new", defaultValue: "new"), font: .caption2.weight(.semibold))
             } bodyContent: {
                 EmptyView()
             } footerLeading: {

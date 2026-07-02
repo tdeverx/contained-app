@@ -36,7 +36,7 @@ struct RootView: View {
                                   onQuit: { NSApplication.shared.terminate(nil) })
         }
         .sheet(isPresented: whatsNewBinding) {
-            ReleaseNotesView(title: "What’s New",
+            ReleaseNotesView(title: AppText.string("releaseNotes.whatsNew", defaultValue: "What's New"),
                              html: app.updater.currentReleaseNotesHTML,
                              onClose: { app.updater.markWhatsNewSeen() })
         }

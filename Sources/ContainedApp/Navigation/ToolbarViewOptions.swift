@@ -82,13 +82,13 @@ struct ToolbarViewOptions: View {
     var body: some View {
         @Bindable var ui = ui
         return DesignMenuButton {
-            Picker("Group by", selection: $ui.grouping) {
+            Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.grouping) {
                 ForEach(ContainerGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
                 }
             }
             .pickerStyle(.inline)
-            Picker("Sort by", selection: $ui.sort) {
+            Picker(AppText.string("toolbar.sortBy", defaultValue: "Sort by"), selection: $ui.sort) {
                 ForEach(ContainerSort.allCases) { sort in
                     Label(sort.title, systemImage: sort.symbol).tag(sort)
                 }
@@ -96,23 +96,23 @@ struct ToolbarViewOptions: View {
             .pickerStyle(.inline)
             Divider()
             Toggle(isOn: $ui.runningOnly) {
-                Label("Running only", systemImage: "play.circle")
+                Label(AppText.string("filter.runningOnly", defaultValue: "Running only"), systemImage: "play.circle")
             }
         } labelContent: {
             labelContent
         }
-        .help("Container filters")
+        .help(AppText.string("toolbar.containerFilters", defaultValue: "Container filters"))
     }
 
     private var labelContent: some View {
         ToolbarTitleSubtitleLabel(symbol: ui.grouping.symbol,
-                                  title: "Containers",
+                                  title: AppText.sectionContainers,
                                   subtitle: subtitle)
     }
 
     private var subtitle: String {
-        var parts = ["by \(ui.grouping.title)"]
-        if ui.runningOnly { parts.append("running") }
+        var parts = [AppText.string("toolbar.groupedBy", defaultValue: "by \(ui.grouping.title)")]
+        if ui.runningOnly { parts.append(AppText.string("status.running.lowercase", defaultValue: "running")) }
         return parts.joined(separator: " · ")
     }
 }
@@ -248,8 +248,8 @@ struct ToolbarPageFilterOptions: View {
         case .activity:
             @Bindable var ui = ui
             DesignMenuButton {
-                Picker("Filter", selection: $ui.activityFilter) {
-                    Label("All events", systemImage: "tray.full").tag(EventKind?.none)
+                Picker(AppText.string("activity.filter", defaultValue: "Filter"), selection: $ui.activityFilter) {
+                    Label(AppText.string("activity.filter.allEvents", defaultValue: "All events"), systemImage: "tray.full").tag(EventKind?.none)
                     Divider()
                     ForEach(EventKind.allCases, id: \.self) { kind in
                         Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
@@ -259,7 +259,9 @@ struct ToolbarPageFilterOptions: View {
             } labelContent: {
                 activityFilterLabel
             }
-            .help(ui.activityFilter == nil ? "Filter Activity" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
+            .help(ui.activityFilter == nil
+                  ? AppText.string("activity.filterActivity", defaultValue: "Filter Activity")
+                  : AppText.string("activity.filter.current", defaultValue: "Filter: \(ui.activityFilter!.rawValue.capitalized)"))
         default:
             EmptyView()
         }
@@ -268,8 +270,8 @@ struct ToolbarPageFilterOptions: View {
     private var activityFilterLabel: some View {
         ToolbarTitleSubtitleLabel(symbol: ui.activityFilter == nil ? "line.3.horizontal.decrease"
                                                                    : "line.3.horizontal.decrease.circle.fill",
-                                  title: "Activity",
-                                  subtitle: ui.activityFilter?.rawValue.capitalized ?? "All events")
+                                  title: AppText.sectionActivity,
+                                  subtitle: ui.activityFilter?.rawValue.capitalized ?? AppText.string("activity.filter.allEvents", defaultValue: "All events"))
     }
 }
 
@@ -279,20 +281,20 @@ private struct ImageViewOptions: View {
     var body: some View {
         @Bindable var ui = ui
         return DesignMenuButton {
-            Picker("Group by", selection: $ui.imageGrouping) {
+            Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.imageGrouping) {
                 ForEach(ImageGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
                 }
             }
             .pickerStyle(.inline)
-            Picker("Sort by", selection: $ui.imageSort) {
+            Picker(AppText.string("toolbar.sortBy", defaultValue: "Sort by"), selection: $ui.imageSort) {
                 ForEach(ImageSort.allCases) { sort in
                     Label(sort.title, systemImage: sort.symbol).tag(sort)
                 }
             }
             .pickerStyle(.inline)
             Divider()
-            Picker("Filter", selection: $ui.imageFilter) {
+            Picker(AppText.string("activity.filter", defaultValue: "Filter"), selection: $ui.imageFilter) {
                 ForEach(ImageFilter.allCases) { filter in
                     Label(filter.title, systemImage: filter.symbol).tag(filter)
                 }
@@ -300,14 +302,14 @@ private struct ImageViewOptions: View {
             .pickerStyle(.inline)
         } labelContent: {
             optionLabel(symbol: ui.imageGrouping.symbol,
-                        title: "Images",
+                        title: AppText.sectionImages,
                         subtitle: imageSubtitle)
         }
-        .help("Image filters")
+        .help(AppText.string("toolbar.imageFilters", defaultValue: "Image filters"))
     }
 
     private var imageSubtitle: String {
-        var parts = ["by \(ui.imageGrouping.title)"]
+        var parts = [AppText.string("toolbar.groupedBy", defaultValue: "by \(ui.imageGrouping.title)")]
         if ui.imageFilter != .all { parts.append(ui.imageFilter.title) }
         return parts.joined(separator: " · ")
     }
@@ -319,13 +321,13 @@ private struct TemplateViewOptions: View {
     var body: some View {
         @Bindable var ui = ui
         return DesignMenuButton {
-            Picker("Group by", selection: $ui.templateGrouping) {
+            Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.templateGrouping) {
                 ForEach(TemplateGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
                 }
             }
             .pickerStyle(.inline)
-            Picker("Sort by", selection: $ui.templateSort) {
+            Picker(AppText.string("toolbar.sortBy", defaultValue: "Sort by"), selection: $ui.templateSort) {
                 ForEach(TemplateSort.allCases) { sort in
                     Label(sort.title, systemImage: sort.symbol).tag(sort)
                 }
@@ -333,10 +335,10 @@ private struct TemplateViewOptions: View {
             .pickerStyle(.inline)
         } labelContent: {
             optionLabel(symbol: ui.templateGrouping.symbol,
-                        title: "Templates",
-                        subtitle: "by \(ui.templateGrouping.title) · \(ui.templateSort.title)")
+                        title: AppText.sectionTemplates,
+                        subtitle: AppText.string("toolbar.groupSortSubtitle", defaultValue: "by \(ui.templateGrouping.title) · \(ui.templateSort.title)"))
         }
-        .help("Template grouping")
+        .help(AppText.string("toolbar.templateGrouping", defaultValue: "Template grouping"))
     }
 }
 
@@ -346,20 +348,20 @@ private struct NetworkViewOptions: View {
     var body: some View {
         @Bindable var ui = ui
         return DesignMenuButton {
-            Picker("Group by", selection: $ui.networkGrouping) {
+            Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.networkGrouping) {
                 ForEach(NetworkGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
                 }
             }
             .pickerStyle(.inline)
-            Picker("Sort by", selection: $ui.networkSort) {
+            Picker(AppText.string("toolbar.sortBy", defaultValue: "Sort by"), selection: $ui.networkSort) {
                 ForEach(NetworkSort.allCases) { sort in
                     Label(sort.title, systemImage: sort.symbol).tag(sort)
                 }
             }
             .pickerStyle(.inline)
             Divider()
-            Picker("Filter", selection: $ui.networkFilter) {
+            Picker(AppText.string("activity.filter", defaultValue: "Filter"), selection: $ui.networkFilter) {
                 ForEach(NetworkFilter.allCases) { filter in
                     Label(filter.title, systemImage: filter.symbol).tag(filter)
                 }
@@ -367,14 +369,14 @@ private struct NetworkViewOptions: View {
             .pickerStyle(.inline)
         } labelContent: {
             optionLabel(symbol: ui.networkGrouping.symbol,
-                        title: "Networks",
+                        title: AppText.sectionNetworks,
                         subtitle: networkSubtitle)
         }
-        .help("Network filters")
+        .help(AppText.string("toolbar.networkFilters", defaultValue: "Network filters"))
     }
 
     private var networkSubtitle: String {
-        var parts = ["by \(ui.networkGrouping.title)"]
+        var parts = [AppText.string("toolbar.groupedBy", defaultValue: "by \(ui.networkGrouping.title)")]
         if ui.networkFilter != .all { parts.append(ui.networkFilter.title) }
         return parts.joined(separator: " · ")
     }

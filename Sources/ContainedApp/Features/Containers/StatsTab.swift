@@ -24,8 +24,10 @@ struct StatsTab: View {
         Group {
             if snapshot.state != .running {
                 ContentUnavailableView {
-                    Label("Not running", systemImage: "chart.xyaxis.line")
-                } description: { Text("Start the container to see live resource usage.") }
+                    Label(AppText.string("stats.notRunning", defaultValue: "Not running"), systemImage: "chart.xyaxis.line")
+                } description: {
+                    Text(AppText.string("stats.notRunning.description", defaultValue: "Start the container to see live resource usage."))
+                }
             } else if let delta {
                 ContainerTabScaffold {
                     LazyVGrid(columns: columns, spacing: DesignTokens.Space.m) {
@@ -35,7 +37,10 @@ struct StatsTab: View {
                         tile(.netTx, delta, "arrow.up.circle")
                         tile(.diskRead, delta, "arrow.down.doc")
                         tile(.diskWrite, delta, "arrow.up.doc")
-                        DesignSparklineMetricTile(label: "Processes", value: "\(delta.numProcesses)", systemImage: "gearshape.2", tint: tint)
+                        DesignSparklineMetricTile(label: AppText.string("stats.processes", defaultValue: "Processes"),
+                                                  value: "\(delta.numProcesses)",
+                                                  systemImage: "gearshape.2",
+                                                  tint: tint)
                     }
                     processList
                 }
@@ -43,7 +48,9 @@ struct StatsTab: View {
                 // Running but no sample yet (first tick pending).
                 LazyVStack(spacing: DesignTokens.Space.m) {
                     ProgressView()
-                    Text("Collecting stats…").font(.callout).foregroundStyle(.secondary)
+                    Text(AppText.string("stats.collecting", defaultValue: "Collecting stats..."))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -55,7 +62,7 @@ struct StatsTab: View {
     private var processList: some View {
         if !processes.isEmpty {
             DesignCardInsetSection {
-                Label("Processes", systemImage: "list.bullet.rectangle")
+                Label(AppText.string("stats.processes", defaultValue: "Processes"), systemImage: "list.bullet.rectangle")
                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 Text(processes)
                     .font(.system(.caption, design: .monospaced))
@@ -92,7 +99,7 @@ struct StatsTab: View {
         let memoryLimit = GraphMetric.memoryLimitBytes(for: delta,
                                                        snapshot: snapshot,
                                                        normalization: normalization)
-        return DesignSparklineMetricTile(label: "Memory \(Format.bytes(delta.memoryUsageBytes)) / \(Format.bytes(memoryLimit))",
+        return DesignSparklineMetricTile(label: AppText.string("stats.memory.detail", defaultValue: "Memory \(Format.bytes(delta.memoryUsageBytes)) / \(Format.bytes(memoryLimit))"),
                           value: GraphMetric.memory.caption(from: delta,
                                                             snapshot: snapshot,
                                                             normalization: normalization),

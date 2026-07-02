@@ -153,7 +153,7 @@ struct CustomizeSheet: View {
     }
 
     private var inheritanceSection: some View {
-        PanelSection(header: "Inheritance") {
+        PanelSection(header: AppText.string("customize.inheritance", defaultValue: "Inheritance")) {
             PanelToggleRow(title: overrideToggleTitle,
                            subtitle: overrideToggleHint,
                            isOn: overrideBinding)
@@ -161,42 +161,43 @@ struct CustomizeSheet: View {
     }
 
     private var styleSection: some View {
-        PanelSection(header: "Style") {
+        PanelSection(header: AppText.string("customize.style", defaultValue: "Style")) {
             PanelField(label: nicknameLabel) {
                 TextField("", text: $style.nickname, prompt: Text(nicknamePrompt))
                     .textFieldStyle(.roundedBorder)
             }
-            PanelToggleRow(title: "Custom icon", isOn: $style.iconEnabled)
+            PanelToggleRow(title: AppText.string("customize.customIcon", defaultValue: "Custom icon"), isOn: $style.iconEnabled)
             if style.iconEnabled {
-                PanelField(label: "Icon") {
+                PanelField(label: AppText.string("customize.icon", defaultValue: "Icon")) {
                     TextField("", text: $style.icon, prompt: Text("SF Symbol, e.g. globe, bolt"))
                         .textFieldStyle(.roundedBorder)
                 }
             } else {
-                PanelRow(title: "Icon", subtitle: "Using the default icon")
+                PanelRow(title: AppText.string("customize.icon", defaultValue: "Icon"),
+                         subtitle: AppText.string("customize.icon.defaultSubtitle", defaultValue: "Using the default icon"))
             }
-            PanelRow(title: "Color",
-                     info: "App Accent follows the accent tint from Settings; other swatches pin this style.") {
+            PanelRow(title: AppText.string("customize.color", defaultValue: "Color"),
+                     info: AppText.string("customize.color.info", defaultValue: "App Accent follows the accent tint from Settings; other swatches pin this style.")) {
                 TintSelector(selection: $style.tint) { $0.localizedDisplayName }
             }
         }
     }
 
     private var statusSection: some View {
-        PanelSection(header: "Status") {
-            PanelToggleRow(title: "Show status indicator", isOn: $style.showStatusIndicator)
+        PanelSection(header: AppText.string("customize.status", defaultValue: "Status")) {
+            PanelToggleRow(title: AppText.string("customize.showStatusIndicator", defaultValue: "Show status indicator"), isOn: $style.showStatusIndicator)
             if style.showStatusIndicator {
-                PanelToggleRow(title: "Show icon", isOn: $style.showStatusIcon)
-                PanelToggleRow(title: "Show text", isOn: $style.showStatusText)
+                PanelToggleRow(title: AppText.string("customize.widget.showIcon", defaultValue: "Show icon"), isOn: $style.showStatusIcon)
+                PanelToggleRow(title: AppText.string("customize.widget.showText", defaultValue: "Show text"), isOn: $style.showStatusText)
             }
         }
     }
 
     private var backgroundSection: some View {
-        PanelSection(header: "Background") {
-            PanelToggleRow(title: "Color the card background", isOn: $style.fillBackground)
+        PanelSection(header: AppText.string("customize.background", defaultValue: "Background")) {
+            PanelToggleRow(title: AppText.string("customize.colorCardBackground", defaultValue: "Color the card background"), isOn: $style.fillBackground)
             if style.fillBackground {
-                PanelRow(title: "Opacity") {
+                PanelRow(title: AppText.string("customize.opacity", defaultValue: "Opacity")) {
                     HStack(spacing: DesignTokens.Space.s) {
                         Slider(value: $style.backgroundOpacity, in: 0.05...0.6)
                         Text(Format.percent(style.backgroundOpacity))
@@ -204,11 +205,11 @@ struct CustomizeSheet: View {
                             .frame(width: DesignTokens.FormWidth.shortReadout)
                     }
                 }
-                PanelToggleRow(title: "Gradient", isOn: $style.gradient)
+                PanelToggleRow(title: AppText.string("customize.gradient", defaultValue: "Gradient"), isOn: $style.gradient)
                 if style.gradient {
                     GradientAngleControl(angle: $style.gradientAngle, title: AppText.direction)
                 }
-                PanelRow(title: "Blend mode") {
+                PanelRow(title: AppText.string("customize.blendMode", defaultValue: "Blend mode")) {
                     Picker("", selection: $style.backgroundBlendMode) {
                         ForEach(ColorLayerBlendMode.allCases) { mode in
                             Text(mode.localizedDisplayName).tag(mode)
@@ -223,18 +224,22 @@ struct CustomizeSheet: View {
 
     private var actionsSection: some View {
         PanelSection {
-            PanelRow(title: target.isImage ? "Reset image style" : "Reset",
-                     subtitle: canReset ? "Remove the saved local override." : "No saved override to remove.") {
+            PanelRow(title: target.isImage
+                         ? AppText.string("customize.resetImageStyle", defaultValue: "Reset image style")
+                         : AppText.string("customize.reset", defaultValue: "Reset"),
+                     subtitle: canReset
+                         ? AppText.string("customize.reset.subtitle", defaultValue: "Remove the saved local override.")
+                         : AppText.string("customize.reset.noOverride", defaultValue: "No saved override to remove.")) {
                 Button(role: .destructive) { reset() } label: {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
+                    Label(AppText.string("customize.reset", defaultValue: "Reset"), systemImage: "arrow.counterclockwise")
                 }
                 .disabled(!canReset)
             }
             if case .container = target {
-                PanelRow(title: "Apply to image",
-                         subtitle: "Make this container style the default for future containers from the same image.") {
+                PanelRow(title: AppText.string("customize.applyToImage", defaultValue: "Apply to image"),
+                         subtitle: AppText.string("customize.applyToImage.subtitle", defaultValue: "Make this container style the default for future containers from the same image.")) {
                     Button { applyToImage() } label: {
-                        Label("Apply", systemImage: "square.stack.3d.up")
+                        Label(AppText.string("customize.apply", defaultValue: "Apply"), systemImage: "square.stack.3d.up")
                     }
                     .disabled(settingsDisabled)
                 }
@@ -250,39 +255,39 @@ struct CustomizeSheet: View {
 
     private var headerTitle: String {
         switch target {
-        case .container: return "Customize card"
-        case .volume: return "Customize volume"
-        case .image, .imageGroup, .imageTag: return "Customize image style"
+        case .container: return AppText.string("customize.header.card", defaultValue: "Customize card")
+        case .volume: return AppText.string("customize.header.volume", defaultValue: "Customize volume")
+        case .image, .imageGroup, .imageTag: return AppText.string("customize.header.imageStyle", defaultValue: "Customize image style")
         }
     }
 
     private var overrideToggleTitle: String {
         switch target {
-        case .container: return "Override image style"
-        case .image, .imageGroup: return "Override default image card design"
-        case .imageTag: return "Override group style"
-        case .volume: return "Override style"
+        case .container: return AppText.string("customize.override.imageStyle", defaultValue: "Override image style")
+        case .image, .imageGroup: return AppText.string("customize.override.defaultImageDesign", defaultValue: "Override default image card design")
+        case .imageTag: return AppText.string("customize.override.groupStyle", defaultValue: "Override group style")
+        case .volume: return AppText.string("customize.override.style", defaultValue: "Override style")
         }
     }
 
     private var overrideToggleHint: String {
         switch target {
         case .container:
-            return "Turn this on to customize only this container. Leave it off to inherit the image style."
+            return AppText.string("customize.override.containerHint", defaultValue: "Turn this on to customize only this container. Leave it off to inherit the image style.")
         case .image:
-            return "Turn this on to style containers from this exact image. Leave it off to inherit the Settings default."
+            return AppText.string("customize.override.imageHint", defaultValue: "Turn this on to style containers from this exact image. Leave it off to inherit the Settings default.")
         case .imageGroup:
-            return "Turn this on to style this image group. Leave it off to inherit the Settings default."
+            return AppText.string("customize.override.imageGroupHint", defaultValue: "Turn this on to style this image group. Leave it off to inherit the Settings default.")
         case .imageTag:
-            return "Turn this on to style only this tag. Leave it off to inherit the image group's style."
+            return AppText.string("customize.override.imageTagHint", defaultValue: "Turn this on to style only this tag. Leave it off to inherit the image group's style.")
         case .volume:
             return ""
         }
     }
 
     private var nicknameLabel: String {
-        if case .container = target { return "Nickname" }
-        return "Display name"
+        if case .container = target { return AppText.string("customize.nickname", defaultValue: "Nickname") }
+        return AppText.string("customize.displayName", defaultValue: "Display name")
     }
 
     private var nicknamePrompt: String {
@@ -296,13 +301,13 @@ struct CustomizeSheet: View {
     private var imageSubtitle: String? {
         switch target {
         case .imageGroup:
-            return "Default for this local image group"
+            return AppText.string("customize.subtitle.imageGroupDefault", defaultValue: "Default for this local image group")
         case .imageTag:
-            return "Style for \(Format.shortImage(target.image))"
+            return AppText.string("customize.subtitle.imageTag", defaultValue: "Style for \(Format.shortImage(target.image))")
         case .image:
-            return "Default for every container from \(Format.shortImage(target.image))"
+            return AppText.string("customize.subtitle.imageDefault", defaultValue: "Default for every container from \(Format.shortImage(target.image))")
         case .volume:
-            return "Style for this volume"
+            return AppText.string("customize.subtitle.volume", defaultValue: "Style for this volume")
         case .container:
             return nil
         }

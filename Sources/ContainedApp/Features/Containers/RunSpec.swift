@@ -51,7 +51,8 @@ struct SocketMap: Identifiable, Hashable, Codable {
     private enum CodingKeys: String, CodingKey { case hostPath, containerPath }
 }
 
-/// The complete state of the Create/Run form. Knows how to render itself as a `container run` argv.
+/// The complete app-owned state of the Create/Run form. Runtime adapters translate the derived
+/// `ContainerCreateRequest` into backend-specific commands.
 struct RunSpec: Codable {
     var runtimeKind: RuntimeKind? = .appleContainer
     var image = ""
@@ -219,8 +220,8 @@ struct RunSpec: Codable {
         // Personalization is resolved from the local store by the edit sheet, not from labels.
     }
 
-    /// Build the `container run …` argument vector. Single source of truth for the live preview
-    /// and the actual execution.
+    /// Command-preview compatibility for the Apple runtime while the form still presents a shell
+    /// preview. The backend boundary remains the runtime-neutral `createRequest`.
     func arguments() -> [String] {
         ContainerCommands.run(createRequest)
     }

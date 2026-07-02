@@ -38,9 +38,17 @@ struct SystemContent: View {
 
         var subtitle: String {
             switch self {
-            case .engine: return "Container engine"
-            case .automation: return "Background work"
-            case .volumes: return "Named, temp, and path mounts"
+            case .engine: return AppText.string("system.page.engine.subtitle", defaultValue: "Container engine")
+            case .automation: return AppText.string("system.page.automation.subtitle", defaultValue: "Background work")
+            case .volumes: return AppText.string("system.page.volumes.subtitle", defaultValue: "Named, temp, and path mounts")
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .engine: return AppText.string("system.page.engine", defaultValue: "Engine")
+            case .automation: return AppText.string("system.page.automation", defaultValue: "Automation")
+            case .volumes: return AppText.sectionVolumes
             }
         }
     }
@@ -80,10 +88,10 @@ struct SystemContent: View {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .containers: return "Remove all stopped containers?"
-            case .images: return "Remove unused images?"
-            case .volumes: return "Remove unused volumes?"
-            case .networks: return "Remove unused networks?"
+            case .containers: return AppText.string("cleanup.removeStoppedContainers.title", defaultValue: "Remove all stopped containers?")
+            case .images: return AppText.string("cleanup.removeUnusedImages.title", defaultValue: "Remove unused images?")
+            case .volumes: return AppText.string("cleanup.removeUnusedVolumes.title", defaultValue: "Remove unused volumes?")
+            case .networks: return AppText.string("cleanup.removeUnusedNetworks.title", defaultValue: "Remove unused networks?")
             }
         }
     }
@@ -130,7 +138,7 @@ struct SystemContent: View {
 
     private var header: some View {
         PanelHeader(symbol: "gearshape.2",
-                    title: "System",
+                    title: AppText.sectionSystem,
                     subtitle: activePage.subtitle) {
             HStack(spacing: DesignTokens.Toolbar.groupSpacing) {
                 engineControls
@@ -151,7 +159,7 @@ struct SystemContent: View {
     private var pageActions: [DesignAction] {
         SystemPage.allCases.map { item in
             DesignAction(systemName: item.systemImage,
-                         help: item.rawValue,
+                         help: item.title,
                          tint: activePage == item ? .accentColor : nil) {
                 setPage(item)
             }
@@ -189,14 +197,14 @@ struct SystemContent: View {
     private var storageMenu: some View {
         Menu {
             Button { reclaimingAll = true } label: {
-                Label("Reclaim all", systemImage: "trash")
+                Label(AppText.string("cleanup.reclaimAll", defaultValue: "Reclaim all"), systemImage: "trash")
             }
             .disabled((app.diskUsage?.totalReclaimableBytes ?? 0) == 0)
             Divider()
-            Button { pruneTarget = .containers } label: { Label("Stopped containers", systemImage: "shippingbox") }
-            Button { pruneTarget = .images } label: { Label("Unused images", systemImage: "square.stack.3d.up") }
-            Button { pruneTarget = .volumes } label: { Label("Unused volumes", systemImage: "externaldrive") }
-            Button { pruneTarget = .networks } label: { Label("Unused networks", systemImage: "network") }
+            Button { pruneTarget = .containers } label: { Label(AppText.string("cleanup.stoppedContainers", defaultValue: "Stopped containers"), systemImage: "shippingbox") }
+            Button { pruneTarget = .images } label: { Label(AppText.string("cleanup.unusedImages", defaultValue: "Unused images"), systemImage: "square.stack.3d.up") }
+            Button { pruneTarget = .volumes } label: { Label(AppText.string("cleanup.unusedVolumes", defaultValue: "Unused volumes"), systemImage: "externaldrive") }
+            Button { pruneTarget = .networks } label: { Label(AppText.string("cleanup.unusedNetworks", defaultValue: "Unused networks"), systemImage: "network") }
         } label: {
             DesignMenuActionLabel(systemName: "trash",
                                   help: AppText.storageCleanup,
@@ -217,18 +225,18 @@ struct SystemContent: View {
     private var volumesCard: some View {
         card {
             HStack {
-                Text("Volumes").font(.headline)
+                Text(AppText.sectionVolumes).font(.headline)
                 DesignBadgeText(text: "\(volumeInventory.count)")
                 Spacer()
                 DesignActionGroup(DesignAction(systemName: "plus",
-                                               title: "New",
+                                               title: AppText.string("common.new", defaultValue: "New"),
                                                help: AppText.newVolume) {
                         onClose()
                         ui.dispatch(.createVolume)
                 })
             }
             if volumeInventory.isEmpty {
-                Text("No named volumes or container mounts found.")
+                Text(AppText.string("volume.inventory.empty", defaultValue: "No named volumes or container mounts found."))
                     .font(.callout).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, DesignTokens.Space.xs)
@@ -273,18 +281,18 @@ struct SystemContent: View {
 
     @ViewBuilder
     private func volumeMenu(_ entry: VolumeInventoryEntry) -> some View {
-        Button { copyToPasteboard(entry.source ?? entry.title) } label: { Label("Copy source", systemImage: "doc.on.doc") }
+        Button { copyToPasteboard(entry.source ?? entry.title) } label: { Label(AppText.string("volume.copySource", defaultValue: "Copy source"), systemImage: "doc.on.doc") }
         if let destination = entry.destination {
-            Button { copyToPasteboard(destination) } label: { Label("Copy destination", systemImage: "arrow.down.doc") }
+            Button { copyToPasteboard(destination) } label: { Label(AppText.string("volume.copyDestination", defaultValue: "Copy destination"), systemImage: "arrow.down.doc") }
         } else {
-            Button("Copy destination", systemImage: "arrow.down.doc") {}
+            Button(AppText.string("volume.copyDestination", defaultValue: "Copy destination"), systemImage: "arrow.down.doc") {}
                 .disabled(true)
         }
         Divider()
         if let volume = entry.resource {
-            Button(role: .destructive) { deletingVolume = volume } label: { Label("Delete", systemImage: "trash") }
+            Button(role: .destructive) { deletingVolume = volume } label: { Label(AppText.delete, systemImage: "trash") }
         } else {
-            Button("Delete", systemImage: "trash", role: .destructive) {}
+            Button(AppText.delete, systemImage: "trash", role: .destructive) {}
                 .disabled(true)
         }
     }
@@ -301,19 +309,19 @@ struct SystemContent: View {
 
     private var automationCard: some View {
         card {
-            Text("Automation").font(.headline)
+            Text(AppText.string("system.page.automation", defaultValue: "Automation")).font(.headline)
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 automationRow(icon: "arrow.triangle.2.circlepath",
-                              title: "Image update check",
+                              title: AppText.string("automation.imageUpdateCheck", defaultValue: "Image update check"),
                               detail: app.settings.imageUpdateChecksEnabled
                                   ? "\(backgroundTaskDetail(now: context.date)) · \(app.imageUpdateIntervalDescription)"
-                                  : "Paused",
+                                  : AppText.string("status.paused", defaultValue: "Paused"),
                               isOn: settingBinding(\.imageUpdateChecksEnabled)) {
                     if app.settings.imageUpdateChecksEnabled {
                         Text(countdown(to: app.imageUpdateNextRunDate, now: context.date))
                             .font(.system(.caption, design: .monospaced).weight(.semibold)).monospacedDigit()
                         DesignActionGroup(DesignAction(systemName: "arrow.triangle.2.circlepath",
-                                                       title: "Run now",
+                                                       title: AppText.string("common.runNow", defaultValue: "Run now"),
                                                        help: AppText.runImageUpdateCheckNow) {
                                 Task { await app.runImageUpdateSweepNow() }
                         })
@@ -322,13 +330,13 @@ struct SystemContent: View {
             }
             Divider()
             automationRow(icon: "arrow.down.app",
-                          title: "App update check",
+                          title: AppText.string("automation.appUpdateCheck", defaultValue: "App update check"),
                           detail: app.updater.canCheckForUpdates
-                              ? "Sparkle · \(app.settings.updateChannel.rawValue.capitalized) channel"
-                              : "Unavailable in this build",
+                              ? AppText.string("automation.appUpdateCheck.detail", defaultValue: "Sparkle · \(app.settings.updateChannel.rawValue.capitalized) channel")
+                              : AppText.string("status.unavailableInBuild", defaultValue: "Unavailable in this build"),
                           isOn: appUpdateBinding) {
                 DesignActionGroup(DesignAction(systemName: "arrow.down.app",
-                                               title: "Check now",
+                                               title: AppText.string("common.checkNow", defaultValue: "Check now"),
                                                help: AppText.checkForUpdatesNow,
                                                isEnabled: app.updater.canCheckForUpdates
                                                    && app.settings.appUpdateChecksEnabled) {
@@ -337,17 +345,17 @@ struct SystemContent: View {
             }
             Divider()
             automationRow(icon: "arrow.clockwise.circle",
-                          title: "Auto-restart crashed containers",
+                          title: AppText.string("automation.autoRestart", defaultValue: "Auto-restart crashed containers"),
                           detail: app.settings.autoRestartEnabled
-                              ? "Restarts containers that exit unexpectedly"
-                              : "Off",
+                              ? AppText.string("automation.autoRestart.detail", defaultValue: "Restarts containers that exit unexpectedly")
+                              : AppText.string("status.off", defaultValue: "Off"),
                           isOn: settingBinding(\.autoRestartEnabled)) { EmptyView() }
             Divider()
             HStack(spacing: DesignTokens.Space.s) {
                 Image(systemName: "dot.radiowaves.left.and.right")
                     .foregroundStyle(.secondary)
                     .frame(width: DesignTokens.IconSize.rowIconColumn)
-                Text("Refresh loop").font(.callout)
+                Text(AppText.string("automation.refreshLoop", defaultValue: "Refresh loop")).font(.callout)
                 Spacer()
                 Text(app.coordinator.isActive ? "Active" : "Paused")
                     .font(.callout)
@@ -440,7 +448,7 @@ struct SystemContent: View {
             HStack(spacing: DesignTokens.Space.s) {
                 DesignStatusDot(color: app.serviceHealthy ? .green : .orange,
                                 size: DesignTokens.IconSize.serviceDot)
-                Text("Container engine").font(.headline)
+                Text(AppText.string("system.containerEngine", defaultValue: "Container engine")).font(.headline)
                 DesignStatusBadge(text: app.serviceLabel,
                                   tint: app.serviceHealthy ? .green : .orange)
                 Spacer(minLength: 0)
@@ -450,9 +458,12 @@ struct SystemContent: View {
                 }
             }
             HStack(spacing: DesignTokens.Space.s) {
-                DesignMetricTile(label: "Containers", value: "\(app.containers.running.count)", caption: "running")
-                DesignMetricTile(label: "Images", value: "\(app.images.count)")
-                DesignMetricTile(label: "Disk used", value: app.diskUsage.map { Format.bytes($0.totalSizeInBytes) } ?? "—")
+                DesignMetricTile(label: AppText.sectionContainers,
+                                 value: "\(app.containers.running.count)",
+                                 caption: AppText.string("status.running.lowercase", defaultValue: "running"))
+                DesignMetricTile(label: AppText.sectionImages, value: "\(app.images.count)")
+                DesignMetricTile(label: AppText.string("system.diskUsed", defaultValue: "Disk used"),
+                                 value: app.diskUsage.map { Format.bytes($0.totalSizeInBytes) } ?? "—")
             }
             if working { ProgressView().controlSize(.small) }
         }

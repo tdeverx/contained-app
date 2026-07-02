@@ -168,8 +168,8 @@ private struct ClassicSectionPage: View {
 private struct BuildPage: View {
     var body: some View {
         PageScaffold(symbol: "hammer",
-                     title: "Build",
-                     subtitle: "From a Dockerfile + build context") {
+                     title: AppText.sectionBuild,
+                     subtitle: AppText.string("build.subtitle.context", defaultValue: "From a Dockerfile + build context")) {
             EmptyView()
         } content: {
             BuildWorkspaceView()
@@ -222,18 +222,18 @@ private struct NetworksPage: View {
 
     var body: some View {
         PageScaffold(symbol: "network",
-                     title: "Networks",
-                     subtitle: "\(sortedNetworks.count) network\(sortedNetworks.count == 1 ? "" : "s")") {
+                     title: AppText.sectionNetworks,
+                     subtitle: AppText.string("network.count", defaultValue: "\(sortedNetworks.count) network\(sortedNetworks.count == 1 ? "" : "s")")) {
             DesignActionGroup(DesignAction(systemName: "plus",
-                                           title: "New",
+                                           title: AppText.string("common.new", defaultValue: "New"),
                                            help: AppText.string("network.newNetwork.lowercase", defaultValue: "New network")) {
                 ui.dispatch(.createNetwork)
             })
         } content: {
             if sortedNetworks.isEmpty {
-                ContentUnavailableView("No networks",
+                ContentUnavailableView(AppText.string("network.empty", defaultValue: "No networks"),
                                        systemImage: "network",
-                                       description: Text("Create or refresh container networks to see them here."))
+                                       description: Text(AppText.string("network.empty.description", defaultValue: "Create or refresh container networks to see them here.")))
                     .frame(maxWidth: .infinity, minHeight: 280)
             } else {
                 LazyVStack(spacing: DesignTokens.Space.s) {
@@ -252,12 +252,12 @@ private struct NetworksPage: View {
             }
         }
         .task { await app.refreshNetworks() }
-        .confirmationDialog("Delete network \(deletingNetwork?.name ?? "")?",
+        .confirmationDialog(AppText.string("network.delete.confirmation", defaultValue: "Delete network \(deletingNetwork?.name ?? "")?"),
                             isPresented: deleteNetworkBinding,
                             presenting: deletingNetwork) { network in
-            Button("Delete", role: .destructive) { Task { await deleteNetwork(network) } }
+            Button(AppText.delete, role: .destructive) { Task { await deleteNetwork(network) } }
         } message: { _ in
-            Text("This removes the network. Containers must be detached first.")
+            Text(AppText.string("network.delete.message", defaultValue: "This removes the network. Containers must be detached first."))
         }
     }
 
