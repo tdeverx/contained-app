@@ -244,6 +244,7 @@ public struct ResourceCardPageControls<ID: Hashable>: View {
     public var selection: ID
     public var tint: Color
     public var controlsReveal: Double
+    public var closeLabel: String
     public var onSelect: (ID) -> Void
     public var onClose: () -> Void
 
@@ -251,12 +252,14 @@ public struct ResourceCardPageControls<ID: Hashable>: View {
                 selection: ID,
                 tint: Color,
                 controlsReveal: Double = 1,
+                closeLabel: String,
                 onSelect: @escaping (ID) -> Void,
                 onClose: @escaping () -> Void) {
         self.items = items
         self.selection = selection
         self.tint = tint
         self.controlsReveal = controlsReveal
+        self.closeLabel = closeLabel
         self.onSelect = onSelect
         self.onClose = onClose
     }
@@ -272,7 +275,7 @@ public struct ResourceCardPageControls<ID: Hashable>: View {
                         .opacity(selection == item.id ? 1 : 0.62)
                 }
             }
-            GlassButtonItem(systemName: "xmark", help: "Close", action: onClose)
+            GlassButtonItem(systemName: "xmark", help: closeLabel, action: onClose)
         }
         .opacity(controlsReveal)
         .allowsHitTesting(controlsReveal > 0.01)

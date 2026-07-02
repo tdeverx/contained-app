@@ -16,6 +16,7 @@ struct ToolbarSearchSource: View {
                                         prompt: paletteEnabled
                                             ? "Search this page, or ⌘K for commands"
                                             : "Search this page",
+                                        clearSearchLabel: AppText.clearSearch,
                                         focused: $focused,
                                         onSubmit: { if paletteEnabled { ui.activeMorph = .palette } },
                                         onClear: { ui.searchText = "" }) {

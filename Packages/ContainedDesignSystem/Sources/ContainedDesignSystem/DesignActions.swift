@@ -21,7 +21,7 @@ public struct DesignAction {
                 action: @escaping () -> Void) {
         self.systemName = systemName
         self.title = title
-        self.help = help ?? title ?? systemName
+        self.help = help ?? title ?? ""
         self.role = role
         self.tint = tint
         self.isCancel = isCancel
@@ -232,16 +232,20 @@ public struct DesignGlassToggle: View {
 /// Package-owned floating selection action bar.
 public struct DesignSelectionActionBar: View {
     public var count: Int
+    public var countLabel: (Int) -> String
     public var actions: [DesignAction]
 
-    public init(count: Int, actions: [DesignAction]) {
+    public init(count: Int,
+                countLabel: @escaping (Int) -> String,
+                actions: [DesignAction]) {
         self.count = count
+        self.countLabel = countLabel
         self.actions = actions
     }
 
     public var body: some View {
         HStack(spacing: Tokens.Space.m) {
-            Text("\(count) selected")
+            Text(countLabel(count))
                 .font(.callout.weight(.medium))
             Divider()
                 .frame(height: 16)

@@ -20,6 +20,7 @@
   - [[Architecture]]
   - [[Runtime Adapters|Runtime-Adapters]]
   - [[Design System|Design-System]]
+  - [[Localization]]
   - [[Release]]
 - [[Contributing]]
 - [[Issues-and-Discussions]]

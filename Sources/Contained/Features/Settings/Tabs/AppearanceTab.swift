@@ -12,19 +12,19 @@ struct AppearanceTab: View {
             PanelSection(header: "Theme") {
                 PanelRow(title: "Appearance") {
                     Picker("", selection: $settings.appearance) {
-                        ForEach(AppearanceMode.allCases) { Text($0.displayName).tag($0) }
+                        ForEach(AppearanceMode.allCases) { Text($0.localizedDisplayName).tag($0) }
                     }
                     .pickerStyle(.segmented).labelsHidden().fixedSize()
                 }
                 PanelRow(title: "Accent tint") {
-                    TintSelector(selection: $settings.accentTint)
+                    TintSelector(selection: $settings.accentTint) { $0.localizedDisplayName }
                 }
             }
 
             PanelSection(header: "Layout") {
                 PanelRow(title: "Card size") {
                     Picker("", selection: $settings.density) {
-                        ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
+                        ForEach(CardDensity.allCases) { Text($0.localizedDisplayName).tag($0) }
                     }
                     .pickerStyle(.segmented).labelsHidden().fixedSize()
                 }
@@ -55,7 +55,7 @@ struct AppearanceTab: View {
                          footer: "Button tint uses the same color layer model as card backgrounds, applied inside toolbar glass controls.",
                          enabled: $settings.buttonTintEnabled) {
                 PanelRow(title: "Tint") {
-                    TintSelector(selection: $settings.buttonTint)
+                    TintSelector(selection: $settings.buttonTint) { $0.localizedDisplayName }
                 }
                 PanelRow(title: "Opacity") {
                     HStack(spacing: Tokens.Space.s) {
@@ -68,12 +68,12 @@ struct AppearanceTab: View {
                 }
                 PanelToggleRow(title: "Gradient", isOn: $settings.buttonTintGradient)
                 if settings.buttonTintGradient {
-                    GradientAngleControl(angle: $settings.buttonTintGradientAngle)
+                    GradientAngleControl(angle: $settings.buttonTintGradientAngle, title: AppText.direction)
                 }
                 PanelRow(title: "Blend mode") {
                     Picker("", selection: $settings.buttonTintBlendMode) {
                         ForEach(ColorLayerBlendMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
+                            Text(mode.localizedDisplayName).tag(mode)
                         }
                     }
                     .labelsHidden()
@@ -87,7 +87,7 @@ struct AppearanceTab: View {
 
     private func materialMenu(_ binding: Binding<WindowMaterial>) -> some View {
         Picker("", selection: binding) {
-            ForEach(WindowMaterial.allCases) { Text($0.displayName).tag($0) }
+            ForEach(WindowMaterial.allCases) { Text($0.localizedDisplayName).tag($0) }
         }
         .labelsHidden().fixedSize()
     }
@@ -114,7 +114,7 @@ private struct ImageDefaultStyleSection: View {
                 Spacer()
             }
             PanelRow(title: "Color") {
-                TintSelector(selection: styleBinding(\.tint))
+                TintSelector(selection: styleBinding(\.tint)) { $0.localizedDisplayName }
             }
             PanelToggleRow(title: "Custom icon", isOn: styleBinding(\.iconEnabled))
             if style.iconEnabled {
@@ -137,12 +137,12 @@ private struct ImageDefaultStyleSection: View {
                 }
                 PanelToggleRow(title: "Gradient", isOn: styleBinding(\.gradient))
                 if style.gradient {
-                    GradientAngleControl(angle: styleBinding(\.gradientAngle))
+                    GradientAngleControl(angle: styleBinding(\.gradientAngle), title: AppText.direction)
                 }
                 PanelRow(title: "Blend mode") {
                     Picker("", selection: styleBinding(\.backgroundBlendMode)) {
                         ForEach(ColorLayerBlendMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
+                            Text(mode.localizedDisplayName).tag(mode)
                         }
                     }
                     .labelsHidden()

@@ -9,12 +9,12 @@ enum GraphMetric: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var displayName: String {
         switch self {
-        case .cpu: return "CPU"
-        case .memory: return "Memory"
-        case .netRx: return "Net In"
-        case .netTx: return "Net Out"
-        case .diskRead: return "Disk Read"
-        case .diskWrite: return "Disk Write"
+        case .cpu: return AppText.string("graphMetric.cpu", defaultValue: "CPU")
+        case .memory: return AppText.string("graphMetric.memory", defaultValue: "Memory")
+        case .netRx: return AppText.string("graphMetric.netRx", defaultValue: "Net In")
+        case .netTx: return AppText.string("graphMetric.netTx", defaultValue: "Net Out")
+        case .diskRead: return AppText.string("graphMetric.diskRead", defaultValue: "Disk Read")
+        case .diskWrite: return AppText.string("graphMetric.diskWrite", defaultValue: "Disk Write")
         }
     }
 

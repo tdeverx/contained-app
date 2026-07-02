@@ -227,7 +227,7 @@ struct EventRow: View {
         } headerAccessory: {
             if isUnread {
                 DesignStatusDot(color: .accentColor)
-                    .accessibilityLabel("Unread")
+                    .accessibilityLabel(AppText.unread)
             } else {
                 EmptyView()
             }

@@ -9,7 +9,7 @@ public struct GlassRowMenu<Content: View>: View {
     @ViewBuilder public var content: () -> Content
 
     public init(systemImage: String = "ellipsis",
-                accessibilityLabel: String = "Options",
+                accessibilityLabel: String,
                 @ViewBuilder content: @escaping () -> Content) {
         self.systemImage = systemImage
         self.accessibilityLabel = accessibilityLabel

@@ -255,9 +255,9 @@ struct PaletteItem: Identifiable {
             app.settings.showInfoTips.toggle()
         })
         for tint in AppTint.allCases {
-            items.append(PaletteItem(title: "Set app tint to \(tint.displayName)",
+            items.append(PaletteItem(title: AppText.setAppTintTitle(tint.localizedDisplayName),
                                      subtitle: "appearance",
-                                     keywords: ["accent", "color", "theme", "tint", tint.rawValue] + tint.searchAliases,
+                                     keywords: ["accent", "color", "theme", "tint", tint.rawValue] + tint.localizedSearchAliases,
                                      kind: .settings,
                                      visual: .tint(tint),
                                      icon: "paintpalette",

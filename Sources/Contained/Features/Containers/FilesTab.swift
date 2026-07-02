@@ -33,16 +33,16 @@ struct FilesTab: View {
     private var pathBar: some View {
         HStack(spacing: Tokens.Space.s) {
             DesignActionGroup(DesignAction(systemName: "chevron.up",
-                                           help: "Parent",
+                                           help: AppText.parent,
                                            isEnabled: path != "/") { goUp() })
             Text(path).font(.system(.callout, design: .monospaced)).lineLimit(1).truncationMode(.middle)
             Spacer()
             if loading { ProgressView().controlSize(.small) }
             DesignActionGroup(DesignAction(systemName: "square.and.arrow.down",
-                                           help: "Copy a file into this folder") {
+                                           help: AppText.string("files.copyIntoFolder", defaultValue: "Copy a file into this folder")) {
                     copyIn()
             })
-            DesignActionGroup(DesignAction(systemName: "arrow.clockwise", help: "Refresh") { Task { await load() } })
+            DesignActionGroup(DesignAction(systemName: "arrow.clockwise", help: AppText.refresh) { Task { await load() } })
         }
     }
 

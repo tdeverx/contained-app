@@ -31,7 +31,7 @@ struct LogsTab: View {
 
     private var controls: some View {
         HStack(spacing: Tokens.Space.m) {
-            DesignGlassToggle(isOn: $following, title: "Follow", systemName: "arrow.down.to.line")
+            DesignGlassToggle(isOn: $following, title: AppText.follow, systemName: "arrow.down.to.line")
             if streaming {
                 HStack(spacing: Tokens.Toolbar.searchIconGap) {
                     ProgressView().controlSize(.small)
@@ -40,11 +40,11 @@ struct LogsTab: View {
             }
             Spacer()
             Text("\(lines.count) lines").font(.caption).foregroundStyle(.secondary).monospacedDigit()
-            DesignActionGroup(DesignAction(systemName: "doc.on.doc", help: "Copy all") {
+            DesignActionGroup(DesignAction(systemName: "doc.on.doc", help: AppText.copyAll) {
                     copyToPasteboard(lines.joined(separator: "\n"))
             })
             DesignActionGroup(DesignAction(systemName: "trash",
-                                           help: "Clear",
+                                           help: AppText.clear,
                                            role: .destructive,
                                            isEnabled: !lines.isEmpty) {
                     lines.removeAll(); carry = ""

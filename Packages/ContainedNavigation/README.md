@@ -7,6 +7,10 @@ It depends on `ContainedDesignSystem` for tokens and visual primitives. It does
 not own app sections, stores, toolbar panel content, `UIState`, routes, or
 feature decisions.
 
+It also does not own localized resources or English UI defaults. Host apps pass
+their own titles, help text, accessibility labels, and panel copy into the
+navigation/design-system views they compose.
+
 ## Importing
 
 From the root app package:

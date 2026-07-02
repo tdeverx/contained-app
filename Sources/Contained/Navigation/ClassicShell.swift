@@ -226,7 +226,7 @@ private struct NetworksPage: View {
                      subtitle: "\(sortedNetworks.count) network\(sortedNetworks.count == 1 ? "" : "s")") {
             DesignActionGroup(DesignAction(systemName: "plus",
                                            title: "New",
-                                           help: "New network") {
+                                           help: AppText.string("network.newNetwork.lowercase", defaultValue: "New network")) {
                 ui.dispatch(.createNetwork)
             })
         } content: {
@@ -273,7 +273,9 @@ private struct NetworksPage: View {
         } subtitleAccessory: {
             EmptyView()
         } headerAccessory: {
-            GlassRowMenu { networkMenu(network) }
+            GlassRowMenu(accessibilityLabel: AppText.string("menu.networkActions", defaultValue: "Network actions")) {
+                networkMenu(network)
+            }
         } bodyContent: {
             EmptyView()
         } footerLeading: {

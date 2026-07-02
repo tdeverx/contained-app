@@ -5,6 +5,10 @@ import SwiftUI
 public struct StreamConsole: View {
     /// Factory so the stream starts with the view's `.task` (and cancels on disappear).
     public let stream: () -> AsyncThrowingStream<String, Error>
+    public var workingLabel: String
+    public var completedLabel: String
+    public var lineCountLabel: (Int) -> String
+    public var copyLogHelp: String
     public var onComplete: (Bool) -> Void = { _ in }
 
     enum RunState: Equatable { case running, done, failed(String) }
@@ -16,8 +20,16 @@ public struct StreamConsole: View {
     private let bottomID = "console-bottom"
 
     public init(stream: @escaping () -> AsyncThrowingStream<String, Error>,
+                workingLabel: String,
+                completedLabel: String,
+                lineCountLabel: @escaping (Int) -> String,
+                copyLogHelp: String,
                 onComplete: @escaping (Bool) -> Void = { _ in }) {
         self.stream = stream
+        self.workingLabel = workingLabel
+        self.completedLabel = completedLabel
+        self.lineCountLabel = lineCountLabel
+        self.copyLogHelp = copyLogHelp
         self.onComplete = onComplete
     }
 
@@ -54,18 +66,18 @@ public struct StreamConsole: View {
             switch state {
             case .running:
                 ProgressView().controlSize(.small)
-                Text("Working…").foregroundStyle(.secondary)
+                Text(workingLabel).foregroundStyle(.secondary)
             case .done:
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                Text("Completed").foregroundStyle(.secondary)
+                Text(completedLabel).foregroundStyle(.secondary)
             case .failed(let message):
                 Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
                 Text(message).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            Text("\(lines.count) lines").font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            Text(lineCountLabel(lines.count)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
             GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "doc.on.doc", help: "Copy log") {
+                GlassButtonItem(systemName: "doc.on.doc", help: copyLogHelp) {
                     copyToPasteboard(lines.joined(separator: "\n"))
                 }
             }

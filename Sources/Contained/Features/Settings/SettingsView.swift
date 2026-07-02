@@ -92,7 +92,7 @@ struct SettingsContent: View {
             }
         }
         if let onClose {
-            actions.append(DesignAction(systemName: "xmark", help: "Close", isCancel: true, action: onClose))
+            actions.append(DesignAction(systemName: "xmark", help: AppText.close, isCancel: true, action: onClose))
         }
         return actions
     }

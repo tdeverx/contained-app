@@ -185,7 +185,7 @@ struct RootView: View {
         Divider()
         Toggle(isOn: $ui.runningOnly) { Label("Show Running Only", systemImage: "play.circle") }
         Picker(selection: $settings.density) {
-            ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
+            ForEach(CardDensity.allCases) { Text($0.localizedDisplayName).tag($0) }
         } label: { Label("Card Size", systemImage: "square.grid.2x2") }
         Divider()
         Button { openSectionOrMorph(.images, morph: .updates) } label: { Label("Images", systemImage: "square.stack.3d.up") }

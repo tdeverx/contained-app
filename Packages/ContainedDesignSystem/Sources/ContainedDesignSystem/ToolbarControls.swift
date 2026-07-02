@@ -32,6 +32,7 @@ public struct DesignGlassMenuButton<LabelContent: View, MenuContent: View>: View
 public struct DesignToolbarSearchField<Trailing: View>: View {
     @Binding public var text: String
     public var prompt: String
+    public var clearSearchLabel: String
     public var focused: FocusState<Bool>.Binding
     public var onSubmit: () -> Void
     public var onClear: () -> Void
@@ -39,12 +40,14 @@ public struct DesignToolbarSearchField<Trailing: View>: View {
 
     public init(text: Binding<String>,
                 prompt: String,
+                clearSearchLabel: String,
                 focused: FocusState<Bool>.Binding,
                 onSubmit: @escaping () -> Void = {},
                 onClear: @escaping () -> Void,
                 @ViewBuilder trailing: @escaping () -> Trailing) {
         self._text = text
         self.prompt = prompt
+        self.clearSearchLabel = clearSearchLabel
         self.focused = focused
         self.onSubmit = onSubmit
         self.onClear = onClear
@@ -69,8 +72,8 @@ public struct DesignToolbarSearchField<Trailing: View>: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
-                    .help("Clear search")
-                    .accessibilityLabel("Clear search")
+                    .help(clearSearchLabel)
+                    .accessibilityLabel(clearSearchLabel)
                 } else {
                     trailing()
                 }

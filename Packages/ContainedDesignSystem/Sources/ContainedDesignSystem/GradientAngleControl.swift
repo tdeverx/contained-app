@@ -3,13 +3,15 @@ import SwiftUI
 /// A 360° gradient-direction control: a draggable dial plus a degree readout.
 public struct GradientAngleControl: View {
     @Binding var angle: Double
+    public var title: String
 
-    public init(angle: Binding<Double>) {
+    public init(angle: Binding<Double>, title: String) {
         self._angle = angle
+        self.title = title
     }
 
     public var body: some View {
-        LabeledContent("Direction") {
+        LabeledContent(title) {
             HStack(spacing: Tokens.Space.m) {
                 AngleDial(angle: $angle)
                     .frame(width: Tokens.InlineControl.gradientDial,

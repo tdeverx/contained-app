@@ -61,7 +61,8 @@ struct RunSpecForm: View {
                 PanelRow(title: "Image defaults",
                          subtitle: "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config.",
                          info: "Images can define default startup settings. Adopt copies those defaults into this form so you can see and edit them before running.") {
-                    DesignTextActionButton(title: "Adopt", systemName: "wand.and.stars") {
+                    DesignTextActionButton(title: AppText.string("runSpec.adopt", defaultValue: "Adopt"),
+                                           systemName: "wand.and.stars") {
                         adoptImageDefaults()
                     }
                 }
@@ -260,7 +261,7 @@ struct RunSpecForm: View {
                 TextField("", text: $spec.personalization.icon, prompt: Text("SF Symbol, e.g. globe, bolt")).textFieldStyle(.roundedBorder)
             }
             PanelRow(title: "Color", info: "Sets the card icon color. If background color is enabled, it also tints the glass card.") {
-                TintSelector(selection: $spec.personalization.tint)
+                TintSelector(selection: $spec.personalization.tint) { $0.localizedDisplayName }
             }
             PanelToggleRow(title: "Color the card background",
                            info: "Adds a soft color wash behind the glass. Turn it off for clear glass with only a colored icon.",
@@ -278,13 +279,13 @@ struct RunSpecForm: View {
                                info: "Blends the color across the card instead of using one flat wash.",
                                isOn: $spec.personalization.gradient)
                 if spec.personalization.gradient {
-                    GradientAngleControl(angle: $spec.personalization.gradientAngle)
+                    GradientAngleControl(angle: $spec.personalization.gradientAngle, title: AppText.direction)
                 }
                 PanelRow(title: "Blend mode",
                          info: "Controls how the card color wash blends with the glass behind it.") {
                     Picker("", selection: $spec.personalization.backgroundBlendMode) {
                         ForEach(ColorLayerBlendMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
+                            Text(mode.localizedDisplayName).tag(mode)
                         }
                     }
                     .labelsHidden()
@@ -297,7 +298,7 @@ struct RunSpecForm: View {
     private var restartSection: some View {
         PanelRow(title: "Restart policy", info: "Contained restarts the container automatically based on this setting.") {
             Picker("", selection: $spec.restart) {
-                ForEach(RestartPolicy.allCases) { Text($0.displayName).tag($0) }
+                ForEach(RestartPolicy.allCases) { Text($0.localizedDisplayName).tag($0) }
             }
             .labelsHidden().fixedSize()
         }
@@ -558,7 +559,7 @@ struct RunSpecForm: View {
 
     private func removeButton(action: @escaping () -> Void) -> some View {
         DesignActionGroup(DesignAction(systemName: "minus.circle.fill",
-                                       help: "Remove",
+                                       help: AppText.string("common.remove", defaultValue: "Remove"),
                                        action: action))
     }
 

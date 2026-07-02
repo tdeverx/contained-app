@@ -117,7 +117,7 @@ struct ContainedApp: App {
             CommandGroup(replacing: .toolbar) {
                 Toggle("Show Running Only", isOn: runningOnlyBinding)
                 Picker("Card Size", selection: cardSizeBinding) {
-                    ForEach(CardDensity.allCases) { Text($0.displayName).tag($0) }
+                    ForEach(CardDensity.allCases) { Text($0.localizedDisplayName).tag($0) }
                 }
                 Divider()
                 Button("Reload") { app.coordinator.wake() }

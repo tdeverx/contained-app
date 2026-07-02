@@ -98,7 +98,7 @@ struct ContainerCard: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(name), \(presentation.label)")
+        .accessibilityLabel(AppText.containerCardAccessibility(name: name, status: presentation.label))
         .onChange(of: showingCustomize) { _, isShowing in
             if isShowing {
                 draftStyle = style
@@ -184,6 +184,7 @@ struct ContainerCard: View {
                           selection: tab,
                           tint: tint,
                           controlsReveal: isExpanded && controlsVisible ? 1 : 0,
+                          closeLabel: AppText.close,
                           onSelect: selectTab,
                           onClose: onClose)
     }
@@ -380,13 +381,13 @@ struct ContainerCard: View {
     @ViewBuilder
     private var footerActions: some View {
         if isRunning {
-            footerAction("stop.fill", help: "Stop", action: onStop)
-            footerAction("arrow.clockwise", help: "Restart", action: onRestart)
+            footerAction("stop.fill", help: AppText.stop, action: onStop)
+            footerAction("arrow.clockwise", help: AppText.restart, action: onRestart)
         } else {
-            footerAction("play.fill", help: "Start", tint: tint, action: onStart)
+            footerAction("play.fill", help: AppText.start, tint: tint, action: onStart)
         }
-        footerAction("slider.horizontal.3", help: "Edit", action: onEdit)
-        footerAction("trash", help: "Delete", role: .destructive) { confirmingDelete = true }
+        footerAction("slider.horizontal.3", help: AppText.edit, action: onEdit)
+        footerAction("trash", help: AppText.delete, role: .destructive) { confirmingDelete = true }
     }
 
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,

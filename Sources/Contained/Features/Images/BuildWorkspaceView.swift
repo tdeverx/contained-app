@@ -32,7 +32,12 @@ struct BuildWorkspaceView: View {
                                        dockerfile: dockerfile.isEmpty ? nil : dockerfile,
                                        buildArgs: argsDict, noCache: noCache,
                                        platform: platform.isEmpty ? nil : platform)
-                }, onComplete: { ok in if ok { Task { await app.refreshImagesIfStale(force: true) } } })
+                },
+                workingLabel: AppText.working,
+                completedLabel: AppText.completed,
+                lineCountLabel: AppText.lineCount,
+                copyLogHelp: AppText.copyLog,
+                onComplete: { ok in if ok { Task { await app.refreshImagesIfStale(force: true) } } })
                 .id(run)
                 .padding(Tokens.Space.s)
             } else {
@@ -70,7 +75,7 @@ struct BuildWorkspaceView: View {
                     Spacer()
                     DesignActionGroup(DesignAction(systemName: "folder",
                                                    title: "Choose",
-                                                   help: "Choose context folder",
+                                                   help: AppText.chooseContextFolder,
                                                    action: chooseFolder))
                 }
             }
@@ -105,7 +110,7 @@ struct BuildWorkspaceView: View {
                         TextField("value", text: $arg.value)
                             .textFieldStyle(.roundedBorder)
                         DesignActionGroup(DesignAction(systemName: "minus.circle.fill",
-                                                       help: "Remove build argument") {
+                                                       help: AppText.removeBuildArgument) {
                                 buildArgs.removeAll { $0.id == arg.id }
                         })
                     }
@@ -115,7 +120,7 @@ struct BuildWorkspaceView: View {
                      subtitle: buildArgs.isEmpty ? "No build-time variables added." : "\(buildArgs.count) argument(s)") {
                 DesignActionGroup(DesignAction(systemName: "plus.circle",
                                                title: "Add build arg",
-                                               help: "Add build argument") {
+                                               help: AppText.addBuildArgument) {
                     buildArgs.append(KeyValue())
                 })
             }
@@ -125,19 +130,21 @@ struct BuildWorkspaceView: View {
     private var commandSection: some View {
         PanelSection {
             HStack(spacing: Tokens.Space.s) {
-                CommandPreviewBar(command: previewCommand)
+                CommandPreviewBar(command: previewCommand,
+                                  copyHelp: AppText.copyCommand,
+                                  copiedAccessibilityLabel: AppText.copied)
                     .frame(maxWidth: .infinity)
                 if building {
                     DesignActionGroup(DesignAction(systemName: "xmark",
                                                    title: "Cancel",
-                                                   help: "Cancel build",
+                                                   help: AppText.cancelBuild,
                                                    role: .destructive) {
                         building = false
                     })
                 } else {
                     DesignActionGroup(DesignAction(systemName: "hammer.fill",
                                                    title: "Build",
-                                                   help: "Build image",
+                                                   help: AppText.buildImage,
                                                    isEnabled: canBuild,
                                                    action: startBuild))
                 }

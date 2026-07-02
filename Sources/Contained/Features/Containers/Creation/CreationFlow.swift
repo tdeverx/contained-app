@@ -344,9 +344,9 @@ struct CreationFlow: View {
     private func leadingAction(_ leading: Leading) -> DesignAction {
         switch leading {
         case .close:
-            return DesignAction(systemName: "xmark", help: "Cancel", isCancel: true) { onClose() }
+            return DesignAction(systemName: "xmark", help: AppText.cancel, isCancel: true) { onClose() }
         case .back(let action):
-            return DesignAction(systemName: "chevron.left", help: "Back", action: action)
+            return DesignAction(systemName: "chevron.left", help: AppText.back, action: action)
         }
     }
 

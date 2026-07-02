@@ -8,14 +8,14 @@ public struct SheetHeader<Trailing: View>: View {
     public let title: String
     public var subtitle: String? = nil
     public var cancelIcon: String = "xmark"
-    public var cancelHelp: String = "Cancel"
+    public var cancelHelp: String
     public let onCancel: () -> Void
     @ViewBuilder var trailing: () -> Trailing
 
     public init(title: String,
                 subtitle: String? = nil,
                 cancelIcon: String = "xmark",
-                cancelHelp: String = "Cancel",
+                cancelHelp: String,
                 onCancel: @escaping () -> Void,
                 @ViewBuilder trailing: @escaping () -> Trailing) {
         self.title = title
@@ -47,7 +47,7 @@ public struct SheetHeader<Trailing: View>: View {
 public extension SheetHeader where Trailing == EmptyView {
     /// Header with only a cancel/close button (no primary action).
     init(title: String, subtitle: String? = nil, cancelIcon: String = "xmark",
-         cancelHelp: String = "Cancel", onCancel: @escaping () -> Void) {
+         cancelHelp: String, onCancel: @escaping () -> Void) {
         self.init(title: title, subtitle: subtitle, cancelIcon: cancelIcon, cancelHelp: cancelHelp,
                   onCancel: onCancel) { EmptyView() }
     }

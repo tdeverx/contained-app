@@ -24,6 +24,30 @@ and card-selection overlays. Components that read `AppModel`, settings stores,
 feature routes, or runtime models stay in the app target, but they should pass
 values into package components instead of recreating style locally.
 
+## Localization boundary
+
+The design system is a building block package. It owns layout, materials,
+tokens, animation behavior, and control anatomy, but it does not own app copy or
+localized resources.
+
+Guidelines:
+
+- user-facing labels, help text, accessibility labels, picker names, page names,
+  and empty-state copy are supplied by `Sources/Contained`
+- package APIs that need words take app-supplied strings or semantic item
+  titles, such as `ResourceCardPages.closeLabel`,
+  `DesignToolbarSearchField.clearSearchLabel`, and `TintSelector`'s
+  `labelForTint`
+- app-owned enum labels and dynamic templates flow through `AppText`, which uses
+  `String(localized:defaultValue:bundle:)` with English fallbacks today
+- package-owned strings are limited to non-user identifiers such as SF Symbol
+  names, raw values, chart field identifiers, and accessibility-hidden chart
+  dimensions
+
+Only the executable target owns localization catalogs. The local packages should
+remain reusable without shipping their own language bundles unless a future
+package genuinely owns standalone user-facing copy.
+
 ## Core principles
 
 - A morph panel is one stable shell. Content can swap inside it, but the shell

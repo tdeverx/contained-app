@@ -23,8 +23,6 @@ public enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
 
     public var id: String { rawValue }
 
-    public var displayName: String { self == .multicolor ? "App Accent" : rawValue.capitalized }
-
     /// True for the "follow the app accent" option (rendered with a marker in the swatch row).
     public var followsAppAccent: Bool { self == .multicolor }
 
@@ -42,24 +40,8 @@ public enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
-    /// Common color words that should also surface this tint in search (e.g. typing "purple" finds
-    /// `indigo`, "blue" finds `azure`). Keeps the curated palette discoverable under everyday names.
-    public var searchAliases: [String] {
-        switch self {
-        case .multicolor: return ["default", "app accent", "system", "auto", "rainbow"]
-        case .graphite:   return ["gray", "grey", "slate", "charcoal", "silver", "neutral", "mono"]
-        case .azure:      return ["blue", "sky", "ocean", "cobalt"]
-        case .teal:       return ["cyan", "aqua", "turquoise", "mint", "seafoam"]
-        case .coral:      return ["orange", "salmon", "burnt", "terracotta", "rust"]
-        case .indigo:     return ["purple", "violet", "blurple", "royal"]
-        case .green:      return ["lime", "olive", "emerald", "forest", "moss"]
-        case .amber:      return ["yellow", "gold", "honey", "mustard"]
-        case .pink:       return ["magenta", "rose", "fuchsia", "crimson", "hot pink"]
-        }
-    }
-
     /// Parse a legacy `contained.tint` label value, falling back to multicolor.
-public static func parse(_ raw: String?) -> AppTint {
+    public static func parse(_ raw: String?) -> AppTint {
         guard let raw, let tint = AppTint(rawValue: raw.lowercased()) else { return .multicolor }
         return tint
     }
@@ -69,16 +51,6 @@ public enum ColorLayerBlendMode: String, CaseIterable, Identifiable, Codable, Se
     case normal, softLight, overlay, multiply, screen
 
     public var id: String { rawValue }
-
-    public var displayName: String {
-        switch self {
-        case .normal: return "Normal"
-        case .softLight: return "Soft Light"
-        case .overlay: return "Overlay"
-        case .multiply: return "Multiply"
-        case .screen: return "Screen"
-        }
-    }
 
     public var blendMode: BlendMode {
         switch self {
@@ -94,7 +66,6 @@ public enum ColorLayerBlendMode: String, CaseIterable, Identifiable, Codable, Se
 public enum AppearanceMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case system, light, dark
     public var id: String { rawValue }
-    public var displayName: String { rawValue.capitalized }
     public var colorScheme: ColorScheme? {
         switch self {
         case .system: return nil
@@ -118,7 +89,6 @@ public enum AppearanceMode: String, CaseIterable, Identifiable, Codable, Sendabl
 public enum CardDensity: String, CaseIterable, Identifiable, Codable, Sendable {
     case small, medium, large
     public var id: String { rawValue }
-    public var displayName: String { rawValue.capitalized }
     public var resourceSize: ResourceCardSize {
         switch self {
         case .small: return .small
@@ -147,27 +117,6 @@ public enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendabl
          sheet, popover, menu, selection, hudWindow, toolTip
 
     public var id: String { rawValue }
-
-    public var displayName: String {
-        switch self {
-        case .glassClear:          return "Glass (Clear)"
-        case .glassRegular:        return "Glass (Regular)"
-        case .fullScreenUI:        return "Full-screen UI (default)"
-        case .underWindowBackground: return "Under Window"
-        case .underPageBackground: return "Under Page"
-        case .windowBackground:    return "Window"
-        case .contentBackground:   return "Content"
-        case .sidebar:             return "Sidebar"
-        case .headerView:          return "Header"
-        case .titlebar:            return "Titlebar"
-        case .sheet:               return "Sheet"
-        case .popover:             return "Popover"
-        case .menu:                return "Menu"
-        case .selection:           return "Selection"
-        case .hudWindow:           return "HUD"
-        case .toolTip:             return "Tooltip"
-        }
-    }
 
     /// True for the Liquid Glass options, which render via `.glassEffect` rather than vibrancy.
     public var isGlass: Bool { self == .glassClear || self == .glassRegular }

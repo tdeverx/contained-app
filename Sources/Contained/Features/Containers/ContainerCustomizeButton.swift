@@ -20,6 +20,6 @@ struct ContainerCustomizeButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help("Customize card")
-        .accessibilityLabel("Customize \(style.displayName(fallback: snapshot.id))")
+        .accessibilityLabel(AppText.customizeAccessibilityLabel(style.displayName(fallback: snapshot.id)))
     }
 }

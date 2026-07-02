@@ -12,18 +12,6 @@ public enum GraphStyle: String, CaseIterable, Identifiable, Codable, Sendable {
 
     public var id: String { rawValue }
 
-    public var displayName: String {
-        switch self {
-        case .area: return "Area"
-        case .line: return "Line"
-        case .bar: return "Bar"
-        case .points: return "Points"
-        case .multiLine: return "Multi-Line"
-        case .range: return "Range"
-        case .scatter: return "Scatter"
-        }
-    }
-
     public var requiresSecondaryMetric: Bool {
         switch self {
         case .multiLine, .range, .scatter: return true
@@ -68,17 +56,6 @@ public enum WidgetInterpolation: String, CaseIterable, Identifiable, Codable, Se
 
     public var id: String { rawValue }
 
-    public var displayName: String {
-        switch self {
-        case .linear: return "Linear"
-        case .catmullRom: return "Smooth"
-        case .cardinal: return "Cardinal"
-        case .monotone: return "Monotone"
-        case .stepStart: return "Step Start"
-        case .stepCenter: return "Step Center"
-        case .stepEnd: return "Step End"
-        }
-    }
 }
 
 public enum SparklineScale: String, CaseIterable, Identifiable, Codable, Sendable {

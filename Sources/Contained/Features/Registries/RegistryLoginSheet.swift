@@ -16,12 +16,12 @@ struct RegistryLoginSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SheetHeader(title: "Registry login", onCancel: { dismiss() }) {
+            SheetHeader(title: "Registry login", cancelHelp: AppText.close, onCancel: { dismiss() }) {
                 if busy {
                     ProgressView().controlSize(.small).frame(width: Tokens.IconSize.control, height: Tokens.IconSize.control)
                 } else {
                     DesignActionGroup(DesignAction(systemName: "checkmark",
-                                                   help: "Log in",
+                                                   help: AppText.logIn,
                                                    isEnabled: !server.trimmingCharacters(in: .whitespaces).isEmpty
                                                        && !username.trimmingCharacters(in: .whitespaces).isEmpty
                                                        && !password.isEmpty) {

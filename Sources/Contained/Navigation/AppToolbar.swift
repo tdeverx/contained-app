@@ -180,11 +180,11 @@ struct AppToolbar: View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
             DesignToolbarActionCluster {
                 DesignActionItems([
-                    DesignAction(systemName: "plus", help: "Add") { ui.openCreationPanel() },
-                    DesignAction(systemName: "shippingbox", help: "Images") {
+                    DesignAction(systemName: "plus", help: AppText.add) { ui.openCreationPanel() },
+                    DesignAction(systemName: "shippingbox", help: AppText.string("section.images", defaultValue: "Images")) {
                         openGlobalSectionOrPanel(.images, morph: .updates)
                     },
-                    DesignAction(systemName: "bookmark", help: "Templates") {
+                    DesignAction(systemName: "bookmark", help: AppText.string("section.templates", defaultValue: "Templates")) {
                         openGlobalSectionOrPanel(.templates, morph: .templates)
                     }
                 ])

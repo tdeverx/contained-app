@@ -12,6 +12,11 @@ Do not put app state, stores, SwiftData models, Sparkle wiring, routing, runtime
 models, or feature-specific business rules in this package. App code should pass
 plain values into package views instead.
 
+This package also does not own localized resources or English UI defaults. When
+a primitive needs visible text, accessibility copy, help, or display names, the
+app supplies those strings through parameters. The executable target owns
+localization keys and English fallbacks.
+
 ## Importing
 
 From the root app package:
@@ -103,7 +108,7 @@ struct DesignSystemExample: View {
             VStack(spacing: Tokens.Space.l) {
                 PanelSection(header: "Appearance") {
                     PanelRow(title: "Accent") {
-                        TintSelector(selection: $tint)
+                        TintSelector(selection: $tint, labelForTint: tintName)
                     }
                     PanelRow(title: "Shortcut") {
                         DesignKeyboardHint("return", "Open")
@@ -145,6 +150,20 @@ struct DesignSystemExample: View {
         .environment(\.buttonMaterial, .glassClear)
         .environment(\.designSystemShowsInfoTips, true)
     }
+
+    private func tintName(_ tint: AppTint) -> String {
+        switch tint {
+        case .multicolor: return "App Accent"
+        case .graphite: return "Graphite"
+        case .azure: return "Azure"
+        case .teal: return "Teal"
+        case .coral: return "Coral"
+        case .indigo: return "Indigo"
+        case .green: return "Green"
+        case .amber: return "Amber"
+        case .pink: return "Pink"
+        }
+    }
 }
 ```
 
@@ -183,6 +202,7 @@ struct CardControlsExample: View {
                      pages: ResourceCardPages(items: pages,
                                               selection: page,
                                               tint: .accentColor,
+                                              closeLabel: "Close",
                                               onSelect: { page = $0 },
                                               onClose: {})) {
             ResourceCardIconChip(symbol: "shippingbox.fill")

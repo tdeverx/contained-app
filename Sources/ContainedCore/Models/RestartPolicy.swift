@@ -5,13 +5,6 @@ import Foundation
 public enum RestartPolicy: String, CaseIterable, Identifiable, Codable, Sendable {
     case no, onFailure = "on-failure", always
     public var id: String { rawValue }
-    public var displayName: String {
-        switch self {
-        case .no: return "No"
-        case .onFailure: return "On failure"
-        case .always: return "Always"
-        }
-    }
 
     /// Parse a label value into a policy (`nil`/unknown → `.no`).
     public init(label: String?) {
