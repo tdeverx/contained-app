@@ -4,13 +4,13 @@ Resources cover volumes, networks, registries, templates, and activity history.
 
 ## Volumes
 
-Volumes can be browsed, inspected, created, attached during container runs, and
+Volumes can be browsed, created, attached during container runs, and
 deleted or pruned when appropriate. Volume styling is local app state and can be
 used for scan-friendly resource cards.
 
 ## Networks
 
-Networks can be browsed, inspected, created, attached during container runs, and
+Networks can be browsed, created, attached during container runs, and
 deleted or pruned when appropriate. The create-network path is part of the
 shared [[Creation Workflow|Creation-Workflow]].
 

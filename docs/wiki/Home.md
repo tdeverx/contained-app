@@ -1,6 +1,6 @@
 # Contained
 
-A native, SwiftUI-first macOS app for Apple's [`container`](https://github.com/apple/container) CLI — a Liquid Glass control surface for running, customizing, and inspecting Linux containers on Apple silicon. It covers the everyday Docker-Desktop workflow plus the broader `container` command surface, without leaving the Mac-native look and feel.
+A native, SwiftUI-first macOS app for Apple's [`container`](https://github.com/apple/container) CLI — a Liquid Glass control surface for running and customizing Linux containers on Apple silicon. It covers the everyday Docker-Desktop workflow plus the broader `container` command surface, without leaving the Mac-native look and feel.
 
 ## Quick start
 
@@ -16,7 +16,7 @@ Prefer a prebuilt app? Grab the latest `.dmg` from [Releases](https://github.com
 
 ## What's inside
 
-- **Containers** — a grid of personalized Liquid Glass cards with live sparklines, full lifecycle, and a 7-tab detail (Overview, Logs, Terminal, Stats, History, Files, Inspect).
+- **Containers** — a grid of personalized Liquid Glass cards with live sparklines, full lifecycle, and a 6-page detail (Overview, Logs, Terminal, Stats, History, Files).
 - **Images / Build / Volumes / Networks / Registries / System** — pull (with Docker Hub search), build (streamed BuildKit log), tag/push/save/load, filesystem export, volume & network CRUD, registry login, service control, `df`, a Prune Center, and guarded kernel/DNS management.
 - **Templates & Compose import** — saved run recipes + built-in starters, and `compose.yaml` import that opens editable, prefilled Run forms for each service.
 - **Persistent history** — SwiftData-backed events and metrics powering a per-container History tab and a system-wide Activity view (Swift Charts).

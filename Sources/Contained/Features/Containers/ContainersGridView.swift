@@ -26,7 +26,6 @@ struct ContainersGridView: View {
 
     // Each network is a collapsible section of the containers attached to it.
     @State private var collapsedNetworks: Set<String> = []
-    @State private var inspectingNetwork: NetworkResource?
     @State private var deletingNetwork: NetworkResource?
 
     private let detailSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
@@ -228,7 +227,6 @@ struct ContainersGridView: View {
         }
         // Network-level actions.
         .task { await app.refreshNetworks() }
-        .sheet(item: $inspectingNetwork) { JSONInspectorSheet(title: $0.name, value: $0) }
         .confirmationDialog("Delete network \(deletingNetwork?.name ?? "")?",
                             isPresented: deleteNetworkBinding, presenting: deletingNetwork) { network in
             Button("Delete", role: .destructive) { Task { await deleteNetwork(network) } }
@@ -293,7 +291,6 @@ struct ContainersGridView: View {
 
     @ViewBuilder
     private func networkMenu(_ resource: NetworkResource) -> some View {
-        Button { inspectingNetwork = resource } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
         Button { copyToPasteboard(resource.name) } label: { Label("Copy Name", systemImage: "doc.on.doc") }
         if !resource.isBuiltin {
             Divider()
@@ -393,7 +390,6 @@ struct ContainersGridView: View {
             onSelectMultiple: { beginSelecting(snapshot.id) },
             onToggleSelected: { toggle(snapshot.id) },
             onEndSelecting: { endSelecting() },
-            revealCLI: app.settings.revealCLI,
             health: app.health.status(for: snapshot.id),
             selecting: selecting,
             isSelected: selection.contains(snapshot.id)
@@ -543,7 +539,6 @@ private struct ContainerCardMetricsRenderer: View {
     let onSelectMultiple: () -> Void
     let onToggleSelected: () -> Void
     let onEndSelecting: () -> Void
-    let revealCLI: Bool
     let health: HealthStatus
     let selecting: Bool
     let isSelected: Bool
@@ -573,7 +568,6 @@ private struct ContainerCardMetricsRenderer: View {
             onSelectMultiple: onSelectMultiple,
             onToggleSelected: onToggleSelected,
             onEndSelecting: onEndSelecting,
-            revealCLI: revealCLI,
             health: health,
             selecting: selecting,
             isSelected: isSelected,

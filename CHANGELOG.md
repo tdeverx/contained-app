@@ -25,15 +25,15 @@
 
 - Container grid with personalized Liquid Glass cards, lifecycle actions, status, image, command, resource highlights, full-card hit targets, and context menus.
 - Container grouping by Network, Volume, Image, or Flat list, with sort and running-only filtering in shared toolbar controls.
-- Expanded container detail tabs for Overview, Logs, Terminal, Stats, History, Files, and Inspect.
-- Live logs, one-shot and follow modes, terminal access through SwiftTerm, file browsing/copy workflows, JSON inspect views, and per-container metrics history.
+- Expanded container detail tabs for Overview, Logs, Terminal, Stats, History, and Files.
+- Live logs, one-shot and follow modes, terminal access through SwiftTerm, file browsing/copy workflows, and per-container metrics history.
 - Shared Run/Edit form for new containers and recreate/edit flows, with validation, image pre-pull, inline errors, and an exact CLI preview.
 - App-managed restart policies and health checks for behavior Apple's `container` CLI does not provide natively.
 - Container image update checks that can pull newer image tags and reopen the edit flow without automatically replacing the running container.
 
 #### Images
 
-- Local image and tag browsing with grouped references, run actions, inspect/history views, tagging, pushing, saving archives, loading OCI `.tar` archives, pruning, and update status.
+- Local image and tag browsing with grouped references, run actions, history pages, tagging, pushing, saving archives, loading OCI `.tar` archives, pruning, and update status.
 - Registry image search flow for Docker Hub, gated behind Settings -> Experimental, with selected results handed into the run configuration flow.
 - Image update detection based on local and remote digests, surfaced on image cards, container cards, toolbar panels, System, and command palette entries.
 - Manual and scheduled image update checks, including "check all", "pull all available image updates", and container-image specific sweeps.
@@ -50,8 +50,8 @@
 
 #### Resources & Registries
 
-- Volume browsing, creation, inspection, deletion, prune actions, local card styling, and mount-aware container grouping.
-- Network browsing, creation, inspection, deletion, prune actions, and network-aware container grouping.
+- Volume browsing, creation, deletion, prune actions, local card styling, and mount-aware container grouping.
+- Network browsing, creation, deletion, prune actions, and network-aware container grouping.
 - Registry credential management in Settings -> Registries, including login/logout with passwords piped through `--password-stdin` rather than process arguments.
 - Activity history for lifecycle, image, compose, system, registry, pull, build, watchdog, healthcheck, alert, and UI events, including unread state, filtering, copy/delete actions, and clear controls.
 

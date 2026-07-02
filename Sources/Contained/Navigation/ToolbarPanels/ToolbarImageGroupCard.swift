@@ -15,15 +15,14 @@ struct ToolbarImageGroupCard: View {
 
     @State private var deletingReference: String?
     @State private var pruning = false
-    /// Detailed image operations (inspect / history / tag / push) now grow the image-detail morph into
-    /// a sub-page in place — matching the creation flow — instead of opening modal sheets.
-    @State private var page: ImageDetailPage = .root
+    /// Detailed image pages grow the image-detail morph in place, matching container cards: tags are
+    /// the default body page, while history/tag/push reuse the same card shell.
+    @State private var page: ImageDetailPage = .tags
     @State private var tagTarget = ""
     @State private var tagBusy = false
 
-    enum ImageDetailPage: Equatable {
-        case root
-        case inspect(String)
+    enum ImageDetailPage: Hashable {
+        case tags
         case history(String)
         case tag(String)
         case push(String)
@@ -35,6 +34,9 @@ struct ToolbarImageGroupCard: View {
         Group {
             if isExpanded {
                 expandedContent
+                    .resourceCardFloatingControls(when: true) {
+                        imagePageControls
+                    }
                     .morphPanelSize(size(for: page))
                     .morphPanelPlacement(.anchored)
                     .animation(spring, value: page)
@@ -58,8 +60,7 @@ struct ToolbarImageGroupCard: View {
     @ViewBuilder
     private var expandedContent: some View {
         switch page {
-        case .root:               rootCard
-        case .inspect(let ref):   inspectPage(ref)
+        case .tags:               rootCard
         case .history(let ref):   historyPage(ref)
         case .tag(let source):    tagPage(source)
         case .push(let ref):      pushPage(ref)
@@ -97,8 +98,8 @@ struct ToolbarImageGroupCard: View {
 
     private func size(for page: ImageDetailPage) -> CGSize {
         switch page {
-        case .root:    return Tokens.PanelSize.imageDetail
-        case .inspect, .history: return Tokens.SheetSize.inspector
+        case .tags:    return Tokens.PanelSize.imageDetail
+        case .history: return Tokens.SheetSize.inspector
         case .tag:     return Tokens.PanelSize.imageTag
         case .push:    return Tokens.SheetSize.console
         }
@@ -120,12 +121,7 @@ struct ToolbarImageGroupCard: View {
                     }
                 }
             } trailing: {
-                GlassButton(singleItem: false) {
-                    GlassButtonItem(systemName: "chevron.left", help: "Back") {
-                        withAnimation(spring) { page = .root }
-                    }
-                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
-                }
+                EmptyView()
             }
         } bodyContent: {
             content()
@@ -137,18 +133,6 @@ struct ToolbarImageGroupCard: View {
             EmptyView()
         } widget: {
             EmptyView()
-        }
-    }
-
-    private func inspectPage(_ reference: String) -> some View {
-        let image = group.images.first { $0.reference == reference } ?? primaryImage(group)
-        return subPageScaffold(symbol: "doc.text.magnifyingglass", title: "Inspect",
-                               subtitle: Format.shortImage(reference)) {
-            if let image {
-                InlineJSONView(json: prettyJSON(image))
-            } else {
-                ContentUnavailableView("Unavailable", systemImage: "doc.text.magnifyingglass")
-            }
         }
     }
 
@@ -232,7 +216,7 @@ struct ToolbarImageGroupCard: View {
                 await app.refreshImagesIfStale(force: true)
                 tagBusy = false
                 tagTarget = ""
-                withAnimation(spring) { page = .root }
+                withAnimation(spring) { page = .tags }
             } catch let error as CommandError {
                 app.flash(error.userMessage); tagBusy = false
             } catch {
@@ -257,14 +241,43 @@ struct ToolbarImageGroupCard: View {
                 ResourceCardSubtitleText(text: repositoryOwner(group.primaryReference))
             }
         } trailing: {
-            if isExpanded {
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
-                }
-            } else {
-                EmptyView()
-            }
+            EmptyView()
         }
+    }
+
+    private var imagePageControls: some View {
+        ResourceCardPageControls(items: imagePageControlItems,
+                                 selection: page,
+                                 tint: resolvedImageTint,
+                                 onSelect: selectPage,
+                                 onClose: onClose)
+    }
+
+    private var imagePageControlItems: [ResourceCardPageControlItem<ImageDetailPage>] {
+        let reference = primaryImage(group)?.reference ?? group.primaryReference
+        return [
+            ResourceCardPageControlItem(id: .tags,
+                                        title: "Tags",
+                                        systemImage: "tag"),
+            ResourceCardPageControlItem(id: .history(reference),
+                                        title: "History",
+                                        systemImage: "clock.arrow.circlepath"),
+            ResourceCardPageControlItem(id: .tag(reference),
+                                        title: "Add Tag",
+                                        systemImage: "plus.circle"),
+            ResourceCardPageControlItem(id: .push(reference),
+                                        title: "Push",
+                                        systemImage: "arrow.up.circle")
+        ]
+    }
+
+    private var resolvedImageTint: Color {
+        app.imageGroupStyle(for: group).color
+    }
+
+    private func selectPage(_ item: ImageDetailPage) {
+        guard page != item else { return }
+        withAnimation(spring) { page = item }
     }
 
     private func imageFooterInfo(_ status: ImageUpdateStatus) -> some View {
@@ -302,10 +315,6 @@ struct ToolbarImageGroupCard: View {
             }
         }
         if let image = primaryImage(group) {
-            if isExpanded {
-                footerAction("tag", help: "Add Tag") { withAnimation(spring) { page = .tag(image.reference) } }
-                footerAction("arrow.up.circle", help: "Push") { withAnimation(spring) { page = .push(image.reference) } }
-            }
             footerAction("arrow.up.doc", help: "Save") { save(image) }
         }
         footerAction("trash", help: "Prune", role: .destructive) { pruning = true }
@@ -362,7 +371,6 @@ struct ToolbarImageGroupCard: View {
                 if isExpanded { onClose() }
             }
             footerAction("doc.on.doc", help: "Copy reference") { copyToPasteboard(reference) }
-            footerAction("doc.text.magnifyingglass", help: "Inspect") { inspect(reference, in: group) }
             footerAction("trash", help: "Delete tag", role: .destructive) { deletingReference = reference }
         }
         .contextMenu { tagMenu(reference, in: group) }
@@ -374,7 +382,6 @@ struct ToolbarImageGroupCard: View {
     private func tagMenu(_ reference: String, in group: LocalImageTagGroup) -> some View {
         Button { ui.runImage(reference); if isExpanded { onClose() } } label: { Label("Run…", systemImage: "play") }
         Button { copyToPasteboard(reference) } label: { Label("Copy reference", systemImage: "doc.on.doc") }
-        Button { inspect(reference, in: group) } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
         Divider()
         Button(role: .destructive) { deletingReference = reference } label: { Label("Delete tag", systemImage: "trash") }
     }
@@ -393,12 +400,11 @@ struct ToolbarImageGroupCard: View {
     private func cardMenu(_ group: LocalImageTagGroup) -> some View {
         Button { ui.runImage(group.primaryReference) } label: { Label("Run…", systemImage: "play") }
         if let image = primaryImage(group) {
-            // Inspect / History / Tag / Push grow the detail morph into a sub-page, so they're offered
-            // only from the expanded detail (a collapsed card opens the detail first).
+            // History / Tag / Push grow the detail morph into a sub-page, so they're offered only
+            // from the expanded detail (a collapsed card opens the detail first).
             if isExpanded {
                 Button { withAnimation(spring) { page = .tag(image.reference) } } label: { Label("Add Tag…", systemImage: "tag") }
                 Button { withAnimation(spring) { page = .push(image.reference) } } label: { Label("Push…", systemImage: "arrow.up.circle") }
-                Button { withAnimation(spring) { page = .inspect(image.reference) } } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
                 Button { withAnimation(spring) { page = .history(image.reference) } } label: { Label("History", systemImage: "clock.arrow.circlepath") }
             } else {
                 Button(action: onTap) { Label("Show Details…", systemImage: "rectangle.expand.vertical") }
@@ -481,10 +487,6 @@ struct ToolbarImageGroupCard: View {
 
     private var deletingBinding: Binding<Bool> {
         Binding(get: { deletingReference != nil }, set: { if !$0 { deletingReference = nil } })
-    }
-
-    private func inspect(_ reference: String, in group: LocalImageTagGroup) {
-        withAnimation(spring) { page = .inspect(reference) }
     }
 
     private func delete(_ reference: String) async {

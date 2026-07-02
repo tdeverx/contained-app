@@ -17,7 +17,6 @@ Common actions:
 - push
 - save archive
 - load archive
-- inspect
 - history
 - prune
 

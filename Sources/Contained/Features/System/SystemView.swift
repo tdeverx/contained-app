@@ -18,7 +18,6 @@ struct SystemContent: View {
     @State private var working = false
     @State private var pruneTarget: PruneTarget?
     @State private var reclaimingAll = false
-    @State private var inspectingVolume: VolumeResource?
     @State private var deletingVolume: VolumeResource?
     @State private var page: SystemPage
 
@@ -107,7 +106,6 @@ struct SystemContent: View {
             .padding(Tokens.Space.s)
         }
         .task { await app.refreshSystemResources() }
-        .sheet(item: $inspectingVolume) { JSONInspectorSheet(title: $0.name, value: $0) }
         .confirmationDialog("Delete volume \(deletingVolume?.name ?? "")?",
                             isPresented: deletingVolumeBinding, presenting: deletingVolume) { volume in
             Button("Delete", role: .destructive) { Task { await deleteVolume(volume) } }
@@ -270,12 +268,6 @@ struct SystemContent: View {
 
     @ViewBuilder
     private func volumeMenu(_ entry: VolumeInventoryEntry) -> some View {
-        if let volume = entry.resource {
-            Button { inspectingVolume = volume } label: { Label("Inspect", systemImage: "doc.text.magnifyingglass") }
-        } else {
-            Button("Inspect", systemImage: "doc.text.magnifyingglass") {}
-                .disabled(true)
-        }
         Button { copyToPasteboard(entry.source ?? entry.title) } label: { Label("Copy source", systemImage: "doc.on.doc") }
         if let destination = entry.destination {
             Button { copyToPasteboard(destination) } label: { Label("Copy destination", systemImage: "arrow.down.doc") }

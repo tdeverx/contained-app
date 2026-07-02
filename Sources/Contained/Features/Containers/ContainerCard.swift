@@ -32,8 +32,6 @@ struct ContainerCard: View {
     var onSelectMultiple: () -> Void = {}
     var onToggleSelected: () -> Void = {}
     var onEndSelecting: () -> Void = {}
-    /// Show the "Reveal CLI" affordance (gated by the global Settings toggle).
-    var revealCLI: Bool = true
     /// App-managed healthcheck status (drives the heart badge).
     var health: HealthStatus = .unknown
     /// Multi-select mode: tapping toggles selection instead of opening the detail.
@@ -56,7 +54,6 @@ struct ContainerCard: View {
         case stats = "Stats"
         case history = "History"
         case files = "Files"
-        case inspect = "Inspect"
 
         var id: String { rawValue }
 
@@ -68,7 +65,6 @@ struct ContainerCard: View {
             case .stats: return "chart.xyaxis.line"
             case .history: return "clock.arrow.circlepath"
             case .files: return "folder"
-            case .inspect: return "doc.text.magnifyingglass"
             }
         }
     }
@@ -308,11 +304,6 @@ struct ContainerCard: View {
             Button { onUpdate() } label: { Label("Update Container…", systemImage: "arrow.down.circle") }
         }
         Button { copyToPasteboard(snapshot.id) } label: { Label("Copy ID", systemImage: "doc.on.doc") }
-        if revealCLI {
-            Button { copyToPasteboard("container inspect \(snapshot.id)") } label: {
-                Label("Copy as CLI", systemImage: "terminal")
-            }
-        }
         Divider()
         Button(role: .destructive) { onDelete() } label: { Label("Delete", systemImage: "trash") }
     }
@@ -351,10 +342,6 @@ struct ContainerCard: View {
             ContainerHistoryTab(snapshot: snapshot)
         case .files:
             FilesTab(snapshot: snapshot)
-        case .inspect:
-            DeferredContainerPage {
-                ContainerInspectTab(snapshot: snapshot)
-            }
         }
     }
 

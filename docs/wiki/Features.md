@@ -8,8 +8,8 @@ Toolbar-first UI and toolbar panel navigation are experimental opt-ins from
 
 ## Feature areas
 
-- **[[Containers|Features-Containers]]** — lifecycle, detail tabs, logs,
-  terminal, stats, files, inspect, app-managed restart/health, and local card
+- **[[Containers|Features-Containers]]** — lifecycle, detail pages, logs,
+  terminal, stats, files, app-managed restart/health, and local card
   personalization.
 - **[[Images|Features-Images]]** — local images and tags, run, pull, load/save,
   tag, push, history, image updates, Docker Hub search, and the build workspace.
