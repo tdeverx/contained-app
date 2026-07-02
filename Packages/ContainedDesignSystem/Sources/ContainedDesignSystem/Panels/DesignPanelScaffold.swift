@@ -1,23 +1,18 @@
 import SwiftUI
-import ContainedDesignSystem
 
-/// A toolbar morph-panel body: fixed chrome (header, segmented pickers) above a scrollable content area
-/// and an optional pinned footer.
+/// A reusable panel body: fixed chrome above a scrollable content area and an optional pinned footer.
 ///
-/// The panel takes the **fixed size** its host hands the `MorphingExpander` (e.g. `DesignTokens.PanelSize.*`).
-/// The inner `ScrollView` simply fills that area and scrolls; it does **not** measure its content. This
-/// matters for performance: an earlier version measured the scroll content's natural height (to make the
-/// panel hug it), which forced the whole `LazyVStack` to realize on open. Filling a definite height
-/// keeps long lists lazy (only visible rows render).
+/// The panel fills the fixed size its presentation host gives it (for example,
+/// `DesignTokens.PanelSize.*`). The inner `ScrollView` fills that area and scrolls; it does not measure
+/// its content. This matters for performance: an earlier version measured the scroll content's natural
+/// height, which forced long lazy lists to realize on open.
 ///
 /// Pass `scrolls: false` for content that brings **its own** scroll view (search results, build
 /// workspace, the paged run form). In that mode the scaffold doesn't wrap the content in a `ScrollView`,
-/// so scroll views aren't double-nested; the host (e.g. `CreationFlow`) supplies the size via
-/// `morphPanelSize`.
+/// so scroll views are not double-nested.
 public struct DesignPanelScaffold<Chrome: View, Content: View, Footer: View>: View {
-    /// Retained for call-site compatibility; the panel's width comes from the host's morph target.
+    /// The expected host width. The scaffold still expands to the width assigned by its presentation host.
     public var width: CGFloat
-    public var placement: MorphPanelPlacement = .anchored
     public var scrollEdgeStyle: ScrollEdgeEffectStyle = .soft
     public var scrolls: Bool = true
     /// Fixed chrome pinned above the scroll area (header, divider, segmented pickers).
@@ -29,14 +24,12 @@ public struct DesignPanelScaffold<Chrome: View, Content: View, Footer: View>: Vi
     @ViewBuilder var footer: () -> Footer
 
     public init(width: CGFloat,
-                placement: MorphPanelPlacement = .anchored,
                 scrollEdgeStyle: ScrollEdgeEffectStyle = .soft,
                 scrolls: Bool = true,
                 @ViewBuilder chrome: @escaping () -> Chrome,
                 @ViewBuilder content: @escaping () -> Content,
                 @ViewBuilder footer: @escaping () -> Footer) {
         self.width = width
-        self.placement = placement
         self.scrollEdgeStyle = scrollEdgeStyle
         self.scrolls = scrolls
         self.chrome = chrome
@@ -67,12 +60,11 @@ public struct DesignPanelScaffold<Chrome: View, Content: View, Footer: View>: Vi
 
 public extension DesignPanelScaffold where Footer == EmptyView {
     init(width: CGFloat,
-         placement: MorphPanelPlacement = .anchored,
          scrollEdgeStyle: ScrollEdgeEffectStyle = .soft,
          scrolls: Bool = true,
          @ViewBuilder chrome: @escaping () -> Chrome,
          @ViewBuilder content: @escaping () -> Content) {
-        self.init(width: width, placement: placement, scrollEdgeStyle: scrollEdgeStyle, scrolls: scrolls,
+        self.init(width: width, scrollEdgeStyle: scrollEdgeStyle, scrolls: scrolls,
                   chrome: chrome, content: content, footer: { EmptyView() })
     }
 }

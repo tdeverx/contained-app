@@ -13,8 +13,9 @@ accepts caller-supplied titles, help text, accessibility labels, and panel copy
 through the views it composes.
 
 Use this package when a view needs reusable layout behavior such as a panel that
-grows from a toolbar source, clamps to app safe areas, and hosts fixed chrome
-above scrollable content.
+grows from a toolbar source and clamps to app safe areas. Pair it with
+`DesignPanelScaffold` from `ContainedDesignSystem` when the promoted surface
+needs fixed chrome above scrollable content.
 
 Card-like detail views can use `MorphingSingleSurface` when the source and
 destination are the same conceptual surface rather than a toolbar-to-panel
@@ -104,7 +105,6 @@ Button("Open") { isPresented = true }
 - ``MorphingSingleSurface``
 - ``MorphingSingleSurfaceExpander``
 - ``MorphFrame``
-- ``DesignPanelScaffold``
 - ``MorphSourceFrameReader``
 - ``MorphSourceFramesKey``
 - ``GlobalBackdropStyle``
