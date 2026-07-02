@@ -1,5 +1,5 @@
 import SwiftUI
-import ContainedDesignSystem
+import ContainedUI
 import ContainedCore
 
 // MARK: - Runtime
@@ -16,26 +16,26 @@ struct RuntimeTab: View {
     @State private var deletingDomain: String?
 
     var body: some View {
-        LazyVStack(spacing: DesignTokens.Space.l) {
-            PanelSection(header: AppText.string("settings.runtime.kernel", defaultValue: "Kernel"),
+        LazyVStack(spacing: UI.Layout.Spacing.l) {
+            UI.Panel.Section(header: AppText.string("settings.runtime.kernel", defaultValue: "Kernel"),
                          footer: AppText.string("settings.runtime.kernel.footer", defaultValue: "Downloads and sets the recommended kernel as the default. May prompt for your administrator password - handled by the container CLI; Contained never sees it.")) {
-                PanelRow(title: AppText.string("settings.runtime.recommendedKernel", defaultValue: "Recommended kernel")) {
+                UI.Panel.Row(title: AppText.string("settings.runtime.recommendedKernel", defaultValue: "Recommended kernel")) {
                     Button("Install…") { confirmingKernel = true }
                 }
                 revealCLIHint("container system kernel set --recommended")
             }
 
-            PanelSection(header: AppText.string("settings.runtime.localDNSDomains", defaultValue: "Local DNS domains"),
+            UI.Panel.Section(header: AppText.string("settings.runtime.localDNSDomains", defaultValue: "Local DNS domains"),
                          footer: AppText.string("settings.runtime.localDNSDomains.footer", defaultValue: "Creating or deleting a domain may prompt for your administrator password - handled by the container CLI.")) {
                 if dnsDomains.isEmpty {
                     Text("No local DNS domains.")
-                        .foregroundStyle(.secondary)
+                        .designSecondaryValueStyle()
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     ForEach(dnsDomains, id: \.self) { domain in
-                        HStack {
-                            Text(domain).font(.system(.callout, design: .monospaced))
-                            Spacer()
+                        UI.List.MetadataRow(systemImage: "network",
+                                          title: domain,
+                                          isMonospaced: true) {
                             Button(role: .destructive) { deletingDomain = domain } label: {
                                 Image(systemName: "trash")
                             }
@@ -48,21 +48,21 @@ struct RuntimeTab: View {
             }
 
             if let props = app.properties {
-                PanelSection(header: AppText.string("settings.runtime.resources", defaultValue: "Runtime resources"),
+                UI.Panel.Section(header: AppText.string("settings.runtime.resources", defaultValue: "Runtime resources"),
                              footer: AppText.string("settings.runtime.resources.footer", defaultValue: "Read-only - machine resources are the denominator for machine-normalized stats. Defaults apply when a container or build doesn't specify its own resources.")) {
                     if let d = props.container {
-                        if let c = d.cpus { PanelRow(title: AppText.string("settings.runtime.defaultCPUs", defaultValue: "Default CPUs")) { Text("\(c)").foregroundStyle(.secondary) } }
-                        if let m = d.memory { PanelRow(title: AppText.string("settings.runtime.defaultMemory", defaultValue: "Default memory")) { Text(m).foregroundStyle(.secondary) } }
+                        if let c = d.cpus { UI.Panel.Row(title: AppText.string("settings.runtime.defaultCPUs", defaultValue: "Default CPUs")) { Text("\(c)").designSecondaryValueStyle() } }
+                        if let m = d.memory { UI.Panel.Row(title: AppText.string("settings.runtime.defaultMemory", defaultValue: "Default memory")) { Text(m).designSecondaryValueStyle() } }
                     }
                     if let machine = props.machine {
-                        if let c = machine.cpus { PanelRow(title: AppText.string("settings.runtime.machineCPUs", defaultValue: "Machine CPUs")) { Text("\(c)").foregroundStyle(.secondary) } }
-                        if let m = machine.memory { PanelRow(title: AppText.string("settings.runtime.machineMemory", defaultValue: "Machine memory")) { Text(m).foregroundStyle(.secondary) } }
+                        if let c = machine.cpus { UI.Panel.Row(title: AppText.string("settings.runtime.machineCPUs", defaultValue: "Machine CPUs")) { Text("\(c)").designSecondaryValueStyle() } }
+                        if let m = machine.memory { UI.Panel.Row(title: AppText.string("settings.runtime.machineMemory", defaultValue: "Machine memory")) { Text(m).designSecondaryValueStyle() } }
                     }
                     if let b = props.build {
-                        if let img = b.image { PanelRow(title: AppText.string("settings.runtime.builderImage", defaultValue: "Builder image")) { Text(img).foregroundStyle(.secondary) } }
-                        if let r = b.rosetta { PanelRow(title: AppText.string("settings.runtime.builderRosetta", defaultValue: "Builder Rosetta")) { Text(r ? "On" : "Off").foregroundStyle(.secondary) } }
+                        if let img = b.image { UI.Panel.Row(title: AppText.string("settings.runtime.builderImage", defaultValue: "Builder image")) { Text(img).designSecondaryValueStyle() } }
+                        if let r = b.rosetta { UI.Panel.Row(title: AppText.string("settings.runtime.builderRosetta", defaultValue: "Builder Rosetta")) { Text(r ? "On" : "Off").designSecondaryValueStyle() } }
                     }
-                    if let k = props.kernel, let path = k.binaryPath { PanelRow(title: AppText.string("settings.runtime.kernel", defaultValue: "Kernel")) { Text(path).foregroundStyle(.secondary) } }
+                    if let k = props.kernel, let path = k.binaryPath { UI.Panel.Row(title: AppText.string("settings.runtime.kernel", defaultValue: "Kernel")) { Text(path).designSecondaryValueStyle() } }
                 }
             }
         }
@@ -89,13 +89,14 @@ struct RuntimeTab: View {
     @ViewBuilder
     private func revealCLIHint(_ command: String) -> some View {
         if app.settings.revealCLI {
-            HStack(spacing: DesignTokens.Space.s) {
-                Image(systemName: "terminal").foregroundStyle(.secondary)
-                Text(command).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
-                    .lineLimit(1).truncationMode(.middle)
-                Spacer()
-                Button { copyToPasteboard(command) } label: { Image(systemName: "doc.on.doc") }
-                    .buttonStyle(.borderless).foregroundStyle(.secondary).help("Copy command")
+            UI.List.MetadataRow(systemImage: "terminal",
+                              title: command,
+                              isMonospaced: true) {
+                Button { copyToPasteboard(command) } label: {
+                    UI.Symbol.Image(systemName: "doc.on.doc")
+                }
+                    .buttonStyle(.borderless)
+                    .help(AppText.copyCommand)
             }
         }
     }

@@ -1,6 +1,6 @@
 import SwiftUI
-import ContainedNavigation
-import ContainedDesignSystem
+import ContainedUX
+import ContainedUI
 import SwiftData
 import AppKit
 import ContainedCore
@@ -73,8 +73,8 @@ struct CreationFlow: View {
     @Namespace private var tileNamespace
 
     private var springAnim: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
-    private var optionPageHeight: CGFloat { DesignOptionTile.defaultHeight + (DesignTokens.Space.s * 2) }
-    private var twoRowOptionPageHeight: CGFloat { optionPageHeight + DesignOptionTile.defaultHeight + DesignTokens.Space.s }
+    private var optionPageHeight: CGFloat { UI.Control.OptionTile.defaultHeight + (UI.Layout.Spacing.s * 2) }
+    private var twoRowOptionPageHeight: CGFloat { optionPageHeight + UI.Control.OptionTile.defaultHeight + UI.Layout.Spacing.s }
     private var menuSize: CGSize { CGSize(width: 760, height: optionPageHeight) }
     private var chooserSize: CGSize { CGSize(width: 640, height: twoRowOptionPageHeight) }
 
@@ -330,16 +330,16 @@ struct CreationFlow: View {
         // These pages own their own scrolling (search results, build workspace, template lists), so the
         // scaffold runs in non-scrolling mode — unified chrome without nesting scroll views. Size is set
         // by `CreationFlow.body`'s `morphPanelSize(size(for:))`.
-        DesignPanelScaffold(width: 0, scrolls: false) {
+        UI.Panel.Scaffold(width: 0, scrolls: false) {
             VStack(spacing: 0) {
-                PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
-                    DesignActionGroup(leadingAction(leading))
+                UI.Panel.Header(symbol: symbol, title: title, subtitle: subtitle) {
+                    UI.Action.Group(leadingAction(leading))
                 }
                 Divider()
             }
         } content: {
             content()
-                .padding(DesignTokens.Space.s)
+                .padding(UI.Layout.Spacing.s)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: contentAlignment)
         }
     }
@@ -347,39 +347,39 @@ struct CreationFlow: View {
     private func contentOnlyScaffold<C: View>(contentAlignment: Alignment = .topLeading,
                                               @ViewBuilder content: @escaping () -> C) -> some View {
         content()
-            .padding(DesignTokens.Space.s)
+            .padding(UI.Layout.Spacing.s)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: contentAlignment)
     }
 
-    private func leadingAction(_ leading: Leading) -> DesignAction {
+    private func leadingAction(_ leading: Leading) -> UI.Action.Item {
         switch leading {
         case .close:
-            return DesignAction(systemName: "xmark", help: AppText.cancel, isCancel: true) { onClose() }
+            return UI.Action.Item(systemName: "xmark", help: AppText.cancel, isCancel: true) { onClose() }
         case .back(let action):
-            return DesignAction(systemName: "chevron.left", help: AppText.back, action: action)
+            return UI.Action.Item(systemName: "chevron.left", help: AppText.back, action: action)
         }
     }
 
     private func gridScaffold<C: View>(@ViewBuilder content: () -> C) -> some View {
         content()
-            .padding(DesignTokens.Space.s)
+            .padding(UI.Layout.Spacing.s)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func optionStack<C: View>(@ViewBuilder content: @escaping () -> C) -> some View {
-        DesignOptionStack(spacing: DesignTokens.Space.s) {
+        UI.Control.OptionStack(spacing: UI.Layout.Spacing.s) {
             content()
         }
     }
 
     private func optionRow<C: View>(@ViewBuilder content: () -> C) -> some View {
-        HStack(spacing: DesignTokens.Space.s) { content() }
+        HStack(spacing: UI.Layout.Spacing.s) { content() }
     }
 
     private func box(symbol: String, title: String, subtitle: String? = nil,
                      matchedID: String? = nil,
                      enabled: Bool = true, action: @escaping () -> Void) -> some View {
-        DesignOptionTile(symbol: symbol, title: title, subtitle: subtitle,
+        UI.Control.OptionTile(symbol: symbol, title: title, subtitle: subtitle,
                         enabled: enabled,
                         matchedID: matchedID,
                         matchedNamespace: matchedID == nil ? nil : tileNamespace,
@@ -447,11 +447,11 @@ struct CreationFlow: View {
         case .network:   return PanelSize.resource
         case .volume:    return PanelSize.resource
         case .build:     return PanelSize.build
-        case .configure: return DesignTokens.SheetSize.form
+        case .configure: return UI.Panel.SheetSize.form
         }
     }
 
-    private func placement(for page: Page) -> MorphPanelPlacement {
+    private func placement(for page: Page) -> UX.Panel.Placement {
         .anchored
     }
 

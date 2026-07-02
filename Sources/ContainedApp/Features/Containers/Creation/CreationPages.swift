@@ -1,5 +1,5 @@
 import SwiftUI
-import ContainedDesignSystem
+import ContainedUI
 import ContainedCore
 
 struct CreationNetworkFields: View {
@@ -14,21 +14,21 @@ struct CreationNetworkFields: View {
                              title: networkName,
                              subtitle: networkSubtitle,
                              command: previewCommand) {
-            PanelSection(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
-                PanelField(label: AppText.string("creation.name", defaultValue: "Name"),
+            UI.Panel.Section(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
+                UI.Panel.Field(label: AppText.string("creation.name", defaultValue: "Name"),
                            info: AppText.string("creation.network.name.info", defaultValue: "A readable name used by containers with `--network`."),
                            error: nameError) {
                     TextField("", text: $name, prompt: Text("my-network"))
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(submitIfReady)
                 }
-                PanelField(label: AppText.string("creation.subnet", defaultValue: "Subnet"),
+                UI.Panel.Field(label: AppText.string("creation.subnet", defaultValue: "Subnet"),
                            info: AppText.string("creation.network.subnet.info", defaultValue: "Optional CIDR range for the network, for example `10.0.0.0/24`.")) {
                     TextField("", text: $subnet, prompt: Text("optional, e.g. 10.0.0.0/24"))
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(submitIfReady)
                 }
-                PanelToggleRow(title: AppText.string("creation.network.internalOnly", defaultValue: "Internal only"),
+                UI.Panel.ToggleRow(title: AppText.string("creation.network.internalOnly", defaultValue: "Internal only"),
                                subtitle: AppText.string("creation.network.internalOnly.subtitle", defaultValue: "Restrict containers on this network from external access."),
                                isOn: $internalOnly)
             }
@@ -53,7 +53,7 @@ struct CreationNetworkFields: View {
         return parts.joined(separator: "  ·  ")
     }
     private var previewCommand: [String] {
-        ContainerCommands.networkCreate(name: trimmedName.isEmpty ? "<name>" : trimmedName,
+        Core.Command.networkCreatePreview(name: trimmedName.isEmpty ? "<name>" : trimmedName,
                                         subnet: trimmedSubnet.isEmpty ? nil : trimmedSubnet,
                                         internalOnly: internalOnly)
     }
@@ -75,15 +75,15 @@ struct CreationVolumeFields: View {
                              title: volumeName,
                              subtitle: volumeSubtitle,
                              command: previewCommand) {
-            PanelSection(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
-                PanelField(label: AppText.string("creation.name", defaultValue: "Name"),
+            UI.Panel.Section(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
+                UI.Panel.Field(label: AppText.string("creation.name", defaultValue: "Name"),
                            info: AppText.string("creation.volume.name.info", defaultValue: "A persistent storage name you can mount into containers."),
                            error: nameError) {
                     TextField("", text: $name, prompt: Text("my-volume"))
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(submitIfReady)
                 }
-                PanelField(label: AppText.string("creation.volume.size", defaultValue: "Size"),
+                UI.Panel.Field(label: AppText.string("creation.volume.size", defaultValue: "Size"),
                            info: AppText.string("creation.volume.size.info", defaultValue: "Optional runtime-specific size hint, such as `10G`. Leave blank for default.")) {
                     TextField("", text: $size, prompt: Text("optional, e.g. 10G"))
                         .textFieldStyle(.roundedBorder)
@@ -107,7 +107,7 @@ struct CreationVolumeFields: View {
     private var volumeName: String { trimmedName.isEmpty ? AppText.string("creation.volume.new", defaultValue: "New volume") : trimmedName }
     private var volumeSubtitle: String { trimmedSize.isEmpty ? AppText.string("creation.volume.defaultSize", defaultValue: "default size") : trimmedSize }
     private var previewCommand: [String] {
-        ContainerCommands.volumeCreate(name: trimmedName.isEmpty ? "<name>" : trimmedName,
+        Core.Command.volumeCreatePreview(name: trimmedName.isEmpty ? "<name>" : trimmedName,
                                        size: trimmedSize.isEmpty ? nil : trimmedSize)
     }
 
@@ -123,31 +123,20 @@ struct CreationLocalImagesContent: View {
     var onSelect: (RunSpec) -> Void
 
     var body: some View {
-        LazyVStack(spacing: DesignTokens.Space.m) {
-            DesignInputSurface {
-                HStack(spacing: DesignTokens.Space.s) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                    TextField(AppText.string("creation.localImages.filter", defaultValue: "Filter local images"), text: $query)
-                        .textFieldStyle(.plain)
-                    if !query.isEmpty {
-                        Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                            .buttonStyle(.plain).foregroundStyle(.secondary)
-                    }
-                }
-            }
+        LazyVStack(spacing: UI.Layout.Spacing.m) {
+            UI.Control.SearchField(text: $query,
+                              prompt: AppText.string("creation.localImages.filter", defaultValue: "Filter local images"),
+                              clearLabel: AppText.clear)
 
             if filteredLocalImages.isEmpty {
-                ContentUnavailableView {
-                    Label(AppText.string("creation.localImages.noMatches", defaultValue: "No matching images"), systemImage: "square.stack.3d.up")
-                } description: {
-                    Text(query.isEmpty
-                         ? AppText.string("creation.localImages.empty", defaultValue: "Pull or build an image first.")
-                         : AppText.string("creation.localImages.tryDifferentFilter", defaultValue: "Try a different filter."))
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                UI.State.Empty(AppText.string("creation.localImages.noMatches", defaultValue: "No matching images"),
+                                 systemImage: "square.stack.3d.up",
+                                 description: query.isEmpty
+                                    ? AppText.string("creation.localImages.empty", defaultValue: "Pull or build an image first.")
+                                    : AppText.string("creation.localImages.tryDifferentFilter", defaultValue: "Try a different filter."))
             } else {
                 ScrollView {
-                    LazyVStack(spacing: DesignTokens.Space.xs) {
+                    LazyVStack(spacing: UI.Layout.Spacing.xs) {
                         ForEach(filteredLocalImages) { image in
                             CreationLocalImageRow(image: image) {
                                 onSelect(RecommendedImage.spec(for: image.reference))
@@ -158,7 +147,7 @@ struct CreationLocalImagesContent: View {
                 }
             }
         }
-        .task { await app.refreshImagesIfStale() }
+        .task { await app.refreshImagesIfNeeded() }
     }
 
     private var filteredLocalImages: [ContainedCore.ImageResource] {
@@ -176,18 +165,18 @@ struct CreationPastedComposeContent: View {
     var onImport: () -> Void
 
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: DesignTokens.Space.m) {
-            DesignInputSurface(horizontalPadding: DesignTokens.Space.s,
-                               verticalPadding: DesignTokens.Space.s,
+        LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.m) {
+            UI.Surface.Input(horizontalPadding: UI.Layout.Spacing.s,
+                               verticalPadding: UI.Layout.Spacing.s,
                                minHeight: 260) {
                 TextEditor(text: $text)
-                    .font(.system(.callout, design: .monospaced))
+                    .designMonospacedCallout()
                     .scrollContentBackground(.hidden)
             }
 
             HStack {
                 Spacer()
-            DesignTextActionButton(title: AppText.string("common.import", defaultValue: "Import"),
+            UI.Action.TextButton(title: AppText.string("common.import", defaultValue: "Import"),
                                        systemName: "arrow.down.doc",
                                        prominence: .prominent,
                                        isEnabled: !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
@@ -204,7 +193,7 @@ struct CreationTemplatesContent: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: DesignTokens.Space.s) {
+            LazyVStack(spacing: UI.Layout.Spacing.s) {
                 ForEach(templates) { template in
                     CreationChoiceCard(symbol: "bookmark",
                                        title: template.name,
@@ -226,17 +215,17 @@ private struct CreationSubmitBar: View {
     var action: () -> Void
 
     var body: some View {
-        HStack(spacing: DesignTokens.Space.s) {
+        HStack(spacing: UI.Layout.Spacing.s) {
             Spacer()
-            if working { ProgressView().controlSize(.small) }
-            DesignTextActionButton(title: title,
+            if working { UI.State.ProgressIndicator() }
+            UI.Action.TextButton(title: title,
                                    systemName: systemImage,
                                    prominence: .prominent,
                                    isEnabled: canSubmit && !working) {
                 action()
             }
         }
-        .padding(DesignTokens.Space.s)
+        .padding(UI.Layout.Spacing.s)
         .background(.clear)
     }
 }
@@ -250,18 +239,18 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
     @ViewBuilder var footer: () -> Footer
 
     var body: some View {
-        LazyVStack(spacing: DesignTokens.Space.m) {
-            DesignCard(size: .small,
+        LazyVStack(spacing: UI.Layout.Spacing.m) {
+            UI.Card.Scaffold(size: .small,
                          elevated: false,
                          title: title,
                          subtitle: subtitle) {
-                DesignCardIconChip(symbol: symbol, tint: .accentColor)
+                UI.Card.IconChip(symbol: symbol, tint: .accentColor)
             } titleAccessory: {
                 EmptyView()
             } subtitleAccessory: {
                 EmptyView()
             } headerAccessory: {
-                DesignBadgeText(text: AppText.string("creation.badge.new", defaultValue: "new"), font: .caption2.weight(.semibold))
+                UI.Badge.Text(text: AppText.string("creation.badge.new", defaultValue: "new"), font: .caption2.weight(.semibold))
             } bodyContent: {
                 EmptyView()
             } footerLeading: {
@@ -274,7 +263,7 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
 
             fields()
 
-            CommandPreviewBar(command: command,
+            UI.Command.PreviewBar(command: command,
                               copyHelp: AppText.copyCommand,
                               copiedAccessibilityLabel: AppText.copied)
                 .frame(maxWidth: .infinity)
@@ -309,19 +298,19 @@ private struct CreationChoiceCard: View {
     var action: () -> Void
 
     var body: some View {
-        DesignCard(size: .small,
+        UI.Card.Scaffold(size: .small,
                      elevated: false,
                      onTap: action,
                      title: title,
                      subtitle: subtitle,
                      subtitleStyle: .monospaced) {
-            DesignCardIconChip(symbol: symbol, tint: .accentColor)
+            UI.Card.IconChip(symbol: symbol, tint: .accentColor)
         } titleAccessory: {
             EmptyView()
         } subtitleAccessory: {
             EmptyView()
         } headerAccessory: {
-            DesignListRowChevron()
+            UI.List.RowChevron()
         } bodyContent: {
             EmptyView()
         } footerLeading: {

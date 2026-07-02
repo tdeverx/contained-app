@@ -1,5 +1,5 @@
 import SwiftUI
-import ContainedDesignSystem
+import ContainedUI
 import ContainedCore
 
 /// A palette search scope. Pins a chip to the search field and searches in-place instead of leaving
@@ -96,14 +96,14 @@ struct PaletteItem: Identifiable {
                                      keywords: ["registry", "pull", "dockerhub", "image"],
                                      kind: .search, keepsPaletteOpen: true,
                                      icon: "globe", tint: .accentColor) {
-                ui.paletteScope = .dockerHub
+                ui.search.scope = .dockerHub
             })
         }
         items.append(PaletteItem(title: AppText.paletteSearchLocalImages, subtitle: AppText.paletteScopeSubtitle,
                                  keywords: ["image", "tag", "local", "filter"],
                                  kind: .search, keepsPaletteOpen: true,
                                  icon: "square.stack.3d.up", tint: .accentColor) {
-            ui.paletteScope = .localImages
+            ui.search.scope = .localImages
         })
         // Page / global actions.
         items.append(PaletteItem(title: AppText.paletteRefresh,
@@ -272,8 +272,8 @@ struct PaletteItem: Identifiable {
                                  tint: .secondary) {
             app.settings.showInfoTips.toggle()
         })
-        for tint in DesignTint.allCases {
-            items.append(PaletteItem(title: AppText.setDesignTintTitle(tint.localizedDisplayName),
+        for tint in UI.Theme.Tint.allCases {
+            items.append(PaletteItem(title: AppText.setThemeTintTitle(tint.localizedDisplayName),
                                      subtitle: AppText.paletteAppearanceSubtitle,
                                      keywords: ["accent", "color", "theme", "tint", tint.rawValue] + tint.localizedSearchAliases,
                                      kind: .settings,
@@ -446,7 +446,7 @@ enum PaletteItemVisual {
     case imageTag(String, groupID: String)
     case volume(VolumeResource)
     case network(NetworkResource)
-    case tint(DesignTint)
+    case tint(UI.Theme.Tint)
 }
 
 private extension SettingsStore {

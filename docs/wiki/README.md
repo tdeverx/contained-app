@@ -1,6 +1,6 @@
 # Wiki Mirror Note
 
-The old flat wiki mirror moved into structured docs:
+The wiki mirror is maintained through structured docs:
 
 - [`docs/app`](../app)
 - [`docs/features`](../features)

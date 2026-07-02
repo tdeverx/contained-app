@@ -18,7 +18,7 @@
 - Removed user-facing JSON Inspect pages and row actions from containers, images, networks, and volumes; image details now use expanded-card pages for Tags, History, Add Tag, and Push.
 - Made mini CPU/memory chip percentages preserve tiny sub-1% values so real streamed CPU changes do not disappear behind whole-percent rounding.
 - Made CPU/memory percentage readouts consistent across cards, live stats, history charts, and mini chips: whole percentages stay clean, while only sub-1% values show the decimals needed.
-- Hardened embedded terminal teardown so rapid card/tab switching does not leave stale `container exec --tty` children behind.
+- Hardened embedded terminal teardown so rapid card/tab switching cleans up `container exec --tty` children.
 - Coalesced image-panel appearance refreshes so page/panel navigation does not force duplicate image-list reloads while users click through the UI.
 - Reduced runtime layout churn by replacing the container grid's bound card-frame preference with coalesced frame tracking and clamping morph panel geometry before it reaches SwiftUI frames.
 - Skipped empty changelog sections in the in-app What's New parser so nightly builds do not render a blank "Changes Since Last Nightly" block before full release notes.

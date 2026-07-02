@@ -3,11 +3,8 @@
 
 # Core app areas.
 /Packages/ContainedCore/ @tdeverx
-/Packages/ContainedRuntime/ @tdeverx
-/Packages/AppleContainerRuntime/ @tdeverx
-/Packages/ContainedDesignSystem/ @tdeverx
-/Packages/ContainedNavigation/ @tdeverx
-/Packages/ContainedPreviewSupport/ @tdeverx
+/Packages/ContainedUI/ @tdeverx
+/Packages/ContainedUX/ @tdeverx
 /Sources/Contained/ @tdeverx
 /Sources/ContainedApp/ @tdeverx
 /Tests/ @tdeverx

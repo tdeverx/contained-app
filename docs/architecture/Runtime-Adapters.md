@@ -1,93 +1,74 @@
-# Runtime Adapters
+# Runtime Orchestration
 
-Contained's app-facing runtime boundary is split into shared contracts and
-concrete adapters:
+Contained's app-facing backend boundary is `ContainedCore`.
 
-- `ContainedRuntime` owns `ContainerRuntimeClient`, `RuntimeDescriptor`,
-  `RuntimeCapability`, runtime translation plans, `CommandError`, and command
-  execution primitives.
-- `AppleContainerRuntime` owns the current Apple `container` CLI adapter:
-  `AppleContainerClient`, `AppleContainerCLILocator`, Apple create/import/default
-  translation, and the Apple table stats parser.
-- `ContainedCore` owns pure models, JSON decoding, compose parsing, decision
-  helpers, open-ended `RuntimeKind`, runtime-neutral create/recreate request
-  fields, and `ContainerCommands` argv builders.
-- `Sources/ContainedApp` owns app state, settings, stores, SwiftUI, SwiftData, and
-  app-specific presentation mapping.
+- `Core.Orchestrator` is the only backend object app stores own.
+- `Core.Runtime` owns runtime descriptors, capabilities, selected-runtime checks, and unsupported-operation errors.
+- `Core.Compose` owns Compose as a cross-runtime interchange format. Yams is internal to `Core.Compose.YAML`.
+- `Core.Container` owns canonical create/edit/import/export models.
+- `Core.Command` owns command previews, process execution, and host invocations.
+- Core-internal adapters, beginning with `Runtimes/AppleContainer`, translate canonical models to backend-specific behavior.
+
+The app owns settings, routing, persistence, localization, Activity presentation,
+and user decisions. It does not create adapter clients, call Apple CLI locators,
+or assemble backend argv.
 
 ## Adapter Shape
 
-Runtime adapters are sibling SwiftPM targets. The current adapter is
-`AppleContainerRuntime`; future engines such as Docker-compatible, Podman,
-Lima-backed, remote, or other runtimes should be added as new adapter targets
-that conform to `ContainerRuntimeClient`.
+Runtime adapters are folders inside `ContainedCore`, not standalone app
+dependencies. The current adapter is Apple container. Future engines such as
+Docker-compatible, Podman, Lima-backed, remote, or other runtimes should be
+added as sibling adapter folders under Core and registered with
+`Core.Orchestrator`.
 
-Do not add backend `switch` statements to SwiftUI views or stores. Stores should
-depend on `any ContainerRuntimeClient`, while bootstrap/configuration chooses the
-concrete adapter.
+Do not add backend `switch` statements to SwiftUI views or stores. Stores call
+Core. Core decides which adapter handles a selected runtime and returns typed
+errors or unavailable plans when a capability is missing.
 
-`RuntimeKind` is an open raw-value type, not a closed enum. New adapters can
-define their own stable identifiers without editing the shared runtime package.
-Use `RuntimeCapability` and `RuntimeDescriptor` to advertise support before a UI
-route enables a command.
+`Core.Runtime.Kind` is an open raw-value type, not a closed enum. New adapters
+can define stable identifiers without forcing app-store or SwiftUI changes. Use
+`Core.Runtime.Capability` and `Core.Runtime.Descriptor` to advertise support
+before a UI route enables a command.
 
-## Create, Import, And Core Choice
+## Create, Import, Export, And Core Choice
 
-The global Run/Edit form is app-owned form state, but it now round-trips through
-`ContainerCreateRequest`, a runtime-neutral model in `ContainedCore`. Each
-request carries its intended `RuntimeKind`, so the core choice is per-container
-or per-import item rather than a global app setting.
+The global Run/Edit form is app-owned form state, but it round-trips through
+`Core.Container.CreateRequest`, a runtime-neutral model. Each request carries
+its intended runtime, so the core choice is per-container or per-import item
+rather than a global app setting.
 
-The UI currently shows Apple container as the only core and disables the picker
-until another runtime descriptor is registered. The disabled control is still
+Core translates into and out of the shared model:
+
+- `previewCreateCommand(for:)` returns the command preview for the selected runtime.
+- `createContainer(_:)` and `recreateContainer(originalID:request:)` create from shared fields.
+- `translateCompose(_:baseDirectory:runtimeKind:)` turns parsed Compose projects into standardized create requests plus warnings.
+- `imageDefaults(for:in:)` lets the selected runtime provide image-specific defaults for the same form fields.
+- `planMigration(_:to:)` and `coreSwitchPlan(for:source:to:)` describe future export/import migration before the app enables a cross-core swap.
+
+The UI currently shows Apple container as the only enabled core and disables the
+picker until another runtime descriptor is registered. The disabled control is
 intentional: it proves where future Docker-compatible or other adapters will
 plug in without making Apple-specific fields the app/backend boundary.
 
-Adapters translate into and out of the shared model:
+## Compose
 
-- `previewCreateCommand(for:)` returns the command preview for the selected
-  runtime.
-- `createContainer(_:)` and `recreateContainer(originalID:request:)` create from
-  the shared fields.
-- `translateCompose(_:baseDirectory:)` turns parsed Compose projects into one
-  or more standardized create requests plus warnings.
-- `imageDefaults(for:in:)` lets an adapter provide image-specific defaults for
-  the same form fields.
-- `coreSwitchPlan(for:to:)` describes future export/import migration before the
-  app enables a cross-core swap.
+Compose is a Core-level interchange format, not a Docker-only package boundary.
+Docker, Podman, and nerdctl-style engines may support native Compose execution
+or export later. Apple container does not execute Compose natively, but Core can
+parse Compose and translate services into Apple container create specs.
 
-`ContainerCommands` remains the Apple argv source of truth. The Apple adapter
-uses it to translate `ContainerCreateRequest` into `container run` today. Future
-adapters should implement their own translator without adding backend `switch`
-statements to SwiftUI views.
+Dialect differences belong under `Core.Compose.Dialect`; YAML parsing/writing
+belongs under `Core.Compose.YAML` and remains the only place that imports Yams.
+Public APIs expose Core models and typed plans, never Yams types.
 
-## Error Boundary
+## Errors And Stats
 
-Runtime and core packages throw typed errors. They expose stable package names,
-error codes, and machine-readable context through `ContainedPackageError`; they
-do not decide how those failures are displayed to users.
+Core throws typed display-neutral errors with stable package codes/context. The
+app maps them through `AppErrorPresentation` and `AppText` before showing
+toasts, inline messages, alerts, or Activity history.
 
-The app target maps package errors through `AppErrorPresentation` and `AppText`.
-That keeps toast copy, inline messages, alerts, and Activity history wording in
-`Sources/ContainedApp`, while reusable packages remain suitable for other hosts.
-Backend stderr is not translated wholesale; non-zero CLI output is preserved as
-runtime-provided detail unless the adapter maps it to a known typed case.
-
-When adding a new adapter or package error, prefer a specific error case with a
-stable `packageErrorCode` over throwing a preformatted English sentence.
-
-## Stats
-
-The shared runtime protocol exposes typed `RuntimeStatsSnapshot` batches from
-`streamStats(ids:)`. Apple `container` currently provides live stats only as an
-ANSI table stream, so `AppleContainerRuntime` parses that table internally.
-Future adapters should publish the same snapshot shape from their own native
-source, such as an engine API stream, without leaking transport details into the
-app.
-
-## Low-Level Commands
-
-`runContainer(arguments:)` remains available for compatibility and direct
-Apple-container affordances, but Run/Edit creation should use
-`ContainerCreateRequest` through the selected runtime client. Do not assemble
-backend argv in SwiftUI or stores.
+Core exposes typed `Core.Metrics.RuntimeStatsSnapshot` batches from
+`streamStats(ids:)`. Apple container currently provides live stats only as an
+ANSI table stream, so the Apple adapter parses that table internally. Future
+adapters should publish the same snapshot shape from their own native source
+without leaking transport details into the app.

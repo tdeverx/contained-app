@@ -1,5 +1,5 @@
 import SwiftUI
-import ContainedDesignSystem
+import ContainedUI
 import AppKit
 import ContainedCore
 
@@ -9,29 +9,29 @@ struct AboutTab: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        LazyVStack(spacing: DesignTokens.Space.l) {
-            PanelSection {
-                HStack(spacing: DesignTokens.Space.m) {
+        LazyVStack(spacing: UI.Layout.Spacing.l) {
+            UI.Panel.Section {
+                HStack(spacing: UI.Layout.Spacing.m) {
                     Image(nsImage: NSApp.applicationIconImage)
                         .resizable()
-                        .frame(width: DesignTokens.IconSize.appIcon, height: DesignTokens.IconSize.appIcon)
-                    VStack(alignment: .leading, spacing: DesignTokens.Space.xxs) {
-                        Text("Contained").font(.title3.weight(.semibold))
-                        Text("Version \(appVersion)").font(.callout).foregroundStyle(.secondary)
+                        .frame(width: UI.Control.Size.appIcon, height: UI.Control.Size.appIcon)
+                    VStack(alignment: .leading, spacing: UI.Layout.Spacing.xxs) {
+                        Text("Contained").designTitleLabelStyle()
+                        Text("Version \(appVersion)").designSecondaryCallout()
                         Text("A native macOS UI for Apple’s container runtime.")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .designSecondaryCaption()
                     }
                     Spacer()
                 }
             }
 
-            PanelSection(header: AppText.sectionSettingsRuntime) {
-                PanelRow(title: AppText.string("settings.about.containerCLI", defaultValue: "Container CLI")) { Text(app.cliVersion ?? "—").foregroundStyle(.secondary) }
-                PanelRow(title: AppText.string("settings.about.apiServer", defaultValue: "API server")) { Text(app.systemStatus?.apiServerVersion ?? "—").foregroundStyle(.secondary) }
+            UI.Panel.Section(header: AppText.sectionSettingsRuntime) {
+                UI.Panel.Row(title: AppText.string("settings.about.containerCLI", defaultValue: "Container CLI")) { Text(app.cliVersion ?? "—").designSecondaryValueStyle() }
+                UI.Panel.Row(title: AppText.string("settings.about.apiServer", defaultValue: "API server")) { Text(app.systemStatus?.apiServerVersion ?? "—").designSecondaryValueStyle() }
             }
 
-            PanelSection {
-                PanelRow(title: AppText.string("settings.about.copyright", defaultValue: "Copyright")) { Text("© 2026 Contained").foregroundStyle(.secondary) }
+            UI.Panel.Section {
+                UI.Panel.Row(title: AppText.string("settings.about.copyright", defaultValue: "Copyright")) { Text("© 2026 Contained").designSecondaryValueStyle() }
             }
         }
     }

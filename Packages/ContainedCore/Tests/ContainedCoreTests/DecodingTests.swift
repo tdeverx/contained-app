@@ -29,16 +29,13 @@ struct DecodingTests {
         #expect(c.configuration.initProcess.environment.contains("FOO=bar"))
         #expect(c.configuration.publishedPorts.first?.hostPort == 18080)
         #expect(c.configuration.publishedPorts.first?.containerPort == 80)
-        // Legacy personalization labels still decode so older containers can migrate locally.
-        #expect(c.tintLabel == "teal")
-        #expect(c.iconLabel == "globe")
+        #expect(c.configuration.labels.isEmpty)
         #expect(c.startedDate != nil)
         #expect(c.status.networks.first?.ipv4Address == "192.168.64.3/24")
     }
 
     @Test func decodesMultiContainerListWithVirtiofsMounts() throws {
-        // Live output with pre-existing containers exposed an enum-as-object mount `type`
-        // ({"virtiofs":{}}) that the initial String model couldn't decode.
+        // Live output can represent mount `type` as an enum-like object such as {"virtiofs":{}}.
         let snapshots = try ContainerJSON.decode([ContainerSnapshot].self, from: try Fixture.data("list-current"))
         #expect(snapshots.count == 4)
         let npm = try #require(snapshots.first { $0.id == "nginx-proxy-manager-latest" })

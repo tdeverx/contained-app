@@ -50,7 +50,7 @@ Prefer one committed fragment per PR or user-facing change, not one file per com
 CHANGES=updates/changes.md CHANNEL=beta VERSION_VALUE="$VERSION" ./scripts/release-body.sh
 ```
 
-Keep `Unreleased` above released version sections for compatibility, but prefer
+Keep `Unreleased` above released version sections for release tooling, but prefer
 `changes/unreleased/` fragments for current PR/build notes. If no explicit
 `CHANGES` or `CHANGES_DIR` source is supplied, `scripts/changes-since-release.sh`
 first reads the previous matching appcast item, extracts its commit SHA, and
@@ -99,7 +99,7 @@ Then:
 
 `.github/workflows/beta.yml` and `.github/workflows/stable.yml` build promoted branches, retain the build number for the matching nightly commit when available, write their own branch appcast, and merge the promoted appcast item into the nightly feed. They upsert GitHub release assets on reruns so a retry refreshes the same tag instead of failing on an existing release. All workflows ask `scripts/version-info.sh` for the build number.
 
-After appcast generation, workflows validate the branch feed before committing it. Beta and Stable workflows validate the promoted nightly feed inside the temporary nightly worktree before pushing the appcast-only `[skip ci]` commit.
+After appcast generation, workflows validate the branch feed before committing it. Beta and Stable workflows validate the promoted nightly feed inside the scratch nightly worktree before pushing the appcast-only `[skip ci]` commit.
 
 ## Notes
 

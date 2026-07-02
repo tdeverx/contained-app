@@ -1,5 +1,5 @@
 import SwiftUI
-import ContainedDesignSystem
+import ContainedUI
 import AppKit
 import ContainedCore
 
@@ -10,49 +10,49 @@ struct BootstrapView: View {
     @State private var starting = false
 
     var body: some View {
-        VStack(spacing: DesignTokens.Space.l) {
-            Image(systemName: icon)
-                .font(.system(size: 52))
-                .foregroundStyle(.tint)
-            Text(title).font(.title2.weight(.semibold))
-            Text(message)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 420)
-
+        UI.State.Hero(systemImage: icon, title: title, message: message) {
             actions
         }
-        .padding(DesignTokens.Space.xxl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
     private var actions: some View {
         switch app.bootstrap {
         case .serviceStopped:
-            Button {
+            UI.Action.TextButton(title: starting ? AppText.string("bootstrap.starting", defaultValue: "Starting...") : AppText.string("bootstrap.startService", defaultValue: "Start container service"),
+                                   systemName: "play.circle",
+                                   prominence: .prominent,
+                                   isEnabled: !starting) {
                 Task { starting = true; await app.startService(); starting = false }
-            } label: {
-                Label(starting ? "Starting…" : "Start container service", systemImage: "play.circle")
-                    .padding(.horizontal, DesignTokens.Space.s)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(starting)
         case .cliMissing:
-            HStack(spacing: DesignTokens.Space.m) {
-                Button { openReleases() } label: { Label("Get the CLI", systemImage: "arrow.down.circle") }
-                    .buttonStyle(.borderedProminent)
-                Button { locateCLI() } label: { Label("Locate binary…", systemImage: "folder") }
+            HStack(spacing: UI.Layout.Spacing.m) {
+                UI.Action.TextButton(title: AppText.string("bootstrap.getCLI", defaultValue: "Get the CLI"),
+                                       systemName: "arrow.down.circle",
+                                       prominence: .prominent,
+                                       action: openReleases)
+                UI.Action.TextButton(title: AppText.string("bootstrap.locateBinary", defaultValue: "Locate binary..."),
+                                       systemName: "folder",
+                                       action: locateCLI)
             }
-            Button("Try again") { Task { await app.retryBootstrap() } }.buttonStyle(.link)
+            UI.Action.TextButton(title: AppText.string("common.tryAgain", defaultValue: "Try again"),
+                                   systemName: "arrow.clockwise") {
+                Task { await app.retryBootstrap() }
+            }
         case .unsupported:
-            HStack(spacing: DesignTokens.Space.m) {
-                Button("Continue anyway") { Task { await app.continueUnsupported() } }
-                    .buttonStyle(.borderedProminent)
-                Button("Try again") { Task { await app.retryBootstrap() } }
+            HStack(spacing: UI.Layout.Spacing.m) {
+                UI.Action.TextButton(title: AppText.string("bootstrap.continueAnyway", defaultValue: "Continue anyway"),
+                                       systemName: "arrow.right",
+                                       prominence: .prominent) {
+                    Task { await app.continueUnsupported() }
+                }
+                UI.Action.TextButton(title: AppText.string("common.tryAgain", defaultValue: "Try again"),
+                                       systemName: "arrow.clockwise") {
+                    Task { await app.retryBootstrap() }
+                }
             }
         case .checking:
-            ProgressView()
+            UI.State.ProgressIndicator()
         case .ready:
             EmptyView()
         }

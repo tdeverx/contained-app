@@ -1,7 +1,6 @@
 import Foundation
 import Testing
 import ContainedCore
-import AppleContainerRuntime
 @testable import ContainedApp
 
 @Suite("RunSpec create requests + runtime mapping")
@@ -115,7 +114,7 @@ struct RunSpecTests {
         #expect(subsequence(["--publish-socket", "/tmp/app.sock:/run/app.sock"], in: args))
         #expect(subsequence(["--env", "KEY=val"], in: args))
         #expect(subsequence(["--label", "team=infra"], in: args))
-        // restart policy round-trips through the contained.restart label, but personalization never does
+        // Restart policy round-trips through the contained.restart label; personalization stays local.
         #expect(args.contains { $0.hasPrefix("contained.restart=") })
         #expect(!args.contains { $0.hasPrefix("contained.tint") || $0.hasPrefix("contained.icon") })
     }
@@ -138,8 +137,8 @@ struct RunSpecTests {
               interval: 10s
               retries: 5
         """
-        let project = try ComposeParser.parse(yaml, projectName: "demo")
-        let plan = AppleContainerCreateTranslator.composePlan(for: project, baseDirectory: nil)
+        let project = try Core.Compose.parse(yaml, projectName: "demo")
+        let plan = try core.translateCompose(project, baseDirectory: nil)
         let item = try #require(plan.items.first)
         let spec = RunSpec(request: item.request, healthCheck: item.healthCheck)
         #expect(spec.image == "postgres:16")
@@ -154,7 +153,7 @@ struct RunSpecTests {
         #expect(spec.healthCheck.retries == 5)
     }
 
-    @Test func composeImportResolvesRelativeBindMountsFromComposeDirectory() {
+    @Test func composeImportResolvesRelativeBindMountsFromComposeDirectory() throws {
         let yaml = """
         services:
           app:
@@ -163,8 +162,8 @@ struct RunSpecTests {
               - "../configs/bazarr:/config"
         """
         let base = URL(filePath: "/Volumes/Vault/.Docker/compose", directoryHint: .isDirectory)
-        let project = try! ComposeParser.parse(yaml, projectName: "demo")
-        let resolved = AppleContainerCreateTranslator.composePlan(for: project, baseDirectory: base)
+        let project = try! Core.Compose.parse(yaml, projectName: "demo")
+        let resolved = try core.translateCompose(project, baseDirectory: base)
             .items
             .first?
             .request
@@ -231,11 +230,9 @@ struct RunSpecTests {
               retries: 3
         """
 
-        let project = try ComposeParser.parse(yaml, projectName: "demo")
-        let plan = AppleContainerCreateTranslator.composePlan(
-            for: project,
-            baseDirectory: URL(filePath: "/opt/stacks/demo", directoryHint: .isDirectory)
-        )
+        let project = try Core.Compose.parse(yaml, projectName: "demo")
+        let plan = try core.translateCompose(project,
+                                             baseDirectory: URL(filePath: "/opt/stacks/demo", directoryHint: .isDirectory))
         let item = try #require(plan.items.first)
         let spec = RunSpec(request: item.request, healthCheck: item.healthCheck)
         let args = spec.arguments()
@@ -303,7 +300,8 @@ struct RunSpecTests {
         var spec = RunSpec()
         spec.image = "alpine"
 
-        let defaults = try #require(AppleContainerCreateTranslator.imageDefaults(for: spec.createRequest, in: images))
+        let maybeDefaults = try core.imageDefaults(for: spec.createRequest, in: images)
+        let defaults = try #require(maybeDefaults)
         let applied = spec.adoptImageDefaults(from: defaults)
 
         #expect(applied >= 3)
@@ -324,7 +322,8 @@ struct RunSpecTests {
         spec.workingDir = "/app"
         spec.env = [KeyValue(key: "PATH", value: "/custom")]
 
-        let defaults = try #require(AppleContainerCreateTranslator.imageDefaults(for: spec.createRequest, in: images))
+        let maybeDefaults = try core.imageDefaults(for: spec.createRequest, in: images)
+        let defaults = try #require(maybeDefaults)
         _ = spec.adoptImageDefaults(from: defaults)
 
         #expect(spec.command == "custom")
@@ -430,11 +429,28 @@ struct RunSpecTests {
             .deletingLastPathComponent()
         let repositoryRoot = testsDirectory.deletingLastPathComponent()
         let packageFixtures = repositoryRoot
-            .appending(path: "Packages/AppleContainerRuntime/Tests/AppleContainerRuntimeTests/Fixtures",
+            .appending(path: "Packages/ContainedCore/Tests/ContainedCoreTests/Fixtures",
                        directoryHint: .isDirectory)
         if FileManager.default.fileExists(atPath: packageFixtures.path) {
             return packageFixtures
         }
         return testsDirectory.appending(path: "ContainedCoreTests/Fixtures", directoryHint: .isDirectory)
+    }
+
+    private var core: Core.Orchestrator {
+        Core.Orchestrator.testing(runner: RunSpecTestRunner())
+    }
+}
+
+private struct RunSpecTestRunner: CommandRunning {
+    func run(_ arguments: [String],
+             stdin: Data?,
+             priority: CommandExecutionPriority) async throws -> Data {
+        Data()
+    }
+
+    func stream(_ arguments: [String],
+                priority: CommandExecutionPriority) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
     }
 }

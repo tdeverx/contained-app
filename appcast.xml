@@ -77,7 +77,7 @@
 <h4>Personalization & Design System</h4>
 <ul>
 <li>Local-only personalization for containers, image groups, image tags, and volumes, including nickname, icon, tint, background, graph/widget choices, and inheritance from image or app defaults.</li>
-<li>Shared Liquid Glass design system primitives: `ResourceGlassCard`, `GlassSurface`, `GlassButton`, `GlassOptionTile`, `MorphPanelScaffold`, `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `CommandPreviewBar`, `InfoButton`, `TintSelector`, `StreamConsole`, `ActivityStatusView`, and toolbar controls.</li>
+<li>Shared Liquid Glass design system primitives: `UI.Card.Scaffold`, `UI.Theme.Material`, `UI.Action.Group`, `UI.Control.OptionTile`, `UX.Morph.Expander`, `UI.Panel.Header`, `UI.Panel.Section`, `UI.Panel.Row`, `UI.Panel.Field`, `UI.Command.PreviewBar`, `UI.Control.InfoButton`, `UI.Control.TintSelector`, `UI.Console.Stream`, `UI.State.ActivityStatusIndicator`, and toolbar controls.</li>
 <li>Accessibility-aware custom visual effects and motion handling, including Reduce Transparency and Reduce Motion support where the app supplies custom glass or animation.</li>
 <li>Shared page and panel scaffolds so sidebar pages, sheets, and toolbar morphs can reuse content without duplicate layouts.</li>
 </ul>

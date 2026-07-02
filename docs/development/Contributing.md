@@ -31,7 +31,7 @@ Labels are intentionally short and color-coded. Use one type label (`bug`,
 `design`, `navigation`, `backend`, `docker`, `release`, or `repo`, then add a
 status like `triage`, `planned`, `backlog`, `up-next`, `in-progress`,
 `needs-info`, `needs-design`, `released`, `blocked`, or `wont-fix`. Broad
-changes to old issues should be previewed before they are applied. Issue bodies
+changes to existing issues should be previewed before they are applied. Issue bodies
 should only be rewritten by maintainers or when the original reporter has
 explicitly allowed it.
 
@@ -55,16 +55,14 @@ enforced without breaking appcast publishing.
 ## Layout
 
 ```
-Packages/ContainedCore/Sources/ContainedCore/   pure logic — models, decoding, compose, argv builders (no SwiftUI)
-Packages/ContainedRuntime/Sources/ContainedRuntime/ shared runtime contracts and capabilities
-Packages/AppleContainerRuntime/Sources/AppleContainerRuntime/ Apple container runtime adapter
+Packages/ContainedCore/Sources/ContainedCore/   backend orchestration — Core.*, adapters, compose, metrics, typed errors (no SwiftUI)
 Sources/ContainedApp/       the SwiftUI app
   Presentation/         app-owned labels, icons, formatting, and localization mapping
   Features/<Domain>/     one folder per sidebar domain
-  Navigation/ Stores/ Support/ History/
-Packages/ContainedDesignSystem/ reusable SwiftUI/AppKit visual primitives and tokens
-Packages/ContainedNavigation/ reusable navigation/layout infrastructure
-Packages/ContainedPreviewSupport/ deterministic fixtures for previews/examples
+  Navigation/ Services/ Personalization/ Persistence/
+Packages/ContainedUI/ reusable SwiftUI/AppKit visual primitives and tokens
+Packages/ContainedUX/ reusable navigation/layout infrastructure
+Packages/ContainedCore/Sources/ContainedCoreFixtures/ semantic fixtures for preview/test/sandbox targets only
 Sources/Contained/       tiny SwiftPM executable launcher
 Xcode/Contained/         tiny native Xcode app launcher and Info.plist
 Contained.xcworkspace/   Xcode entry point
@@ -84,7 +82,8 @@ appcast.xml              Sparkle feed at the root of each release branch
 
 - **Agents start at `AGENTS.md`.** Coding agents should read the root agent guide before editing; it summarizes branch, update, release-note, design-system, and verification rules.
 - **Directory names are intentional.** SwiftPM folders stay `Sources` and `Tests`, Swift source domains use PascalCase, and repository infrastructure uses lowercase names such as `docs` and `scripts`. Put helper scripts in `scripts/` and use hyphenated names for multi-word shell scripts.
-- **Reusable packages live under `Packages/`.** Keep app-agnostic design primitives, tokens, spacing, material, opacity, and micro-chrome in `ContainedDesignSystem`; keep app state, stores, Sparkle, SwiftData, persistence, and feature routing in `Sources/ContainedApp`.
+- **Reusable packages live under `Packages/`.** Keep app-agnostic design primitives, tokens, spacing, material, opacity, and micro-chrome in `ContainedUI`; keep app state, stores, Sparkle, SwiftData, persistence, and feature routing in `Sources/ContainedApp`.
+- **Fixtures are Core-owned and non-shipping.** `ContainedCoreFixtures` exposes deterministic semantic samples under `Core.Fixtures.*` for tests, previews, and sandbox-only targets. Normal app targets and distributable bundles must not depend on it.
 - **The app owns localization.** Reusable packages should not introduce
   user-facing English defaults or localized resource bundles. If a package
   component needs text, add an explicit parameter and pass app-owned strings
@@ -99,19 +98,19 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Package docs live with the package.** Keep package-local import/setup/examples in each `Packages/<PackageName>/README.md`, with DocC landing pages under each target's `.docc` catalog. Keep app-level architecture and workflow guidance under `docs/`.
 - **Xcode opens the workspace.** `Contained.xcworkspace` points at the native `Contained.xcodeproj` and local package manifests. The Xcode target links the root package's `ContainedApp` product and builds/runs a real `Contained.app`; SwiftPM remains the release, CI, bundle, signing, notarization, and appcast source of truth.
 - **Use Xcode for functional SwiftUI loops.** The shared `Contained` scheme builds/runs the app and runs `ContainedAppTests`; `ContainedAppTests` is the focused app-test scheme; package schemes come from the package manifests; `ContainedPreviews` is reserved for preview-oriented development.
-- **Navigation infrastructure belongs in `ContainedNavigation` only when it is generic.** App sections, pending actions, concrete toolbar panels, and `UIState` stay in `Sources/ContainedApp` until they can cross the boundary without app policy.
-- **Every Apple `container` CLI action goes through a `ContainerCommands` builder** + `AppleContainerRuntime`, with a golden-argv test. The UI never assembles argv inline — this keeps "Reveal CLI" honest.
-- **Runtime-facing code should depend on `ContainerRuntimeClient` where a backend choice matters.** The Apple `container` implementation remains the default adapter; future Docker-compatible, Podman, Lima-backed, remote, or other runtimes should be sibling adapter targets that advertise capability differences through `RuntimeDescriptor`. Create/import flows should translate through `ContainerCreateRequest` and carry `RuntimeKind` per container, not as a global app setting.
-- **Pure decision logic is factored into `ContainedCore`** (`RestartDecision`, `HealthDecision`, compose ordering) and unit-tested without spawning processes.
+- **Navigation infrastructure belongs in `ContainedUX` only when it is generic.** App sections, pending actions, concrete toolbar panels, and `UIState` stay in `Sources/ContainedApp` until they can cross the boundary without app policy.
+- **Every backend action goes through `ContainedCore`.** Apple `container` argv builders and adapter clients are Core internals with golden tests. The UI never assembles argv inline; app stores call `Core.Orchestrator`.
+- **Runtime-facing code should use `Core.*` namespaces.** The Apple `container` implementation is the only enabled adapter today. Future Docker-compatible, Podman, Lima-backed, remote, or other runtimes should be sibling adapter folders inside Core and advertise capability differences through `Core.Runtime.Descriptor`. Create/import flows should translate through `Core.Container.CreateRequest` and carry `Core.Runtime.Kind` per container, not as a global app setting.
+- **Pure decision logic is factored into `ContainedCore`** (`RestartDecision`, `HealthDecision`, compose ordering, runtime translation) and unit-tested without spawning processes.
 - **No `contained.*` personalization labels.** Card styles and healthchecks live in local stores. Only `contained.restart` and `contained.stack` are written (they must round-trip through the container).
 - **Never put secrets or personal data in test fixtures.** Fixtures are captured CLI output — scrub tokens, domains, and paths before committing. (`.gitignore` blocks signing material; push protection is on.)
-- **Match the surrounding style** — comment density, naming, Liquid Glass idioms. Prefer app-facing design routes such as `PanelHeader`, `PanelSection`, `DesignPanelScaffold`, `DesignCard`, `DesignActionGroup`, `DesignTextActionButton`, `DesignToggleButton`, `CommandPreviewBar`, and `DesignTokens`. Do not add app-local spacing, padding, radius, shadow, material, opacity, glass button styles, or badge/keycap/status-dot recipes; add them to `ContainedDesignSystem` first.
-- **Gate debug-only tools at compile time.** Use `#if CONTAINED_DEBUG_TOOLS` for debug menus, diagnostics, fixtures, or local-only inspection surfaces. SwiftPM defines that flag only for debug builds, so release bundles exclude the code instead of merely hiding it at runtime.
+- **Match the surrounding style** — comment density, naming, Liquid Glass idioms. Prefer app-facing design routes such as `UI.Panel.Header`, `UI.Panel.Section`, `UI.Panel.Scaffold`, `UI.Card.Scaffold`, `UI.Action.Group`, `UI.Action.TextButton`, `UI.Action.ToggleButton`, `UI.Command.PreviewBar`, and contextual element tokens. Do not add app-local spacing, padding, radius, shadow, material, opacity, material button styles, or badge/keycap/status-dot recipes; add them to `ContainedUI` first.
+- **Gate debug-only tools at compile time.** Use `#if CONTAINED_DEBUG_TOOLS` for debug menus, diagnostics, or local-only inspection surfaces. Fixture-backed samples use `CONTAINED_CORE_FIXTURES` in fixture/test/preview/sandbox-only targets, never plain `DEBUG`. SwiftPM defines `CONTAINED_DEBUG_TOOLS` only for debug builds, so release bundles exclude that code instead of merely hiding it at runtime.
 - **Keep the sidebar fallback working.** Toolbar-first UI and toolbar panel navigation are experimental gates, not replacements for the classic shell.
 - **Sync docs with behavior.** If behavior, settings, routes, or user-facing wording changes, update the matching page under `docs/app`, `docs/features`, `docs/development`, `docs/architecture`, or `docs/release` and keep README links current.
 - **Preserve update build numbers.** `scripts/version-info.sh` is the single build-number source of truth; beta/stable workflows must pass the retained `BUILD` into `scripts/bundle.sh` and merge promoted appcast items into the nightly feed.
 - **Keep code scanning intentional.** `.github/workflows/codeql.yml` is the repository-owned CodeQL setup. GitHub Actions workflow analysis runs on PRs and pushes that touch source, scripts, workflows, package files, or tests, plus a weekly scheduled baseline. Swift analysis is scheduled/manual because Swift CodeQL currently takes too long to be a healthy per-PR gate. Appcast-only, docs-only, changelog-resource-only, and change-fragment-only commits are ignored so generated release feed commits do not burn macOS scan minutes.
-- **Write release notes at the right level.** Keep `CHANGELOG.md` curated and version-level: use the base version section, such as `## [1.0.0]`, for durable user-facing release notes. Put PR/build deltas in `changes/unreleased/` fragments by default, not in `CHANGELOG.md` as a running implementation inventory. Use `changes/beta/` or `changes/nightly/` only for channel-specific notes. `scripts/collect-changes.sh` can compile those fragments for a directory or git range. When no explicit `CHANGES`/`CHANGES_DIR` source is provided, Beta/Nightly notes first try the previous matching appcast item plus the changelog/change-fragment git delta, then fall back to channel sections and `Unreleased` only as compatibility fallbacks. Stable ships full notes only; Beta/Nightly ship channel changes plus full notes.
+- **Write release notes at the right level.** Keep `CHANGELOG.md` curated and version-level: use the base version section, such as `## [1.0.0]`, for durable user-facing release notes. Put PR/build deltas in `changes/unreleased/` fragments by default, not in `CHANGELOG.md` as a running implementation inventory. Use `changes/beta/` or `changes/nightly/` only for channel-specific notes. `scripts/collect-changes.sh` can compile those fragments for a directory or git range. When no explicit `CHANGES` or `CHANGES_DIR` source is provided, Beta/Nightly notes first try the previous matching appcast item plus the changelog/change-fragment git delta, then fall back to channel sections and `Unreleased` only when no channel item exists. Stable ships full notes only; Beta/Nightly ship channel changes plus full notes.
 - **Let CI check invariants, not fix them.** `scripts/ci-validate.sh` checks bundled changelog sync, shell syntax, workflow YAML syntax, Stable/Beta/Nightly release-note ordering, and PR release-note coverage when given a base ref. If `CHANGELOG.md` changes, run `./scripts/sync-changelog-resource.sh` locally and commit the bundled resource; CI uses `--check` so drift fails loudly.
 - **Use `no-release-note` narrowly.** PR CI accepts the label only through `NO_RELEASE_NOTE=1`; reserve it for docs/meta/dependency-only maintenance that does not change shipped behavior, scripts, workflows, tests, or source. Dependabot applies it automatically to grouped dependency update PRs.
 - **Use `wiki-approved` for direct wiki-impacting changes only when a maintainer has reviewed the docs impact.** The wiki sync automation prototype is tracked separately in issue #26 and should not be assumed to exist until that issue is resolved.

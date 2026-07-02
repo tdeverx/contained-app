@@ -1,5 +1,5 @@
 import SwiftUI
-import ContainedDesignSystem
+import ContainedUI
 import ContainedCore
 
 // MARK: - Updates
@@ -11,10 +11,10 @@ struct UpdatesTab: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        LazyVStack(spacing: DesignTokens.Space.l) {
-            PanelSection(header: AppText.sectionSettingsUpdates,
+        LazyVStack(spacing: UI.Layout.Spacing.l) {
+            UI.Panel.Section(header: AppText.sectionSettingsUpdates,
                          footer: AppText.string("settings.updates.footer", defaultValue: "\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.")) {
-                PanelRow(title: AppText.string("settings.updates.channel", defaultValue: "Update channel")) {
+                UI.Panel.Row(title: AppText.string("settings.updates.channel", defaultValue: "Update channel")) {
                     Menu(app.settings.updateChannel.displayName) {
                         ForEach(UpdateChannel.allCases) { channel in
                             Button {
@@ -31,7 +31,7 @@ struct UpdatesTab: View {
                     }
                     .fixedSize()
                 }
-                PanelToggleRow(title: AppText.string("settings.updates.automaticallyCheck", defaultValue: "Automatically check for updates"),
+                UI.Panel.ToggleRow(title: AppText.string("settings.updates.automaticallyCheck", defaultValue: "Automatically check for updates"),
                                isOn: Binding(get: { settings.appUpdateChecksEnabled },
                                              set: {
                                                  settings.appUpdateChecksEnabled = $0
@@ -47,9 +47,9 @@ struct UpdatesTab: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            PanelSection(header: AppText.string("settings.updates.imageUpdates", defaultValue: "Image updates"),
+            UI.Panel.Section(header: AppText.string("settings.updates.imageUpdates", defaultValue: "Image updates"),
                          footer: AppText.string("settings.updates.imageUpdates.footer", defaultValue: "Controls the background registry digest check cadence. Manual checks are always available from Images, System, and the toolbar.")) {
-                PanelRow(title: AppText.string("settings.updates.checkImages", defaultValue: "Check images")) {
+                UI.Panel.Row(title: AppText.string("settings.updates.checkImages", defaultValue: "Check images")) {
                     Picker("", selection: $settings.imageUpdateIntervalHours) {
                         Text("Every hour").tag(1)
                         Text("Every 3 hours").tag(3)

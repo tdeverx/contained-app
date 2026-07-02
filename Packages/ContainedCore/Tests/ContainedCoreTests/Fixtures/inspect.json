@@ -53,8 +53,7 @@
         "workingDirectory" : "\/"
       },
       "labels" : {
-        "contained.icon" : "globe",
-        "contained.tint" : "teal"
+
       },
       "mounts" : [
 

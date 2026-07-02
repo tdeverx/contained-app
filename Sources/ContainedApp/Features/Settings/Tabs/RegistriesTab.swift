@@ -1,7 +1,6 @@
 import SwiftUI
-import ContainedDesignSystem
+import ContainedUI
 import ContainedCore
-import ContainedRuntime
 
 // MARK: - Registries
 
@@ -12,23 +11,18 @@ struct RegistriesTab: View {
     @State private var loggingOut: RegistryLogin?
 
     var body: some View {
-        LazyVStack(spacing: DesignTokens.Space.l) {
-            PanelSection(header: AppText.string("settings.registries.signedIn", defaultValue: "Signed-in registries"),
+        LazyVStack(spacing: UI.Layout.Spacing.l) {
+            UI.Panel.Section(header: AppText.string("settings.registries.signedIn", defaultValue: "Signed-in registries"),
                          footer: AppText.string("settings.registries.footer", defaultValue: "Credentials are typed by you and piped to the CLI via stdin, so the password never lands in the process list. Contained doesn't store it.")) {
                 if app.registries.isEmpty {
                     Text("Not signed in to any registries.")
-                        .foregroundStyle(.secondary)
+                        .designSecondaryValueStyle()
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     ForEach(app.registries) { login in
-                        HStack {
-                            VStack(alignment: .leading, spacing: DesignTokens.Space.xxs) {
-                                Text(login.host)
-                                if let user = login.username {
-                                    Text("as \(user)").font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                            Spacer()
+                        UI.List.MetadataRow(systemImage: "key",
+                                          title: login.host,
+                                          subtitle: login.username.map { AppText.string("settings.registries.username", defaultValue: "as \($0)") }) {
                             Button("Log Out", role: .destructive) { loggingOut = login }
                         }
                         .contextMenu {
@@ -40,7 +34,7 @@ struct RegistriesTab: View {
                 }
             }
 
-            PanelSection {
+            UI.Panel.Section {
                 Button("Log In to Registry…") { loggingIn = true }
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

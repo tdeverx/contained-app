@@ -1,5 +1,5 @@
 import SwiftUI
-import ContainedDesignSystem
+import ContainedUI
 import ContainedCore
 
 // MARK: - General
@@ -10,34 +10,34 @@ struct GeneralTab: View {
     @State private var confirmingClear = false
 
     var body: some View {
-        LazyVStack(spacing: DesignTokens.Space.l) {
-            PanelSection(header: AppText.string("settings.general.startup", defaultValue: "Startup")) {
-                PanelToggleRow(title: AppText.string("settings.general.launchAtLogin", defaultValue: "Launch at login"),
+        LazyVStack(spacing: UI.Layout.Spacing.l) {
+            UI.Panel.Section(header: AppText.string("settings.general.startup", defaultValue: "Startup")) {
+                UI.Panel.ToggleRow(title: AppText.string("settings.general.launchAtLogin", defaultValue: "Launch at login"),
                                isOn: $settings.launchAtLogin)
-                PanelToggleRow(title: AppText.string("settings.general.keepInMenuBar", defaultValue: "Keep running in the menu bar"),
+                UI.Panel.ToggleRow(title: AppText.string("settings.general.keepInMenuBar", defaultValue: "Keep running in the menu bar"),
                                isOn: $settings.keepInMenuBar)
             }
 
-            PanelSection(header: AppText.string("settings.general.activityAlerts", defaultValue: "Activity & alerts")) {
-                PanelToggleRow(title: AppText.string("settings.general.notifyOnCrash", defaultValue: "System alert on container crash / restart"),
+            UI.Panel.Section(header: AppText.string("settings.general.activityAlerts", defaultValue: "Activity & alerts")) {
+                UI.Panel.ToggleRow(title: AppText.string("settings.general.notifyOnCrash", defaultValue: "System alert on container crash / restart"),
                                isOn: $settings.notifyOnCrash)
-                PanelToggleRow(title: AppText.string("settings.general.showRevealCLI", defaultValue: "Show Reveal CLI on actions"),
+                UI.Panel.ToggleRow(title: AppText.string("settings.general.showRevealCLI", defaultValue: "Show Reveal CLI on actions"),
                                info: AppText.string("settings.general.showRevealCLI.info", defaultValue: "Shows the exact `container ...` command for important actions. Useful when you are learning the CLI or want to verify what will run."),
                                isOn: $settings.revealCLI)
             }
 
-            PanelSection(header: AppText.string("settings.general.data", defaultValue: "Data"),
+            UI.Panel.Section(header: AppText.string("settings.general.data", defaultValue: "Data"),
                          footer: AppText.string("settings.general.data.footer", defaultValue: "Live metrics use one low-priority runtime stream. The list refresh interval only controls background service, container list, and resource-cache polling. \(settings.statsNormalizationMode.footnote)")) {
-                PanelRow(title: AppText.string("settings.general.listRefreshInterval", defaultValue: "List refresh interval")) {
-                    HStack(spacing: DesignTokens.Space.s) {
+                UI.Panel.Row(title: AppText.string("settings.general.listRefreshInterval", defaultValue: "List refresh interval")) {
+                    HStack(spacing: UI.Layout.Spacing.s) {
                         Slider(value: $settings.refreshInterval, in: 1...10, step: 1)
-                            .frame(width: DesignTokens.FormWidth.compactSlider)
+                            .frame(width: UI.Form.Width.compactSlider)
                         Text("\(Int(settings.refreshInterval))s")
                             .monospacedDigit()
-                            .frame(width: DesignTokens.FormWidth.refreshReadout, alignment: .trailing)
+                            .frame(width: UI.Form.Width.refreshReadout, alignment: .trailing)
                     }
                 }
-                PanelRow(title: AppText.string("settings.general.keepHistoryFor", defaultValue: "Keep history for")) {
+                UI.Panel.Row(title: AppText.string("settings.general.keepHistoryFor", defaultValue: "Keep history for")) {
                     Picker("", selection: retentionBinding) {
                         Text("1 day").tag(1)
                         Text("7 days").tag(7)
@@ -46,7 +46,7 @@ struct GeneralTab: View {
                     }
                         .labelsHidden().fixedSize()
                 }
-                PanelRow(title: AppText.string("settings.general.normalizeStats", defaultValue: "Normalize stats")) {
+                UI.Panel.Row(title: AppText.string("settings.general.normalizeStats", defaultValue: "Normalize stats")) {
                     Picker("", selection: statsNormalizationBinding) {
                         ForEach(StatsNormalizationMode.allCases) { mode in
                             Text(mode.displayName).tag(mode)
@@ -61,9 +61,9 @@ struct GeneralTab: View {
                 ConfigTransferControls()
             }
 
-            PanelSection(header: AppText.string("settings.general.logging", defaultValue: "Logging"),
+            UI.Panel.Section(header: AppText.string("settings.general.logging", defaultValue: "Logging"),
                          footer: settings.loggingLevel.footnote) {
-                PanelRow(title: AppText.string("settings.general.loggingLevel", defaultValue: "Level")) {
+                UI.Panel.Row(title: AppText.string("settings.general.loggingLevel", defaultValue: "Level")) {
                     Picker("", selection: $settings.loggingLevel) {
                         ForEach(AppLogLevel.allCases) { level in
                             Text(level.displayName).tag(level)
@@ -73,18 +73,16 @@ struct GeneralTab: View {
                     .labelsHidden()
                     .fixedSize()
                 }
-                LazyVStack(alignment: .leading, spacing: DesignTokens.Space.s) {
-                    Text("Write to").font(.caption).foregroundStyle(.secondary)
+                UI.List.Section(AppText.string("settings.logging.writeTo", defaultValue: "Write to")) {
                     ForEach(AppLogDestination.allCases) { destination in
                         Toggle(destination.displayName, isOn: setBinding(destination, in: \.enabledLogDestinations))
                             .toggleStyle(.checkbox)
                     }
                 }
-                LazyVStack(alignment: .leading, spacing: DesignTokens.Space.s) {
-                    Text("Categories").font(.caption).foregroundStyle(.secondary)
+                UI.List.Section(AppText.string("settings.logging.categories", defaultValue: "Categories")) {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), alignment: .leading)],
                               alignment: .leading,
-                              spacing: DesignTokens.Space.s) {
+                              spacing: UI.Layout.Spacing.s) {
                         ForEach(AppLogCategory.allCases) { category in
                             Toggle(category.displayName, isOn: setBinding(category, in: \.enabledLogCategories))
                                 .toggleStyle(.checkbox)
@@ -93,8 +91,8 @@ struct GeneralTab: View {
                 }
             }
 
-            PanelSection(header: AppText.string("settings.general.advanced", defaultValue: "Advanced")) {
-                PanelField(label: AppText.string("settings.general.containerCLIPath", defaultValue: "Container CLI path"),
+            UI.Panel.Section(header: AppText.string("settings.general.advanced", defaultValue: "Advanced")) {
+                UI.Panel.Field(label: AppText.string("settings.general.containerCLIPath", defaultValue: "Container CLI path"),
                            info: AppText.string("settings.general.containerCLIPath.info", defaultValue: "Override the auto-detected `container` binary location.")) {
                     TextField("", text: $settings.cliPathOverride, prompt: Text("/usr/local/bin/container"))
                         .textFieldStyle(.roundedBorder)

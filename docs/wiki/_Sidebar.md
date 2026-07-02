@@ -1,7 +1,6 @@
 # Contained
 
-This compatibility sidebar points to the structured docs that replaced the old
-flat wiki mirror.
+This sidebar points to the maintained structured docs.
 
 - [Home](/docs/app/Home.md)
 - [Features](/docs/features/Features.md)

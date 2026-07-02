@@ -6,11 +6,10 @@ localization-ready APIs.
 ## Ownership
 
 - `Sources/ContainedApp` owns all user-facing strings and the localization catalog.
-- `ContainedDesignSystem` and `ContainedNavigation` are building-block packages:
+- `ContainedUI` and `ContainedUX` are building-block packages:
   they own structure and visuals, not app copy.
-- `ContainedCore`, `ContainedRuntime`, and runtime adapters should stay
-  language-free except for stable technical identifiers, raw values, and command
-  output.
+- `ContainedCore` should stay language-free except for stable technical
+  identifiers, raw values, package error codes, and backend command output.
 
 If a package component needs visible text, add an explicit parameter instead of
 adding an English default in the package. Examples include action help, close
@@ -30,7 +29,7 @@ it to a known typed case.
 Use `AppText` for reusable app-owned labels and dynamic templates:
 
 ```swift
-DesignToolbarSearchField(text: $query,
+UI.Toolbar.SearchField(text: $query,
                          prompt: "Search this page",
                          clearSearchLabel: AppText.clearSearch,
                          focused: $focused,
@@ -38,11 +37,11 @@ DesignToolbarSearchField(text: $query,
     EmptyView()
 }
 
-TintSelector(selection: $settings.accentTint) {
+UI.Control.TintSelector(selection: $settings.accentTint) {
     $0.localizedDisplayName
 }
 
-DesignSelectionActionBar(count: selection.count,
+UI.Action.SelectionBar(count: selection.count,
                          countLabel: AppText.selectedCount,
                          actions: actions)
 

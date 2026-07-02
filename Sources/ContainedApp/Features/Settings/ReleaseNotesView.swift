@@ -1,6 +1,6 @@
 import SwiftUI
 import WebKit
-import ContainedDesignSystem
+import ContainedUI
 
 struct ReleaseNotesView: View {
     var title: String
@@ -9,13 +9,13 @@ struct ReleaseNotesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SheetHeader(title: title, cancelHelp: AppText.done) {
+            UI.Panel.SheetTitleBar(title: title, cancelHelp: AppText.done) {
                 onClose?()
             }
             Divider()
             HTMLView(html: html)
         }
-        .frame(DesignTokens.SheetSize.releaseNotes)
+        .frame(UI.Panel.SheetSize.releaseNotes)
     }
 }
 

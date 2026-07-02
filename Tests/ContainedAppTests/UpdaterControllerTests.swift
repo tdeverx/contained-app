@@ -415,9 +415,9 @@ struct UpdaterControllerTests {
             <channel>
                 <title>Contained</title>
                 <item>
-                    <title>old beta item</title>
+                    <title>previous beta item</title>
                     <sparkle:version>120</sparkle:version>
-                    <sparkle:shortVersionString>1.0.0-beta.120+old</sparkle:shortVersionString>
+                    <sparkle:shortVersionString>1.0.0-beta.120+previous</sparkle:shortVersionString>
                 </item>
                 <item>
                     <title>1.0.0-nightly.119+def456</title>
@@ -442,7 +442,7 @@ struct UpdaterControllerTests {
         let promotedBuildOccurrences = merged.components(separatedBy: "<sparkle:version>120</sparkle:version>").count - 1
         #expect(promotedBuildOccurrences == 1)
         #expect(merged.contains("1.0.0-beta.120+abc123"))
-        #expect(!merged.contains("old beta item"))
+        #expect(!merged.contains("previous beta item"))
         #expect(merged.contains("1.0.0-nightly.119+def456"))
     }
 }

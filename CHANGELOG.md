@@ -68,7 +68,7 @@
 #### Personalization & Design System
 
 - Local-only personalization for containers, image groups, image tags, and volumes, including nickname, icon, tint, background, graph/widget choices, and inheritance from image or app defaults.
-- Shared Liquid Glass design system primitives: `DesignCard`, `DesignContentSurface`, `DesignInputSurface`, `DesignOptionTile`, `DesignPanelScaffold`, `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `CommandPreviewBar`, `InfoButton`, `TintSelector`, `StreamConsole`, `ActivityStatusView`, and toolbar controls.
+- Shared Liquid Glass design system primitives: `UI.Card.Scaffold`, `UI.Surface.Content`, `UI.Surface.Input`, `UI.Control.OptionTile`, `UI.Panel.Scaffold`, `UI.Panel.Header`, `UI.Panel.Section`, `UI.Panel.Row`, `UI.Panel.Field`, `UI.Command.PreviewBar`, `UI.Control.InfoButton`, `UI.Control.TintSelector`, `UI.Console.Stream`, `UI.State.ActivityStatusIndicator`, and toolbar controls.
 - Accessibility-aware custom visual effects and motion handling, including Reduce Transparency and Reduce Motion support where the app supplies custom glass or animation.
 - Shared page and panel scaffolds so sidebar pages, sheets, and toolbar morphs can reuse content without duplicate layouts.
 
@@ -93,9 +93,9 @@
 
 ### Technical
 
-- Swift Package layout with a pure `ContainedCore` library for CLI command builders, JSON models, compose parsing, decision helpers, and service logic, plus a `Contained` SwiftUI executable for UI, stores, Sparkle, SwiftData, and migration.
+- Swift Package layout with `ContainedCore` for backend orchestration, `ContainedUI` for visual primitives, `ContainedUX` for interaction infrastructure, `ContainedApp` for app-owned SwiftUI/persistence/localization policy, and a tiny `Contained` executable launcher.
 - `ContainerCommands` is the single source of truth for `container` argv construction and is covered by golden tests.
-- `ContainedRuntime` defines the shared runtime contract, while `AppleContainerRuntime` exposes typed async methods over real `container --format json` output and typed stats streams.
+- `ContainedCore` now owns the shared runtime contract, Core orchestrator, Apple `container` adapter internals, typed async runtime methods, and typed stats streams.
 - `RunSpec` is the single source of truth for Run/Edit form state, validation, CLI preview, and actual execution.
 - `AppModel` owns bootstrap, client wiring, stores, refresh coordination, image updates, service lifecycle, config transfer, and resource-style lookup through focused extensions.
 - `UIState`, `AppSection`, toolbar option enums, and pending actions centralize navigation, filters, morph routing, and classic fallback routing.
@@ -105,6 +105,6 @@
 
 ### Migration Notes
 
-- Saved local container, image, and volume styles are preserved and migrated away from legacy decorative `contained.*` labels where possible.
+- Saved local container, image, and volume styles are kept in local app storage.
 - Local settings, personalization, health checks, templates, and activity history can be exported before resetting data created by a newer app schema.
 - Activity events created before unread tracking are treated as unread on first launch.

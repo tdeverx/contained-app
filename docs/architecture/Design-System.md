@@ -3,16 +3,16 @@
 Contained's UI is built around a small Liquid Glass design system. Prefer these
 components before adding one-off surfaces.
 
-App-agnostic SwiftUI/AppKit primitives live in the local `ContainedDesignSystem`
+App-agnostic SwiftUI/AppKit primitives live in the local `ContainedUI`
 package under `Packages/`. App-specific views, stores, settings, routing,
 localization, and domain presentation mappings stay in `ContainedApp` until they
 have a clean reusable boundary.
 
 Package-local docs:
 
-- [`Packages/ContainedDesignSystem/README.md`](../../Packages/ContainedDesignSystem/README.md)
-- [`ContainedDesignSystem` DocC landing page](../../Packages/ContainedDesignSystem/Sources/ContainedDesignSystem/ContainedDesignSystem.docc/ContainedDesignSystem.md)
-- [`Packages/ContainedNavigation/README.md`](../../Packages/ContainedNavigation/README.md)
+- [`Packages/ContainedUI/README.md`](../../Packages/ContainedUI/README.md)
+- [`ContainedUI` DocC landing page](../../Packages/ContainedUI/Sources/ContainedUI/ContainedUI.docc/ContainedUI.md)
+- [`Packages/ContainedUX/README.md`](../../Packages/ContainedUX/README.md)
 
 The package owns the shared tokens, visual-effect background bridge, exterior
 shadow, glass surface modifier, panel/page/sheet scaffolds, toolbar controls,
@@ -35,8 +35,8 @@ Guidelines:
 - user-facing labels, help text, accessibility labels, picker names, page names,
   and empty-state copy are supplied by `Sources/ContainedApp`
 - package APIs that need words take app-supplied strings or semantic item
-  titles, such as `DesignCardPages.closeLabel`,
-  `DesignToolbarSearchField.clearSearchLabel`, and `TintSelector`'s
+  titles, such as `UI.Card.Pages.closeLabel`,
+  `UI.Toolbar.SearchField.clearSearchLabel`, and `UI.Control.TintSelector`'s
   `labelForTint`
 - app-owned enum labels and dynamic templates flow through `AppText`, which uses
   `String(localized:defaultValue:bundle:)` with English fallbacks today
@@ -63,28 +63,28 @@ package genuinely owns standalone user-facing copy.
 Style ownership:
 
 - `Personalization` is the resolved card style.
-- `WidgetConfiguration` owns app-side metric-widget schema. `GraphStyle` and
-  `WidgetInterpolation` live in the design package as graph rendering options.
-- `PersonalizationStore` owns persistence, inheritance, backup, and legacy
-  `contained.*` label migration.
+- `WidgetConfiguration` owns app-side metric-widget schema. `UI.Chart.GraphStyle` and
+  `UI.Chart.Interpolation` live in the design package as graph rendering options.
+- `PersonalizationStore` owns persistence, inheritance, backup, and local-only
+  style resolution.
 
 ## Panel scaffolding
 
-Use `DesignPanelScaffold` for toolbar panels. It provides the shared chrome,
+Use `UI.Panel.Scaffold` for toolbar panels. It provides the shared chrome,
 content, and footer structure used by Images, Templates, Activity, System,
 Settings, and the Command Palette.
 
 Guidelines:
 
 - keep panels anchored to their toolbar source when possible
-- use `PanelHeader` for titled panels
-- omit `PanelHeader` when the primary control is itself the header, such as the
+- use `UI.Panel.Header` for titled panels
+- omit `UI.Panel.Header` when the primary control is itself the header, such as the
   Command Palette search field
 - keep footer hints compact and secondary
 
 ## Settings-style editors
 
-Use `PanelSection`, `PanelRow`, `PanelField`, and `PanelToggleRow` for dense
+Use `UI.Panel.Section`, `UI.Panel.Row`, `UI.Panel.Field`, and `PanelToggleRow` for dense
 settings and editor surfaces inside glass panels. This keeps Customize, Run/Edit,
 registry login, image build, and Settings aligned on one row rhythm and one
 info-button placement model.
@@ -96,7 +96,7 @@ Guidelines:
   trailing info buttons
 - split repeated editors into focused subviews when the parent sheet also owns
   persistence or presentation state
-- use `SheetHeader` for modal sheets and `PanelHeader` for in-window morph
+- use `UI.Panel.SheetTitleBar` for modal sheets and `UI.Panel.Header` for in-window morph
   panels or embedded panel pages
 
 ## Toolbar shell
@@ -108,7 +108,7 @@ or fall back to classic pages and sheets.
 
 `AppToolbar` is mounted inside the `NavigationSplitView` detail column by
 `ClassicShell`, not across the whole split view. The detail body receives top
-padding from `MorphSafeAreaManager`, while the sidebar and bottom page edge keep
+padding from `UX.SafeArea.Manager`, while the sidebar and bottom page edge keep
 native split-view layout. Scrollable page interiors add bottom scroll-content
 clearance for the floating toolbar, so the last row can move above it without
 lifting the page itself. Toolbar page actions live in the top row to the left of
@@ -138,51 +138,51 @@ safe-area contract as morph panels, clearing both top and bottom toolbar bands.
 
 Use package-owned semantic controls for command chrome:
 
-- `DesignActionGroup` and `DesignActionItems` for icon action groups
-- `DesignActionCluster` for mixed menu/action capsules
-- `DesignInputCluster` for inline search/input lanes
-- `DesignTextActionButton` for labeled standard or prominent actions
-- `DesignToggleButton` for toggle buttons in toolbar or panel chrome
-- `DesignSelectionActionBar` for floating selection bars
-- `DesignStatusBanner` for transient bottom banners
-- `DesignToolbarSearchField`, `DesignMenuButton`,
-  `DesignToolbarStatusButton`, `DesignToolbarActionCluster`, and
-  `DesignToolbarVanitySlot` for toolbar-specific slots
+- `UI.Action.Group` and `UI.Action.Items` for icon action groups
+- `UI.Action.Cluster` for mixed menu/action capsules
+- `UI.Control.InputCluster` for inline search/input lanes
+- `UI.Action.TextButton` for labeled standard or prominent actions
+- `UI.Action.ToggleButton` for toggle buttons in toolbar or panel chrome
+- `UI.Action.SelectionBar` for floating selection bars
+- `UI.State.Banner` for transient bottom banners
+- `UI.Toolbar.SearchField`, `UI.Control.MenuButton`,
+  `UI.Toolbar.StatusButton`, `UI.Toolbar.ActionCluster`, and
+  `UI.Toolbar.VanitySlot` for toolbar-specific slots
 
-Feature views cannot call the package-internal `GlassButton`, `GlassButtonItem`,
-`GlassButtonInputItem`, `glassSurface`, or `glassCapsuleSurface` routes. They
+Feature views cannot call the package-internal `material button internals`, `material button internalsItem`,
+`material button internalsInputItem`, `materialSurface`, or `materialCapsuleSurface` routes. They
 also should not use `.buttonStyle(.glass/.glassProminent)` directly. If a view
 needs a new command shape, add a named design-system route and then consume it
 from the app.
 
 ## Design cards
 
-Use `DesignCard` for containers, images, tags, volumes, networks, and
+Use `UI.Card.Scaffold` for containers, images, tags, volumes, networks, and
 palette result cards.
 
 Recommended inputs and package pieces:
 
-- `DesignCardPages` for expanded-card page rails
-- `DesignCardIconChip` for icons and symbols
-- `DesignCardTextStyle` for standard versus monospaced title/subtitle text
-- `DesignBadgeText` for compact state or kind labels
-- `DesignCardFooterMini` for small footer actions and metrics
-- `DesignCardWidgetGroup` for horizontal widget metadata
-- `DesignCardFooterChip` and `DesignCardFooterButton` for card-local controls
-- `DesignCardInsetSection` for charts, lists, and read-only groups inside an
+- `UI.Card.Pages` for expanded-card page rails
+- `UI.Card.IconChip` for icons and symbols
+- `UI.Card.TextStyle` for standard versus monospaced title/subtitle text
+- `UI.Badge.Text` for compact state or kind labels
+- `UI.Card.FooterMini` for small footer actions and metrics
+- `UI.Card.WidgetGroup` for horizontal widget metadata
+- `UI.Card.FooterChip` and `UI.Card.FooterButton` for card-local controls
+- `UI.Card.InsetSection` for charts, lists, and read-only groups inside an
   expanded card body
 - `designCardFloatingControls` and `designCardProgressOverlay` for
   card-owned overlays
-- `DesignStatusDot`, `DesignStatusBadge`, `DesignKeyCap`, and
-  `DesignKeyboardHint` for micro chrome
+- `UI.Badge.Dot`, `UI.Badge.Status`, `UI.Control.KeyCap`, and
+  `UI.Control.KeyboardHint` for micro chrome
 
 Use `isSelected` instead of inventing a second selection ring. Use `elevated:
 false` for cards inside already-elevated morph panels.
 
-`DesignCard` owns the card anatomy:
+`UI.Card.Scaffold` owns the card anatomy:
 
 - the header is always visible and stays outside the expanding body
-- page controls are declared with `DesignCardPages`, stay mounted in the header
+- page controls are declared with `UI.Card.Pages`, stay mounted in the header
   trailing slot, and use `controlsReveal` instead of app-local overlays or
   conditional trailing views
 - the body appears only while expanded
@@ -191,13 +191,13 @@ false` for cards inside already-elevated morph panels.
 - footers stay sticky on `.medium` and `.large` cards and move into the
   expanded body on `.small`
 
-`DesignCardSurface`, `DesignCardHeader`, and `DesignCardPageControls` are
-package-internal composition pieces used by `DesignCard`.
+`card surface internals`, `card header internals`, and `card page-control internals` are
+package-internal composition pieces used by `UI.Card.Scaffold`.
 
-Do not create a second `DesignCard` or direct surface modifier inside an
+Do not create a second `UI.Card.Scaffold` or direct surface modifier inside an
 expanded card body unless the nested object is itself an independent resource
 card, such as an image tag row. In-card content should go through
-`DesignCardInsetSection`.
+`UI.Card.InsetSection`.
 
 ## Palette visual results
 
@@ -212,31 +212,34 @@ The palette should not degrade rich app objects into plain text. Use
 
 Plain rows are reserved for generic actions such as refresh or opening a page.
 
-## DesignTokens
+## Tokens
 
-Use `DesignTokens` for spacing, radius, toolbar dimensions, panel sizes, icon sizes,
-form widths, chart sizes, badge/keycap insets, design-card opacities, terminal
-chrome, and shadows. Feature views should not call low-level surface modifiers
-or glass button styles; use named package routes such as `DesignCard`,
-`PanelSection`, `DesignContentSurface`, `DesignInputSurface`,
-`DesignActionGroup`, `DesignActionCluster`, `DesignInputCluster`,
-`DesignTextActionButton`, and `DesignCardInsetSection`.
-If a new visual value appears, add a token or package primitive before using it
-in the app.
+`UI.Tokens` is the minimal raw token source for `ContainedUI` internals. UI
+components may read those raw tokens directly so one primitive change can flow
+through every visual element that mirrors it.
 
-Important groups:
+App-facing and UX-facing code should use contextual element tokens instead:
 
-- `DesignTokens.Toolbar` for toolbar band and control sizing
-- `DesignTokens.PanelSize` for morph target sizes
-- `DesignTokens.Space` for layout rhythm
-- `DesignTokens.Radius` for card and control rounding
-- `DesignTokens.IconSize` for chips and toolbar controls
-- `DesignTokens.DesignCard`, `DesignTokens.Badge`, `DesignTokens.Keyboard`, `DesignTokens.Chart`,
-  `DesignTokens.FormWidth`, and `DesignTokens.Terminal` for smaller repeated chrome values
+- `UI.Toolbar.Size` for toolbar band and control sizing
+- `UI.Panel.Size`, `UI.Panel.Padding`, `UI.Panel.Spacing`, and `UI.Panel.Radius`
+  for panels and morph targets
+- `UI.Card.Padding`, `UI.Card.Spacing`, `UI.Card.Radius`, and `UI.Card.Metric`
+  for card anatomy
+- `UI.Layout.Spacing` only when layout rhythm has no more specific element owner
+- `UI.Control.Size`, `UI.Badge.Padding`, `UI.Form.Width`, `UI.Chart.Size`, and
+  similar element namespaces for repeated smaller chrome values
 
-Feature views can choose semantic content, domain colors, and app data, but
-should not create app-local spacing, padding, radius, shadow, material, opacity,
-badge, keycap, status-dot, or terminal-surface recipes.
+Contextual tokens mirror `UI.Tokens` by default. If an element needs its own
+value, the declaration must include a short inline comment explaining why that
+token intentionally diverges from the raw default.
+
+Feature views should not call low-level surface modifiers, material button
+styles, or raw `UI.Tokens`; use named package routes such as
+`UI.Card.Scaffold`, `UI.Panel.Section`, `UI.Surface.Content`,
+`UI.Surface.Input`, `UI.Action.Group`, `UI.Action.Cluster`,
+`UI.Control.InputCluster`, `UI.Action.TextButton`, and `UI.Card.InsetSection`.
+If a new visual value appears, add or extend a contextual element token or
+package primitive before using it in the app.
 
 ## Verification
 

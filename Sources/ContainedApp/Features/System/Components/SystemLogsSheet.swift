@@ -1,5 +1,5 @@
 import SwiftUI
-import ContainedDesignSystem
+import ContainedUI
 import ContainedCore
 
 struct SystemLogsSheet: View {
@@ -10,31 +10,31 @@ struct SystemLogsSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: DesignTokens.Space.m) {
-                Text("System logs").font(.headline)
-                DesignToggleButton(isOn: $follow, title: AppText.follow, systemName: "arrow.down.to.line")
+            HStack(spacing: UI.Layout.Spacing.m) {
+                Text("System logs").designHeadlineLabelStyle()
+                UI.Action.ToggleButton(isOn: $follow, title: AppText.follow, systemName: "arrow.down.to.line")
                     .onChange(of: follow) { _, _ in session += 1 }
                 Spacer()
-                DesignActionGroup(DesignAction(systemName: "xmark",
+                UI.Action.Group(UI.Action.Item(systemName: "xmark",
                                                help: AppText.close,
                                                isCancel: true) {
                         dismiss()
                 })
             }
-            .padding(DesignTokens.Space.s)
+            .padding(UI.Layout.Spacing.s)
             if let client = app.client {
-                StreamConsole(stream: { client.streamSystemLogs(follow: follow, last: 500) },
+                UI.Console.Stream(stream: { client.streamSystemLogs(follow: follow, last: 500) },
                               workingLabel: AppText.working,
                               completedLabel: AppText.completed,
                               lineCountLabel: AppText.lineCount,
                               copyLogHelp: AppText.copyLog,
                               failureLabel: AppErrorPresentation.message)
                     .id(session)
-                    .padding(.horizontal, DesignTokens.Space.s)
-                    .padding(.bottom, DesignTokens.Space.s)
+                    .padding(.horizontal, UI.Layout.Spacing.s)
+                    .padding(.bottom, UI.Layout.Spacing.s)
             }
         }
-        .frame(DesignTokens.SheetSize.wide)
+        .frame(UI.Panel.SheetSize.wide)
         .sheetMaterial()
     }
 }

@@ -1,8 +1,7 @@
 import SwiftUI
-import ContainedNavigation
-import ContainedDesignSystem
+import ContainedUX
+import ContainedUI
 import ContainedCore
-import ContainedRuntime
 
 /// System overview content: service status + controls, volumes, `system df` disk usage, a Prune
 /// Center, and a system-logs viewer. Hosted header-less in the toolbar System morph panel. Daemon
@@ -97,7 +96,7 @@ struct SystemContent: View {
     }
 
     var body: some View {
-        DesignPanelScaffold(width: DesignTokens.PanelSize.system.width) {
+        UI.Panel.Scaffold(width: UI.Panel.Size.system.width) {
             if showsHeader {
                 VStack(spacing: 0) {
                     header
@@ -105,14 +104,14 @@ struct SystemContent: View {
                 }
             }
         } content: {
-            LazyVStack(alignment: .leading, spacing: DesignTokens.Space.l) {
+            LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.l) {
                 switch activePage {
                 case .engine: engineStatusCard
                 case .automation: automationCard
                 case .volumes: volumesCard
                 }
             }
-            .padding(DesignTokens.Space.s)
+            .padding(UI.Layout.Spacing.s)
         }
         .task { await app.refreshSystemResources() }
         .confirmationDialog("Delete volume \(deletingVolume?.name ?? "")?",
@@ -131,22 +130,22 @@ struct SystemContent: View {
 
     /// A consistent design-system section card.
     private func card<Content: View>(@ViewBuilder _ content: @escaping () -> Content) -> some View {
-        DesignContentSurface(elevated: elevated, alignment: .leading) {
-            LazyVStack(alignment: .leading, spacing: DesignTokens.Space.m) { content() }
+        UI.Surface.Content(elevated: elevated, alignment: .leading) {
+            LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.m) { content() }
         }
     }
 
     private var header: some View {
-        PanelHeader(symbol: "gearshape.2",
+        UI.Panel.Header(symbol: "gearshape.2",
                     title: AppText.sectionSystem,
                     subtitle: activePage.subtitle) {
-            HStack(spacing: DesignTokens.Toolbar.groupSpacing) {
+            HStack(spacing: UI.Toolbar.Spacing.groupSpacing) {
                 engineControls
-                DesignActionCluster {
-                    DesignActionItems(pageActions)
+                UI.Action.Cluster {
+                    UI.Action.Items(pageActions)
                     storageMenu
                     if showClose {
-                        DesignActionItems([DesignAction(systemName: "xmark",
+                        UI.Action.Items([UI.Action.Item(systemName: "xmark",
                                                         help: AppText.close,
                                                         isCancel: true,
                                                         action: onClose)])
@@ -156,9 +155,9 @@ struct SystemContent: View {
         }
     }
 
-    private var pageActions: [DesignAction] {
+    private var pageActions: [UI.Action.Item] {
         SystemPage.allCases.map { item in
-            DesignAction(systemName: item.systemImage,
+            UI.Action.Item(systemName: item.systemImage,
                          help: item.title,
                          tint: activePage == item ? .accentColor : nil) {
                 setPage(item)
@@ -167,9 +166,9 @@ struct SystemContent: View {
     }
 
     private var engineControls: some View {
-        DesignActionGroup([
+        UI.Action.Group([
             servicePowerAction,
-            DesignAction(systemName: "arrow.clockwise",
+            UI.Action.Item(systemName: "arrow.clockwise",
                          help: AppText.restartService,
                          isEnabled: !working) {
                 run { await app.restartService() }
@@ -177,16 +176,16 @@ struct SystemContent: View {
         ])
     }
 
-    private var servicePowerAction: DesignAction {
+    private var servicePowerAction: UI.Action.Item {
         if app.serviceHealthy {
-            return DesignAction(systemName: "stop.fill",
+            return UI.Action.Item(systemName: "stop.fill",
                                 help: AppText.stopService,
                                 role: .destructive,
                                 isEnabled: !working) {
                 run { await app.stopService() }
             }
         } else {
-            return DesignAction(systemName: "play.fill",
+            return UI.Action.Item(systemName: "play.fill",
                                 help: AppText.startService,
                                 isEnabled: !working) {
                 run { await app.startService() }
@@ -206,7 +205,7 @@ struct SystemContent: View {
             Button { pruneTarget = .volumes } label: { Label(AppText.string("cleanup.unusedVolumes", defaultValue: "Unused volumes"), systemImage: "externaldrive") }
             Button { pruneTarget = .networks } label: { Label(AppText.string("cleanup.unusedNetworks", defaultValue: "Unused networks"), systemImage: "network") }
         } label: {
-            DesignMenuActionLabel(systemName: "trash",
+            UI.Action.MenuLabel(systemName: "trash",
                                   help: AppText.storageCleanup,
                                   role: .destructive)
         }
@@ -225,10 +224,10 @@ struct SystemContent: View {
     private var volumesCard: some View {
         card {
             HStack {
-                Text(AppText.sectionVolumes).font(.headline)
-                DesignBadgeText(text: "\(volumeInventory.count)")
+                Text(AppText.sectionVolumes).designHeadlineLabelStyle()
+                UI.Badge.Text(text: "\(volumeInventory.count)")
                 Spacer()
-                DesignActionGroup(DesignAction(systemName: "plus",
+                UI.Action.Group(UI.Action.Item(systemName: "plus",
                                                title: AppText.string("common.new", defaultValue: "New"),
                                                help: AppText.newVolume) {
                         onClose()
@@ -236,10 +235,9 @@ struct SystemContent: View {
                 })
             }
             if volumeInventory.isEmpty {
-                Text(AppText.string("volume.inventory.empty", defaultValue: "No named volumes or container mounts found."))
-                    .font(.callout).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, DesignTokens.Space.xs)
+                UI.State.Empty(AppText.string("volume.inventory.empty", defaultValue: "No named volumes or container mounts found."),
+                                 systemImage: "externaldrive",
+                                 padding: UI.Layout.Spacing.xs)
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(volumeInventory.enumerated()), id: \.element.id) { index, entry in
@@ -252,30 +250,19 @@ struct SystemContent: View {
     }
 
     private func volumeRow(_ entry: VolumeInventoryEntry) -> some View {
-        HStack(spacing: DesignTokens.Space.m) {
-            Image(systemName: entry.kind.symbol)
-                .foregroundStyle(.secondary)
-                .frame(width: DesignTokens.IconSize.rowIconColumn)
-            VStack(alignment: .leading, spacing: DesignTokens.DesignCard.compactTextSpacing) {
-                HStack(spacing: DesignTokens.Space.xs) {
-                    Text(entry.title).font(.system(.callout, design: .monospaced)).lineLimit(1)
-                    DesignBadgeText(text: entry.kind.rawValue)
-                }
-                if let subtitle = SystemVolumeInventory.rowSubtitle(entry) {
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
-            Spacer(minLength: DesignTokens.Space.s)
+        UI.List.MetadataBadgeRow(systemImage: entry.kind.symbol,
+                               title: entry.title,
+                               badge: entry.kind.rawValue,
+                               subtitle: SystemVolumeInventory.rowSubtitle(entry),
+                               isMonospaced: true) {
             if !entry.containers.isEmpty {
-                Text("\(entry.containers.count)")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                UI.Card.MetricText(text: "\(entry.containers.count)")
+                    .designSecondaryValueStyle()
             }
-            DesignRowMenu(accessibilityLabel: AppText.string("menu.volumeActions", defaultValue: "Volume actions")) {
+            UI.Control.RowMenu(accessibilityLabel: AppText.string("menu.volumeActions", defaultValue: "Volume actions")) {
                 volumeMenu(entry)
             }
         }
-        .padding(.vertical, DesignTokens.Space.s)
         .contextMenu { volumeMenu(entry) }
     }
 
@@ -309,7 +296,7 @@ struct SystemContent: View {
 
     private var automationCard: some View {
         card {
-            Text(AppText.string("system.page.automation", defaultValue: "Automation")).font(.headline)
+            Text(AppText.string("system.page.automation", defaultValue: "Automation")).designHeadlineLabelStyle()
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 automationRow(icon: "arrow.triangle.2.circlepath",
                               title: AppText.string("automation.imageUpdateCheck", defaultValue: "Image update check"),
@@ -319,8 +306,9 @@ struct SystemContent: View {
                               isOn: settingBinding(\.imageUpdateChecksEnabled)) {
                     if app.settings.imageUpdateChecksEnabled {
                         Text(countdown(to: app.imageUpdateNextRunDate, now: context.date))
-                            .font(.system(.caption, design: .monospaced).weight(.semibold)).monospacedDigit()
-                        DesignActionGroup(DesignAction(systemName: "arrow.triangle.2.circlepath",
+                            .designSecondaryMonospacedCaption()
+                            .monospacedDigit()
+                        UI.Action.Group(UI.Action.Item(systemName: "arrow.triangle.2.circlepath",
                                                        title: AppText.string("common.runNow", defaultValue: "Run now"),
                                                        help: AppText.runImageUpdateCheckNow) {
                                 Task { await app.runImageUpdateSweepNow() }
@@ -335,7 +323,7 @@ struct SystemContent: View {
                               ? AppText.string("automation.appUpdateCheck.detail", defaultValue: "Sparkle · \(app.settings.updateChannel.rawValue.capitalized) channel")
                               : AppText.string("status.unavailableInBuild", defaultValue: "Unavailable in this build"),
                           isOn: appUpdateBinding) {
-                DesignActionGroup(DesignAction(systemName: "arrow.down.app",
+                UI.Action.Group(UI.Action.Item(systemName: "arrow.down.app",
                                                title: AppText.string("common.checkNow", defaultValue: "Check now"),
                                                help: AppText.checkForUpdatesNow,
                                                isEnabled: app.updater.canCheckForUpdates
@@ -351,31 +339,21 @@ struct SystemContent: View {
                               : AppText.string("status.off", defaultValue: "Off"),
                           isOn: settingBinding(\.autoRestartEnabled)) { EmptyView() }
             Divider()
-            HStack(spacing: DesignTokens.Space.s) {
-                Image(systemName: "dot.radiowaves.left.and.right")
-                    .foregroundStyle(.secondary)
-                    .frame(width: DesignTokens.IconSize.rowIconColumn)
-                Text(AppText.string("automation.refreshLoop", defaultValue: "Refresh loop")).font(.callout)
-                Spacer()
-                Text(app.coordinator.isActive ? "Active" : "Paused")
-                    .font(.callout)
-                    .foregroundStyle(app.coordinator.isActive ? .green : .secondary)
+            UI.List.MetadataRow(systemImage: "dot.radiowaves.left.and.right",
+                              title: AppText.string("automation.refreshLoop", defaultValue: "Refresh loop")) {
+                UI.State.StatusText(app.coordinator.isActive ? "Active" : "Paused",
+                                 tone: app.coordinator.isActive ? .success : .neutral)
             }
         }
     }
 
     private func automationRow<Trailing: View>(icon: String, title: String, detail: String,
                                                isOn: Binding<Bool>,
-                                               @ViewBuilder trailing: () -> Trailing) -> some View {
-        HStack(spacing: DesignTokens.Space.m) {
-            Image(systemName: icon).font(.title3)
-                .foregroundStyle(isOn.wrappedValue ? Color.accentColor : .secondary)
-                .frame(width: DesignTokens.IconSize.rowIconColumn)
-            VStack(alignment: .leading, spacing: DesignTokens.Space.xxs) {
-                Text(title).font(.callout)
-                Text(detail).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer(minLength: DesignTokens.Space.s)
+                                               @ViewBuilder trailing: @escaping () -> Trailing) -> some View {
+        UI.List.MetadataRow(systemImage: icon,
+                          title: title,
+                          subtitle: detail,
+                          tint: isOn.wrappedValue ? .accentColor : .secondary) {
             trailing()
             Toggle("", isOn: isOn).labelsHidden().controlSize(.mini)
         }
@@ -445,27 +423,27 @@ struct SystemContent: View {
 
     private var engineStatusCard: some View {
         card {
-            HStack(spacing: DesignTokens.Space.s) {
-                DesignStatusDot(color: app.serviceHealthy ? .green : .orange,
-                                size: DesignTokens.IconSize.serviceDot)
-                Text(AppText.string("system.containerEngine", defaultValue: "Container engine")).font(.headline)
-                DesignStatusBadge(text: app.serviceLabel,
+            HStack(spacing: UI.Layout.Spacing.s) {
+                UI.Badge.Dot(color: app.serviceHealthy ? .green : .orange,
+                                size: UI.Control.Size.serviceDot)
+                Text(AppText.string("system.containerEngine", defaultValue: "Container engine")).designHeadlineLabelStyle()
+                UI.Badge.Status(text: app.serviceLabel,
                                   tint: app.serviceHealthy ? .green : .orange)
                 Spacer(minLength: 0)
                 if let version = app.systemStatus?.apiServerVersion {
-                    Text(version).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
+                    Text(version).designSecondaryMonospacedCaption()
                         .textSelection(.enabled)
                 }
             }
-            HStack(spacing: DesignTokens.Space.s) {
-                DesignMetricTile(label: AppText.sectionContainers,
+            HStack(spacing: UI.Layout.Spacing.s) {
+                UI.Control.MetricTile(label: AppText.sectionContainers,
                                  value: "\(app.containers.running.count)",
                                  caption: AppText.string("status.running.lowercase", defaultValue: "running"))
-                DesignMetricTile(label: AppText.sectionImages, value: "\(app.images.count)")
-                DesignMetricTile(label: AppText.string("system.diskUsed", defaultValue: "Disk used"),
+                UI.Control.MetricTile(label: AppText.sectionImages, value: "\(app.images.count)")
+                UI.Control.MetricTile(label: AppText.string("system.diskUsed", defaultValue: "Disk used"),
                                  value: app.diskUsage.map { Format.bytes($0.totalSizeInBytes) } ?? "—")
             }
-            if working { ProgressView().controlSize(.small) }
+            if working { UI.State.ProgressIndicator() }
         }
     }
 

@@ -29,7 +29,7 @@ resource panel, it should be discoverable from `CommandPalette.swift`.
 
 Results should use the design system rather than custom row chrome:
 
-- use `DesignCard` for every result card
+- use `UI.Card.Scaffold` for every result card
 - pass badges, chevrons, return hints, and unread dots through the card's named
   accessory slots instead of building custom headers
 - use `PaletteItemVisual` for anything that can be represented visually
@@ -62,11 +62,11 @@ results.
 - `Sources/ContainedApp/Features/Palette/CommandPalette.swift` owns the indexed
   actions and search fields.
 - `Sources/ContainedApp/Features/Palette/PaletteSearch.swift` owns scoring.
-- `Sources/ContainedApp/Navigation/ToolbarPanels/ToolbarSearchSource.swift` owns the
+- `Sources/ContainedApp/Navigation/Toolbar/Panels/ToolbarSearchSource.swift` owns the
   toolbar search field (and the empty-query escalation into the palette).
-- `Sources/ContainedApp/Navigation/ToolbarPanels/ToolbarCommandPalette.swift` owns
+- `Sources/ContainedApp/Navigation/Toolbar/Panels/ToolbarCommandPalette.swift` owns
   the visual panel and keyboard handling.
-- `Sources/ContainedApp/Navigation/ToolbarPanels/PaletteResultCard.swift` owns
+- `Sources/ContainedApp/Navigation/Toolbar/Panels/PaletteResultCard.swift` owns
   per-result card rendering.
 - `Tests/ContainedAppTests/PaletteSearchTests.swift` locks in fuzzy matching and
   ranking expectations.

@@ -1,14 +1,14 @@
 import SwiftUI
-import ContainedNavigation
-import ContainedDesignSystem
+import ContainedUX
+import ContainedUI
 import AppKit
 import ContainedCore
 
-/// App preferences. Six sections, each built from the same `PanelSection` glass-card model so spacing,
+/// App preferences. Six sections, each built from the same `UI.Panel.Section` glass-card model so spacing,
 /// headers, and explanatory footers stay consistent: Appearance (theme + glass), General (behavior,
 /// data, CLI), Runtime, Registries, Updates, and About.
 ///
-/// Hosted in the toolbar Settings morph panel via the shared `DesignPanelScaffold`.
+/// Hosted in the toolbar Settings morph panel via the shared `UI.Panel.Scaffold`.
 /// Sections switch via a header menu rather than a `TabView`.
 struct SettingsContent: View {
     @Environment(AppModel.self) private var app
@@ -63,7 +63,7 @@ struct SettingsContent: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        DesignPanelScaffold(width: DesignTokens.PanelSize.settings.width) {
+        UI.Panel.Scaffold(width: UI.Panel.Size.settings.width) {
             if showsHeader {
                 VStack(spacing: 0) {
                     header
@@ -72,7 +72,7 @@ struct SettingsContent: View {
             }
         } content: {
             sectionBody(settings: settings)
-                .padding(DesignTokens.Space.s)
+                .padding(UI.Layout.Spacing.s)
         }
         .morphPanelPlacement(.centered)
         .onAppear { consumeRequestedPage() }
@@ -89,23 +89,23 @@ struct SettingsContent: View {
     }
 
     private var header: some View {
-        PanelHeader(symbol: page.systemImage,
+        UI.Panel.Header(symbol: page.systemImage,
                     title: AppText.sectionSettings,
                     subtitle: page.title) {
-            DesignActionGroup(headerActions)
+            UI.Action.Group(headerActions)
         }
     }
 
-    private var headerActions: [DesignAction] {
+    private var headerActions: [UI.Action.Item] {
         var actions = SettingsPage.allCases.map { item in
-            DesignAction(systemName: item.systemImage,
+            UI.Action.Item(systemName: item.systemImage,
                          help: item.title,
                          tint: page == item ? .accentColor : nil) {
                 page = item
             }
         }
         if let onClose {
-            actions.append(DesignAction(systemName: "xmark", help: AppText.close, isCancel: true, action: onClose))
+            actions.append(UI.Action.Item(systemName: "xmark", help: AppText.close, isCancel: true, action: onClose))
         }
         return actions
     }

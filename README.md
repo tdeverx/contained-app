@@ -95,16 +95,20 @@ instead.
 The root package contains the app launcher and app implementation, then consumes
 standalone local packages:
 
-- [`ContainedCore`](Packages/ContainedCore/README.md): pure models, runtime-neutral create/recreate request fields, Apple `container` argv builders, decoders, compose parsing, metric normalization, and package error metadata.
-- [`ContainedRuntime`](Packages/ContainedRuntime/README.md): shared runtime contracts, descriptors, capabilities, translation plans, command errors, and command execution primitives.
-- [`AppleContainerRuntime`](Packages/AppleContainerRuntime/README.md): the current Apple `container` adapter, including translation from shared create/import models to Apple CLI commands. Future Docker-compatible, Podman, Lima-backed, remote, or other runtime engines should be sibling adapter packages.
-- [`ContainedDesignSystem`](Packages/ContainedDesignSystem/README.md): reusable SwiftUI/AppKit visual primitives, tokens, spacing, material, cards, panels, controls, feedback, and data visualization.
-- [`ContainedNavigation`](Packages/ContainedNavigation/README.md): reusable safe-area, morphing, measurement, and panel-host infrastructure.
-- [`ContainedPreviewSupport`](Packages/ContainedPreviewSupport/README.md): deterministic fixtures for package examples and SwiftUI previews.
-- `ContainedApp`: SwiftUI app shell, navigation, feature views, stores, history, settings, Sparkle support, app state migration, app-specific presentation mappings, and localization.
+- [`ContainedCore`](Packages/ContainedCore/README.md): the backend/orchestration package. It exposes `Core.*` APIs for runtime descriptors/capabilities, canonical container models, command previews, Compose import/export semantics, Apple `container` adapter internals, metrics, typed errors, and future runtime migration planning.
+- [`ContainedUI`](Packages/ContainedUI/README.md): reusable SwiftUI/AppKit visual primitives, tokens, spacing, material, cards, panels, controls, feedback, and data visualization.
+- [`ContainedUX`](Packages/ContainedUX/README.md): reusable safe-area, morphing, measurement, and panel-host infrastructure.
+- `ContainedApp`: SwiftUI app shell, navigation, feature views, stores, history, settings, Sparkle support, app state migration, app-specific presentation mappings, localization, and the join point between Core/UI/UX.
 - `Contained`: tiny SwiftPM executable launcher used by command-line builds and bundle scripts.
 
-Integration is intentionally CLI-based rather than private-framework based. Personalization and app-managed metadata stay local to Contained so the user's container resources remain clean when used directly from the terminal.
+Ownership shorthand: UI owns visuals, UX owns interaction/morph/panel movement,
+Core owns backend orchestration, and ContainedApp joins those packages with
+localization, persistence, settings, routing, and feature policy.
+Core also exposes a separate `ContainedCoreFixtures` product for deterministic
+test/preview data under `Core.Fixtures.*`; normal app and distributable bundle
+targets do not link it.
+
+Integration is intentionally CLI-based rather than private-framework based. The app talks to `Core.Orchestrator`; Core owns adapter-specific argv/process details. Personalization and app-managed metadata stay local to Contained so the user's container resources remain clean when used directly from the terminal.
 Reusable packages expose display-neutral errors with stable package codes/context; the app owns localized messages, alerts, and Activity history presentation.
 
 ## License

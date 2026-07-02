@@ -11,11 +11,8 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "Packages/ContainedCore"),
-        .package(path: "Packages/ContainedRuntime"),
-        .package(path: "Packages/AppleContainerRuntime"),
-        .package(path: "Packages/ContainedDesignSystem"),
-        .package(path: "Packages/ContainedNavigation"),
-        .package(path: "Packages/ContainedPreviewSupport"),
+        .package(path: "Packages/ContainedUI"),
+        .package(path: "Packages/ContainedUX"),
         // Mature VT100/xterm emulator + PTY host for the in-container terminal. AppKit-backed,
         // bridged through NSViewRepresentable in the app target.
         .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.2.0"),
@@ -29,11 +26,8 @@ let package = Package(
             name: "ContainedApp",
             dependencies: [
                 .product(name: "ContainedCore", package: "ContainedCore"),
-                .product(name: "ContainedRuntime", package: "ContainedRuntime"),
-                .product(name: "AppleContainerRuntime", package: "AppleContainerRuntime"),
-                .product(name: "ContainedDesignSystem", package: "ContainedDesignSystem"),
-                .product(name: "ContainedNavigation", package: "ContainedNavigation"),
-                .product(name: "ContainedPreviewSupport", package: "ContainedPreviewSupport"),
+                .product(name: "ContainedUI", package: "ContainedUI"),
+                .product(name: "ContainedUX", package: "ContainedUX"),
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
                 .product(name: "Sparkle", package: "Sparkle"),
             ],
@@ -49,15 +43,14 @@ let package = Package(
             dependencies: ["ContainedApp"],
             path: "Sources/Contained"
         ),
-        // Tests for app-target value types (RunSpec form state and runtime-translated create mapping).
-        // Imports the shared app module with @testable.
+        // Tests for app-owned value types, runtime mapping, and fixture-to-presentation mapping.
+        // Imports the shared app module with @testable and keeps fixtures out of the app target.
         .testTarget(
             name: "ContainedAppTests",
             dependencies: [
                 "ContainedApp",
                 .product(name: "ContainedCore", package: "ContainedCore"),
-                .product(name: "ContainedRuntime", package: "ContainedRuntime"),
-                .product(name: "AppleContainerRuntime", package: "AppleContainerRuntime"),
+                .product(name: "ContainedCoreFixtures", package: "ContainedCore"),
             ],
             path: "Tests/ContainedAppTests"
         ),

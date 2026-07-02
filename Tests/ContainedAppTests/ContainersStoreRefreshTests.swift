@@ -1,8 +1,6 @@
 import Foundation
 import Testing
 import ContainedCore
-import ContainedRuntime
-import AppleContainerRuntime
 @testable import ContainedApp
 
 @Suite("Container stats streaming")
@@ -11,7 +9,7 @@ struct ContainersStoreRefreshTests {
     @Test func refreshDoesNotRunStatsCommand() async {
         let runner = RecordingRunner()
         let store = ContainersStore()
-        store.client = AppleContainerClient(runner: runner)
+        store.client = Core.Orchestrator.testing(runner: runner)
 
         await store.refresh()
 
@@ -22,7 +20,7 @@ struct ContainersStoreRefreshTests {
     @Test func streamedStatsUpdateEveryFrameWithoutAppThrottle() async {
         let runner = RecordingRunner()
         let store = ContainersStore()
-        store.client = AppleContainerClient(runner: runner)
+        store.client = Core.Orchestrator.testing(runner: runner)
         let clock = TestClock(Date(timeIntervalSinceReferenceDate: 1_000))
         store.now = { clock.date }
 
@@ -54,7 +52,7 @@ struct ContainersStoreRefreshTests {
     @Test func streamedStatsClampTinyIntervalsForCounterRates() async {
         let runner = RecordingRunner()
         let store = ContainersStore()
-        store.client = AppleContainerClient(runner: runner)
+        store.client = Core.Orchestrator.testing(runner: runner)
         let clock = TestClock(Date(timeIntervalSinceReferenceDate: 1_000))
         store.now = { clock.date }
 

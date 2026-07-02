@@ -71,7 +71,7 @@
     "cardDensity.large": {},
     "cardDensity.medium": {},
     "cardDensity.small": {},
-    "cleanup.cleanedStaleRows": {},
+    "cleanup.cleanedOrphanedRows": {},
     "cleanup.reclaimAll": {},
     "cleanup.removeStoppedContainers.title": {},
     "cleanup.removeUnusedImages.title": {},
