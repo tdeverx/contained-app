@@ -6,7 +6,7 @@ Reusable SwiftUI/AppKit visual primitives for Contained.
 
 `ContainedDesignSystem` owns app-agnostic visual policy: spacing, padding,
 radius, material, tint, glass surfaces, panel/page/sheet scaffolds, toolbar
-controls, resource-card chrome, sparklines, JSON/stream surfaces, color controls,
+controls, design-card chrome, sparklines, JSON/stream surfaces, color controls,
 clipboard helpers, and small chrome such as badges, keycaps, status dots, metric
 tiles, terminal surfaces, and selection overlays.
 
@@ -27,7 +27,7 @@ Set material and shell policy near the app root:
 struct AppRoot: View {
     var body: some View {
         DesignSystemExample()
-            .tint(AppTint.azure.color)
+            .tint(DesignTint.azure.color)
             .environment(\.modalMaterial, WindowMaterial.sheet)
             .environment(\.buttonMaterial, WindowMaterial.glassClear)
             .environment(\.cardMaterial, WindowMaterial.glassRegular)
@@ -47,13 +47,13 @@ import SwiftUI
 import ContainedDesignSystem
 
 struct DesignSystemExample: View {
-    @State private var tint = AppTint.azure
+    @State private var tint = DesignTint.azure
 
     var body: some View {
         PageScaffold(symbol: "shippingbox",
                      title: "Containers",
                      subtitle: "Local runtime") {
-            VStack(spacing: Tokens.Space.l) {
+            VStack(spacing: DesignTokens.Space.l) {
                 PanelSection(header: "Appearance") {
                     PanelRow(title: "Accent") {
                         TintSelector(selection: $tint, labelForTint: tintName)
@@ -63,11 +63,11 @@ struct DesignSystemExample: View {
                     }
                 }
 
-                ResourceCard(size: .small,
+                DesignCard(size: .small,
                              elevated: false,
                              title: "web",
                              subtitle: "nginx:latest") {
-                    ResourceCardIconChip(symbol: "shippingbox.fill",
+                    DesignCardIconChip(symbol: "shippingbox.fill",
                                          tint: tint.color)
                 } titleAccessory: {
                     EmptyView()
@@ -91,7 +91,7 @@ struct DesignSystemExample: View {
         .environment(\.buttonMaterial, .glassClear)
     }
 
-    private func tintName(_ tint: AppTint) -> String {
+    private func tintName(_ tint: DesignTint) -> String {
         switch tint {
         case .multicolor: return "App Accent"
         case .graphite: return "Graphite"
@@ -109,14 +109,14 @@ struct DesignSystemExample: View {
 
 ## Resource Card Controls
 
-Use `ResourceCard` for cards. Feature views pass plain titles, subtitles, page
+Use `DesignCard` for cards. Feature views pass plain titles, subtitles, page
 IDs, labels, metric strings, and actions; the package owns header/body/widget/footer
 placement:
 
-`ResourceCard` owns card anatomy:
+`DesignCard` owns card anatomy:
 
 - the header is always sticky and visible
-- page controls are declared through `ResourceCardPages`, stay mounted in the
+- page controls are declared through `DesignCardPages`, stay mounted in the
   header trailing slot, and use `controlsReveal` for visibility
 - the body appears only when the card is expanded
 - the widget is sticky for `.large` cards and becomes body content for `.medium`
@@ -128,25 +128,25 @@ struct CardControlsExample: View {
     @State private var metric = "cpu"
 
     private let pages = [
-        ResourceCardPageControlItem(id: "overview",
+        DesignCardPageControlItem(id: "overview",
                                     title: "Overview",
                                     systemImage: "rectangle.grid.1x2"),
-        ResourceCardPageControlItem(id: "logs",
+        DesignCardPageControlItem(id: "logs",
                                     title: "Logs",
                                     systemImage: "text.alignleft")
     ]
 
     var body: some View {
-        ResourceCard(size: .large,
+        DesignCard(size: .large,
                      title: "web",
                      subtitle: "nginx:latest",
-                     pages: ResourceCardPages(items: pages,
+                     pages: DesignCardPages(items: pages,
                                               selection: page,
                                               tint: .accentColor,
                                               closeLabel: "Close",
                                               onSelect: { page = $0 },
                                               onClose: {})) {
-            ResourceCardIconChip(symbol: "shippingbox.fill")
+            DesignCardIconChip(symbol: "shippingbox.fill")
         } titleAccessory: {
             EmptyView()
         } subtitleAccessory: {
@@ -154,27 +154,27 @@ struct CardControlsExample: View {
         } headerAccessory: {
             EmptyView()
         } bodyContent: {
-            ResourceCardInsetSection(title: "Details") {
-                ResourceCardSubtitleText(text: "Ready")
+            DesignCardInsetSection(title: "Details") {
+                DesignCardSubtitleText(text: "Ready")
             }
         } footerLeading: {
-            ResourceCardFooterChip(isSelected: metric == "cpu",
+            DesignCardFooterChip(isSelected: metric == "cpu",
                                    tint: .accentColor,
                                    help: "CPU",
                                    action: { metric = "cpu" }) {
                 Image(systemName: "cpu")
             } text: {
-                ResourceCardMetricText(text: "12%")
+                DesignCardMetricText(text: "12%")
             }
         } footerActions: {
-            ResourceCardFooterButton(systemName: "play.fill",
+            DesignCardFooterButton(systemName: "play.fill",
                                      help: "Start",
                                      tint: .accentColor) {}
         } widget: {
             LiveSparkline(samples: [0, 0.12, 0.18],
                           color: .accentColor,
                           scale: .fraction)
-                .frame(height: Tokens.ResourceCard.sparklineHeight)
+                .frame(height: DesignTokens.DesignCard.sparklineHeight)
         }
     }
 }
@@ -246,11 +246,11 @@ DesignGlassToggle(isOn: $following,
 
 ## Topics
 
-### Tokens and Theme
+### DesignTokens and Theme
 
-- ``Tokens``
+- ``DesignTokens``
 - ``WindowMaterial``
-- ``AppTint``
+- ``DesignTint``
 - ``ColorLayerBlendMode``
 - ``GlassButtonTintStyle``
 - ``DesignActionCluster``
@@ -292,28 +292,28 @@ DesignGlassToggle(isOn: $following,
 
 ### Resource Cards
 
-- ``ResourceCard``
-- ``ResourceCardPages``
-- ``ResourceCardNoPage``
-- ``ResourceCardTextStyle``
-- ``ResourceGlassCard``
-- ``ResourceCardHeader``
-- ``ResourceCardHeaderTextBlock``
-- ``ResourceCardIconChip``
-- ``ResourceBadgeText``
-- ``ResourceCardFooterMini``
-- ``ResourceCardWidgetGroup``
-- ``ResourceCardFooterChip``
-- ``ResourceCardFooterButton``
-- ``ResourceCardInsetSection``
-- ``ResourceCardPageControls``
-- ``ResourceCardPageControlItem``
-- ``View/resourceCardFloatingControls(when:controls:)``
-- ``View/resourceCardProgressOverlay(when:)``
-- ``ResourceCardTitleText``
-- ``ResourceCardSubtitleText``
-- ``ResourceCardMonospacedSubtitleText``
-- ``ResourceCardMetricText``
+- ``DesignCard``
+- ``DesignCardPages``
+- ``DesignCardNoPage``
+- ``DesignCardTextStyle``
+- ``DesignCardSurface``
+- ``DesignCardHeader``
+- ``DesignCardHeaderTextBlock``
+- ``DesignCardIconChip``
+- ``DesignBadgeText``
+- ``DesignCardFooterMini``
+- ``DesignCardWidgetGroup``
+- ``DesignCardFooterChip``
+- ``DesignCardFooterButton``
+- ``DesignCardInsetSection``
+- ``DesignCardPageControls``
+- ``DesignCardPageControlItem``
+- ``View/designCardFloatingControls(when:controls:)``
+- ``View/designCardProgressOverlay(when:)``
+- ``DesignCardTitleText``
+- ``DesignCardSubtitleText``
+- ``DesignCardMonospacedSubtitleText``
+- ``DesignCardMetricText``
 
 ### Data Display and Micro Chrome
 

@@ -45,7 +45,7 @@ body:
       placeholder: |
         - [ ] Compare the main options
         - [ ] Check affected screens, commands, or settings
-        - [ ] Confirm docs/wiki impact
+        - [ ] Confirm docs impact
     validations:
       required: false
 
@@ -57,7 +57,7 @@ body:
       placeholder: |
         - [ ] Update the relevant app/core code
         - [ ] Add or update focused tests
-        - [ ] Update docs/wiki if behavior or language changes
+        - [ ] Update docs if behavior or language changes
     validations:
       required: false
 

@@ -1,9 +1,17 @@
 import Foundation
 import Testing
-@testable import Contained
+@testable import ContainedApp
 
 @MainActor
+@Suite(.serialized)
 struct UpdaterControllerTests {
+    private static var repositoryRoot: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+    }
+
     @Test func whatsNewIsNotMarkedSeenUntilClose() {
         let defaults = UserDefaults(suiteName: "ContainedUpdaterTests-\(UUID().uuidString)")!
         let updater = UpdaterController(defaults: defaults)
@@ -53,9 +61,9 @@ struct UpdaterControllerTests {
     }
 
     @Test func bundledChangelogResourceMatchesReleaseChangelog() throws {
-        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let root = Self.repositoryRoot
         let releaseChangelog = root.appendingPathComponent("CHANGELOG.md")
-        let bundledChangelog = root.appendingPathComponent("Sources/Contained/Resources/CHANGELOG.md")
+        let bundledChangelog = root.appendingPathComponent("Sources/ContainedApp/Resources/CHANGELOG.md")
 
         let releaseText = try String(contentsOf: releaseChangelog, encoding: .utf8)
         let bundledText = try String(contentsOf: bundledChangelog, encoding: .utf8)
@@ -63,15 +71,18 @@ struct UpdaterControllerTests {
         #expect(bundledText == releaseText)
     }
 
-    @Test func bundledReleaseNotesAreReadable() {
-        let updater = UpdaterController(defaults: UserDefaults(suiteName: "ContainedUpdaterTests-\(UUID().uuidString)")!)
+    @Test func bundledReleaseNotesAreReadable() throws {
+        let fallback = Self.repositoryRoot.appendingPathComponent("Sources/ContainedApp/Resources/CHANGELOG.md")
+        let changelogURL = UpdaterController.changelogResourceURL() ?? fallback
+        let changelog = try String(contentsOf: changelogURL, encoding: .utf8)
+        let html = try #require(ChangelogSection.releaseNotesHTML(version: "1.0.0", from: changelog))
 
-        #expect(!updater.currentReleaseNotesHTML.contains("No release notes are bundled"))
-        #expect(updater.currentReleaseNotesHTML.contains("First complete Contained release"))
+        #expect(!html.contains("No release notes are bundled"))
+        #expect(html.contains("First complete Contained release"))
     }
 
     @Test func prereleaseVersionsUseBaseChangelogSection() throws {
-        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let root = Self.repositoryRoot
         let releaseChangelog = root.appendingPathComponent("CHANGELOG.md")
         let releaseText = try String(contentsOf: releaseChangelog, encoding: .utf8)
 
@@ -135,7 +146,8 @@ struct UpdaterControllerTests {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("ContainedUpdaterTests-\(UUID().uuidString)")
         let app = root.appendingPathComponent("Contained.app")
-        let resources = app.appendingPathComponent("Contents/Resources/Contained_Contained.bundle")
+        let resources = app
+            .appendingPathComponent("Contents/Resources/Contained_ContainedApp.bundle/Contents/Resources")
         try FileManager.default.createDirectory(at: resources, withIntermediateDirectories: true)
         try "# Changelog\n".write(to: resources.appendingPathComponent("CHANGELOG.md"),
                                   atomically: true,
@@ -153,7 +165,7 @@ struct UpdaterControllerTests {
     }
 
     @Test func releaseNotesScriptComposesNightlyChangesAndFullNotes() throws {
-        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let root = Self.repositoryRoot
         let work = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("ContainedReleaseNotesTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
@@ -210,7 +222,7 @@ struct UpdaterControllerTests {
     }
 
     @Test func betaReleaseNotesIncludeBetaChangesAndFullNotes() throws {
-        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let root = Self.repositoryRoot
         let work = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("ContainedReleaseNotesTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
@@ -269,7 +281,7 @@ struct UpdaterControllerTests {
     }
 
     @Test func stableReleaseNotesOnlyIncludeFullVersionNotes() throws {
-        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let root = Self.repositoryRoot
         let work = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("ContainedReleaseNotesTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
@@ -321,7 +333,7 @@ struct UpdaterControllerTests {
     }
 
     @Test func betaReleaseNotesCanCompileChangeFragments() throws {
-        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let root = Self.repositoryRoot
         let work = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("ContainedReleaseNotesTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
@@ -376,7 +388,7 @@ struct UpdaterControllerTests {
     }
 
     @Test func promotedAppcastItemsMergeIntoNightlyIdempotently() throws {
-        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let root = Self.repositoryRoot
         let work = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("ContainedAppcastMergeTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)

@@ -47,7 +47,7 @@ body:
       placeholder: |
         - [ ] Move shared behavior into the primitive
         - [ ] Remove duplicated local styling where appropriate
-        - [ ] Update docs/wiki if behavior or language changes
+        - [ ] Update docs if behavior or language changes
     validations:
       required: false
 

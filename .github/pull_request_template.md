@@ -31,8 +31,8 @@
 ## Release Notes And Docs
 
 - [ ] Added or updated a release/change note, or applied the `no-release-note` label for docs/meta/dependency-only maintenance
-- [ ] Updated `docs/wiki` for user-facing behavior or workflow changes, or this PR does not need docs
-- [ ] Synced `Sources/Contained/Resources/CHANGELOG.md` when `CHANGELOG.md` changed (`./scripts/sync-changelog-resource.sh --check` passes)
+- [ ] Updated `docs` for user-facing behavior or workflow changes, or this PR does not need docs
+- [ ] Synced `Sources/ContainedApp/Resources/CHANGELOG.md` when `CHANGELOG.md` changed (`./scripts/sync-changelog-resource.sh --check` passes)
 
 ## Update Safety
 

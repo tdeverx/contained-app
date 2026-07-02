@@ -17,5 +17,9 @@ let package = Package(
                 .product(name: "ContainedDesignSystem", package: "ContainedDesignSystem"),
             ]
         ),
+        .testTarget(
+            name: "ContainedNavigationTests",
+            dependencies: ["ContainedNavigation"]
+        ),
     ]
 )

@@ -1,0 +1,432 @@
+import SwiftUI
+
+public enum DesignCardSize {
+    case small, medium, large
+
+    /// Footer actions stay visible in compact/expanded chrome for medium and large cards.
+    /// Small cards move footer content into the expanded body so the closed card remains header-only.
+    public var keepsFooterSticky: Bool { self != .small }
+    /// Widgets stay visible as card chrome only for large cards. Medium cards keep the widget as
+    /// part of the expanded body, preserving the simpler closed-card silhouette.
+    public var keepsWidgetSticky: Bool { self == .large }
+    public var embedsFooterInBody: Bool { self == .small }
+    public var embedsWidgetInBody: Bool { self == .medium }
+
+    public var showsFooter: Bool { keepsFooterSticky }
+    public var showsWidget: Bool { keepsWidgetSticky }
+}
+
+public enum DesignCardExpandedMetrics {
+    public static let maxWidth: CGFloat = 760
+}
+
+public struct CardSizePicker: View {
+    @Binding var selection: CardDensity
+    public var title: String
+    public var labelForDensity: (CardDensity) -> String
+
+    public init(selection: Binding<CardDensity>,
+                title: String,
+                labelForDensity: @escaping (CardDensity) -> String) {
+        self._selection = selection
+        self.title = title
+        self.labelForDensity = labelForDensity
+    }
+
+    public var body: some View {
+        Picker(title, selection: $selection) {
+            ForEach(CardDensity.allCases) { density in
+                Text(labelForDensity(density)).tag(density)
+            }
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 230)
+    }
+}
+
+public struct DesignCardSurface<Header: View, BodyContent: View, FooterLeading: View,
+                         FooterActions: View, Widget: View>: View {
+    var size: DesignCardSize
+    var isExpanded = false
+    var cornerRadiusOverride: CGFloat?
+    var controlsVisible = true
+    var isSelected = false
+    var showsFooter = true
+    var showsWidget = true
+    /// When set, the selected state reads as a soft `white.opacity` wash (matching a hovered glass
+    /// button) instead of the 2.5pt accent stroke — used by the Activity and command-palette rows.
+    var usesSelectionFill = false
+    var fill: Color?
+    var fillOpacity: Double = 0.18
+    var gradient: Bool = false
+    var gradientAngle: Double = 135
+    var blendMode: ColorLayerBlendMode = .softLight
+    /// Lift the card with a shadow. Pass `false` for flat tiles inside an already-elevated panel.
+    var elevated: Bool = true
+    var onTap: () -> Void = {}
+    @ViewBuilder var header: () -> Header
+    @ViewBuilder var bodyContent: () -> BodyContent
+    @ViewBuilder var footerLeading: () -> FooterLeading
+    @ViewBuilder var footerActions: () -> FooterActions
+    @ViewBuilder var widget: () -> Widget
+
+    @State private var hovering = false
+    @Environment(\.cardMaterial) private var cardMaterial
+
+    /// Render the selected state as a soft fill wash instead of the accent stroke.
+    public func selectionFill(_ on: Bool = true) -> Self {
+        var copy = self
+        copy.usesSelectionFill = on
+        return copy
+    }
+
+    public init(size: DesignCardSize,
+         isExpanded: Bool = false,
+         cornerRadiusOverride: CGFloat? = nil,
+         controlsVisible: Bool = true,
+         isSelected: Bool = false,
+         showsFooter: Bool = true,
+         showsWidget: Bool = true,
+         fill: Color? = nil,
+         fillOpacity: Double = 0.18,
+         gradient: Bool = false,
+         gradientAngle: Double = 135,
+         blendMode: ColorLayerBlendMode = .softLight,
+         elevated: Bool = true,
+         onTap: @escaping () -> Void = {},
+         @ViewBuilder header: @escaping () -> Header,
+         @ViewBuilder bodyContent: @escaping () -> BodyContent,
+         @ViewBuilder footerLeading: @escaping () -> FooterLeading,
+         @ViewBuilder footerActions: @escaping () -> FooterActions,
+         @ViewBuilder widget: @escaping () -> Widget) {
+        self.size = size
+        self.isExpanded = isExpanded
+        self.cornerRadiusOverride = cornerRadiusOverride
+        self.controlsVisible = controlsVisible
+        self.isSelected = isSelected
+        self.showsFooter = showsFooter
+        self.showsWidget = showsWidget
+        self.fill = fill
+        self.fillOpacity = fillOpacity
+        self.gradient = gradient
+        self.gradientAngle = gradientAngle
+        self.blendMode = blendMode
+        self.elevated = elevated
+        self.onTap = onTap
+        self.header = header
+        self.bodyContent = bodyContent
+        self.footerLeading = footerLeading
+        self.footerActions = footerActions
+        self.widget = widget
+    }
+
+    public var body: some View {
+        surface
+            .contentShape(Rectangle())
+            .onTapGesture { if !isExpanded { onTap() } }
+            .onHover { hovering = $0 }
+    }
+
+    private var surface: some View {
+        let cornerRadius = cornerRadiusOverride ?? (isExpanded ? DesignTokens.Radius.sheet : DesignTokens.Radius.card)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        return cardContent
+            .frame(maxWidth: isExpanded ? DesignCardExpandedMetrics.maxWidth : .infinity,
+                   alignment: .leading)
+            .clipShape(shape)
+            .designCardMaterial(cardMaterial,
+                                  cornerRadius: cornerRadius,
+                                  shadow: elevated,
+                                  fill: fill,
+                                  fillOpacity: fillOpacity,
+                                  gradient: gradient,
+                                  gradientAngle: gradientAngle,
+                                  blendMode: blendMode)
+            .overlay {
+                if isSelected {
+                    if usesSelectionFill {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(DesignMaterial.toolbarHoverFill)
+                    } else {
+                        RoundedRectangle(cornerRadius: DesignTokens.Radius.inset(from: cornerRadius, by: 1),
+                                         style: .continuous)
+                            .strokeBorder(Color.accentColor, lineWidth: 2.5)
+                            .padding(1)
+                    }
+                }
+            }
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: isExpanded)
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: cornerRadiusOverride)
+    }
+
+    @ViewBuilder
+    private var cardContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            stickyHeader
+                .layoutPriority(1)
+            if isExpanded {
+                expandedBody
+                    .layoutPriority(0)
+            }
+            if shouldShowStickyWidget {
+                stickyWidget
+                    .layoutPriority(1)
+            }
+            if shouldShowStickyFooter {
+                stickyFooter(showActions: isExpanded ? controlsVisible : hovering)
+                    .layoutPriority(1)
+            }
+        }
+    }
+
+    private var stickyHeader: some View {
+        header()
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var expandedBody: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            bodyContent()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if shouldEmbedWidgetInBody {
+                embeddedWidget
+            }
+            if shouldEmbedFooterInBody {
+                stickyFooter(showActions: controlsVisible)
+                    .layoutPriority(1)
+            }
+        }
+    }
+
+    private var stickyWidget: some View {
+        widgetBand
+    }
+
+    private var embeddedWidget: some View {
+        widgetBand
+    }
+
+    private func stickyFooter(showActions: Bool) -> some View {
+        DesignCardFooter(actionsVisible: showActions) {
+            footerLeading()
+        } trailing: {
+            footerActions()
+        } widget: {
+            EmptyView()
+        }
+    }
+
+    private var widgetBand: some View {
+        widget()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, DesignTokens.DesignCard.padding)
+            .padding(.bottom, DesignTokens.DesignCard.padding)
+    }
+
+    private var shouldShowStickyWidget: Bool {
+        showsWidget && hasWidgetSlot && size.keepsWidgetSticky
+    }
+
+    private var shouldEmbedWidgetInBody: Bool {
+        showsWidget && hasWidgetSlot && size.embedsWidgetInBody
+    }
+
+    private var shouldShowStickyFooter: Bool {
+        showsFooter && hasFooterSlot && size.keepsFooterSticky
+    }
+
+    private var shouldEmbedFooterInBody: Bool {
+        showsFooter && hasFooterSlot && size.embedsFooterInBody
+    }
+
+    private var hasWidgetSlot: Bool {
+        Widget.self != EmptyView.self
+    }
+
+    private var hasFooterSlot: Bool {
+        FooterLeading.self != EmptyView.self || FooterActions.self != EmptyView.self
+    }
+}
+
+private struct DesignCardMaterialSurface: ViewModifier {
+    var material: WindowMaterial
+    var cornerRadius: CGFloat
+    var shadow: Bool
+    var fill: Color?
+    var fillOpacity: Double
+    var gradient: Bool
+    var gradientAngle: Double
+    var blendMode: ColorLayerBlendMode
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        content
+            .clipShape(shape)
+            .background {
+                if shadow {
+                    ExteriorShadow(cornerRadius: cornerRadius,
+                                   color: shadowColor,
+                                   radius: shadowRadius,
+                                   y: shadowY)
+                }
+            }
+            .background {
+                ZStack {
+                    if let glass = material.glass {
+                        Color.clear.glassEffect(glass, in: shape)
+                    } else {
+                        VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                    }
+
+                    fillLayer(shape)
+                }
+                .clipShape(shape)
+                .compositingGroup()
+            }
+    }
+
+    @ViewBuilder
+    private func fillLayer(_ shape: RoundedRectangle) -> some View {
+        if let fill {
+            shape.fill(fillStyle(fill))
+                .blendMode(blendMode.blendMode)
+                .clipShape(shape)
+        }
+    }
+
+    private func fillStyle(_ color: Color) -> AnyShapeStyle {
+        if gradient {
+            let radians = gradientAngle * .pi / 180
+            let dx = cos(radians) / 2
+            let dy = sin(radians) / 2
+            return AnyShapeStyle(LinearGradient(
+                colors: [color.opacity(fillOpacity * 1.35), color.opacity(fillOpacity * 0.4)],
+                startPoint: UnitPoint(x: 0.5 - dx, y: 0.5 - dy),
+                endPoint: UnitPoint(x: 0.5 + dx, y: 0.5 + dy)))
+        }
+        return AnyShapeStyle(color.opacity(fillOpacity))
+    }
+
+    private var shadowColor: Color { .black.opacity((colorScheme == .dark ? 0.55 : 0.18)) }
+    private var shadowRadius: CGFloat { 10 }
+    private var shadowY: CGFloat { 4 }
+}
+
+private extension View {
+    func designCardMaterial(_ material: WindowMaterial,
+                              cornerRadius: CGFloat,
+                              shadow: Bool,
+                              fill: Color?,
+                              fillOpacity: Double,
+                              gradient: Bool,
+                              gradientAngle: Double,
+                              blendMode: ColorLayerBlendMode) -> some View {
+        modifier(DesignCardMaterialSurface(material: material,
+                                             cornerRadius: cornerRadius,
+                                             shadow: shadow,
+                                             fill: fill,
+                                             fillOpacity: fillOpacity,
+                                             gradient: gradient,
+                                             gradientAngle: gradientAngle,
+                                             blendMode: blendMode))
+    }
+}
+
+public extension DesignCardSurface where BodyContent == EmptyView, FooterLeading == EmptyView,
+                                FooterActions == EmptyView, Widget == EmptyView {
+    init(size: DesignCardSize = .small,
+         isSelected: Bool = false,
+         fill: Color? = nil,
+         fillOpacity: Double = 0.18,
+         gradient: Bool = false,
+         gradientAngle: Double = 135,
+         blendMode: ColorLayerBlendMode = .softLight,
+         elevated: Bool = true,
+         onTap: @escaping () -> Void = {},
+         @ViewBuilder header: @escaping () -> Header) {
+        self.init(size: size,
+                  isSelected: isSelected,
+                  fill: fill,
+                  fillOpacity: fillOpacity,
+                  gradient: gradient,
+                  gradientAngle: gradientAngle,
+                  blendMode: blendMode,
+                  elevated: elevated,
+                  onTap: onTap,
+                  header: header,
+                  bodyContent: { EmptyView() },
+                  footerLeading: { EmptyView() },
+                  footerActions: { EmptyView() },
+                  widget: { EmptyView() })
+    }
+}
+
+public extension DesignCardSurface where BodyContent == EmptyView, Widget == EmptyView {
+    init(size: DesignCardSize,
+         isExpanded: Bool = false,
+         controlsVisible: Bool = true,
+         isSelected: Bool = false,
+         fill: Color? = nil,
+         fillOpacity: Double = 0.18,
+         gradient: Bool = false,
+         gradientAngle: Double = 135,
+         blendMode: ColorLayerBlendMode = .softLight,
+         elevated: Bool = true,
+         onTap: @escaping () -> Void = {},
+         @ViewBuilder header: @escaping () -> Header,
+         @ViewBuilder footerLeading: @escaping () -> FooterLeading,
+         @ViewBuilder footerActions: @escaping () -> FooterActions) {
+        self.init(size: size,
+                  isExpanded: isExpanded,
+                  controlsVisible: controlsVisible,
+                  isSelected: isSelected,
+                  fill: fill,
+                  fillOpacity: fillOpacity,
+                  gradient: gradient,
+                  gradientAngle: gradientAngle,
+                  blendMode: blendMode,
+                  elevated: elevated,
+                  onTap: onTap,
+                  header: header,
+                  bodyContent: { EmptyView() },
+                  footerLeading: footerLeading,
+                  footerActions: footerActions,
+                  widget: { EmptyView() })
+    }
+}
+
+public extension DesignCardSurface where Widget == EmptyView {
+    init(size: DesignCardSize,
+         isExpanded: Bool = false,
+         controlsVisible: Bool = true,
+         isSelected: Bool = false,
+         fill: Color? = nil,
+         fillOpacity: Double = 0.18,
+         gradient: Bool = false,
+         gradientAngle: Double = 135,
+         blendMode: ColorLayerBlendMode = .softLight,
+         elevated: Bool = true,
+         onTap: @escaping () -> Void = {},
+         @ViewBuilder header: @escaping () -> Header,
+         @ViewBuilder bodyContent: @escaping () -> BodyContent,
+         @ViewBuilder footerLeading: @escaping () -> FooterLeading,
+         @ViewBuilder footerActions: @escaping () -> FooterActions) {
+        self.init(size: size,
+                  isExpanded: isExpanded,
+                  controlsVisible: controlsVisible,
+                  isSelected: isSelected,
+                  fill: fill,
+                  fillOpacity: fillOpacity,
+                  gradient: gradient,
+                  gradientAngle: gradientAngle,
+                  blendMode: blendMode,
+                  elevated: elevated,
+                  onTap: onTap,
+                  header: header,
+                  bodyContent: bodyContent,
+                  footerLeading: footerLeading,
+                  footerActions: footerActions,
+                  widget: { EmptyView() })
+    }
+}

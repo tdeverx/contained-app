@@ -2,7 +2,7 @@ import Foundation
 import Testing
 import ContainedCore
 import AppleContainerRuntime
-@testable import Contained
+@testable import ContainedApp
 
 @Suite("RunSpec create requests + runtime mapping")
 @MainActor
@@ -425,9 +425,16 @@ struct RunSpecTests {
     }
 
     private var fixturesURL: URL {
-        URL(filePath: #filePath)
+        let testsDirectory = URL(filePath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appending(path: "ContainedCoreTests/Fixtures", directoryHint: .isDirectory)
+        let repositoryRoot = testsDirectory.deletingLastPathComponent()
+        let packageFixtures = repositoryRoot
+            .appending(path: "Packages/AppleContainerRuntime/Tests/AppleContainerRuntimeTests/Fixtures",
+                       directoryHint: .isDirectory)
+        if FileManager.default.fileExists(atPath: packageFixtures.path) {
+            return packageFixtures
+        }
+        return testsDirectory.appending(path: "ContainedCoreTests/Fixtures", directoryHint: .isDirectory)
     }
 }

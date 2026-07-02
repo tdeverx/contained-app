@@ -47,7 +47,7 @@ body:
       placeholder: |
         - [ ] Update navigation, toolbar, panel, or measurement code
         - [ ] Add focused tests or smoke coverage where practical
-        - [ ] Update docs/wiki if behavior or terminology changes
+        - [ ] Update docs if behavior or terminology changes
     validations:
       required: false
 

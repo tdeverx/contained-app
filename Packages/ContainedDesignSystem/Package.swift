@@ -9,5 +9,9 @@ let package = Package(
     ],
     targets: [
         .target(name: "ContainedDesignSystem"),
+        .testTarget(
+            name: "ContainedDesignSystemTests",
+            dependencies: ["ContainedDesignSystem"]
+        ),
     ]
 )

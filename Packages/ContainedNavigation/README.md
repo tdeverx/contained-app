@@ -29,9 +29,9 @@ import ContainedNavigation
 
 ## What Belongs Here
 
-- `AppSafeAreaManager`, `AppSafeAreaPolicy`, and the `appSafeAreas` environment
+- `MorphSafeAreaManager`, `MorphSafeAreaPolicy`, and the `morphSafeAreas` environment
   value for generic top/bottom toolbar safe-area contracts.
-- `MorphGeometry`, `AppMorphTarget`, and `MorphPanelPlacement` for target rects
+- `MorphGeometry`, `MorphTarget`, and `MorphPanelPlacement` for target rects
   that clamp to a safe area.
 - `MorphingExpander` for the reusable grow/shrink panel shell.
 - `MorphingSingleSurface` and `MorphingSingleSurfaceExpander` for card-like
@@ -39,7 +39,7 @@ import ContainedNavigation
   a handoff panel.
 - `MorphSourceFrameReader` and `MorphSourceFramesKey` for measuring source
   frames in a named coordinate space without app-local preference keys.
-- `MorphPanelScaffold` for generic fixed chrome, scrollable content, and pinned
+- `DesignPanelScaffold` for generic fixed chrome, scrollable content, and pinned
   footer layout inside a morph panel.
 
 Keep concrete panel contents in the app target. For example, Images, Templates,
@@ -62,20 +62,20 @@ struct NavigationPackageExample: View {
 
     private let originFrame = CGRect(x: 24,
                                      y: 24,
-                                     width: Tokens.Toolbar.buttonGroupHeight,
-                                     height: Tokens.Toolbar.buttonGroupHeight)
+                                     width: DesignTokens.Toolbar.buttonGroupHeight,
+                                     height: DesignTokens.Toolbar.buttonGroupHeight)
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             DesignActionGroup(DesignAction(systemName: "plus", help: "Add") {
                 isPresented = true
             })
-            .padding(Tokens.Space.l)
+            .padding(DesignTokens.Space.l)
 
             MorphingExpander(isPresented: $isPresented,
                              originFrame: originFrame,
-                             target: .centered(size: Tokens.PanelSize.add)) {
-                MorphPanelScaffold(width: Tokens.PanelSize.add.width) {
+                             target: .centered(size: DesignTokens.PanelSize.add)) {
+                DesignPanelScaffold(width: DesignTokens.PanelSize.add.width) {
                     PanelHeader(symbol: "plus",
                                 title: "Add",
                                 subtitle: "Choose a starting point") {
@@ -87,7 +87,7 @@ struct NavigationPackageExample: View {
                     }
                     Divider()
                 } content: {
-                    VStack(spacing: Tokens.Space.s) {
+                    VStack(spacing: DesignTokens.Space.s) {
                         GlassOptionTile(symbol: "play.rectangle",
                                         title: "Run a container",
                                         subtitle: "Start from an image") {
@@ -99,13 +99,13 @@ struct NavigationPackageExample: View {
                             isPresented = false
                         }
                     }
-                    .padding(Tokens.Space.s)
+                    .padding(DesignTokens.Space.s)
                 }
             }
         }
-        .environment(\.appSafeAreas,
-                      AppSafeAreaManager(topToolbarHeight: Tokens.Toolbar.band,
-                                         bottomToolbarHeight: Tokens.Toolbar.band))
+        .environment(\.morphSafeAreas,
+                      MorphSafeAreaManager(topToolbarHeight: DesignTokens.Toolbar.band,
+                                         bottomToolbarHeight: DesignTokens.Toolbar.band))
     }
 }
 ```
@@ -129,16 +129,16 @@ draws its own surface, use `MorphingSingleSurfaceExpander` instead of
 ```swift
 MorphingSingleSurfaceExpander(isPresented: $isPresented,
                               originFrame: sourceFrame,
-                              target: .anchored(size: Tokens.PanelSize.imageDetail)) {
-    ExpandedResourceCard()
+                              target: .anchored(size: DesignTokens.PanelSize.imageDetail)) {
+    ExpandedDesignCard()
 }
 ```
 
 ## Safe-Area Policies
 
-Use `AppMorphTarget.centered(size:)` for modal-like work, such as creation
-details. Use `AppMorphTarget.anchored(size:)` when a panel should grow from and
-stay near its source control. Both paths use `AppSafeAreaManager` to avoid
+Use `MorphTarget.centered(size:)` for modal-like work, such as creation
+details. Use `MorphTarget.anchored(size:)` when a panel should grow from and
+stay near its source control. Both paths use `MorphSafeAreaManager` to avoid
 toolbar bands and system insets.
 
 For real toolbar sources, measure source controls in the same named coordinate
@@ -158,14 +158,15 @@ Button("Open") { isPresented = true }
 - Design package:
   `../ContainedDesignSystem/README.md`
 - App architecture:
-  `../../docs/wiki/Architecture.md`
+  `../../docs/architecture/Architecture.md`
 
 ## Verification
 
-Build the package by itself:
+Build and test the package by itself:
 
 ```sh
 swift build --package-path Packages/ContainedNavigation
+swift test --package-path Packages/ContainedNavigation
 ```
 
 Build it through the app graph:

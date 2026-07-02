@@ -34,15 +34,20 @@ Requirements:
 
 ## Build
 
-Contained is SwiftPM-first. The checked-in Xcode workspace is for manual editing
-and SwiftUI iteration; its shared schemes delegate back to SwiftPM so CI/release
-behavior stays identical to the command line.
+Contained has two supported development entry points that share the same package
+graph:
+
+- Xcode: `Contained.xcworkspace` contains a native macOS app target that builds
+  and runs `Contained.app` directly for SwiftUI iteration.
+- SwiftPM: `Package.swift`, `swift build`, `swift test`, and `scripts/bundle.sh`
+  remain the CI, release, packaging, signing, notarization, and appcast path.
 
 ```sh
 open Contained.xcworkspace
 swift build
 swift test
 xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug build
+xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug test
 ./scripts/bundle.sh debug
 open Contained.app
 ```
@@ -51,39 +56,45 @@ Maintainers use `scripts/release.sh` and `scripts/appcast.sh` for signing, notar
 
 ## Documentation
 
-The GitHub wiki is the source of truth for feature and implementation notes.
-The maintained wiki pages are mirrored in [`docs/wiki`](docs/wiki) so docs
-changes can be reviewed with code changes:
+Maintained docs live in [`docs`](docs) beside the code so architecture and
+workflow changes can be reviewed with implementation changes:
 
-- Start: [Features](https://github.com/tdeverx/contained-app/wiki/Features), [Installation](https://github.com/tdeverx/contained-app/wiki/Installation), [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts), [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting)
-- Workflows: [Creation Workflow](https://github.com/tdeverx/contained-app/wiki/Creation-Workflow), [Run / Edit Form](https://github.com/tdeverx/contained-app/wiki/Run-Edit-Form), [Compose Import](https://github.com/tdeverx/contained-app/wiki/Compose-Import), [Command Palette](https://github.com/tdeverx/contained-app/wiki/Command-Palette), [Updates](https://github.com/tdeverx/contained-app/wiki/Updates)
-- Feature areas: [Containers](https://github.com/tdeverx/contained-app/wiki/Features-Containers), [Images](https://github.com/tdeverx/contained-app/wiki/Features-Images), [Resources](https://github.com/tdeverx/contained-app/wiki/Features-Resources), [System & Settings](https://github.com/tdeverx/contained-app/wiki/System-Settings)
-- Maintainers: [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture), [Runtime Adapters](https://github.com/tdeverx/contained-app/wiki/Runtime-Adapters), [Design System](https://github.com/tdeverx/contained-app/wiki/Design-System), [Release Runbook](https://github.com/tdeverx/contained-app/wiki/Release), [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing), [Issues and Discussions](https://github.com/tdeverx/contained-app/wiki/Issues-and-Discussions)
+- App: [Home](docs/app/Home.md), [Installation](docs/app/Installation.md), [Keyboard Shortcuts](docs/app/Keyboard-Shortcuts.md), [Troubleshooting](docs/app/Troubleshooting.md), [Updates](docs/app/Updates.md), [System Settings](docs/app/System-Settings.md)
+- Features: [Feature Overview](docs/features/Features.md), [Containers](docs/features/Containers.md), [Images](docs/features/Images.md), [Resources](docs/features/Resources.md), [Creation Workflow](docs/features/Creation-Workflow.md), [Run / Edit Form](docs/features/Run-Edit-Form.md), [Compose Import](docs/features/Compose-Import.md), [Command Palette](docs/features/Command-Palette.md)
+- Architecture: [Architecture](docs/architecture/Architecture.md), [Runtime Adapters](docs/architecture/Runtime-Adapters.md), [Design System](docs/architecture/Design-System.md)
+- Development: [Contributing](docs/development/Contributing.md), [Issues and Discussions](docs/development/Issues-and-Discussions.md), [Localization](docs/app/Localization.md)
+- Release: [Release Runbook](docs/release/Release.md)
+
+Each local package also has its own README and DocC landing page under
+`Packages/<PackageName>/`.
 
 ## Contributing And Support
 
-Start with the [wiki](https://github.com/tdeverx/contained-app/wiki) and
-[Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting).
+Start with the [docs](docs) and
+[Troubleshooting](docs/app/Troubleshooting.md).
 Use [Discussions Q&A](https://github.com/tdeverx/contained-app/discussions/categories/q-a)
 for setup help and questions, and
 [open an issue](https://github.com/tdeverx/contained-app/issues/new/choose) for
 actionable bugs, crashes, regressions, or tracked feature work.
 
-Please read the [contributing guide](https://github.com/tdeverx/contained-app/wiki/Contributing)
+Please read the [contributing guide](docs/development/Contributing.md)
 before opening a larger PR. Do not post vulnerabilities publicly; use
 [private vulnerability reporting](https://github.com/tdeverx/contained-app/security/advisories/new)
 instead.
 
 ## Architecture
 
-The root package has the app/core targets and consumes local reusable packages:
+The root package contains the app launcher and app implementation, then consumes
+standalone local packages:
 
-- `ContainedCore`: models, runtime-neutral create/recreate request fields, Apple `container` argv builders, real `container --format json` decoders, compose parsing, and testable service logic.
-- `ContainedRuntime`: shared runtime contracts, descriptors, capabilities, translation plans, command errors, and command execution primitives.
-- `AppleContainerRuntime`: the current Apple `container` adapter, including translation from shared create/import models to Apple CLI commands. Future Docker-compatible, Podman, Lima-backed, remote, or other runtime engines should be sibling adapter targets.
-- `Contained`: SwiftUI app shell, navigation, feature views, stores, history, settings, Sparkle support, app state migration, and app-specific presentation mappings.
-- [`Packages/ContainedDesignSystem`](Packages/ContainedDesignSystem/README.md): reusable SwiftUI/AppKit visual primitives, tokens, spacing, material, and micro-chrome shared by the app.
-- [`Packages/ContainedNavigation`](Packages/ContainedNavigation/README.md): reusable navigation and layout infrastructure shared by app chrome.
+- [`ContainedCore`](Packages/ContainedCore/README.md): pure models, runtime-neutral create/recreate request fields, Apple `container` argv builders, decoders, compose parsing, metric normalization, and package error metadata.
+- [`ContainedRuntime`](Packages/ContainedRuntime/README.md): shared runtime contracts, descriptors, capabilities, translation plans, command errors, and command execution primitives.
+- [`AppleContainerRuntime`](Packages/AppleContainerRuntime/README.md): the current Apple `container` adapter, including translation from shared create/import models to Apple CLI commands. Future Docker-compatible, Podman, Lima-backed, remote, or other runtime engines should be sibling adapter packages.
+- [`ContainedDesignSystem`](Packages/ContainedDesignSystem/README.md): reusable SwiftUI/AppKit visual primitives, tokens, spacing, material, cards, panels, controls, feedback, and data visualization.
+- [`ContainedNavigation`](Packages/ContainedNavigation/README.md): reusable safe-area, morphing, measurement, and panel-host infrastructure.
+- [`ContainedPreviewSupport`](Packages/ContainedPreviewSupport/README.md): deterministic fixtures for package examples and SwiftUI previews.
+- `ContainedApp`: SwiftUI app shell, navigation, feature views, stores, history, settings, Sparkle support, app state migration, app-specific presentation mappings, and localization.
+- `Contained`: tiny SwiftPM executable launcher used by command-line builds and bundle scripts.
 
 Integration is intentionally CLI-based rather than private-framework based. Personalization and app-managed metadata stay local to Contained so the user's container resources remain clean when used directly from the terminal.
 Reusable packages expose display-neutral errors with stable package codes/context; the app owns localized messages, alerts, and Activity history presentation.
