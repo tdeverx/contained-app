@@ -69,9 +69,10 @@ struct ActivityContent: View {
             }
             .pickerStyle(.inline)
         } label: {
-            GlassButtonItem(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
-                                                                 : "line.3.horizontal.decrease.circle.fill",
-                            help: ui.activityFilter == nil ? "Filter" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
+            DesignMenuActionLabel(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
+                                                                        : "line.3.horizontal.decrease.circle.fill",
+                                  help: ui.activityFilter == nil ? "Filter"
+                                                                 : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
         }
         .buttonStyle(.plain)
         .disabled(presentKinds.isEmpty)
@@ -90,20 +91,7 @@ struct ActivityContent: View {
                                 subtitle: subtitle) {
                         GlassButton {
                             filterMenu
-                            GlassButtonItem(systemName: "checkmark.circle",
-                                            help: ui.activityFilter == nil ? "Mark all as read"
-                                                                          : "Mark \(ui.activityFilter!.rawValue.capitalized) as read",
-                                            action: markFilteredRead)
-                                .disabled(filteredUnreadCount == 0)
-                            GlassButtonItem(systemName: "trash",
-                                            role: .destructive,
-                                            help: ui.activityFilter == nil ? "Clear activity"
-                                                                          : "Clear \(ui.activityFilter!.rawValue.capitalized) events",
-                                            action: clearFiltered)
-                                .disabled(filtered.isEmpty)
-                            if showClose {
-                                GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
-                            }
+                            DesignActionItems(activityHeaderActions)
                         }
                     }
                     Divider()
@@ -125,6 +113,29 @@ struct ActivityContent: View {
         }
         // Once the user has seen the panel, the events are read — clears the toolbar badge on dismiss.
         .onDisappear(perform: markAllRead)
+    }
+
+    private var activityHeaderActions: [DesignAction] {
+        var actions = [
+            DesignAction(systemName: "checkmark.circle",
+                         help: ui.activityFilter == nil ? "Mark all as read"
+                                                       : "Mark \(ui.activityFilter!.rawValue.capitalized) as read",
+                         isEnabled: filteredUnreadCount > 0,
+                         action: markFilteredRead),
+            DesignAction(systemName: "trash",
+                         help: ui.activityFilter == nil ? "Clear activity"
+                                                       : "Clear \(ui.activityFilter!.rawValue.capitalized) events",
+                         role: .destructive,
+                         isEnabled: !filtered.isEmpty,
+                         action: clearFiltered)
+        ]
+        if showClose {
+            actions.append(DesignAction(systemName: "xmark",
+                                        help: "Close",
+                                        isCancel: true,
+                                        action: onClose))
+        }
+        return actions
     }
 
     /// Marks every event read — used on dismiss (the whole panel has been seen).

@@ -102,12 +102,7 @@ struct AppToolbar: View {
     /// it's vanity chrome that owns the `.settings` morph slot so the Settings panel (opened via ⌘, or
     /// the menu) has a frame to grow from.
     private var settingsZone: some View {
-        // The same GlassButton container as the other toolbar controls (for consistency), but empty and
-        // non-interactive — vanity chrome and a stable morph origin, sized by a min width.
-        GlassButton(minWidth: Tokens.Toolbar.trafficLightsWidth, singleItem: true, interactive: false) {
-            Color.clear
-        }
-        .fixedSize(horizontal: true, vertical: false)
+        DesignToolbarVanitySlot()
         .opacity(ui.activeMorph == .settings ? 0 : 1)
         .background(singleSlotReader(.settings))
     }
@@ -158,24 +153,21 @@ struct AppToolbar: View {
     }
 
     private var systemStatusButton: some View {
-        GlassButton(singleItem: true) {
-            GlassButtonItem(help: app.activity?.title ?? "System \(app.serviceLabel)", action: {
-                openGlobalSectionOrPanel(.system, morph: .system)
-            }) {
-                if let activity = app.activity {
-                    ActivityStatusView(activity: ActivityStatusPresentation(title: activity.title,
-                                                                            detail: activity.detail,
-                                                                            fraction: activity.fraction),
-                                       style: .inline)
-                } else {
-                    HStack(spacing: Tokens.Toolbar.searchIconGap) {
-                        Image(systemName: systemStatusIcon)
-                            .foregroundStyle(systemStatusColor)
-                            .frame(width: Tokens.Toolbar.iconContentWidth)
-                        Text(app.serviceLabel)
-                            .foregroundStyle(.secondary)
-                            .padding(.trailing, Tokens.Toolbar.statusLabelTrailingPadding)
-                    }
+        DesignToolbarStatusButton(help: app.activity?.title ?? "System \(app.serviceLabel)",
+                                  action: { openGlobalSectionOrPanel(.system, morph: .system) }) {
+            if let activity = app.activity {
+                ActivityStatusView(activity: ActivityStatusPresentation(title: activity.title,
+                                                                        detail: activity.detail,
+                                                                        fraction: activity.fraction),
+                                   style: .inline)
+            } else {
+                HStack(spacing: Tokens.Toolbar.searchIconGap) {
+                    Image(systemName: systemStatusIcon)
+                        .foregroundStyle(systemStatusColor)
+                        .frame(width: Tokens.Toolbar.iconContentWidth)
+                    Text(app.serviceLabel)
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, Tokens.Toolbar.statusLabelTrailingPadding)
                 }
             }
         }
@@ -186,10 +178,16 @@ struct AppToolbar: View {
 
     private var bottomActionGroup: some View {
         HStack(spacing: Tokens.Toolbar.groupSpacing) {
-            GlassButton {
-                GlassButtonItem(systemName: "plus", help: "Add") { ui.openCreationPanel() }
-                GlassButtonItem(systemName: "shippingbox", help: "Images") { openGlobalSectionOrPanel(.images, morph: .updates) }
-                GlassButtonItem(systemName: "bookmark", help: "Templates") { openGlobalSectionOrPanel(.templates, morph: .templates) }
+            DesignToolbarActionCluster {
+                DesignActionItems([
+                    DesignAction(systemName: "plus", help: "Add") { ui.openCreationPanel() },
+                    DesignAction(systemName: "shippingbox", help: "Images") {
+                        openGlobalSectionOrPanel(.images, morph: .updates)
+                    },
+                    DesignAction(systemName: "bookmark", help: "Templates") {
+                        openGlobalSectionOrPanel(.templates, morph: .templates)
+                    }
+                ])
                 ActivityToolbarButton()
             }
             .opacity(isBottomGroupMorphActive ? 0 : 1)
@@ -503,18 +501,17 @@ private struct ActivityToolbarButton: View {
     var body: some View {
         let count = unread.count
         let hasUnread = count > 0
-        return GlassButtonItem(tint: hasUnread ? app.settings.accentTint.color : .white,
-                               help: hasUnread ? "Activity — \(count) unread" : "Activity",
-                               isIcon: true,
-                               action: {
+        return DesignActionItems([
+            DesignAction(systemName: hasUnread ? "bell.fill" : "bell",
+                         help: hasUnread ? "Activity — \(count) unread" : "Activity",
+                         tint: hasUnread ? app.settings.accentTint.color : .white) {
                                    if ui.panelNavigationEnabled {
                                        ui.toggleMorph(.activity)
                                    } else {
                                        ui.navigate(to: .activity)
                                    }
-                               }) {
-            Image(systemName: hasUnread ? "bell.fill" : "bell")
-        }
+            }
+        ])
     }
 }
 

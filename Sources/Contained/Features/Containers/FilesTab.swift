@@ -31,21 +31,17 @@ struct FilesTab: View {
 
     private var pathBar: some View {
         HStack(spacing: Tokens.Space.s) {
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "chevron.up", help: "Parent") { goUp() }
-                    .disabled(path == "/")
-            }
+            DesignActionGroup(DesignAction(systemName: "chevron.up",
+                                           help: "Parent",
+                                           isEnabled: path != "/") { goUp() })
             Text(path).font(.system(.callout, design: .monospaced)).lineLimit(1).truncationMode(.middle)
             Spacer()
             if loading { ProgressView().controlSize(.small) }
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "square.and.arrow.down", help: "Copy a file into this folder") {
+            DesignActionGroup(DesignAction(systemName: "square.and.arrow.down",
+                                           help: "Copy a file into this folder") {
                     copyIn()
-                }
-            }
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "arrow.clockwise", help: "Refresh") { Task { await load() } }
-            }
+            })
+            DesignActionGroup(DesignAction(systemName: "arrow.clockwise", help: "Refresh") { Task { await load() } })
         }
     }
 

@@ -116,9 +116,10 @@ struct ToolbarTemplatesPanel: View {
                     title: "Templates",
                     subtitle: "\(saved.count) saved") {
             if showClose {
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
-                }
+                DesignActionGroup(DesignAction(systemName: "xmark",
+                                               help: "Close",
+                                               isCancel: true,
+                                               action: onClose))
             }
         }
     }
@@ -184,7 +185,12 @@ struct ToolbarTemplatesPanel: View {
             .foregroundStyle(.red)
             .help("Delete")
             .accessibilityLabel("Delete")
-            Button("Use") { use(template) }.buttonStyle(.glassProminent).controlSize(.small)
+            DesignTextActionButton(title: "Use",
+                                   systemName: "plus.circle",
+                                   prominence: .prominent,
+                                   controlSize: .small) {
+                use(template)
+            }
         } widget: {
             EmptyView()
         }

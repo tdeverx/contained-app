@@ -450,19 +450,17 @@ struct ContainersGridView: View {
     }
 
     private var batchBar: some View {
-        HStack(spacing: Tokens.Space.m) {
-            Text("\(selection.count) selected").font(.callout.weight(.medium))
-            Divider().frame(height: 16)
-            Button { batch { await store.start($0) } } label: { Label("Start", systemImage: "play.fill") }
-            Button { batch { await store.stop($0) } } label: { Label("Stop", systemImage: "stop.fill") }
-            Button(role: .destructive) { batch { await store.remove($0, force: true) } } label: {
-                Label("Delete", systemImage: "trash")
+        DesignSelectionActionBar(count: selection.count, actions: [
+            DesignAction(systemName: "play.fill", title: "Start") {
+                batch { await store.start($0) }
+            },
+            DesignAction(systemName: "stop.fill", title: "Stop") {
+                batch { await store.stop($0) }
+            },
+            DesignAction(systemName: "trash", title: "Delete", role: .destructive) {
+                batch { await store.remove($0, force: true) }
             }
-        }
-        .buttonStyle(.glass)
-        .padding(.horizontal, Tokens.Space.l)
-        .padding(.vertical, Tokens.Space.s)
-        .glassCapsuleSurface(shadow: false)
+        ])
         .padding(.bottom, Tokens.Space.l)
     }
 

@@ -223,11 +223,11 @@ private struct NetworksPage: View {
         PageScaffold(symbol: "network",
                      title: "Networks",
                      subtitle: "\(sortedNetworks.count) network\(sortedNetworks.count == 1 ? "" : "s")") {
-            GlassButton(singleItem: true) {
-                GlassButtonItem(help: "New network", action: { ui.dispatch(.createNetwork) }) {
-                    Label("New", systemImage: "plus")
-                }
-            }
+            DesignActionGroup(DesignAction(systemName: "plus",
+                                           title: "New",
+                                           help: "New network") {
+                ui.dispatch(.createNetwork)
+            })
         } content: {
             if sortedNetworks.isEmpty {
                 ContentUnavailableView("No networks",

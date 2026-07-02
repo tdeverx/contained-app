@@ -12,15 +12,14 @@ struct SystemLogsSheet: View {
         VStack(spacing: 0) {
             HStack(spacing: Tokens.Space.m) {
                 Text("System logs").font(.headline)
-                Toggle(isOn: $follow) { Label("Follow", systemImage: "arrow.down.to.line") }
-                    .toggleStyle(.button).buttonStyle(.glass).buttonBorderShape(.capsule)
+                DesignGlassToggle(isOn: $follow, title: "Follow", systemName: "arrow.down.to.line")
                     .onChange(of: follow) { _, _ in session += 1 }
                 Spacer()
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true) {
+                DesignActionGroup(DesignAction(systemName: "xmark",
+                                               help: "Close",
+                                               isCancel: true) {
                         dismiss()
-                    }
-                }
+                })
             }
             .padding(Tokens.Space.s)
             if let client = app.client {

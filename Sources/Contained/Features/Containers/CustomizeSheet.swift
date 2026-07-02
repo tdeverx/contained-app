@@ -145,10 +145,10 @@ struct CustomizeSheet: View {
         PanelHeader(symbol: "paintbrush.pointed",
                     title: headerTitle,
                     subtitle: imageSubtitle) {
-            GlassButton {
-                GlassButtonItem(systemName: "checkmark", help: "Save") { save() }
-                GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true) { dismiss() }
-            }
+            DesignActionGroup([
+                DesignAction(systemName: "checkmark", help: "Save") { save() },
+                DesignAction(systemName: "xmark", help: "Close", isCancel: true) { dismiss() }
+            ])
         }
     }
 

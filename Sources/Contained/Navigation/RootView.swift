@@ -251,11 +251,7 @@ struct RootView: View {
     @ViewBuilder
     private var bannerView: some View {
         if let banner = app.banner {
-            Text(banner)
-                .font(.callout.weight(.medium))
-                .padding(.horizontal, Tokens.Space.l)
-                .padding(.vertical, Tokens.Space.s)
-                .glassCapsuleSurface(shadow: false)
+            DesignStatusBanner(banner)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }

@@ -68,11 +68,10 @@ struct BuildWorkspaceView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                     Spacer()
-                    GlassButton(singleItem: true) {
-                        GlassButtonItem(help: "Choose context folder", action: chooseFolder) {
-                            Label("Choose", systemImage: "folder")
-                        }
-                    }
+                    DesignActionGroup(DesignAction(systemName: "folder",
+                                                   title: "Choose",
+                                                   help: "Choose context folder",
+                                                   action: chooseFolder))
                 }
             }
             PanelField(label: "Dockerfile",
@@ -105,22 +104,20 @@ struct BuildWorkspaceView: View {
                         Text("=").foregroundStyle(.secondary)
                         TextField("value", text: $arg.value)
                             .textFieldStyle(.roundedBorder)
-                        GlassButton(singleItem: true) {
-                            GlassButtonItem(systemName: "minus.circle.fill",
-                                            help: "Remove build argument") {
+                        DesignActionGroup(DesignAction(systemName: "minus.circle.fill",
+                                                       help: "Remove build argument") {
                                 buildArgs.removeAll { $0.id == arg.id }
-                            }
-                        }
+                        })
                     }
                 }
             }
             PanelRow(title: "Build arguments",
                      subtitle: buildArgs.isEmpty ? "No build-time variables added." : "\(buildArgs.count) argument(s)") {
-                GlassButton(singleItem: true) {
-                    GlassButtonItem(help: "Add build argument", action: { buildArgs.append(KeyValue()) }) {
-                        Label("Add build arg", systemImage: "plus.circle")
-                    }
-                }
+                DesignActionGroup(DesignAction(systemName: "plus.circle",
+                                               title: "Add build arg",
+                                               help: "Add build argument") {
+                    buildArgs.append(KeyValue())
+                })
             }
         }
     }
@@ -131,18 +128,18 @@ struct BuildWorkspaceView: View {
                 CommandPreviewBar(command: previewCommand)
                     .frame(maxWidth: .infinity)
                 if building {
-                    GlassButton(singleItem: true) {
-                        GlassButtonItem(role: .destructive, help: "Cancel build", action: { building = false }) {
-                            Label("Cancel", systemImage: "xmark")
-                        }
-                    }
+                    DesignActionGroup(DesignAction(systemName: "xmark",
+                                                   title: "Cancel",
+                                                   help: "Cancel build",
+                                                   role: .destructive) {
+                        building = false
+                    })
                 } else {
-                    GlassButton(singleItem: true) {
-                        GlassButtonItem(help: "Build image", action: startBuild) {
-                            Label("Build", systemImage: "hammer.fill")
-                        }
-                    }
-                    .disabled(!canBuild)
+                    DesignActionGroup(DesignAction(systemName: "hammer.fill",
+                                                   title: "Build",
+                                                   help: "Build image",
+                                                   isEnabled: canBuild,
+                                                   action: startBuild))
                 }
             }
         }

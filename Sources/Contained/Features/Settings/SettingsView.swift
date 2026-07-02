@@ -79,21 +79,22 @@ struct SettingsContent: View {
         PanelHeader(symbol: page.systemImage,
                     title: "Settings",
                     subtitle: page.rawValue) {
-            GlassButton {
-                ForEach(SettingsPage.allCases) { item in
-                    GlassButtonItem(tint: page == item ? .accentColor : nil,
-                                    help: item.rawValue,
-                                    isIcon: true,
-                                    action: { page = item }) {
-                        Image(systemName: item.systemImage)
-                            .opacity(page == item ? 1 : 0.62)
-                    }
-                }
-                if let onClose {
-                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
-                }
+            DesignActionGroup(headerActions)
+        }
+    }
+
+    private var headerActions: [DesignAction] {
+        var actions = SettingsPage.allCases.map { item in
+            DesignAction(systemName: item.systemImage,
+                         help: item.rawValue,
+                         tint: page == item ? .accentColor : nil) {
+                page = item
             }
         }
+        if let onClose {
+            actions.append(DesignAction(systemName: "xmark", help: "Close", isCancel: true, action: onClose))
+        }
+        return actions
     }
 
     @ViewBuilder

@@ -81,38 +81,35 @@ struct ContainerConfigureView: View {
                     title: isEdit ? "Edit container" : "Run a container",
                     subtitle: isEdit ? "Replaces the existing container with your edits" : nil) {
             HStack(spacing: Tokens.Space.s) {
-                GlassButton(singleItem: true) {
-                    leadingButton
-                }
-                GlassButton {
-                    if working {
-                        ProgressView().controlSize(.small)
-                            .frame(width: Tokens.Toolbar.buttonItemHeight, height: Tokens.Toolbar.buttonItemHeight)
-                    } else {
-                        GlassButtonItem(systemName: "bookmark", help: "Save as template") {
-                            guard spec.isRunnable else { return }
+                DesignActionGroup(leadingAction)
+                if working {
+                    DesignProgressActionCapsule()
+                } else {
+                    DesignActionGroup([
+                        DesignAction(systemName: "bookmark",
+                                     help: "Save as template",
+                                     isEnabled: spec.isRunnable) {
                             templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
                             savingTemplate = true
-                        }
-                        GlassButtonItem(systemName: isEdit ? "checkmark" : "play.fill",
-                                        help: isEdit ? "Save" : "Create") {
-                            guard spec.isRunnable else { return }
+                        },
+                        DesignAction(systemName: isEdit ? "checkmark" : "play.fill",
+                                     help: isEdit ? "Save" : "Create",
+                                     isEnabled: spec.isRunnable) {
                             if isEdit { confirming = true } else { create() }
                         }
-                    }
+                    ])
+                    .opacity(spec.isRunnable ? 1 : 0.55)
                 }
-                .opacity(!working && !spec.isRunnable ? 0.55 : 1)
             }
         }
     }
 
-    @ViewBuilder
-    private var leadingButton: some View {
+    private var leadingAction: DesignAction {
         switch leading {
         case .cancel(let action):
-            GlassButtonItem(systemName: "xmark", help: "Cancel", isCancel: true, action: action)
+            return DesignAction(systemName: "xmark", help: "Cancel", isCancel: true, action: action)
         case .back(let action):
-            GlassButtonItem(systemName: "chevron.left", help: "Back", action: action)
+            return DesignAction(systemName: "chevron.left", help: "Back", action: action)
         }
     }
 

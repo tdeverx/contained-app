@@ -64,9 +64,7 @@ struct TerminalTab: View {
             .onChange(of: shell) { _, _ in reconnect() }
             Text("exec into \(snapshot.id)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
             Spacer()
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "arrow.clockwise", help: "Reconnect") { reconnect() }
-            }
+            DesignActionGroup(DesignAction(systemName: "arrow.clockwise", help: "Reconnect") { reconnect() })
         }
     }
 
@@ -75,11 +73,10 @@ struct TerminalTab: View {
             Image(systemName: "bolt.horizontal.circle").font(.largeTitle).foregroundStyle(.secondary)
             Text(code == nil || code == 0 ? "Session ended" : "Session ended (exit \(code!))")
                 .font(.headline)
-            GlassButton(singleItem: true) {
-                GlassButtonItem(help: "Reconnect terminal", action: reconnect) {
-                    Label("Reconnect", systemImage: "arrow.clockwise")
-                }
-            }
+            DesignActionGroup(DesignAction(systemName: "arrow.clockwise",
+                                           title: "Reconnect",
+                                           help: "Reconnect terminal",
+                                           action: reconnect))
         }
     }
 

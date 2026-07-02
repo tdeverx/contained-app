@@ -77,23 +77,28 @@ struct ToolbarUpdatesPanel: View {
         PanelHeader(symbol: "square.stack.3d.up",
                     title: "Images",
                     subtitle: "\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")") {
-            GlassButton {
-                GlassButtonItem(systemName: "square.and.arrow.down", help: "Load Image Tar") {
+            DesignActionGroup(imageHeaderActions)
+        }
+    }
+
+    private var imageHeaderActions: [DesignAction] {
+        var actions = [
+            DesignAction(systemName: "square.and.arrow.down", help: "Load Image Tar") {
                     ui.dispatch(.loadImage)
                     onClose()
-                }
-                GlassButtonItem(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
+            },
+            DesignAction(systemName: "arrow.triangle.2.circlepath", help: "Check for Updates") {
                     Task { await app.runImageUpdateSweepNow() }
-                }
-                GlassButtonItem(systemName: "trash", role: .destructive, help: "Prune Images") {
+            },
+            DesignAction(systemName: "trash", help: "Prune Images", role: .destructive) {
                     ui.dispatch(.pruneImages)
                     onClose()
-                }
-                if showClose {
-                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
-                }
             }
+        ]
+        if showClose {
+            actions.append(DesignAction(systemName: "xmark", help: "Close", isCancel: true, action: onClose))
         }
+        return actions
     }
 
     private var emptyCard: some View {

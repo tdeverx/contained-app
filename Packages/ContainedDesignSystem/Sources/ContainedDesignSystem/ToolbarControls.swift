@@ -4,6 +4,146 @@ import SwiftUI
 /// Glass toolbar proportions. Centralizing them here keeps the toolbar, the creation tiles
 /// (`GlassOptionTile`), and any future band controls visually consistent and on one source of truth.
 
+public struct DesignGlassMenuButton<LabelContent: View, MenuContent: View>: View {
+    @ViewBuilder public var menuContent: () -> MenuContent
+    @ViewBuilder public var labelContent: () -> LabelContent
+
+    public init(@ViewBuilder menuContent: @escaping () -> MenuContent,
+                @ViewBuilder labelContent: @escaping () -> LabelContent) {
+        self.menuContent = menuContent
+        self.labelContent = labelContent
+    }
+
+    public var body: some View {
+        Menu {
+            menuContent()
+        } label: {
+            GlassButton(singleItem: true) {
+                labelContent()
+            }
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize(horizontal: true, vertical: false)
+    }
+}
+
+public struct DesignToolbarSearchField<Trailing: View>: View {
+    @Binding public var text: String
+    public var prompt: String
+    public var focused: FocusState<Bool>.Binding
+    public var onSubmit: () -> Void
+    public var onClear: () -> Void
+    @ViewBuilder public var trailing: () -> Trailing
+
+    public init(text: Binding<String>,
+                prompt: String,
+                focused: FocusState<Bool>.Binding,
+                onSubmit: @escaping () -> Void = {},
+                onClear: @escaping () -> Void,
+                @ViewBuilder trailing: @escaping () -> Trailing) {
+        self._text = text
+        self.prompt = prompt
+        self.focused = focused
+        self.onSubmit = onSubmit
+        self.onClear = onClear
+        self.trailing = trailing
+    }
+
+    public var body: some View {
+        GlassButton(singleItem: true) {
+            GlassButtonInputItem {
+                Image(systemName: "magnifyingglass")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                TextField(prompt, text: $text)
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .focused(focused)
+                    .onSubmit(onSubmit)
+                if !text.isEmpty {
+                    Button(action: onClear) {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .help("Clear search")
+                    .accessibilityLabel("Clear search")
+                } else {
+                    trailing()
+                }
+            }
+        }
+        .toolbarControlContentShape()
+        .simultaneousGesture(TapGesture().onEnded { focused.wrappedValue = true })
+    }
+}
+
+/// Package-owned empty toolbar slot for stable morph origins and vanity chrome.
+public struct DesignToolbarVanitySlot<Content: View>: View {
+    public var minWidth: CGFloat
+    public var interactive: Bool
+    @ViewBuilder public var content: () -> Content
+
+    public init(minWidth: CGFloat = Tokens.Toolbar.trafficLightsWidth,
+                interactive: Bool = false,
+                @ViewBuilder content: @escaping () -> Content = { Color.clear }) {
+        self.minWidth = minWidth
+        self.interactive = interactive
+        self.content = content
+    }
+
+    public var body: some View {
+        GlassButton(minWidth: minWidth, singleItem: true, interactive: interactive) {
+            content()
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+}
+
+/// Package-owned toolbar button for custom status content.
+public struct DesignToolbarStatusButton<Content: View>: View {
+    public var help: String
+    public var action: () -> Void
+    @ViewBuilder public var content: () -> Content
+
+    public init(help: String,
+                action: @escaping () -> Void,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.help = help
+        self.action = action
+        self.content = content
+    }
+
+    public var body: some View {
+        GlassButton(singleItem: true) {
+            GlassButtonItem(help: help, action: action) {
+                content()
+            }
+        }
+    }
+}
+
+/// Package-owned glass shell for toolbar clusters that mix action items and status/menu items.
+public struct DesignToolbarActionCluster<Content: View>: View {
+    public var spacing: CGFloat
+    @ViewBuilder public var content: () -> Content
+
+    public init(spacing: CGFloat = 0,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.spacing = spacing
+        self.content = content
+    }
+
+    public var body: some View {
+        GlassButton(spacing: spacing) {
+            content()
+        }
+    }
+}
+
 /// A toolbar-styled menu trigger that uses the same icon sizing as `GlassButtonItem` but keeps
 /// the actual menu behavior native.
 public struct ToolbarMenuButton<Content: View>: View {

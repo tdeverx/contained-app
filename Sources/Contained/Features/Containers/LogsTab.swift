@@ -30,10 +30,7 @@ struct LogsTab: View {
 
     private var controls: some View {
         HStack(spacing: Tokens.Space.m) {
-            Toggle(isOn: $following) { Label("Follow", systemImage: "arrow.down.to.line") }
-                .toggleStyle(.button)
-                .buttonStyle(.glass)
-                .buttonBorderShape(.capsule)
+            DesignGlassToggle(isOn: $following, title: "Follow", systemName: "arrow.down.to.line")
             if streaming {
                 HStack(spacing: Tokens.Toolbar.searchIconGap) {
                     ProgressView().controlSize(.small)
@@ -42,17 +39,15 @@ struct LogsTab: View {
             }
             Spacer()
             Text("\(lines.count) lines").font(.caption).foregroundStyle(.secondary).monospacedDigit()
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "doc.on.doc", help: "Copy all") {
+            DesignActionGroup(DesignAction(systemName: "doc.on.doc", help: "Copy all") {
                     copyToPasteboard(lines.joined(separator: "\n"))
-                }
-            }
-            GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: "trash", role: .destructive, help: "Clear") {
+            })
+            DesignActionGroup(DesignAction(systemName: "trash",
+                                           help: "Clear",
+                                           role: .destructive,
+                                           isEnabled: !lines.isEmpty) {
                     lines.removeAll(); carry = ""
-                }
-                .disabled(lines.isEmpty)
-            }
+            })
         }
     }
 
