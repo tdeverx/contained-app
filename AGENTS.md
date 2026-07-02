@@ -8,6 +8,8 @@ This file is the working contract for coding agents in this repository. Follow i
 - Local reusable packages live under `Packages/` and are consumed by the root SwiftPM package.
 - `Contained.xcworkspace` is an Xcode convenience entry point over the SwiftPM manifests. Do not hand-maintain generated `.xcodeproj` state.
 - `Sources/ContainedCore` is pure/testable logic. Keep SwiftUI, app state, Sparkle, and persistence out of it.
+- `Sources/ContainedRuntime` is the shared runtime contract module. Keep it adapter-neutral so future runtimes can conform without changing app stores or views.
+- `Sources/AppleContainerRuntime` is the Apple `container` adapter. Future Docker-compatible, Podman, Lima-backed, remote, or other engines should be sibling adapter targets rather than switches in the app.
 - `Sources/Contained` is the app: SwiftUI screens, app-specific presentation mappings, navigation, stores, history, settings, and update support.
 - `Packages/ContainedDesignSystem` is the reusable SwiftUI/AppKit design-system package. Keep app state, stores, Sparkle, SwiftData, persistence, and feature routing out of it.
 - `Packages/ContainedNavigation` is the reusable navigation/layout package. Keep app sections, toolbar panels, stores, and concrete routing state in `Sources/Contained`.
@@ -56,7 +58,7 @@ This file is the working contract for coding agents in this repository. Follow i
 
 ## Coding Rules
 
-- Keep CLI actions behind `ContainerCommands` and `ContainerClient`; do not assemble argv inline in SwiftUI.
+- Keep Apple `container` CLI actions behind `ContainerCommands` and `AppleContainerRuntime`; do not assemble argv inline in SwiftUI. App stores should depend on `any ContainerRuntimeClient` where backend choice matters.
 - Put pure decision logic in `ContainedCore` with focused tests.
 - Do not write app personalization back as `contained.*` labels. Only `contained.restart` and `contained.stack` may round-trip through container labels.
 - Keep helper scripts in `scripts/` and prefer hyphenated file names for multi-word shell scripts.

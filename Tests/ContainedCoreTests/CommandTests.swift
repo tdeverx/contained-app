@@ -109,66 +109,6 @@ struct CommandTests {
         #expect(decoded.results.first?.pullReference == "nginx")
     }
 
-    @Test func parseVersionAndSupport() {
-        let v = CLILocator.parseVersion("container CLI version 1.0.0 (build: release, commit: ee848e3)")
-        #expect(v == "1.0.0")
-        #expect(CLILocator.isSupported(v))
-        #expect(!CLILocator.isSupported("0.10.0"))
-        #expect(!CLILocator.isSupported(nil))
-    }
-
-    @Test func appleRuntimeDescriptorAdvertisesCurrentCapabilities() throws {
-        let descriptor = RuntimeDescriptor.appleContainer
-        #expect(descriptor.kind == .appleContainer)
-        #expect(descriptor.displayName == "Apple container")
-        #expect(descriptor.executableName == "container")
-        #expect(descriptor.supports([.containers, .images, .volumes, .networks]))
-        #expect(descriptor.supports([.systemStatus, .systemLogs, .exec, .copy]))
-        try descriptor.require([.imageBuild, .imagePush, .registries])
-
-        let readOnly = RuntimeDescriptor(kind: .dockerCompatible,
-                                         displayName: "Read-only runtime",
-                                         executableName: "container",
-                                         capabilities: [.containers])
-        #expect(!readOnly.supports(.imageBuild))
-        #expect(throws: UnsupportedRuntimeCapability.self) {
-            try readOnly.require(.imageBuild)
-        }
-    }
-
-    @Test func containerClientConformsToRuntimeClient() async throws {
-        let runner = MockCommandRunner(result: .success(try Fixture.data("list")))
-        let runtime: any ContainerRuntimeClient = ContainerClient(runner: runner)
-        #expect(runtime.descriptor == .appleContainer)
-
-        let containers = try await runtime.listContainers(all: true)
-        #expect(containers.first?.id == "fixture-web")
-    }
-
-    @Test func clientDecodesThroughMock() async throws {
-        let runner = MockCommandRunner(result: .success(try Fixture.data("list")))
-        let client = ContainerClient(runner: runner)
-        let containers = try await client.listContainers()
-        #expect(containers.first?.id == "fixture-web")
-    }
-
-    @Test func clientMapsDecodeFailure() async throws {
-        // The real `image list` error case: stdout is an error line, not JSON.
-        let bad = MockCommandRunner(result: .success(Data("Error: content with digest sha256:…".utf8)))
-        let client = ContainerClient(runner: bad)
-        await #expect(throws: CommandError.self) {
-            _ = try await client.listContainers()
-        }
-    }
-
-    @Test func clientPropagatesNonZeroExit() async throws {
-        let failing = MockCommandRunner(result: .failure(.nonZeroExit(code: 1, stderr: "boom", command: "list")))
-        let client = ContainerClient(runner: failing)
-        await #expect(throws: CommandError.self) {
-            _ = try await client.listContainers()
-        }
-    }
-
     @Test func statsDeltaComputesCPUFraction() {
         let prev = ContainerStats(id: "x", cpuUsageUsec: 1_000_000, memoryUsageBytes: 100, memoryLimitBytes: 1000,
                                   blockReadBytes: 0, blockWriteBytes: 0, networkRxBytes: 0, networkTxBytes: 0, numProcesses: 1)

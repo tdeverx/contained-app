@@ -55,7 +55,7 @@ changes can be reviewed with code changes:
 - Start: [Features](https://github.com/tdeverx/contained-app/wiki/Features), [Installation](https://github.com/tdeverx/contained-app/wiki/Installation), [Keyboard Shortcuts](https://github.com/tdeverx/contained-app/wiki/Keyboard-Shortcuts), [Troubleshooting](https://github.com/tdeverx/contained-app/wiki/Troubleshooting)
 - Workflows: [Creation Workflow](https://github.com/tdeverx/contained-app/wiki/Creation-Workflow), [Run / Edit Form](https://github.com/tdeverx/contained-app/wiki/Run-Edit-Form), [Compose Import](https://github.com/tdeverx/contained-app/wiki/Compose-Import), [Command Palette](https://github.com/tdeverx/contained-app/wiki/Command-Palette), [Updates](https://github.com/tdeverx/contained-app/wiki/Updates)
 - Feature areas: [Containers](https://github.com/tdeverx/contained-app/wiki/Features-Containers), [Images](https://github.com/tdeverx/contained-app/wiki/Features-Images), [Resources](https://github.com/tdeverx/contained-app/wiki/Features-Resources), [System & Settings](https://github.com/tdeverx/contained-app/wiki/System-Settings)
-- Maintainers: [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture), [Design System](https://github.com/tdeverx/contained-app/wiki/Design-System), [Release Runbook](https://github.com/tdeverx/contained-app/wiki/Release), [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing), [Issues and Discussions](https://github.com/tdeverx/contained-app/wiki/Issues-and-Discussions)
+- Maintainers: [Architecture](https://github.com/tdeverx/contained-app/wiki/Architecture), [Runtime Adapters](https://github.com/tdeverx/contained-app/wiki/Runtime-Adapters), [Design System](https://github.com/tdeverx/contained-app/wiki/Design-System), [Release Runbook](https://github.com/tdeverx/contained-app/wiki/Release), [Contributing](https://github.com/tdeverx/contained-app/wiki/Contributing), [Issues and Discussions](https://github.com/tdeverx/contained-app/wiki/Issues-and-Discussions)
 
 ## Contributing And Support
 
@@ -75,7 +75,9 @@ instead.
 
 The root package has the app/core targets and consumes local reusable packages:
 
-- `ContainedCore`: models, CLI command builders, real `container --format json` decoders, and testable service logic.
+- `ContainedCore`: models, Apple `container` argv builders, real `container --format json` decoders, compose parsing, and testable service logic.
+- `ContainedRuntime`: shared runtime contracts, descriptors, capabilities, command errors, and command execution primitives.
+- `AppleContainerRuntime`: the current Apple `container` adapter. Future Docker-compatible, Podman, Lima-backed, remote, or other runtime engines should be sibling adapter targets.
 - `Contained`: SwiftUI app shell, navigation, feature views, stores, history, settings, Sparkle support, app state migration, and app-specific presentation mappings.
 - [`Packages/ContainedDesignSystem`](Packages/ContainedDesignSystem/README.md): reusable SwiftUI/AppKit visual primitives, tokens, spacing, material, and micro-chrome shared by the app.
 - [`Packages/ContainedNavigation`](Packages/ContainedNavigation/README.md): reusable navigation and layout infrastructure shared by app chrome.

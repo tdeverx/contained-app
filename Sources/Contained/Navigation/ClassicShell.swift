@@ -3,6 +3,7 @@ import ContainedNavigation
 import ContainedDesignSystem
 import SwiftData
 import ContainedCore
+import ContainedRuntime
 
 struct ClassicShell: View {
     @Environment(AppModel.self) private var app

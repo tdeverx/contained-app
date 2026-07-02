@@ -4,6 +4,7 @@ import ContainedDesignSystem
 import SwiftData
 import AppKit
 import ContainedCore
+import ContainedRuntime
 
 struct ToolbarImageGroupCard: View {
     @Environment(AppModel.self) private var app

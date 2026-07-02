@@ -2,6 +2,7 @@ import SwiftUI
 import ContainedDesignSystem
 import AppKit
 import ContainedCore
+import AppleContainerRuntime
 
 @main
 struct ContainedApp: App {
@@ -236,7 +237,7 @@ struct ContainedApp: App {
 
     /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).
     private func revealCLIBinary() {
-        guard let url = CLILocator.locate(override: app.settings.cliPathOverride) else { return }
+        guard let url = AppleContainerCLILocator.locate(override: app.settings.cliPathOverride) else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 

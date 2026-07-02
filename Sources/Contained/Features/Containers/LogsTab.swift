@@ -1,6 +1,7 @@
 import SwiftUI
 import ContainedDesignSystem
 import ContainedCore
+import ContainedRuntime
 
 /// Live container logs via `container logs --follow`. The stream is tied to this view's lifetime
 /// (`.task(id:)`), so leaving the tab cancels it and terminates the child process (SIGTERM).

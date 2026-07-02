@@ -1,8 +1,10 @@
 import Foundation
+import ContainedCore
+import ContainedRuntime
 
 /// Typed facade over a `CommandRunning`. Returns decoded models; maps decode failures to
 /// `CommandError.decodingFailed` so callers handle one error type.
-public struct ContainerClient: Sendable {
+public struct AppleContainerClient: Sendable {
     public let runner: any CommandRunning
     public var descriptor: RuntimeDescriptor { .appleContainer }
 
@@ -23,8 +25,30 @@ public struct ContainerClient: Sendable {
                          priority: .utility)
     }
 
-    public func streamStatsTable(ids: [String] = []) -> AsyncThrowingStream<String, Error> {
+    private func statsTableStream(ids: [String] = []) -> AsyncThrowingStream<String, Error> {
         runner.stream(ContainerCommands.statsTableStream(ids: ids), priority: .utility)
+    }
+
+    public func streamStats(ids: [String] = []) -> AsyncThrowingStream<[RuntimeStatsSnapshot], Error> {
+        let source = statsTableStream(ids: ids)
+        return AsyncThrowingStream { continuation in
+            let task = Task(priority: .utility) {
+                var parser = ContainerStatsTableParser()
+                do {
+                    for try await chunk in source {
+                        try Task.checkCancellation()
+                        let samples = parser.append(chunk)
+                        if !samples.isEmpty { continuation.yield(samples) }
+                    }
+                    continuation.finish()
+                } catch is CancellationError {
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 
     public func diskUsage() async throws -> DiskUsage {
@@ -111,6 +135,14 @@ public struct ContainerClient: Sendable {
     /// Stream `image push --progress plain` to a logged-in registry.
     public func streamPush(_ ref: String, platform: String? = nil) -> AsyncThrowingStream<String, Error> {
         runner.stream(ContainerCommands.imagePush(ref, platform: platform))
+    }
+
+    @discardableResult public func runContainer(arguments: [String]) async throws -> Data {
+        try await runner.run(arguments)
+    }
+
+    @discardableResult public func performSystemAction(_ action: String) async throws -> Data {
+        try await runner.run(["system", action])
     }
 
     // MARK: Registries
@@ -204,4 +236,4 @@ public struct ContainerClient: Sendable {
     }
 }
 
-extension ContainerClient: ContainerRuntimeClient {}
+extension AppleContainerClient: ContainerRuntimeClient {}

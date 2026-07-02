@@ -1,0 +1,9 @@
+[?1049h[?25l[H[JContainer ID  Cpu %  Memory Usage  Net Rx/Tx  Block I/O  Pids
+[H[JContainer ID  Cpu %  Memory Usage           Net Rx/Tx              Block I/O              Pids
+buildkit      0.00%  103.19 MiB / 2.00 GiB  475.54 KiB / 0.59 KiB  59.17 MiB / 24.00 KiB  17
+sonarrhd      0.07%  276.57 MiB / 1.00 GiB  2.37 MiB / 3.68 MiB    142.96 MiB / 700 KiB   26
+[H[JContainer ID  Cpu %  Memory Usage           Net Rx/Tx              Block I/O              Pids
+buildkit      0.00%  103.19 MiB / 2.00 GiB  475.54 KiB / 0.59 KiB  59.17 MiB / 24.00 KiB  17
+sonarrhd      0.06%  276.57 MiB / 1.00 GiB  2.37 MiB / 3.68 MiB    142.96 MiB / 700 KiB   26
+[H[Jerror collecting stats: CancellationError()
+[?25h[?1049l

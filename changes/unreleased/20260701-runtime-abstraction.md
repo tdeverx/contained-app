@@ -1,1 +1,1 @@
-- Added the first backend runtime abstraction in `ContainedCore`, with Apple `container` capabilities advertised through `ContainerRuntimeClient` and `RuntimeDescriptor`.
+- Split runtime contracts into `ContainedRuntime` and the current Apple `container` adapter into `AppleContainerRuntime`, with open-ended runtime identifiers and typed stats streams so future Docker-compatible or other engine adapters can be added as sibling modules.

@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import ContainedCore
+import AppleContainerRuntime
 import ContainedDesignSystem
 
 /// The menu shown by the menu-bar extra: a compact command surface with service status, running
@@ -283,7 +284,7 @@ struct MenuBarContent: View {
 
     /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).
     private func revealCLIBinary() {
-        guard let url = CLILocator.locate(override: app.settings.cliPathOverride) else { return }
+        guard let url = AppleContainerCLILocator.locate(override: app.settings.cliPathOverride) else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 }
