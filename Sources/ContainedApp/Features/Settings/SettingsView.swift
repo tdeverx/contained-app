@@ -27,6 +27,18 @@ struct SettingsContent: View {
 
         var id: String { rawValue }
 
+        var title: String {
+            switch self {
+            case .appearance: AppText.sectionSettingsAppearance
+            case .general: AppText.sectionSettingsGeneral
+            case .runtime: AppText.sectionSettingsRuntime
+            case .registries: AppText.sectionSettingsRegistries
+            case .experimental: AppText.sectionSettingsExperimental
+            case .updates: AppText.sectionSettingsUpdates
+            case .about: AppText.sectionSettingsAbout
+            }
+        }
+
         var systemImage: String {
             switch self {
             case .appearance: "paintpalette"
@@ -78,8 +90,8 @@ struct SettingsContent: View {
 
     private var header: some View {
         PanelHeader(symbol: page.systemImage,
-                    title: "Settings",
-                    subtitle: page.rawValue) {
+                    title: AppText.sectionSettings,
+                    subtitle: page.title) {
             DesignActionGroup(headerActions)
         }
     }
@@ -87,7 +99,7 @@ struct SettingsContent: View {
     private var headerActions: [DesignAction] {
         var actions = SettingsPage.allCases.map { item in
             DesignAction(systemName: item.systemImage,
-                         help: item.rawValue,
+                         help: item.title,
                          tint: page == item ? .accentColor : nil) {
                 page = item
             }
