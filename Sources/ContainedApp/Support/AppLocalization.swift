@@ -83,6 +83,13 @@ enum AppText {
     static var sectionTemplates: String { string("section.templates", defaultValue: "Templates") }
     static var sectionActivity: String { string("section.activity", defaultValue: "Activity") }
     static var sectionSettings: String { string("section.settings", defaultValue: "Settings") }
+    static var sectionSettingsAppearance: String { string("settings.page.appearance", defaultValue: "Appearance") }
+    static var sectionSettingsGeneral: String { string("settings.page.general", defaultValue: "General") }
+    static var sectionSettingsRuntime: String { string("settings.page.runtime", defaultValue: "Runtime") }
+    static var sectionSettingsRegistries: String { string("settings.page.registries", defaultValue: "Registries") }
+    static var sectionSettingsExperimental: String { string("settings.page.experimental", defaultValue: "Experimental") }
+    static var sectionSettingsUpdates: String { string("settings.page.updates", defaultValue: "Updates") }
+    static var sectionSettingsAbout: String { string("settings.page.about", defaultValue: "About") }
     static var sectionGroupWorkloads: String { string("sectionGroup.workloads", defaultValue: "Workloads") }
     static var sectionGroupInfra: String { string("sectionGroup.infra", defaultValue: "Infra") }
     static var sectionGroupSystem: String { string("sectionGroup.system", defaultValue: "System") }

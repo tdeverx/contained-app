@@ -12,9 +12,9 @@ struct UpdatesTab: View {
     var body: some View {
         @Bindable var settings = app.settings
         LazyVStack(spacing: DesignTokens.Space.l) {
-            PanelSection(header: "Updates",
-                         footer: "\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.") {
-                PanelRow(title: "Update channel") {
+            PanelSection(header: AppText.sectionSettingsUpdates,
+                         footer: AppText.string("settings.updates.footer", defaultValue: "\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.")) {
+                PanelRow(title: AppText.string("settings.updates.channel", defaultValue: "Update channel")) {
                     Menu(app.settings.updateChannel.displayName) {
                         ForEach(UpdateChannel.allCases) { channel in
                             Button {
@@ -31,7 +31,7 @@ struct UpdatesTab: View {
                     }
                     .fixedSize()
                 }
-                PanelToggleRow(title: "Automatically check for updates",
+                PanelToggleRow(title: AppText.string("settings.updates.automaticallyCheck", defaultValue: "Automatically check for updates"),
                                isOn: Binding(get: { settings.appUpdateChecksEnabled },
                                              set: {
                                                  settings.appUpdateChecksEnabled = $0
@@ -47,9 +47,9 @@ struct UpdatesTab: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            PanelSection(header: "Image updates",
-                         footer: "Controls the background registry digest check cadence. Manual checks are always available from Images, System, and the toolbar.") {
-                PanelRow(title: "Check images") {
+            PanelSection(header: AppText.string("settings.updates.imageUpdates", defaultValue: "Image updates"),
+                         footer: AppText.string("settings.updates.imageUpdates.footer", defaultValue: "Controls the background registry digest check cadence. Manual checks are always available from Images, System, and the toolbar.")) {
+                PanelRow(title: AppText.string("settings.updates.checkImages", defaultValue: "Check images")) {
                     Picker("", selection: $settings.imageUpdateIntervalHours) {
                         Text("Every hour").tag(1)
                         Text("Every 3 hours").tag(3)
@@ -63,7 +63,7 @@ struct UpdatesTab: View {
         }
         .task { app.updater.refreshChannelAvailability() }
         .sheet(isPresented: $showingCurrentNotes) {
-            ReleaseNotesView(title: "What’s New",
+            ReleaseNotesView(title: AppText.string("releaseNotes.whatsNew", defaultValue: "What's New"),
                              html: app.updater.currentReleaseNotesHTML,
                              onClose: { showingCurrentNotes = false })
         }
@@ -76,16 +76,16 @@ struct UpdatesTab: View {
 
     private var availableUpdateNotesLabel: String {
         if let version = app.updater.availableUpdateDisplayVersion {
-            return "What’s New in \(version)"
+            return AppText.string("releaseNotes.whatsNewInVersion", defaultValue: "What's New in \(version)")
         }
-        return "What’s New in Available Update"
+        return AppText.string("releaseNotes.whatsNewInAvailableUpdate", defaultValue: "What's New in Available Update")
     }
 
     private var availableUpdateNotesTitle: String {
         if let version = app.updater.availableUpdateDisplayVersion {
-            return "What’s New in \(version)"
+            return AppText.string("releaseNotes.whatsNewInVersion", defaultValue: "What's New in \(version)")
         }
-        return "Available Update"
+        return AppText.string("releaseNotes.availableUpdate", defaultValue: "Available Update")
     }
 
     private var channelBinding: Binding<UpdateChannel> {

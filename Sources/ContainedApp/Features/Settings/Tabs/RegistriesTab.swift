@@ -13,8 +13,8 @@ struct RegistriesTab: View {
 
     var body: some View {
         LazyVStack(spacing: DesignTokens.Space.l) {
-            PanelSection(header: "Signed-in registries",
-                         footer: "Credentials are typed by you and piped to the CLI via stdin, so the password never lands in the process list. Contained doesn’t store it.") {
+            PanelSection(header: AppText.string("settings.registries.signedIn", defaultValue: "Signed-in registries"),
+                         footer: AppText.string("settings.registries.footer", defaultValue: "Credentials are typed by you and piped to the CLI via stdin, so the password never lands in the process list. Contained doesn't store it.")) {
                 if app.registries.isEmpty {
                     Text("Not signed in to any registries.")
                         .foregroundStyle(.secondary)

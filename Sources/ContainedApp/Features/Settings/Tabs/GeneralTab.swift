@@ -11,21 +11,24 @@ struct GeneralTab: View {
 
     var body: some View {
         LazyVStack(spacing: DesignTokens.Space.l) {
-            PanelSection(header: "Startup") {
-                PanelToggleRow(title: "Launch at login", isOn: $settings.launchAtLogin)
-                PanelToggleRow(title: "Keep running in the menu bar", isOn: $settings.keepInMenuBar)
+            PanelSection(header: AppText.string("settings.general.startup", defaultValue: "Startup")) {
+                PanelToggleRow(title: AppText.string("settings.general.launchAtLogin", defaultValue: "Launch at login"),
+                               isOn: $settings.launchAtLogin)
+                PanelToggleRow(title: AppText.string("settings.general.keepInMenuBar", defaultValue: "Keep running in the menu bar"),
+                               isOn: $settings.keepInMenuBar)
             }
 
-            PanelSection(header: "Activity & alerts") {
-                PanelToggleRow(title: "System alert on container crash / restart", isOn: $settings.notifyOnCrash)
-                PanelToggleRow(title: "Show “Reveal CLI” on actions",
-                               info: "Shows the exact `container ...` command for important actions. Useful when you are learning the CLI or want to verify what will run.",
+            PanelSection(header: AppText.string("settings.general.activityAlerts", defaultValue: "Activity & alerts")) {
+                PanelToggleRow(title: AppText.string("settings.general.notifyOnCrash", defaultValue: "System alert on container crash / restart"),
+                               isOn: $settings.notifyOnCrash)
+                PanelToggleRow(title: AppText.string("settings.general.showRevealCLI", defaultValue: "Show Reveal CLI on actions"),
+                               info: AppText.string("settings.general.showRevealCLI.info", defaultValue: "Shows the exact `container ...` command for important actions. Useful when you are learning the CLI or want to verify what will run."),
                                isOn: $settings.revealCLI)
             }
 
-            PanelSection(header: "Data",
-                         footer: "Live metrics use one low-priority runtime stream. The list refresh interval only controls background service, container list, and resource-cache polling. \(settings.statsNormalizationMode.footnote)") {
-                PanelRow(title: "List refresh interval") {
+            PanelSection(header: AppText.string("settings.general.data", defaultValue: "Data"),
+                         footer: AppText.string("settings.general.data.footer", defaultValue: "Live metrics use one low-priority runtime stream. The list refresh interval only controls background service, container list, and resource-cache polling. \(settings.statsNormalizationMode.footnote)")) {
+                PanelRow(title: AppText.string("settings.general.listRefreshInterval", defaultValue: "List refresh interval")) {
                     HStack(spacing: DesignTokens.Space.s) {
                         Slider(value: $settings.refreshInterval, in: 1...10, step: 1)
                             .frame(width: DesignTokens.FormWidth.compactSlider)
@@ -34,7 +37,7 @@ struct GeneralTab: View {
                             .frame(width: DesignTokens.FormWidth.refreshReadout, alignment: .trailing)
                     }
                 }
-                PanelRow(title: "Keep history for") {
+                PanelRow(title: AppText.string("settings.general.keepHistoryFor", defaultValue: "Keep history for")) {
                     Picker("", selection: retentionBinding) {
                         Text("1 day").tag(1)
                         Text("7 days").tag(7)
@@ -43,7 +46,7 @@ struct GeneralTab: View {
                     }
                         .labelsHidden().fixedSize()
                 }
-                PanelRow(title: "Normalize stats") {
+                PanelRow(title: AppText.string("settings.general.normalizeStats", defaultValue: "Normalize stats")) {
                     Picker("", selection: statsNormalizationBinding) {
                         ForEach(StatsNormalizationMode.allCases) { mode in
                             Text(mode.displayName).tag(mode)
@@ -58,9 +61,9 @@ struct GeneralTab: View {
                 ConfigTransferControls()
             }
 
-            PanelSection(header: "Logging",
+            PanelSection(header: AppText.string("settings.general.logging", defaultValue: "Logging"),
                          footer: settings.loggingLevel.footnote) {
-                PanelRow(title: "Level") {
+                PanelRow(title: AppText.string("settings.general.loggingLevel", defaultValue: "Level")) {
                     Picker("", selection: $settings.loggingLevel) {
                         ForEach(AppLogLevel.allCases) { level in
                             Text(level.displayName).tag(level)
@@ -90,9 +93,9 @@ struct GeneralTab: View {
                 }
             }
 
-            PanelSection(header: "Advanced") {
-                PanelField(label: "Container CLI path",
-                           info: "Override the auto-detected `container` binary location.") {
+            PanelSection(header: AppText.string("settings.general.advanced", defaultValue: "Advanced")) {
+                PanelField(label: AppText.string("settings.general.containerCLIPath", defaultValue: "Container CLI path"),
+                           info: AppText.string("settings.general.containerCLIPath.info", defaultValue: "Override the auto-detected `container` binary location.")) {
                     TextField("", text: $settings.cliPathOverride, prompt: Text("/usr/local/bin/container"))
                         .textFieldStyle(.roundedBorder)
                 }

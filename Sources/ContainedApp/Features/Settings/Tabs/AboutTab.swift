@@ -25,13 +25,13 @@ struct AboutTab: View {
                 }
             }
 
-            PanelSection(header: "Runtime") {
-                PanelRow(title: "Container CLI") { Text(app.cliVersion ?? "—").foregroundStyle(.secondary) }
-                PanelRow(title: "API server") { Text(app.systemStatus?.apiServerVersion ?? "—").foregroundStyle(.secondary) }
+            PanelSection(header: AppText.sectionSettingsRuntime) {
+                PanelRow(title: AppText.string("settings.about.containerCLI", defaultValue: "Container CLI")) { Text(app.cliVersion ?? "—").foregroundStyle(.secondary) }
+                PanelRow(title: AppText.string("settings.about.apiServer", defaultValue: "API server")) { Text(app.systemStatus?.apiServerVersion ?? "—").foregroundStyle(.secondary) }
             }
 
             PanelSection {
-                PanelRow(title: "Copyright") { Text("© 2026 Contained").foregroundStyle(.secondary) }
+                PanelRow(title: AppText.string("settings.about.copyright", defaultValue: "Copyright")) { Text("© 2026 Contained").foregroundStyle(.secondary) }
             }
         }
     }
