@@ -17,6 +17,7 @@
 		0E2100010000000000000006 /* SystemVolumeInventoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000006 /* SystemVolumeInventoryTests.swift */; };
 		0E2100010000000000000007 /* UpdaterControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000007 /* UpdaterControllerTests.swift */; };
 		0E2100010000000000000008 /* ContainedApp in Frameworks */ = {isa = PBXBuildFile; productRef = 0E20000B0000000000000001 /* ContainedApp */; };
+		0E2100010000000000000009 /* AppErrorPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000009 /* AppErrorPresentationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 		0E2100020000000000000006 /* SystemVolumeInventoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVolumeInventoryTests.swift; sourceTree = "<group>"; };
 		0E2100020000000000000007 /* UpdaterControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterControllerTests.swift; sourceTree = "<group>"; };
 		0E2100020000000000000008 /* ContainedAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ContainedAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0E2100020000000000000009 /* AppErrorPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorPresentationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +105,7 @@
 		0E2100040000000000000001 /* ContainedAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				0E2100020000000000000009 /* AppErrorPresentationTests.swift */,
 				0E2100020000000000000001 /* AppLoggingTests.swift */,
 				0E2100020000000000000002 /* ContainersStoreRefreshTests.swift */,
 				0E2100020000000000000003 /* MigrationTests.swift */,
@@ -227,6 +230,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0E2100010000000000000009 /* AppErrorPresentationTests.swift in Sources */,
 				0E2100010000000000000001 /* AppLoggingTests.swift in Sources */,
 				0E2100010000000000000002 /* ContainersStoreRefreshTests.swift in Sources */,
 				0E2100010000000000000003 /* MigrationTests.swift in Sources */,

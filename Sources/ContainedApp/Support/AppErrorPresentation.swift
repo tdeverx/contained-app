@@ -109,10 +109,9 @@ enum AppErrorPresentation {
     private static func message(for error: ComposeError) -> String {
         switch error {
         case .invalid(let reason):
-            if reason.isEmpty {
-                return AppText.string("error.compose.invalid", defaultValue: "Invalid compose file.")
-            }
-            return reason
+            let reason = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !reason.isEmpty else { return AppText.composeInvalid }
+            return AppText.composeInvalid(reason: reason)
         }
     }
 }
