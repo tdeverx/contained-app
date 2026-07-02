@@ -68,6 +68,25 @@ enum AppText {
     static var clearActivity: String { string("activity.clearActivity", defaultValue: "Clear activity") }
     static var tint: String { string("common.tint", defaultValue: "Tint") }
     static var unread: String { string("common.unread", defaultValue: "Unread") }
+    static var runtimeCore: String { string("runtime.core", defaultValue: "Core") }
+    static var runtimeCoreSubtitle: String {
+        string(
+            "runtime.core.subtitle",
+            defaultValue: "Runtime adapter used for create, recreate, imports, images, logs, stats, and system actions."
+        )
+    }
+    static var containerRuntimeNotReady: String {
+        string("runtime.notReady", defaultValue: "Container runtime is not ready.")
+    }
+    static var composeNoServicesWithImages: String {
+        string("compose.noServicesWithImages", defaultValue: "No services with an image to import.")
+    }
+    static var composeWarnings: String {
+        string(
+            "compose.warnings",
+            defaultValue: "Some compose keys were not translated; review each container before creating."
+        )
+    }
 
     static var reconnectTerminal: String {
         string("terminal.reconnectTerminal", defaultValue: "Reconnect terminal")

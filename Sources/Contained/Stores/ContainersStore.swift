@@ -3,7 +3,6 @@ import ContainedDesignSystem
 import OSLog
 import ContainedCore
 import ContainedRuntime
-import ContainedRuntime
 
 /// Owns the container list and derived live stats. Lifecycle actions run through the client and
 /// trigger a refresh. Stats arrive from the app-wide runtime stream and are converted into deltas
@@ -274,7 +273,10 @@ final class ContainersStore {
                        severity: .info)
         diagnosticLogger.notice("Run started from creation flow")
         do {
-            let output = try await client.runContainer(arguments: spec.arguments())
+            guard client.descriptor.kind == spec.effectiveRuntimeKind else {
+                throw UnsupportedRuntimeCapability(kind: spec.effectiveRuntimeKind, capability: .containers)
+            }
+            let result = try await client.createContainer(spec.createRequest)
             performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
@@ -283,12 +285,7 @@ final class ContainersStore {
                            severity: elapsed >= 1.5 ? .warning : .info)
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
                                  "Run finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
-            if !spec.name.isEmpty { return spec.name }
-            let printed = String(decoding: output, as: UTF8.self)
-                .components(separatedBy: .newlines)
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .last(where: { !$0.isEmpty })
-            return printed
+            return result.id
         } catch {
             errorMessage = error.appDisplayMessage
             let elapsed = Date().timeIntervalSince(started)
@@ -314,9 +311,10 @@ final class ContainersStore {
         logger?.record("Recreating \(originalID)", category: .lifecycle, containerID: originalID)
         diagnosticLogger.notice("Recreate started for \(originalID, privacy: .public)")
         do {
-            _ = try? await client.stop([originalID])          // best-effort; may already be stopped
-            _ = try await client.deleteContainers([originalID], force: true)
-            _ = try await client.runContainer(arguments: spec.arguments())
+            guard client.descriptor.kind == spec.effectiveRuntimeKind else {
+                throw UnsupportedRuntimeCapability(kind: spec.effectiveRuntimeKind, capability: .containers)
+            }
+            _ = try await client.recreateContainer(originalID: originalID, request: spec.createRequest)
             performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)

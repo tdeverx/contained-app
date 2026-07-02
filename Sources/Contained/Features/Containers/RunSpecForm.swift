@@ -52,12 +52,23 @@ struct RunSpecForm: View {
 
     private var generalSection: some View {
         Group {
+            PanelRow(title: AppText.runtimeCore,
+                     subtitle: app.runtimeCoreSelectorIsEnabled ? AppText.runtimeCoreSubtitle : app.runtimeCoreSelectorDisabledReason) {
+                Picker("", selection: runtimeKindBinding) {
+                    ForEach(app.availableRuntimeDescriptors, id: \.kind) { descriptor in
+                        Text(descriptor.displayName).tag(descriptor.kind)
+                    }
+                }
+                .labelsHidden()
+                .fixedSize()
+                .disabled(!app.runtimeCoreSelectorIsEnabled)
+            }
             PanelField(label: "Image",
                        info: "The container image to start, such as `nginx:latest`. If it is not on this Mac yet, Contained pulls it before running.",
                        error: spec.image.trimmingCharacters(in: .whitespaces).isEmpty ? "An image reference is required." : nil) {
                 TextField("", text: $spec.image, prompt: Text("e.g. nginx:latest")).textFieldStyle(.roundedBorder)
             }
-            if imageDefaultConfig != nil {
+            if imageDefaults != nil {
                 PanelRow(title: "Image defaults",
                          subtitle: "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config.",
                          info: "Images can define default startup settings. Adopt copies those defaults into this form so you can see and edit them before running.") {
@@ -149,13 +160,18 @@ struct RunSpecForm: View {
                        set: { if $0 != "custom" { spec.platform = $0 } })
     }
 
-    private var imageDefaultConfig: VariantConfig.OCIConfig? {
-        spec.imageDefaults(in: app.images)
+    private var imageDefaults: ContainerImageDefaults? {
+        app.imageDefaults(for: spec)
+    }
+
+    private var runtimeKindBinding: Binding<RuntimeKind> {
+        Binding(get: { spec.effectiveRuntimeKind },
+                set: { spec.runtimeKind = $0 })
     }
 
     private func adoptImageDefaults() {
-        guard let imageDefaultConfig else { return }
-        let applied = spec.adoptImageDefaults(from: imageDefaultConfig)
+        guard let imageDefaults else { return }
+        let applied = spec.adoptImageDefaults(from: imageDefaults)
         if applied > 0 {
             app.flash("Adopted \(applied) image default\(applied == 1 ? "" : "s")")
         } else {

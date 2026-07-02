@@ -1,22 +1,6 @@
 import Foundation
 import ContainedCore
 
-/// Stable identifier for a runtime adapter.
-///
-/// This is intentionally open-ended rather than a closed enum. Apple `container` is the first
-/// adapter, Docker-compatible engines are an obvious future adapter, and the package should also be
-/// able to host runtimes that do not exist yet without editing this shared module.
-public struct RuntimeKind: RawRepresentable, Codable, Equatable, Hashable, Sendable {
-    public var rawValue: String
-
-    public init(rawValue: String) {
-        self.rawValue = rawValue
-    }
-
-    public static let appleContainer = RuntimeKind(rawValue: "apple-container")
-    public static let dockerCompatible = RuntimeKind(rawValue: "docker-compatible")
-}
-
 public struct RuntimeCapability: OptionSet, Equatable, Sendable {
     public let rawValue: UInt64
 
@@ -40,6 +24,8 @@ public struct RuntimeCapability: OptionSet, Equatable, Sendable {
     public static let exec = RuntimeCapability(rawValue: 1 << 13)
     public static let copy = RuntimeCapability(rawValue: 1 << 14)
     public static let containerExport = RuntimeCapability(rawValue: 1 << 15)
+    public static let composeImport = RuntimeCapability(rawValue: 1 << 16)
+    public static let coreMigration = RuntimeCapability(rawValue: 1 << 17)
 
     public static let appleContainer: RuntimeCapability = [
         .containers,
@@ -58,6 +44,7 @@ public struct RuntimeCapability: OptionSet, Equatable, Sendable {
         .exec,
         .copy,
         .containerExport,
+        .composeImport,
     ]
 }
 
@@ -131,6 +118,11 @@ public protocol ContainerRuntimeClient: Sendable {
     func execCapture(_ id: String, _ command: [String]) async throws -> String
     @discardableResult func copy(source: String, destination: String) async throws -> Data
     func streamSystemLogs(follow: Bool, last: Int?) -> AsyncThrowingStream<String, Error>
+    func previewCreateCommand(for request: ContainerCreateRequest) throws -> RuntimeCommandPreview
+    @discardableResult func createContainer(_ request: ContainerCreateRequest) async throws -> ContainerCreateResult
+    func translateCompose(_ project: ComposeProject, baseDirectory: URL?) throws -> RuntimeComposeImportPlan
+    func imageDefaults(for request: ContainerCreateRequest, in images: [ImageResource]) throws -> ContainerImageDefaults?
+    func coreSwitchPlan(for containerID: String, to target: RuntimeDescriptor?) throws -> RuntimeCoreSwitchPlan
     func systemStatus() async throws -> SystemStatus
     func networks() async throws -> [NetworkResource]
     func volumes() async throws -> [VolumeResource]
@@ -193,6 +185,38 @@ public extension ContainerRuntimeClient {
 
     func streamPush(_ ref: String) -> AsyncThrowingStream<String, Error> {
         streamPush(ref, platform: nil)
+    }
+
+    func previewCreateCommand(for request: ContainerCreateRequest) throws -> RuntimeCommandPreview {
+        throw UnsupportedRuntimeCapability(kind: descriptor.kind, capability: .containers)
+    }
+
+    @discardableResult func createContainer(_ request: ContainerCreateRequest) async throws -> ContainerCreateResult {
+        throw UnsupportedRuntimeCapability(kind: descriptor.kind, capability: .containers)
+    }
+
+    @discardableResult func recreateContainer(originalID: String,
+                                             request: ContainerCreateRequest) async throws -> ContainerCreateResult {
+        _ = try? await stop([originalID])
+        _ = try await deleteContainers([originalID], force: true)
+        return try await createContainer(request)
+    }
+
+    func translateCompose(_ project: ComposeProject, baseDirectory: URL? = nil) throws -> RuntimeComposeImportPlan {
+        throw UnsupportedRuntimeCapability(kind: descriptor.kind, capability: .composeImport)
+    }
+
+    func imageDefaults(for request: ContainerCreateRequest, in images: [ImageResource]) throws -> ContainerImageDefaults? {
+        nil
+    }
+
+    func coreSwitchPlan(for containerID: String, to target: RuntimeDescriptor?) throws -> RuntimeCoreSwitchPlan {
+        RuntimeCoreSwitchPlan(
+            isAvailable: false,
+            reason: "Core switching requires export/import support from both runtimes.",
+            source: descriptor.kind,
+            target: target?.kind
+        )
     }
 
     @discardableResult func createVolume(name: String, size: String?) async throws -> Data {

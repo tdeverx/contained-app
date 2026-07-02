@@ -55,7 +55,7 @@ struct ContainerConfigureView: View {
                 .padding(Tokens.Space.s)
         } footer: {
             if app.settings.revealCLI {
-                CommandPreviewBar(command: spec.arguments(),
+                CommandPreviewBar(command: app.previewCreateCommand(for: spec),
                                   copyHelp: AppText.copyCommand,
                                   copiedAccessibilityLabel: AppText.copied)
                     .padding(Tokens.Space.s)

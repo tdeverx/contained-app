@@ -44,60 +44,36 @@ extension RunSpec {
         return short + ":latest"
     }
 
-    func matchingImage(in images: [ContainedCore.ImageResource]) -> ContainedCore.ImageResource? {
-        let target = normalizedImageReference
-        return images.first { Self.normalizedImageReference($0.reference) == target }
-    }
-
-    func imageDefaults(in images: [ContainedCore.ImageResource]) -> VariantConfig.OCIConfig? {
-        matchingImage(in: images).flatMap { imageDefaults(from: $0) }
-    }
-
-    func imageDefaults(from image: ContainedCore.ImageResource) -> VariantConfig.OCIConfig? {
-        let runnable = image.variants.filter(\.isRunnable)
-        let platformMatch = runnable.first { variant in
-            !platform.isEmpty && variant.platform.display == platform
-        }
-        #if arch(arm64)
-        let hostMatch = runnable.first { $0.platform.os == "linux" && $0.platform.architecture == "arm64" }
-        #else
-        let hostMatch = runnable.first { $0.platform.os == "linux" && $0.platform.architecture == "amd64" }
-        #endif
-        return (platformMatch ?? hostMatch ?? runnable.first)?.config?.config
-    }
-
     @discardableResult
-    mutating func adoptImageDefaults(from config: VariantConfig.OCIConfig) -> Int {
+    mutating func adoptImageDefaults(from defaults: ContainerImageDefaults) -> Int {
         var applied = 0
-        if command.trimmingCharacters(in: .whitespaces).isEmpty, let cmd = config.cmd, !cmd.isEmpty {
+        if command.trimmingCharacters(in: .whitespaces).isEmpty, !defaults.command.isEmpty {
+            let cmd = defaults.command
             command = cmd.joined(separator: " ")
             applied += 1
         }
         if entrypoint.trimmingCharacters(in: .whitespaces).isEmpty,
-           let entrypointValue = config.entrypoint,
-           !entrypointValue.isEmpty {
+           !defaults.entrypoint.isEmpty {
+            let entrypointValue = defaults.entrypoint
             entrypoint = entrypointValue.joined(separator: " ")
             applied += 1
         }
         if workingDir.trimmingCharacters(in: .whitespaces).isEmpty,
-           let workingDirValue = config.workingDir,
+           let workingDirValue = defaults.workingDirectory,
            !workingDirValue.isEmpty {
             workingDir = workingDirValue
             applied += 1
         }
         if user.trimmingCharacters(in: .whitespaces).isEmpty,
-           let userValue = config.user,
+           let userValue = defaults.user,
            !userValue.isEmpty {
             user = userValue
             applied += 1
         }
         let existingEnvKeys = Set(env.map(\.key))
-        for entry in config.env ?? [] {
-            guard let separator = entry.firstIndex(of: "=") else { continue }
-            let key = String(entry[..<separator])
-            guard !key.isEmpty, !existingEnvKeys.contains(key) else { continue }
-            let value = String(entry[entry.index(after: separator)...])
-            env.append(KeyValue(key: key, value: value))
+        for entry in defaults.environment {
+            guard entry.isValid, !existingEnvKeys.contains(entry.key) else { continue }
+            env.append(KeyValue(key: entry.key, value: entry.value))
             applied += 1
         }
         return applied

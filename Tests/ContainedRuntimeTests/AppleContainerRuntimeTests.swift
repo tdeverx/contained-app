@@ -56,7 +56,63 @@ struct AppleContainerRuntimeTests {
         #expect(descriptor.executableName == "container")
         #expect(descriptor.supports([.containers, .images, .volumes, .networks]))
         #expect(descriptor.supports([.systemStatus, .systemLogs, .exec, .copy]))
+        #expect(descriptor.supports(.composeImport))
+        #expect(!descriptor.supports(.coreMigration))
         try descriptor.require([.imageBuild, .imagePush, .registries])
+    }
+
+    @Test func appleCreateTranslatorBuildsPreviewAndResult() {
+        var request = ContainerCreateRequest()
+        request.image = "nginx:latest"
+        request.name = "web"
+        request.cpus = "2"
+
+        let preview = AppleContainerCreateTranslator.preview(for: request)
+        #expect(preview.command == ["run", "--detach", "--name", "web", "--cpus", "2", "nginx:latest"])
+        #expect(preview.warnings.isEmpty)
+
+        let namedResult = AppleContainerCreateTranslator.result(from: Data("generated-id\n".utf8), request: request)
+        #expect(namedResult.id == "web")
+
+        request.name = ""
+        let generatedResult = AppleContainerCreateTranslator.result(from: Data("generated-id\n".utf8), request: request)
+        #expect(generatedResult.id == "generated-id")
+    }
+
+    @Test func appleComposeTranslationReturnsStandardCreateFields() throws {
+        let yaml = """
+        services:
+          app:
+            image: example/app:1
+            container_name: demo-app
+            command: ["serve", "--port", "8080"]
+            ports:
+              - "18080:8080"
+            volumes:
+              - "./config:/config:ro"
+            environment:
+              TZ: Europe/London
+            restart: always
+            healthcheck:
+              test: ["CMD", "curl", "-f", "http://localhost:8080"]
+              retries: 2
+        """
+        let project = try ComposeParser.parse(yaml, projectName: "demo")
+        let base = URL(filePath: "/opt/stacks/demo", directoryHint: .isDirectory)
+        let plan = AppleContainerCreateTranslator.composePlan(for: project, baseDirectory: base)
+        let item = try #require(plan.items.first)
+
+        #expect(item.request.runtimeKind == .appleContainer)
+        #expect(item.request.name == "demo-app")
+        #expect(item.request.image == "example/app:1")
+        #expect(item.request.command == ["serve", "--port", "8080"])
+        #expect(item.request.ports.map(\.spec) == ["18080:8080"])
+        #expect(item.request.volumes.map(\.spec) == ["/opt/stacks/demo/config:/config:ro"])
+        #expect(item.request.env.map { "\($0.key)=\($0.value)" } == ["TZ=Europe/London"])
+        #expect(item.request.restart == .always)
+        #expect(item.request.labels.contains { $0.key == "contained.stack" && $0.value == "demo" })
+        #expect(item.healthCheck?.command == ["curl", "-f", "http://localhost:8080"])
+        #expect(item.healthCheck?.retries == 2)
     }
 
     @Test func appleClientConformsToRuntimeClient() async throws {

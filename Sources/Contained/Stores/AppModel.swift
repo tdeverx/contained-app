@@ -96,6 +96,18 @@ final class AppModel {
                 ?? ProcessInfo.processInfo.physicalMemory
         )
     }
+    var availableRuntimeDescriptors: [RuntimeDescriptor] {
+        [.appleContainer]
+    }
+    var runtimeCoreSelectorIsEnabled: Bool {
+        availableRuntimeDescriptors.count > 1
+    }
+    var runtimeCoreSelectorDisabledReason: String {
+        AppText.string(
+            "runtime.coreSelector.disabledReason",
+            defaultValue: "Apple container is the only available core in this build. Additional cores will enable this selector."
+        )
+    }
 
     /// One in-flight operation shown in the bottom progress bar.
     struct ActivityState: Equatable {
@@ -216,6 +228,15 @@ final class AppModel {
         }
     }
 
+    func runtimeDescriptor(for kind: RuntimeKind) -> RuntimeDescriptor {
+        availableRuntimeDescriptors.first { $0.kind == kind } ?? .appleContainer
+    }
+
+    func runtimeClient(for kind: RuntimeKind) -> (any ContainerRuntimeClient)? {
+        guard let client, client.descriptor.kind == kind else { return nil }
+        return client
+    }
+
     func applyStatsNormalizationContext() {
         containers.configureStatsNormalization(statsNormalizationContext)
     }
@@ -293,6 +314,16 @@ final class AppModel {
     /// Collapses the repeated `do / catch CommandError / catch` blocks across the stores and sheets.
     func captured(_ work: () async throws -> Void) async -> String? {
         await capturedError(work)?.appDisplayMessage
+    }
+
+    func previewCreateCommand(for spec: RunSpec) -> [String] {
+        (try? runtimeClient(for: spec.effectiveRuntimeKind)?.previewCreateCommand(for: spec.createRequest).command)
+            ?? spec.arguments()
+    }
+
+    func imageDefaults(for spec: RunSpec) -> ContainerImageDefaults? {
+        guard let client = runtimeClient(for: spec.effectiveRuntimeKind) else { return nil }
+        return try? client.imageDefaults(for: spec.createRequest, in: images)
     }
 
     /// Run a throwing action while preserving the original error for Activity/package metadata.
@@ -438,7 +469,15 @@ final class AppModel {
     /// nothing while the image silently downloads. Attaches local style + healthcheck on success.
     @discardableResult
     func createContainer(_ spec: RunSpec) async -> String? {
-        guard client != nil else { return nil }
+        guard runtimeClient(for: spec.effectiveRuntimeKind) != nil else {
+            let error = UnsupportedRuntimeCapability(kind: spec.effectiveRuntimeKind, capability: .containers)
+            createError = error.appDisplayMessage
+            logger.recordFailure("Create requested unavailable runtime",
+                                 error: error,
+                                 category: .lifecycle,
+                                 severity: .warning)
+            return nil
+        }
         createError = nil
         if !(await imageIsLocal(spec.image)) {
             guard await pullImage(spec.image) else {
@@ -462,7 +501,16 @@ final class AppModel {
     /// deleting the current container so an unavailable image does not strand the edit flow.
     @discardableResult
     func recreateContainer(originalID: String, spec: RunSpec) async -> String? {
-        guard client != nil else { return nil }
+        guard runtimeClient(for: spec.effectiveRuntimeKind) != nil else {
+            let error = UnsupportedRuntimeCapability(kind: spec.effectiveRuntimeKind, capability: .containers)
+            flash(error.appDisplayMessage)
+            logger.recordFailure("Recreate requested unavailable runtime",
+                                 error: error,
+                                 category: .lifecycle,
+                                 severity: .warning,
+                                 containerID: originalID)
+            return nil
+        }
         if !(await imageIsLocal(spec.image)) {
             guard await pullImage(spec.image) else { return nil }
         }
