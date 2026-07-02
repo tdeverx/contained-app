@@ -37,7 +37,6 @@ Expanded container detail surfaces include:
 - Stats
 - History
 - Files
-- Inspect
 
 Expanded views use the same toolbar safe-area contract as morph panels, clearing
 top and bottom toolbar bands when the experimental toolbar is visible.

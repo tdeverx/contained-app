@@ -11,8 +11,9 @@
 - Made scrollable and resource-sized app panels lazy by default, including container tabs, settings pages, image/tag panels, system/activity/history views, and package scaffolds that can host long content.
 - Switched singular image detail expansion to the same single-surface card path as containers, leaving morph panels for true toolbar panels instead of wrapping expanded image cards in panel chrome.
 - Warmed container/image customizer sheets from the already-rendered style state and cached local image tag grouping so opening style popovers no longer rebuilds large resource views first.
-- Deferred heavyweight expanded-card pages until their tab selection settles, avoiding transient Logs/Terminal/Stats/Inspect work while users rapidly switch pages.
-- Kept lightweight History/Files expanded-card pages immediate and shortened heavyweight page deferral so page switching feels snappier without eagerly loading Logs/Terminal/Stats/Inspect.
+- Deferred heavyweight expanded-card pages until their tab selection settles, avoiding transient Logs/Terminal/Stats work while users rapidly switch pages.
+- Kept lightweight History/Files expanded-card pages immediate and shortened heavyweight page deferral so page switching feels snappier without eagerly loading Logs/Terminal/Stats.
+- Removed user-facing JSON Inspect pages and row actions from containers, images, networks, and volumes; image details now use expanded-card pages for Tags, History, Add Tag, and Push.
 - Made mini CPU/memory chip percentages preserve tiny sub-1% values so real streamed CPU changes do not disappear behind whole-percent rounding.
 - Made CPU/memory percentage readouts consistent across cards, live stats, history charts, and mini chips: whole percentages stay clean, while only sub-1% values show the decimals needed.
 - Hardened embedded terminal teardown so rapid card/tab switching does not leave stale `container exec --tty` children behind.

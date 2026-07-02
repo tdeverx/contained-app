@@ -180,7 +180,6 @@ private struct BuildPage: View {
 private struct NetworksPage: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @State private var inspectingNetwork: NetworkResource?
     @State private var deletingNetwork: NetworkResource?
 
     private var sortedNetworks: [NetworkResource] {
@@ -252,7 +251,6 @@ private struct NetworksPage: View {
             }
         }
         .task { await app.refreshNetworks() }
-        .sheet(item: $inspectingNetwork) { JSONInspectorSheet(title: $0.name, value: $0) }
         .confirmationDialog("Delete network \(deletingNetwork?.name ?? "")?",
                             isPresented: deleteNetworkBinding,
                             presenting: deletingNetwork) { network in
@@ -291,9 +289,6 @@ private struct NetworksPage: View {
 
     @ViewBuilder
     private func networkMenu(_ network: NetworkResource) -> some View {
-        Button { inspectingNetwork = network } label: {
-            Label("Inspect", systemImage: "doc.text.magnifyingglass")
-        }
         Button { copyToPasteboard(network.name) } label: {
             Label("Copy Name", systemImage: "doc.on.doc")
         }

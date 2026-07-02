@@ -43,7 +43,7 @@ public enum Tokens {
         public static let small = CGSize(width: 420, height: 280)    // confirmations, short forms
         public static let form = CGSize(width: 560, height: 680)     // the run/edit form
         public static let console = CGSize(width: 560, height: 540)  // streamed-progress / logs
-        public static let inspector = CGSize(width: 600, height: 560) // JSON inspector, history
+        public static let inspector = CGSize(width: 600, height: 560) // Dense detail/history pages
         public static let releaseNotes = CGSize(width: 620, height: 520)
         public static let wide = CGSize(width: 720, height: 560)     // build workspace
         public static let dialogWidth: CGFloat = 460

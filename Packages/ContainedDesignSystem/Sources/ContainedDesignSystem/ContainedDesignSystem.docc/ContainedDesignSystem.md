@@ -230,7 +230,5 @@ DesignInputSurface {
 
 - ``TintSelector``
 - ``GradientAngleControl``
-- ``JSONInspectorSheet``
-- ``InlineJSONView``
 - ``StreamConsole``
 - ``copyToPasteboard(_:)``
