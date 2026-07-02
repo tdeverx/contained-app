@@ -23,7 +23,7 @@ private struct OptionalAccessibilityLabel: ViewModifier {
     }
 }
 
-public struct GlassButtonTintStyle: Equatable, Sendable {
+public struct DesignButtonTintStyle: Equatable, Sendable {
     public var enabled = false
     public var tint: DesignTint = .multicolor
     public var opacity = 0.18
@@ -45,7 +45,7 @@ public struct GlassButtonTintStyle: Equatable, Sendable {
         self.blendMode = blendMode
     }
 
-    public static let disabled = GlassButtonTintStyle()
+    public static let disabled = DesignButtonTintStyle()
 }
 
 /// A reusable glass button item: an icon or text button with the shared 28pt inner height and 4pt

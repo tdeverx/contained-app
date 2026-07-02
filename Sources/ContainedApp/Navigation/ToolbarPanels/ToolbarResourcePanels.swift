@@ -164,7 +164,7 @@ struct ToolbarTemplatesPanel: View {
         } headerAccessory: {
             // Chevron affordance: tapping the card hands off to the create morph (parity with the
             // image cards that grow into the morph detail).
-            GlassListRowChevron()
+            DesignListRowChevron()
         } bodyContent: {
             EmptyView()
         } footerLeading: {

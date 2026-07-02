@@ -68,7 +68,7 @@
 #### Personalization & Design System
 
 - Local-only personalization for containers, image groups, image tags, and volumes, including nickname, icon, tint, background, graph/widget choices, and inheritance from image or app defaults.
-- Shared Liquid Glass design system primitives: `DesignCard`, `DesignContentSurface`, `DesignInputSurface`, `GlassOptionTile`, `DesignPanelScaffold`, `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `CommandPreviewBar`, `InfoButton`, `TintSelector`, `StreamConsole`, `ActivityStatusView`, and toolbar controls.
+- Shared Liquid Glass design system primitives: `DesignCard`, `DesignContentSurface`, `DesignInputSurface`, `DesignOptionTile`, `DesignPanelScaffold`, `PanelHeader`, `PanelSection`, `PanelRow`, `PanelField`, `CommandPreviewBar`, `InfoButton`, `TintSelector`, `StreamConsole`, `ActivityStatusView`, and toolbar controls.
 - Accessibility-aware custom visual effects and motion handling, including Reduce Transparency and Reduce Motion support where the app supplies custom glass or animation.
 - Shared page and panel scaffolds so sidebar pages, sheets, and toolbar morphs can reuse content without duplicate layouts.
 

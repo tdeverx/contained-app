@@ -30,7 +30,7 @@ struct VisualEffectBackground: NSViewRepresentable {
 /// Stable root-owned backing for the detail column. Pages render above this layer instead of
 /// applying their own window material. Translucency is always on — legibility under low-contrast
 /// wallpapers is left to the OS "Reduce transparency" accessibility setting.
-public struct ContentBackgroundLayer: View {
+public struct DesignContentBackgroundLayer: View {
     public var material: NSVisualEffectView.Material
 
     public init(material: NSVisualEffectView.Material = .fullScreenUI) {

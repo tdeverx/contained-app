@@ -40,10 +40,10 @@ private struct NavigationPreview: View {
                     }
                 } content: {
                     VStack(spacing: DesignTokens.Space.s) {
-                        GlassOptionTile(symbol: "shippingbox",
+                        DesignOptionTile(symbol: "shippingbox",
                                         title: "Primary item",
                                         subtitle: "Start from a template") {}
-                        GlassOptionTile(symbol: "square.stack.3d.up",
+                        DesignOptionTile(symbol: "square.stack.3d.up",
                                         title: "Image",
                                         subtitle: "Use a local image") {}
                     }

@@ -140,12 +140,12 @@ Use package-owned semantic controls for command chrome:
 
 - `DesignActionGroup` and `DesignActionItems` for icon action groups
 - `DesignActionCluster` for mixed menu/action capsules
-- `DesignInputCluster` for inline search/input glass lanes
+- `DesignInputCluster` for inline search/input lanes
 - `DesignTextActionButton` for labeled standard or prominent actions
-- `DesignGlassToggle` for glass toggle buttons
+- `DesignToggleButton` for toggle buttons in toolbar or panel chrome
 - `DesignSelectionActionBar` for floating selection bars
 - `DesignStatusBanner` for transient bottom banners
-- `DesignToolbarSearchField`, `DesignGlassMenuButton`,
+- `DesignToolbarSearchField`, `DesignMenuButton`,
   `DesignToolbarStatusButton`, `DesignToolbarActionCluster`, and
   `DesignToolbarVanitySlot` for toolbar-specific slots
 

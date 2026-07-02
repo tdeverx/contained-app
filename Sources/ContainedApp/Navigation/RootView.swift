@@ -83,7 +83,7 @@ struct RootView: View {
         .tint(settings.accentTint.color)
         .environment(\.modalMaterial, settings.modalMaterial)
         .environment(\.buttonMaterial, settings.buttonMaterial)
-        .environment(\.buttonTintStyle, GlassButtonTintStyle(enabled: settings.buttonTintEnabled,
+        .environment(\.buttonTintStyle, DesignButtonTintStyle(enabled: settings.buttonTintEnabled,
                                                              tint: settings.buttonTint,
                                                              opacity: settings.buttonTintOpacity,
                                                              gradient: settings.buttonTintGradient,
@@ -143,7 +143,7 @@ struct RootView: View {
     private func toolbarShell(settings: SettingsStore) -> some View {
         GeometryReader { _ in
             ZStack {
-                ContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
+                DesignContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
                 toolbarContent
             }
         }
@@ -158,7 +158,7 @@ struct RootView: View {
 
     private func classicShell(settings: SettingsStore) -> some View {
         ZStack {
-            ContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
+            DesignContentBackgroundLayer(material: settings.windowMaterial.nsMaterial)
             content
                 .ignoresSafeArea(.container, edges: .vertical)
         }

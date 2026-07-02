@@ -35,7 +35,7 @@ struct StatsTab: View {
                         tile(.netTx, delta, "arrow.up.circle")
                         tile(.diskRead, delta, "arrow.down.doc")
                         tile(.diskWrite, delta, "arrow.up.doc")
-                        MetricTile(label: "Processes", value: "\(delta.numProcesses)", systemImage: "gearshape.2", tint: tint)
+                        DesignSparklineMetricTile(label: "Processes", value: "\(delta.numProcesses)", systemImage: "gearshape.2", tint: tint)
                     }
                     processList
                 }
@@ -80,7 +80,7 @@ struct StatsTab: View {
     }
 
     private func tile(_ metric: GraphMetric, _ delta: StatsDelta, _ symbol: String) -> some View {
-        MetricTile(label: metric.displayName,
+        DesignSparklineMetricTile(label: metric.displayName,
                    value: metric.caption(from: delta, snapshot: snapshot, normalization: normalization),
                    systemImage: symbol,
                    tint: tint,
@@ -92,7 +92,7 @@ struct StatsTab: View {
         let memoryLimit = GraphMetric.memoryLimitBytes(for: delta,
                                                        snapshot: snapshot,
                                                        normalization: normalization)
-        return MetricTile(label: "Memory \(Format.bytes(delta.memoryUsageBytes)) / \(Format.bytes(memoryLimit))",
+        return DesignSparklineMetricTile(label: "Memory \(Format.bytes(delta.memoryUsageBytes)) / \(Format.bytes(memoryLimit))",
                           value: GraphMetric.memory.caption(from: delta,
                                                             snapshot: snapshot,
                                                             normalization: normalization),

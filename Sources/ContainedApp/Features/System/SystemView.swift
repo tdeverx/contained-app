@@ -263,7 +263,7 @@ struct SystemContent: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            GlassRowMenu(accessibilityLabel: AppText.string("menu.volumeActions", defaultValue: "Volume actions")) {
+            DesignRowMenu(accessibilityLabel: AppText.string("menu.volumeActions", defaultValue: "Volume actions")) {
                 volumeMenu(entry)
             }
         }

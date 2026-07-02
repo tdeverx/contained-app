@@ -31,7 +31,7 @@ struct AppRoot: View {
             .environment(\.modalMaterial, WindowMaterial.sheet)
             .environment(\.buttonMaterial, WindowMaterial.glassClear)
             .environment(\.cardMaterial, WindowMaterial.glassRegular)
-            .environment(\.buttonTintStyle, GlassButtonTintStyle(enabled: true,
+            .environment(\.buttonTintStyle, DesignButtonTintStyle(enabled: true,
                                                                  tint: .azure))
             .environment(\.designSystemShowsInfoTips, true)
             .environment(\.pageScaffoldUsesToolbarChrome, false)
@@ -74,7 +74,7 @@ struct DesignSystemExample: View {
                 } subtitleAccessory: {
                     EmptyView()
                 } headerAccessory: {
-                    GlassListRowChevron()
+                    DesignListRowChevron()
                 } bodyContent: {
                     EmptyView()
                 } footerLeading: {
@@ -239,7 +239,7 @@ DesignTextActionButton(title: "Import",
     importArchive()
 }
 
-DesignGlassToggle(isOn: $following,
+DesignToggleButton(isOn: $following,
                   title: "Follow",
                   systemName: "arrow.down.to.line")
 ```
@@ -252,7 +252,7 @@ DesignGlassToggle(isOn: $following,
 - ``WindowMaterial``
 - ``DesignTint``
 - ``ColorLayerBlendMode``
-- ``GlassButtonTintStyle``
+- ``DesignButtonTintStyle``
 - ``DesignActionCluster``
 - ``DesignInputCluster``
 
@@ -276,16 +276,18 @@ DesignGlassToggle(isOn: $following,
 - ``DesignMenuActionLabel``
 - ``DesignTextActionButton``
 - ``DesignTextActionProminence``
-- ``DesignGlassToggle``
+- ``DesignToggleButton``
 - ``DesignSelectionActionBar``
 - ``DesignStatusBanner``
 - ``DesignProgressActionCapsule``
-- ``DesignGlassMenuButton``
+- ``DesignMenuButton``
 - ``DesignToolbarSearchField``
 - ``DesignToolbarVanitySlot``
 - ``DesignToolbarStatusButton``
 - ``DesignToolbarActionCluster``
-- ``GlassRowMenu``
+- ``DesignRowMenu``
+- ``DesignOptionStack``
+- ``DesignOptionTile``
 
 ### Design Cards
 
@@ -316,7 +318,7 @@ DesignGlassToggle(isOn: $following,
 - ``GraphStyle``
 - ``WidgetInterpolation``
 - ``SparklineScale``
-- ``MetricTile``
+- ``DesignSparklineMetricTile``
 - ``DesignStatusDot``
 - ``DesignStatusBadge``
 - ``DesignContentSurface``

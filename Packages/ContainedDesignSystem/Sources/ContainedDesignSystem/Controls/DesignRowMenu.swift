@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// The circular glass ellipsis menu used as a trailing accessory on compact rows and detail headers.
+/// The circular design-system ellipsis menu used as a trailing accessory on compact rows and
+/// detail headers.
 /// Centralizes the styling chain and the VoiceOver label so icon-only menus are consistently
 /// accessible.
-public struct GlassRowMenu<Content: View>: View {
+public struct DesignRowMenu<Content: View>: View {
     public var systemImage: String
     public var accessibilityLabel: String
     @ViewBuilder public var content: () -> Content

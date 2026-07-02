@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A dashboard summary tile: muted label, large value, optional symbol and sparkline.
-public struct MetricTile: View {
+public struct DesignSparklineMetricTile: View {
     public let label: String
     public let value: String
     public var systemImage: String? = nil

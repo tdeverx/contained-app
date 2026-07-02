@@ -273,7 +273,7 @@ private struct NetworksPage: View {
         } subtitleAccessory: {
             EmptyView()
         } headerAccessory: {
-            GlassRowMenu(accessibilityLabel: AppText.string("menu.networkActions", defaultValue: "Network actions")) {
+            DesignRowMenu(accessibilityLabel: AppText.string("menu.networkActions", defaultValue: "Network actions")) {
                 networkMenu(network)
             }
         } bodyContent: {

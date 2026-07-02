@@ -319,7 +319,7 @@ private struct CreationChoiceCard: View {
         } subtitleAccessory: {
             EmptyView()
         } headerAccessory: {
-            GlassListRowChevron()
+            DesignListRowChevron()
         } bodyContent: {
             EmptyView()
         } footerLeading: {
