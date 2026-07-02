@@ -238,7 +238,8 @@ struct AppToolbar: View {
                              showsBackdrop: false,
                              closeRequestToken: ui.morphCloseRequestToken,
                              onExpansionChange: setMorphBackdropExpanded) {
-                ToolbarUpdatesPanel(onOpenImage: openToolbarImageDetail) {
+                ToolbarUpdatesPanel(hiddenImageGroupID: toolbarImageDetailPresented ? toolbarImageDetail?.id : nil,
+                                    onOpenImage: openToolbarImageDetail) {
                     ui.requestMorphClose(.updates)
                 }
             }
@@ -248,15 +249,15 @@ struct AppToolbar: View {
     @ViewBuilder
     private var toolbarImageDetailLayer: some View {
         if let detail = toolbarImageDetail, toolbarImageDetailPresented {
-            MorphingExpander(isPresented: toolbarImageDetailBinding,
-                             originFrame: usableToolbarImageSource ?? .zero,
-                             target: .anchored(size: toolbarImageDetailSize,
-                                               safeArea: toolbarMorphSafeArea(for: .updates),
-                                               margin: 16),
-                             backdropStyle: .dim,
-                             showsBackdrop: true,
-                             closeRequestToken: toolbarImageCloseRequestToken,
-                             onBackdropTap: closeToolbarImageDetail) {
+            MorphingSingleSurfaceExpander(isPresented: toolbarImageDetailBinding,
+                                          originFrame: usableToolbarImageSource ?? .zero,
+                                          target: .anchored(size: toolbarImageDetailSize,
+                                                            safeArea: toolbarMorphSafeArea(for: .updates),
+                                                            margin: 16),
+                                          backdropStyle: .dim,
+                                          showsBackdrop: true,
+                                          closeRequestToken: toolbarImageCloseRequestToken,
+                                          onBackdropTap: closeToolbarImageDetail) {
                 ToolbarImageGroupCard(group: currentToolbarImageGroup(detail),
                                       isExpanded: true,
                                       onTap: {},

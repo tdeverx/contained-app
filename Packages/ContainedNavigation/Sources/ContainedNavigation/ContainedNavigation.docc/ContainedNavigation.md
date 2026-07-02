@@ -92,6 +92,7 @@ struct NavigationPackageExample: View {
 
 - ``MorphingExpander``
 - ``MorphingSingleSurface``
+- ``MorphingSingleSurfaceExpander``
 - ``MorphFrame``
 - ``MorphPanelScaffold``
 - ``GlobalBackdropStyle``

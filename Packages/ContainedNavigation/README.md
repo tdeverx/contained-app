@@ -30,8 +30,9 @@ import ContainedNavigation
 - `MorphGeometry`, `AppMorphTarget`, and `MorphPanelPlacement` for target rects
   that clamp to a safe area.
 - `MorphingExpander` for the reusable grow/shrink panel shell.
-- `MorphingSingleSurface` for card-like overlays that grow from one existing
-  source slot into one target rect without a handoff panel.
+- `MorphingSingleSurface` and `MorphingSingleSurfaceExpander` for card-like
+  overlays that grow from one existing source slot into one target rect without
+  a handoff panel.
 - `MorphPanelScaffold` for generic fixed chrome, scrollable content, and pinned
   footer layout inside a morph panel.
 
@@ -116,6 +117,18 @@ MorphingSingleSurface(source: sourceFrame,
                       target: detailFrame,
                       progress: isExpanded ? 1 : 0) {
     DetailCard()
+}
+```
+
+When the card needs the same open/close lifecycle as a morph panel but already
+draws its own surface, use `MorphingSingleSurfaceExpander` instead of
+`MorphingExpander`:
+
+```swift
+MorphingSingleSurfaceExpander(isPresented: $isPresented,
+                              originFrame: sourceFrame,
+                              target: .anchored(size: Tokens.PanelSize.imageDetail)) {
+    ExpandedResourceCard()
 }
 ```
 

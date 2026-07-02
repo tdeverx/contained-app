@@ -106,21 +106,37 @@ struct ToolbarImageGroupCard: View {
 
     private func subPageScaffold<C: View>(symbol: String, title: String, subtitle: String?,
                                           @ViewBuilder content: @escaping () -> C) -> some View {
-        MorphPanelScaffold(width: 0, scrolls: false) {
-            VStack(spacing: 0) {
-                PanelHeader(symbol: symbol, title: title, subtitle: subtitle) {
-                    GlassButton(singleItem: true) {
-                        GlassButtonItem(systemName: "chevron.left", help: "Back") {
-                            withAnimation(spring) { page = .root }
-                        }
+        ResourceGlassCard(size: .medium,
+                          isExpanded: true,
+                          showsFooter: false,
+                          elevated: false) {
+            ResourceCardHeader {
+                ResourceCardIconChip(symbol: symbol, tint: .accentColor)
+            } content: {
+                VStack(alignment: .leading, spacing: Tokens.ResourceCard.compactTextSpacing) {
+                    ResourceCardTitleText(text: title)
+                    if let subtitle {
+                        ResourceCardMonospacedSubtitleText(text: subtitle)
                     }
                 }
-                Divider()
+            } trailing: {
+                GlassButton(singleItem: false) {
+                    GlassButtonItem(systemName: "chevron.left", help: "Back") {
+                        withAnimation(spring) { page = .root }
+                    }
+                    GlassButtonItem(systemName: "xmark", help: "Close", isCancel: true, action: onClose)
+                }
             }
-        } content: {
+        } bodyContent: {
             content()
                 .padding(Tokens.Space.s)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        } footerLeading: {
+            EmptyView()
+        } footerActions: {
+            EmptyView()
+        } widget: {
+            EmptyView()
         }
     }
 

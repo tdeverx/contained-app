@@ -9,6 +9,7 @@
 - Normalized card and stats-page CPU/memory values against each container's configured CPU and memory limits while leaving network and disk throughput as raw bytes-per-second rates.
 - Added a metric normalization setting, letting users switch CPU/memory percentages between per-container limits and Apple container's machine CPU/memory resources.
 - Made scrollable and resource-sized app panels lazy by default, including container tabs, settings pages, image/tag panels, system/activity/history views, and package scaffolds that can host long content.
+- Switched singular image detail expansion to the same single-surface card path as containers, leaving morph panels for true toolbar panels instead of wrapping expanded image cards in panel chrome.
 - Warmed container/image customizer sheets from the already-rendered style state and cached local image tag grouping so opening style popovers no longer rebuilds large resource views first.
 - Deferred heavyweight expanded-card pages until their tab selection settles, avoiding transient Logs/Terminal/Stats/Inspect work while users rapidly switch pages.
 - Kept lightweight History/Files expanded-card pages immediate and shortened heavyweight page deferral so page switching feels snappier without eagerly loading Logs/Terminal/Stats/Inspect.
