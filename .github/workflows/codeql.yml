@@ -7,7 +7,7 @@ on:
   pull_request:
     branches: [main, nightly, beta, stable]
     paths-ignore:
-      - 'docs/**'
+      - 'Documentation/**'
       - 'README.md'
       - 'Packages/*/README.md'
       - 'Packages/*/Sources/*/*.docc/**'
@@ -26,11 +26,11 @@ on:
       - '.gitignore'
       - 'Sources/ContainedApp/Resources/CHANGELOG.md'
       - 'appcast.xml'
-      - 'changes/**'
+      - 'Changes/**'
   push:
     branches: [nightly, beta, stable]
     paths-ignore:
-      - 'docs/**'
+      - 'Documentation/**'
       - 'README.md'
       - 'Packages/*/README.md'
       - 'Packages/*/Sources/*/*.docc/**'
@@ -49,7 +49,7 @@ on:
       - '.gitignore'
       - 'Sources/ContainedApp/Resources/CHANGELOG.md'
       - 'appcast.xml'
-      - 'changes/**'
+      - 'Changes/**'
   schedule:
     - cron: '37 4 * * 1'
   workflow_dispatch:

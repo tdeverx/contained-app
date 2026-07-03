@@ -16,6 +16,7 @@ permissions:
 jobs:
   pr:
     runs-on: macos-26
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,7 +34,7 @@ jobs:
           while IFS= read -r file; do
             [ -n "$file" ] || continue
             case "$file" in
-              docs/**|README.md|Packages/*/README.md|Packages/*/Sources/*/*.docc/**|CODE_OF_CONDUCT.md|.github/*.md|.github/assets/**|.github/ISSUE_TEMPLATE/**|LICENSE|NOTICE|SECURITY.md|SUPPORT.md|CODEOWNERS|.github/dependabot.yml|.gitignore|appcast.xml)
+              Documentation/**|README.md|Packages/*/README.md|Packages/*/Sources/*/*.docc/**|Changes/**|CODE_OF_CONDUCT.md|.github/*.md|.github/assets/**|.github/ISSUE_TEMPLATE/**|LICENSE|NOTICE|SECURITY.md|SUPPORT.md|CODEOWNERS|.github/dependabot.yml|.gitignore|appcast.xml)
                 ;;
               *)
                 material=true
@@ -49,11 +50,11 @@ jobs:
           set -euo pipefail
           brew list ripgrep >/dev/null 2>&1 || brew install ripgrep
           git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
-          ./scripts/ci-validate.sh --base-ref "origin/${{ github.base_ref }}" --require-release-note
+          ./Scripts/check.sh repo --base-ref "origin/${{ github.base_ref }}" --require-release-note
 
       - name: Release script fixtures
         if: steps.changes.outputs.material == 'true'
-        run: ./scripts/test-release-scripts.sh
+        run: ./Scripts/check.sh release
 
       - name: Build & test
         if: steps.changes.outputs.material == 'true'
@@ -61,18 +62,18 @@ jobs:
           set -euo pipefail
           swift build -c release
           swift test
-          ./scripts/check-generated-clean.sh
+          ./Scripts/check.sh generated
 
       - name: Bundle smoke validation
         if: steps.changes.outputs.material == 'true'
         run: |
           set -euo pipefail
-          BUILD=$(CHANNEL=nightly ./scripts/version-info.sh build)
-          SHA=$(CHANNEL=nightly ./scripts/version-info.sh sha)
-          VERSION=$(CHANNEL=nightly BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
-          CHANNEL=nightly BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
-          VERSION="${VERSION}" BUILD="${BUILD}" ./scripts/validate-bundle.sh Contained.app
-          ./scripts/check-generated-clean.sh
+          BUILD=$(CHANNEL=nightly ./Scripts/package.sh version build)
+          SHA=$(CHANNEL=nightly ./Scripts/package.sh version sha)
+          VERSION=$(CHANNEL=nightly BUILD="${BUILD}" SHA="${SHA}" ./Scripts/package.sh version version)
+          CHANNEL=nightly BUILD="${BUILD}" VERSION="${VERSION}" ./Scripts/package.sh app release
+          VERSION="${VERSION}" BUILD="${BUILD}" ./Scripts/package.sh smoke Contained.app
+          ./Scripts/check.sh generated
 
       - name: Skip build notice
         if: steps.changes.outputs.material != 'true'

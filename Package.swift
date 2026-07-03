@@ -17,7 +17,7 @@ let package = Package(
         // bridged through NSViewRepresentable in the app target.
         .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.2.0"),
         // Auto-update (release): Sparkle, the de-facto macOS updater. Inert until a signed build
-        // points SUFeedURL at a hosted appcast (see scripts/appcast.sh).
+        // points SUFeedURL at a hosted appcast (see Scripts/appcast.sh).
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
     ],
     targets: [

@@ -14,10 +14,11 @@ on:
     # Docs/meta-only changes don't need a build. Changelog changes do, because the changelog is
     # bundled into the app and drives GitHub/Sparkle release notes.
     paths-ignore:
-      - 'docs/**'
+      - 'Documentation/**'
       - 'README.md'
       - 'Packages/*/README.md'
       - 'Packages/*/Sources/*/*.docc/**'
+      - 'Changes/**'
       - 'CODE_OF_CONDUCT.md'
       - '.github/*.md'
       - '.github/ISSUE_TEMPLATE/**'
@@ -42,6 +43,7 @@ permissions:
 jobs:
   nightly:
     runs-on: macos-26        # GA, arm64 (Apple silicon) — ships Xcode 26
+    timeout-minutes: 30
     env:
       SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
       GH_TOKEN: ${{ github.token }}
@@ -57,32 +59,32 @@ jobs:
         run: |
           set -euo pipefail
           brew list ripgrep >/dev/null 2>&1 || brew install ripgrep
-          ./scripts/ci-validate.sh
-          ./scripts/test-release-scripts.sh
+          ./Scripts/check.sh repo
+          ./Scripts/check.sh release
           swift build -c release
           swift test
-          ./scripts/check-generated-clean.sh
+          ./Scripts/check.sh generated
 
       - name: Bundle (ad-hoc signed) + DMG
         run: |
           set -euo pipefail
-          BUILD=$(CHANNEL=nightly ./scripts/version-info.sh build)
-          SHA=$(CHANNEL=nightly ./scripts/version-info.sh sha)
-          VERSION=$(CHANNEL=nightly BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
+          BUILD=$(CHANNEL=nightly ./Scripts/package.sh version build)
+          SHA=$(CHANNEL=nightly ./Scripts/package.sh version sha)
+          VERSION=$(CHANNEL=nightly BUILD="${BUILD}" SHA="${SHA}" ./Scripts/package.sh version version)
           export BUILD SHA VERSION
           {
-            echo "BASE_VERSION=$(./scripts/version-info.sh base)"
+            echo "BASE_VERSION=$(./Scripts/package.sh version base)"
             echo "BUILD=${BUILD}"
             echo "SHA=${SHA}"
             echo "VERSION=${VERSION}"
           } >> "$GITHUB_ENV"
-          CHANNEL=nightly BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
-          VERSION="${VERSION}" BUILD="${BUILD}" ./scripts/validate-bundle.sh Contained.app
-          ./scripts/check-generated-clean.sh
+          CHANNEL=nightly BUILD="${BUILD}" VERSION="${VERSION}" ./Scripts/package.sh app release
+          VERSION="${VERSION}" BUILD="${BUILD}" ./Scripts/package.sh smoke Contained.app
+          ./Scripts/check.sh generated
           mkdir -p updates
           brew install create-dmg
-          ./scripts/make-dmg.sh nightly Contained.app "updates/Contained-${VERSION}.dmg"
-          CHANNEL=nightly VERSION_VALUE="${VERSION}" ./scripts/release-body.sh > updates/release-notes.md
+          ./Scripts/package.sh dmg nightly Contained.app "updates/Contained-${VERSION}.dmg"
+          CHANNEL=nightly VERSION_VALUE="${VERSION}" ./Scripts/notes.sh body > updates/release-notes.md
           {
             echo "Automated build of \`nightly\` @ ${SHA}."
             echo
@@ -109,9 +111,9 @@ jobs:
           [ -x "$BIN/generate_appcast" ] || BIN="$(dirname "$(find .build -type f -name generate_appcast | head -1)")"
           ED_KEY_FILE="$KEYFILE" \
             DOWNLOAD_PREFIX="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/" \
-            ./scripts/appcast.sh "$BIN" updates
-          [ -s "$PREVIOUS_APPCAST" ] && ./scripts/promote-appcast-to-nightly.sh --non-nightly-only "$PREVIOUS_APPCAST" appcast.xml
-          CHANNEL=nightly ./scripts/validate-appcast.sh appcast.xml
+            ./Scripts/appcast.sh generate "$BIN" updates
+          [ -s "$PREVIOUS_APPCAST" ] && ./Scripts/appcast.sh promote --non-nightly-only "$PREVIOUS_APPCAST" appcast.xml
+          CHANNEL=nightly ./Scripts/appcast.sh validate appcast.xml
           rm -f "$KEYFILE"
           rm -f "$PREVIOUS_APPCAST"
           git config user.name  "github-actions[bot]"
@@ -121,5 +123,19 @@ jobs:
             echo "appcast unchanged — nothing to commit."
           else
             git commit -m "ci: nightly appcast (${VERSION}) [skip ci]"
+            git push origin HEAD:nightly
+          fi
+
+      - name: Roll current notes into beta accumulator
+        run: |
+          set -euo pipefail
+          ./Scripts/notes.sh finalize nightly
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Changes/Current.md Changes/Beta.md
+          if git diff --cached --quiet; then
+            echo "release notes unchanged — nothing to commit."
+          else
+            git commit -m "ci: roll nightly notes (${VERSION}) [skip ci]"
             git push origin HEAD:nightly
           fi

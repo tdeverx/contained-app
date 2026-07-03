@@ -245,7 +245,7 @@ struct UpdaterControllerTests {
         let process = Process()
         process.currentDirectoryURL = root
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["./scripts/release-notes.sh", work.path]
+        process.arguments = ["./Scripts/notes.sh", "html", work.path]
         process.environment = ProcessInfo.processInfo.environment.merging([
             "CHANGELOG": releaseNotes.path,
             "RELEASE_NOTES": releaseNotes.path,
@@ -306,7 +306,7 @@ struct UpdaterControllerTests {
         let process = Process()
         process.currentDirectoryURL = root
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["./scripts/release-notes.sh", work.path]
+        process.arguments = ["./Scripts/notes.sh", "html", work.path]
         process.environment = ProcessInfo.processInfo.environment.merging([
             "CHANGELOG": releaseNotes.path,
             "RELEASE_NOTES": releaseNotes.path,
@@ -359,7 +359,7 @@ struct UpdaterControllerTests {
         let process = Process()
         process.currentDirectoryURL = root
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["./scripts/release-notes.sh", work.path]
+        process.arguments = ["./Scripts/notes.sh", "html", work.path]
         process.environment = ProcessInfo.processInfo.environment.merging([
             "CHANGELOG": releaseNotes.path,
             "RELEASE_NOTES": releaseNotes.path,
@@ -413,7 +413,7 @@ struct UpdaterControllerTests {
         let process = Process()
         process.currentDirectoryURL = root
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["./scripts/release-notes.sh", work.path]
+        process.arguments = ["./Scripts/notes.sh", "html", work.path]
         process.environment = ProcessInfo.processInfo.environment.merging([
             "CHANGELOG": releaseNotes.path,
             "RELEASE_NOTES": releaseNotes.path,
@@ -480,7 +480,7 @@ struct UpdaterControllerTests {
             let process = Process()
             process.currentDirectoryURL = root
             process.executableURL = URL(fileURLWithPath: "/bin/bash")
-            process.arguments = ["./scripts/promote-appcast-to-nightly.sh", promoted.path, nightly.path]
+            process.arguments = ["./Scripts/appcast.sh", "promote", promoted.path, nightly.path]
             try process.run()
             process.waitUntilExit()
             #expect(process.terminationStatus == 0)

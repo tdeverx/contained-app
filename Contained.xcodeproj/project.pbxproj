@@ -275,7 +275,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Contained;
 				ARCHS = arm64;
-				CODE_SIGN_ENTITLEMENTS = scripts/Contained.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Scripts/Contained.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -303,7 +303,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = Contained;
 				ARCHS = arm64;
-				CODE_SIGN_ENTITLEMENTS = scripts/Contained.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Scripts/Contained.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;

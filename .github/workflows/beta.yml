@@ -15,10 +15,11 @@ on:
     # Docs/meta-only changes don't need a build. Changelog changes do, because the changelog is
     # bundled into the app and drives GitHub/Sparkle release notes.
     paths-ignore:
-      - 'docs/**'
+      - 'Documentation/**'
       - 'README.md'
       - 'Packages/*/README.md'
       - 'Packages/*/Sources/*/*.docc/**'
+      - 'Changes/**'
       - 'CODE_OF_CONDUCT.md'
       - '.github/*.md'
       - '.github/ISSUE_TEMPLATE/**'
@@ -43,6 +44,7 @@ permissions:
 jobs:
   beta:
     runs-on: macos-26
+    timeout-minutes: 30
     env:
       SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
       GH_TOKEN: ${{ github.token }}
@@ -66,34 +68,34 @@ jobs:
         run: |
           set -euo pipefail
           brew list ripgrep >/dev/null 2>&1 || brew install ripgrep
-          ./scripts/ci-validate.sh
-          ./scripts/test-release-scripts.sh
+          ./Scripts/check.sh repo
+          ./Scripts/check.sh release
           swift build -c release
           swift test
-          ./scripts/check-generated-clean.sh
+          ./Scripts/check.sh generated
 
       - name: Bundle (ad-hoc signed) + DMG
         if: steps.guard.outputs.build == 'true'
         run: |
           set -euo pipefail
           git fetch origin nightly:refs/remotes/origin/nightly
-          SHA=$(CHANNEL=beta ./scripts/version-info.sh sha)
-          BUILD=$(CHANNEL=beta BUILD_SOURCE_REF=origin/nightly SHA="${SHA}" ./scripts/version-info.sh build)
-          VERSION=$(CHANNEL=beta BUILD="${BUILD}" SHA="${SHA}" ./scripts/version-info.sh version)
+          SHA=$(CHANNEL=beta ./Scripts/package.sh version sha)
+          BUILD=$(CHANNEL=beta BUILD_SOURCE_REF=origin/nightly SHA="${SHA}" ./Scripts/package.sh version build)
+          VERSION=$(CHANNEL=beta BUILD="${BUILD}" SHA="${SHA}" ./Scripts/package.sh version version)
           export BUILD SHA VERSION
           {
-            echo "BASE_VERSION=$(./scripts/version-info.sh base)"
+            echo "BASE_VERSION=$(./Scripts/package.sh version base)"
             echo "BUILD=${BUILD}"
             echo "SHA=${SHA}"
             echo "VERSION=${VERSION}"
           } >> "$GITHUB_ENV"
-          CHANNEL=beta BUILD="${BUILD}" VERSION="${VERSION}" ./scripts/bundle.sh release
-          VERSION="${VERSION}" BUILD="${BUILD}" ./scripts/validate-bundle.sh Contained.app
-          ./scripts/check-generated-clean.sh
+          CHANNEL=beta BUILD="${BUILD}" VERSION="${VERSION}" ./Scripts/package.sh app release
+          VERSION="${VERSION}" BUILD="${BUILD}" ./Scripts/package.sh smoke Contained.app
+          ./Scripts/check.sh generated
           mkdir -p updates
           brew install create-dmg
-          ./scripts/make-dmg.sh beta Contained.app "updates/Contained-${VERSION}.dmg"
-          CHANNEL=beta VERSION_VALUE="${VERSION}" ./scripts/release-body.sh > updates/release-notes.md
+          ./Scripts/package.sh dmg beta Contained.app "updates/Contained-${VERSION}.dmg"
+          CHANNEL=beta VERSION_VALUE="${VERSION}" ./Scripts/notes.sh body > updates/release-notes.md
           {
             echo "Automated beta build @ ${SHA}."
             echo
@@ -127,8 +129,8 @@ jobs:
           [ -x "$BIN/generate_appcast" ] || BIN="$(dirname "$(find .build -type f -name generate_appcast | head -1)")"
           ED_KEY_FILE="$KEYFILE" \
             DOWNLOAD_PREFIX="https://github.com/tdeverx/contained-app/releases/download/v${VERSION}/" \
-            ./scripts/appcast.sh "$BIN" updates
-          CHANNEL=beta ./scripts/validate-appcast.sh appcast.xml
+            ./Scripts/appcast.sh generate "$BIN" updates
+          CHANNEL=beta ./Scripts/appcast.sh validate appcast.xml
           rm -f "$KEYFILE"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -146,10 +148,10 @@ jobs:
           NIGHTLY_WORKTREE="$(mktemp -d)"
           rm -rf "$NIGHTLY_WORKTREE"
           git worktree add "$NIGHTLY_WORKTREE" origin/nightly
-          ./scripts/promote-appcast-to-nightly.sh "$PROMOTED_APPCAST" "$NIGHTLY_WORKTREE/appcast.xml"
+          ./Scripts/appcast.sh promote "$PROMOTED_APPCAST" "$NIGHTLY_WORKTREE/appcast.xml"
           (
             cd "$NIGHTLY_WORKTREE"
-            CHANNEL=nightly "$GITHUB_WORKSPACE/scripts/validate-appcast.sh" appcast.xml
+            CHANNEL=nightly "$GITHUB_WORKSPACE/Scripts/appcast.sh" validate appcast.xml
             git config user.name  "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add appcast.xml
@@ -162,3 +164,18 @@ jobs:
           )
           git worktree remove "$NIGHTLY_WORKTREE" --force
           rm -f "$PROMOTED_APPCAST"
+
+      - name: Clear beta release-note accumulator
+        if: steps.guard.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+          ./Scripts/notes.sh finalize beta
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Changes/Beta.md
+          if git diff --cached --quiet; then
+            echo "beta release notes already clear."
+          else
+            git commit -m "ci: clear beta notes (${VERSION}) [skip ci]"
+            git push origin HEAD:beta
+          fi

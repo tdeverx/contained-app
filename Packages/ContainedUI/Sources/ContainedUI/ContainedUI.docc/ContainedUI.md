@@ -76,3 +76,8 @@ UI.Chart.Sparkline(samples: samples,
                    scale: .fraction)
     .frame(height: UI.Card.Metric.sparklineHeight)
 ```
+
+## Related Documentation
+
+- [Design System](../../../../../Documentation/Architecture/Design-System.md)
+- [Wiki sync map](../../../../../Documentation/Wiki/File-Map.md)

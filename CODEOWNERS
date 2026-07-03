@@ -11,8 +11,8 @@
 
 # Repository operations.
 /.github/ @tdeverx
-/scripts/ @tdeverx
-/docs/ @tdeverx
+/Scripts/ @tdeverx
+/Documentation/ @tdeverx
 /CHANGELOG.md @tdeverx
 /Sources/ContainedApp/Resources/CHANGELOG.md @tdeverx
 

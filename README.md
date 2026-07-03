@@ -59,21 +59,21 @@ swift build
 swift test
 xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug build
 xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug test
-./scripts/bundle.sh debug
+./Scripts/package.sh app debug
 open Contained.app
 ```
 
-Maintainers use `scripts/release.sh` and `scripts/appcast.sh` for signing, notarization, DMG creation, GitHub release notes, and Sparkle appcasts.
+Maintainers use `Scripts/package.sh notarized` and `Scripts/appcast.sh generate` for signing, notarization, DMG creation, GitHub release notes, and Sparkle appcasts.
 
 ## Documentation
 
-Start with the [documentation index](docs/README.md). The most-used pages are:
+Start with the [documentation index](Documentation/README.md). The most-used pages are:
 
-- App: [Home](docs/app/Home.md), [Installation](docs/app/Installation.md), [Keyboard Shortcuts](docs/app/Keyboard-Shortcuts.md), [Troubleshooting](docs/app/Troubleshooting.md), [Updates](docs/app/Updates.md), [System Settings](docs/app/System-Settings.md)
-- Features: [Feature Overview](docs/features/Features.md), [Containers](docs/features/Containers.md), [Images](docs/features/Images.md), [Resources](docs/features/Resources.md), [Creation Workflow](docs/features/Creation-Workflow.md), [Run / Edit Form](docs/features/Run-Edit-Form.md), [Compose Import](docs/features/Compose-Import.md), [Command Palette](docs/features/Command-Palette.md)
-- Architecture: [Architecture](docs/architecture/Architecture.md), [Runtime Adapters](docs/architecture/Runtime-Adapters.md), [Design System](docs/architecture/Design-System.md)
-- Development: [Contributing](docs/development/Contributing.md), [Issues and Discussions](docs/development/Issues-and-Discussions.md), [Documentation Map](docs/development/Documentation-Map.md), [Localization](docs/app/Localization.md)
-- Release: [Release Runbook](docs/release/Release.md)
+- App: [Home](Documentation/App/Home.md), [Installation](Documentation/App/Installation.md), [Keyboard Shortcuts](Documentation/App/Keyboard-Shortcuts.md), [Troubleshooting](Documentation/App/Troubleshooting.md), [Updates](Documentation/App/Updates.md), [System Settings](Documentation/App/System-Settings.md)
+- Features: [Feature Overview](Documentation/Features/Features.md), [Containers](Documentation/Features/Containers.md), [Images](Documentation/Features/Images.md), [Resources](Documentation/Features/Resources.md), [Creation Workflow](Documentation/Features/Creation-Workflow.md), [Run / Edit Form](Documentation/Features/Run-Edit-Form.md), [Compose Import](Documentation/Features/Compose-Import.md), [Command Palette](Documentation/Features/Command-Palette.md)
+- Architecture: [Architecture](Documentation/Architecture/Architecture.md), [Runtime Adapters](Documentation/Architecture/Runtime-Adapters.md), [Design System](Documentation/Architecture/Design-System.md)
+- Development: [Contributing](Documentation/Development/Contributing.md), [Issues and Discussions](Documentation/Development/Issues-and-Discussions.md), [Documentation Map](Documentation/Development/Documentation-Map.md), [Localization](Documentation/App/Localization.md)
+- Release: [Release Runbook](Documentation/Release/Release.md)
 
 Package docs live beside each local package:
 
@@ -81,7 +81,7 @@ Package docs live beside each local package:
 - [ContainedUI](Packages/ContainedUI/README.md)
 - [ContainedUX](Packages/ContainedUX/README.md)
 
-The checked-in [wiki map](docs/wiki/README.md) explains how maintained docs map to the separate GitHub wiki repository.
+The checked-in [wiki map](Documentation/Wiki/README.md) explains how maintained docs map to the separate GitHub wiki repository.
 
 ## Architecture
 
@@ -101,7 +101,7 @@ Core also exposes a separate `ContainedCoreFixtures` product for deterministic t
 
 ## Contributing And Support
 
-Read the [contributing guide](docs/development/Contributing.md) before opening a larger PR.
+Read the [contributing guide](Documentation/Development/Contributing.md) before opening a larger PR.
 
 - Use [Discussions Q&A](https://github.com/tdeverx/contained-app/discussions/categories/q-a) for setup help and questions.
 - Use [issues](https://github.com/tdeverx/contained-app/issues/new/choose) for actionable bugs, crashes, regressions, and tracked feature work.

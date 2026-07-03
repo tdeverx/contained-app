@@ -66,3 +66,9 @@ Use `Core.Fixtures.AppleContainer.*` for Apple-container-specific samples and
 `Core.Fixtures.Generic.*` only for runtime-neutral values. The app owns any
 mapping from these semantic samples into localized labels, SwiftUI preview
 state, personalization, or widget settings.
+
+## Related Documentation
+
+- <doc:ContainedCore>
+- [Runtime Adapters](../../../../../Documentation/Architecture/Runtime-Adapters.md)
+- [Wiki sync map](../../../../../Documentation/Wiki/File-Map.md)
