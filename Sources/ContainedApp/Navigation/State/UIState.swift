@@ -162,7 +162,7 @@ final class UIState {
         if !panelNavigationEnabled {
             switch action {
             case .runContainer:
-                presentCreate(ContainerFormState())
+                presentCreate(ContainerFormState(runtimeKind: .appleContainer))
                 return
             case .pullImage, .createVolume, .createNetwork, .activityHistory:
                 navigateForClassicFallback(action)
@@ -205,7 +205,7 @@ final class UIState {
         guard panelNavigationEnabled else {
             switch entry {
             case .menu, .chooser, .configure:
-                presentCreate(spec ?? ContainerFormState())
+                presentCreate(spec ?? ContainerFormState(runtimeKind: .appleContainer))
             case .network:
                 navigate(to: .networks)
             case .volume:
@@ -262,12 +262,11 @@ final class UIState {
     }
 
     func runImage(_ reference: String,
-                  runtimeKind: Core.Runtime.Kind? = nil,
+                  runtimeKind: Core.Runtime.Kind,
                   returningTo returnEntry: CreationEntry? = nil,
                   searchQuery: String = "") {
-        var spec = ContainerFormState()
+        var spec = ContainerFormState(runtimeKind: runtimeKind)
         spec.image = reference
-        if let runtimeKind { spec.runtimeKind = runtimeKind }
         guard panelNavigationEnabled else {
             presentCreate(spec)
             return

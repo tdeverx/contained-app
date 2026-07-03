@@ -42,8 +42,7 @@ enum DockerCreateTranslator {
     private static func createRequest(for service: Core.Compose.Service,
                                       projectName: String,
                                       baseDirectory: URL?) -> Core.Container.CreateRequest {
-        var request = Core.Container.CreateRequest()
-        request.runtimeKind = .docker
+        var request = Core.Container.CreateRequest(runtimeKind: .docker)
         request.image = service.image ?? ""
         request.platform = service.platform ?? ""
         request.name = service.name

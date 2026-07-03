@@ -59,8 +59,43 @@ struct AppleContainerAdapterTests {
         try descriptor.require([.imageBuild, .imagePush, .registries])
     }
 
+    @Test func appleModuleReadinessDistinguishesUnsupportedAndStopped() async {
+        let module = AppleContainerRuntimeModule()
+        let ready = await module.readiness(
+            cliURL: URL(fileURLWithPath: "/usr/local/bin/container"),
+            runner: CommandMapRunner(outputs: [
+                ContainerCommands.version: .success(Data("container CLI version 1.0.0\n".utf8)),
+                ContainerCommands.systemStatus: .success(Data(#"{"status":"running"}"#.utf8)),
+            ])
+        )
+
+        #expect(ready.kind == .appleContainer)
+        #expect(ready.version == "1.0.0")
+        #expect(ready.state == .ready)
+
+        let unsupported = await module.readiness(
+            cliURL: URL(fileURLWithPath: "/usr/local/bin/container"),
+            runner: CommandMapRunner(outputs: [
+                ContainerCommands.version: .success(Data("container CLI version 0.9.0\n".utf8)),
+            ])
+        )
+
+        #expect(unsupported.version == "0.9.0")
+        #expect(unsupported.state == .unsupported)
+
+        let stopped = await module.readiness(
+            cliURL: URL(fileURLWithPath: "/usr/local/bin/container"),
+            runner: CommandMapRunner(outputs: [
+                ContainerCommands.version: .success(Data("container CLI version 1.0.0\n".utf8)),
+                ContainerCommands.systemStatus: .success(Data(#"{"status":"stopped"}"#.utf8)),
+            ])
+        )
+
+        #expect(stopped.state == .endpointUnavailable)
+    }
+
     @Test func appleCreateTranslatorBuildsPreviewAndResult() {
-        var request = Core.Container.CreateRequest()
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
         request.image = "nginx:latest"
         request.name = "web"
         request.cpus = "2"
@@ -114,9 +149,9 @@ struct AppleContainerAdapterTests {
         #expect(item.healthCheck?.retries == 2)
     }
 
-    @Test func appleClientConformsToRuntimeClient() async throws {
+    @Test func appleClientConformsToRuntimeContainerClient() async throws {
         let runner = MockCommandRunner(result: .success(try Fixture.data("list")))
-        let runtime: any ContainerRuntimeClient = AppleContainerClient(runner: runner)
+        let runtime: any RuntimeContainerClient = AppleContainerClient(runner: runner)
 
         #expect(runtime.descriptor == .appleContainer)
         let containers = try await runtime.listContainers(all: true)
@@ -188,7 +223,7 @@ struct AppleContainerAdapterTests {
     @Test func appleClientStreamsTypedStatsSnapshots() async throws {
         let stream = try Fixture.string("stats-table")
         let runner = MockCommandRunner(result: .success(Data()), streamChunks: [stream])
-        let runtime: any ContainerRuntimeClient = AppleContainerClient(runner: runner)
+        let runtime: any RuntimeContainerClient = AppleContainerClient(runner: runner)
         var received: [[Core.Metrics.RuntimeStatsSnapshot]] = []
 
         for try await samples in runtime.streamStats(ids: ["buildkit", "sonarrhd"]) {
@@ -197,5 +232,24 @@ struct AppleContainerAdapterTests {
 
         #expect(received.count == 1)
         #expect(received.first?.map(\.id) == ["buildkit", "sonarrhd"])
+    }
+}
+
+private struct CommandMapRunner: Core.Command.Running {
+    var outputs: [[String]: Result<Data, Core.Command.Error>]
+
+    func run(_ arguments: [String],
+             stdin: Data?,
+             priority: Core.Command.ExecutionPriority) async throws -> Data {
+        try (outputs[arguments] ?? .failure(.nonZeroExit(
+            code: 127,
+            stderr: "unexpected command: \(arguments.joined(separator: " "))",
+            command: arguments.joined(separator: " ")
+        ))).get()
+    }
+
+    func stream(_ arguments: [String],
+                priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
     }
 }

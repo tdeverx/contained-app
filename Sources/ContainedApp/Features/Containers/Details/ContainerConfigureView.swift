@@ -36,7 +36,7 @@ struct ContainerConfigureView: View {
         self.leading = leading
         self.onFinished = onFinished
         switch mode {
-        case .new(let prefill):      _spec = State(initialValue: prefill ?? ContainerFormState())
+        case .new(let prefill):      _spec = State(initialValue: prefill ?? ContainerFormState(runtimeKind: .appleContainer))
         case .edit(let snapshot, _): _spec = State(initialValue: ContainerFormState(from: snapshot.configuration))
         }
     }

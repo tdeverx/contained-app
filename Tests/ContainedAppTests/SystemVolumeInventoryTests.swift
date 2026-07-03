@@ -36,6 +36,6 @@ struct SystemVolumeInventoryTests {
     }
 
     private func decode<T: Decodable>(_ type: T.Type, from json: String) throws -> T {
-        try JSONDecoder().decode(T.self, from: Data(json.utf8))
+        try Core.Container.JSON.decode(type, from: Data(json.utf8), runtimeKind: .appleContainer)
     }
 }

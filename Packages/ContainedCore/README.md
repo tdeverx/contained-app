@@ -9,6 +9,9 @@ product-specific presentation policy.
 - `Core.Orchestrator`, the app-facing backend facade.
 - `Core.Runtime` descriptors, capabilities, runtime-scoped checks, and typed
   unsupported-operation errors.
+- `Core.Runtime.Module`, the adapter contract used by built-in runtime modules
+  to provide descriptors, CLI lookup, readiness, command previews, terminal
+  invocations, schema support profiles, and runtime clients.
 - `Core.Container` semantic create/edit/import/export models.
 - `Core.Compose` import/export plans and Compose YAML parsing/writing internals.
 - `Core.Command` command previews, command execution, and host invocations.
@@ -37,8 +40,10 @@ import ContainedCore
 
 let result = await Core.Orchestrator.bootstrap(
     configuration: Core.Configuration(
-        appleContainer: .init(cliPathOverride: nil),
-        docker: .init(cliPathOverride: nil)
+        runtimes: [
+            .appleContainer: .init(cliPathOverride: nil),
+            .docker: .init(cliPathOverride: nil),
+        ]
     )
 )
 
@@ -57,7 +62,7 @@ let containers = try await core.listRuntimeContainers(all: true)
 ## Create Preview Example
 
 ```swift
-var document = Core.Schema.Document.containerCreate()
+var document = Core.Schema.Document.containerCreate(runtimeKind: .appleContainer)
 document.set(.containerName, .string("web"))
 document.set(.imageReference, .string("nginx:latest"))
 document.set(.networkPorts, .portList([.init(hostPort: "8080", containerPort: "80")]))

@@ -55,7 +55,9 @@ struct ImageWorkflowTests {
           }
         ]
         """
-        let images = try JSONDecoder().decode([Core.Image.Resource].self, from: Data(json.utf8))
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self,
+                                                    from: Data(json.utf8),
+                                                    runtimeKind: .appleContainer)
         let groups = Core.Image.LocalTagGroup.groups(for: images)
         #expect(groups.count == 1)
         #expect(groups.first?.references == ["docker.io/library/alpine:latest", "localhost/alpine:test"])

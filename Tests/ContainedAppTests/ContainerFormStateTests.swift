@@ -8,13 +8,13 @@ import ContainedCore
 struct ContainerFormStateTests {
 
     @Test func basicArgv() throws {
-        var spec = ContainerFormState()
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = "nginx:latest"
         #expect(try arguments(spec) == ["run", "--detach", "nginx:latest"])
     }
 
     @Test func coreFlagsArgv() throws {
-        var spec = ContainerFormState()
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = "alpine"
         spec.name = "web"
         spec.detach = false
@@ -39,7 +39,7 @@ struct ContainerFormStateTests {
     }
 
     @Test func advancedFlagsArgv() throws {
-        var spec = ContainerFormState()
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = "alpine"
         spec.interactive = true
         spec.tty = true
@@ -98,7 +98,7 @@ struct ContainerFormStateTests {
     }
 
     @Test func portsVolumesEnvAndLabelsArgv() throws {
-        var spec = ContainerFormState()
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = "nginx"
         spec.ports = [PortMap(hostPort: "8080", containerPort: "80", proto: "tcp"),
                       PortMap(hostPort: "53", containerPort: "53", proto: "udp")]
@@ -298,8 +298,10 @@ struct ContainerFormStateTests {
 
     @Test func adoptsPulledImageDefaultsIntoEmptyRunFields() throws {
         let data = try Data(contentsOf: fixturesURL.appending(path: "image-inspect.json"))
-        let images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: data)
-        var spec = ContainerFormState()
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self,
+                                                    from: data,
+                                                    runtimeKind: .appleContainer)
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = "alpine"
 
         let maybeDefaults = try core.imageDefaults(for: spec.document, in: images)
@@ -317,8 +319,10 @@ struct ContainerFormStateTests {
 
     @Test func adoptingImageDefaultsDoesNotOverwriteExistingEdits() throws {
         let data = try Data(contentsOf: fixturesURL.appending(path: "image-inspect.json"))
-        let images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: data)
-        var spec = ContainerFormState()
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self,
+                                                    from: data,
+                                                    runtimeKind: .appleContainer)
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = "alpine"
         spec.command = "custom"
         spec.workingDir = "/app"
@@ -334,7 +338,7 @@ struct ContainerFormStateTests {
     }
 
     @Test func containerFormStateIsCodable() throws {
-        var spec = ContainerFormState()
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = "redis:7"
         spec.ports = [PortMap(hostPort: "6379", containerPort: "6379", proto: "tcp")]
         spec.capAdd = ["CAP_NET_RAW"]
@@ -391,7 +395,9 @@ struct ContainerFormStateTests {
           }
         }
         """
-        let snapshot = try JSONDecoder().decode(Core.Container.Snapshot.self, from: Data(json.utf8))
+        let snapshot = try Core.Container.JSON.decode(Core.Container.Snapshot.self,
+                                                      from: Data(json.utf8),
+                                                      runtimeKind: .appleContainer)
         let spec = ContainerFormState(from: snapshot.configuration)
 
         #expect(spec.image == "example/app:1")
@@ -440,7 +446,8 @@ struct ContainerFormStateTests {
     }
 
     private var core: Core.Orchestrator {
-        Core.Orchestrator.testing(runner: ContainerFormStateTestRunner())
+        Core.Orchestrator.testing(runner: ContainerFormStateTestRunner(),
+                                  runtimeKind: .appleContainer)
     }
 
     private func arguments(_ spec: ContainerFormState) throws -> [String] {

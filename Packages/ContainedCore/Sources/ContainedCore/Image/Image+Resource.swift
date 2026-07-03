@@ -18,13 +18,23 @@ struct Resource: Codable, Sendable, Identifiable, Hashable {
         configuration = try c.decode(Core.Image.Configuration.self, forKey: .configuration)
         id = try c.decode(String.self, forKey: .id)
         variants = try c.decodeIfPresent([Core.Image.Variant].self, forKey: .variants) ?? []
-        runtimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) ?? .appleContainer
+        if let decodedRuntimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) {
+            runtimeKind = decodedRuntimeKind
+        } else if let contextRuntimeKind = decoder.coreRuntimeKindContext {
+            runtimeKind = contextRuntimeKind
+        } else {
+            throw DecodingError.keyNotFound(
+                CodingKeys.runtimeKind,
+                DecodingError.Context(codingPath: decoder.codingPath,
+                                      debugDescription: "Missing runtimeKind and no runtime decoding context was provided.")
+            )
+        }
     }
 
     public init(configuration: Core.Image.Configuration,
                 id: String,
                 variants: [Core.Image.Variant] = [],
-                runtimeKind: Core.Runtime.Kind = .appleContainer) {
+                runtimeKind: Core.Runtime.Kind) {
         self.configuration = configuration
         self.id = id
         self.variants = variants

@@ -13,7 +13,7 @@ struct ContainerFormState: Codable {
     var personalization = Personalization()
     var healthCheck = Core.Container.HealthCheck()
 
-    init(document: Core.Schema.Document = .containerCreate(),
+    init(document: Core.Schema.Document,
          healthCheck: Core.Container.HealthCheck? = nil) {
         self.document = document
         if let healthCheck { self.healthCheck = healthCheck }

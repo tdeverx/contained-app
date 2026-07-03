@@ -6,19 +6,21 @@ import Testing
 struct DecodingTests {
 
     @Test func placeholderSnapshotDecodes() {
-        let s = Core.Container.Snapshot.placeholder(id: "nginx", image: "nginx:latest")
+        let s = Core.Container.Snapshot.placeholder(id: "nginx", image: "nginx:latest", runtimeKind: .appleContainer)
         #expect(s.id == "nginx")
         #expect(s.image == "nginx:latest")
         #expect(s.state == .running)
-        let stopped = Core.Container.Snapshot.placeholder(id: "x", image: "redis:7", state: .stopped)
+        let stopped = Core.Container.Snapshot.placeholder(id: "x", image: "redis:7", state: .stopped, runtimeKind: .appleContainer)
         #expect(stopped.state == .stopped)
-        let quoted = Core.Container.Snapshot.placeholder(id: #"weird "id""#, image: #"repo/"quoted":tag"#)
+        let quoted = Core.Container.Snapshot.placeholder(id: #"weird "id""#, image: #"repo/"quoted":tag"#, runtimeKind: .appleContainer)
         #expect(quoted.id == #"weird "id""#)
         #expect(quoted.image == #"repo/"quoted":tag"#)
     }
 
     @Test func decodesContainerList() throws {
-        let snapshots = try Core.Container.JSON.decode([Core.Container.Snapshot].self, from: try Fixture.data("list"))
+        let snapshots = try Core.Container.JSON.decode([Core.Container.Snapshot].self,
+                                                       from: try Fixture.data("list"),
+                                                       runtimeKind: .appleContainer)
         try #require(snapshots.count == 1)
         let c = snapshots[0]
         #expect(c.id == "fixture-web")
@@ -34,9 +36,18 @@ struct DecodingTests {
         #expect(c.status.networks.first?.ipv4Address == "192.168.64.3/24")
     }
 
+    @Test func resourceDecodingRequiresRuntimeIdentityOrContext() throws {
+        #expect(throws: DecodingError.self) {
+            _ = try Core.Container.JSON.decode([Core.Container.Snapshot].self,
+                                               from: try Fixture.data("list"))
+        }
+    }
+
     @Test func decodesMultiContainerListWithVirtiofsMounts() throws {
         // Live output can represent mount `type` as an enum-like object such as {"virtiofs":{}}.
-        let snapshots = try Core.Container.JSON.decode([Core.Container.Snapshot].self, from: try Fixture.data("list-current"))
+        let snapshots = try Core.Container.JSON.decode([Core.Container.Snapshot].self,
+                                                       from: try Fixture.data("list-current"),
+                                                       runtimeKind: .appleContainer)
         #expect(snapshots.count == 4)
         let npm = try #require(snapshots.first { $0.id == "nginx-proxy-manager-latest" })
         #expect(npm.configuration.mounts.count == 2)
@@ -45,7 +56,9 @@ struct DecodingTests {
     }
 
     @Test func decodesInspectMatchesList() throws {
-        let inspected = try Core.Container.JSON.decode([Core.Container.Snapshot].self, from: try Fixture.data("inspect"))
+        let inspected = try Core.Container.JSON.decode([Core.Container.Snapshot].self,
+                                                       from: try Fixture.data("inspect"),
+                                                       runtimeKind: .appleContainer)
         #expect(inspected.first?.id == "fixture-web")
         #expect(inspected.first?.configuration.platform.architecture == "arm64")
     }
@@ -90,7 +103,9 @@ struct DecodingTests {
     }
 
     @Test func decodesNetworks() throws {
-        let nets = try Core.Container.JSON.decode([Core.Network.Resource].self, from: try Fixture.data("networks"))
+        let nets = try Core.Container.JSON.decode([Core.Network.Resource].self,
+                                                  from: try Fixture.data("networks"),
+                                                  runtimeKind: .appleContainer)
         let def = try #require(nets.first)
         #expect(def.name == "default")
         #expect(def.isBuiltin)
@@ -98,12 +113,16 @@ struct DecodingTests {
     }
 
     @Test func decodesEmptyVolumes() throws {
-        let vols = try Core.Container.JSON.decode([Core.Volume.Resource].self, from: try Fixture.data("volumes"))
+        let vols = try Core.Container.JSON.decode([Core.Volume.Resource].self,
+                                                  from: try Fixture.data("volumes"),
+                                                  runtimeKind: .appleContainer)
         #expect(vols.isEmpty)
     }
 
     @Test func decodesMultiArchImage() throws {
-        let images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: try Fixture.data("image-inspect"))
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self,
+                                                    from: try Fixture.data("image-inspect"),
+                                                    runtimeKind: .appleContainer)
         let img = try #require(images.first)
         #expect(img.reference == "docker.io/library/alpine:latest")
         #expect(img.variants.count > 1)
@@ -213,5 +232,6 @@ struct DecodingTests {
         let data = Data(#"{"state":"frobnicating","networks":[]}"#.utf8)
         let s = try Core.Container.JSON.decode(Core.Container.RuntimeState.self, from: data)
         #expect(s.state == .unknown)
+        #expect(s.rawState == "frobnicating")
     }
 }

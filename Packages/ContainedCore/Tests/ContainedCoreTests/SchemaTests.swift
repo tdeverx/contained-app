@@ -133,7 +133,7 @@ struct SchemaTests {
     }
 
     @Test func appleOSAndArchitectureGenerateFlagsOnlyWithoutPlatform() throws {
-        var document = Core.Schema.Document.containerCreate()
+        var document = Core.Schema.Document.containerCreate(runtimeKind: .appleContainer)
         document.set(.imageReference, .string("alpine"))
         document.set(.imageOS, .string("linux"))
         document.set(.imageArchitecture, .string("amd64"))
@@ -158,7 +158,7 @@ struct SchemaTests {
     }
 
     @Test func schemaConformanceMigratorDoesNotNeedVersionGate() throws {
-        var document = Core.Schema.Document.containerCreate()
+        var document = Core.Schema.Document.containerCreate(runtimeKind: .appleContainer)
         document.schemaVersion = Core.Schema.Version(999)
         document.set(.imageReference, .string("alpine"))
         document.set(.processCommand, .string("echo hello"))
@@ -192,7 +192,7 @@ struct SchemaTests {
                 ),
             ]
         )
-        var document = Core.Schema.Document.containerCreate()
+        var document = Core.Schema.Document.containerCreate(runtimeKind: .appleContainer)
         document.values = [oldImagePath: .string("alpine")]
 
         let migrated = document.migrated(to: definition)
@@ -202,7 +202,7 @@ struct SchemaTests {
     }
 
     @Test func unresolvedSchemaDeviationsReturnFieldKeyedIssues() {
-        var document = Core.Schema.Document.containerCreate()
+        var document = Core.Schema.Document.containerCreate(runtimeKind: .appleContainer)
         document.set(.imageReference, .bool(true))
         document.set(Core.Field.Path("unknown.future.field"), .string("value"))
 

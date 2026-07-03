@@ -105,7 +105,10 @@ public extension Core.Orchestrator {
                              runtimeKind: Core.Runtime.Kind,
                              onPullProgress: (@Sendable (String) async -> Void)?) async throws -> Bool {
         let target = Core.Registry.ImageReference.normalizedKey(reference)
-        let images = try await requireRuntime(runtimeKind, capability: .images).images()
+        let runtime = try requireRuntime(runtimeKind,
+                                         capability: .images,
+                                         as: (any RuntimeImageClient).self)
+        let images = try await runtime.images()
         if images.contains(where: { Core.Registry.ImageReference.normalizedKey($0.reference) == target }) {
             return true
         }
@@ -126,7 +129,10 @@ public extension Core.Orchestrator {
                                           pollInterval: TimeInterval) async throws -> Core.Container.Snapshot? {
         let deadline = Date().addingTimeInterval(stabilizationTimeout)
         repeat {
-            let snapshots = try await requireRuntime(runtimeKind, capability: .containers)
+            let runtime = try requireRuntime(runtimeKind,
+                                             capability: .containers,
+                                             as: (any RuntimeContainerClient).self)
+            let snapshots = try await runtime
                 .listContainers(all: true)
                 .map { $0.scoped(to: runtimeKind) }
             if let target = snapshots.first(where: { $0.id == id }) {

@@ -158,10 +158,12 @@ final class ImageTagRecord {
     var runtimeImageID: String
     var digest: String?
     var resourceData: Data?
+    var updateStatusData: Data?
     var isLocal: Bool
     var isMissing: Bool
     var lastSeenAt: Date?
     var missingSince: Date?
+    var lastCheckedAt: Date?
     var updatedAt: Date
 
     init(scopedID: String,
@@ -171,10 +173,12 @@ final class ImageTagRecord {
          runtimeImageID: String,
          digest: String? = nil,
          resourceData: Data? = nil,
+         updateStatusData: Data? = nil,
          isLocal: Bool = true,
          isMissing: Bool = false,
          lastSeenAt: Date? = nil,
          missingSince: Date? = nil,
+         lastCheckedAt: Date? = nil,
          updatedAt: Date = Date()) {
         self.scopedID = scopedID
         self.imageIdentity = imageIdentity
@@ -183,10 +187,12 @@ final class ImageTagRecord {
         self.runtimeImageID = runtimeImageID
         self.digest = digest
         self.resourceData = resourceData
+        self.updateStatusData = updateStatusData
         self.isLocal = isLocal
         self.isMissing = isMissing
         self.lastSeenAt = lastSeenAt
         self.missingSince = missingSince
+        self.lastCheckedAt = lastCheckedAt
         self.updatedAt = updatedAt
     }
 }

@@ -9,7 +9,8 @@ struct ContainersStoreRefreshTests {
     @Test func refreshDoesNotRunStatsCommand() async {
         let runner = RecordingRunner()
         let store = ContainersStore()
-        store.client = Core.Orchestrator.testing(runner: runner)
+        store.client = Core.Orchestrator.testing(runner: runner,
+                                                 runtimeKind: .appleContainer)
 
         await store.refresh()
 
@@ -41,7 +42,8 @@ struct ContainersStoreRefreshTests {
     @Test func streamedStatsUpdateEveryFrameWithoutAppThrottle() async {
         let runner = RecordingRunner()
         let store = ContainersStore()
-        store.client = Core.Orchestrator.testing(runner: runner)
+        store.client = Core.Orchestrator.testing(runner: runner,
+                                                 runtimeKind: .appleContainer)
         let clock = TestClock(Date(timeIntervalSinceReferenceDate: 1_000))
         store.now = { clock.date }
 
@@ -73,7 +75,8 @@ struct ContainersStoreRefreshTests {
     @Test func streamedStatsClampTinyIntervalsForCounterRates() async {
         let runner = RecordingRunner()
         let store = ContainersStore()
-        store.client = Core.Orchestrator.testing(runner: runner)
+        store.client = Core.Orchestrator.testing(runner: runner,
+                                                 runtimeKind: .appleContainer)
         let clock = TestClock(Date(timeIntervalSinceReferenceDate: 1_000))
         store.now = { clock.date }
 
@@ -348,7 +351,9 @@ struct ContainersStoreRefreshTests {
           "status": { "state": "running" }
         }
         """
-        return try! JSONDecoder().decode(Core.Container.Snapshot.self, from: Data(payload.utf8))
+        return try! Core.Container.JSON.decode(Core.Container.Snapshot.self,
+                                               from: Data(payload.utf8),
+                                               runtimeKind: .appleContainer)
     }
 }
 

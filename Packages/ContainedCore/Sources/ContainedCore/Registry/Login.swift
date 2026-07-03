@@ -16,7 +16,7 @@ struct Login: Codable, Sendable, Identifiable, Hashable {
                 username: String? = nil,
                 created: Date? = nil,
                 modified: Date? = nil,
-                runtimeKind: Core.Runtime.Kind = .appleContainer) {
+                runtimeKind: Core.Runtime.Kind) {
         self.host = host
         self.username = username
         self.created = created
@@ -44,7 +44,16 @@ struct Login: Codable, Sendable, Identifiable, Hashable {
         username = string(["username", "user"])
         created = date(["created", "createdAt", "creationDate"])
         modified = date(["modified", "modifiedAt", "updated"])
-        runtimeKind = .appleContainer
+        if let runtimeKind = string(["runtimeKind"]).map(Core.Runtime.Kind.init(rawValue:)) {
+            self.runtimeKind = runtimeKind
+        } else if let contextRuntimeKind = decoder.coreRuntimeKindContext {
+            runtimeKind = contextRuntimeKind
+        } else {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(codingPath: decoder.codingPath,
+                                      debugDescription: "Missing runtimeKind and no runtime decoding context was provided.")
+            )
+        }
     }
 
     public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Registry.Login {

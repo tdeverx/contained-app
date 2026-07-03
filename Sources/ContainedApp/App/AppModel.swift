@@ -102,11 +102,14 @@ final class AppModel {
                 ?? ProcessInfo.processInfo.physicalMemory
         )
     }
-    var availableRuntimeDescriptors: [Core.Runtime.Descriptor] {
+    var registeredRuntimeDescriptors: [Core.Runtime.Descriptor] {
         client?.availableRuntimeDescriptors ?? []
     }
+    var availableRuntimeDescriptors: [Core.Runtime.Descriptor] {
+        registeredRuntimeDescriptors.filter { runtimeIsReady($0.kind) }
+    }
     var supportedRuntimeDescriptors: [Core.Runtime.Descriptor] {
-        [.appleContainer, .docker]
+        Core.Runtime.supportedDescriptors
     }
     var runtimePickerIsEnabled: Bool {
         availableRuntimeDescriptors.count > 1
@@ -119,6 +122,13 @@ final class AppModel {
     }
     var appleRuntimeAvailable: Bool {
         client?.supportsRuntime(.appleContainer) == true
+    }
+    var appleRuntimeReady: Bool {
+        runtimeIsReady(.appleContainer)
+    }
+
+    func runtimeIsReady(_ kind: Core.Runtime.Kind) -> Bool {
+        runtimeReadiness[kind]?.state == .ready
     }
 
     func runtimeCLIURL(for kind: Core.Runtime.Kind) -> URL? {
@@ -196,17 +206,16 @@ final class AppModel {
 
     func bootstrapIfNeeded() async {
         logger.record("Checking container CLI", category: .system, severity: .debug)
-        let configuration = Core.Configuration(appleContainer: .init(cliPathOverride: settings.cliPathOverride),
-                                               docker: .init(cliPathOverride: settings.dockerCLIPathOverride))
+        let configuration = Core.Configuration(runtimes: [
+            .appleContainer: .init(cliPathOverride: settings.cliPathOverride),
+            .docker: .init(cliPathOverride: settings.dockerCLIPathOverride),
+        ])
         let result = await Core.Orchestrator.bootstrap(configuration: configuration)
-        if case .cliMissing = result {
-            bootstrap = .cliMissing
-            logger.record("Container CLI missing", category: .system, severity: .error)
-            return
-        }
-
         switch result {
-        case .cliMissing:
+        case .cliMissing(let readiness):
+            runtimeReadiness = Dictionary(uniqueKeysWithValues: readiness.map { ($0.kind, $0) })
+            database.upsertRuntimeReadiness(readiness,
+                                            descriptors: supportedRuntimeDescriptors)
             bootstrap = .cliMissing
             logger.record("Container CLI missing", category: .system, severity: .error)
             return
@@ -215,8 +224,9 @@ final class AppModel {
             runtimeReadiness = Dictionary(uniqueKeysWithValues: readiness.map { ($0.kind, $0) })
             containers.client = orchestrator
             database.upsertRuntimeReadiness(readiness,
-                                            descriptors: orchestrator.availableRuntimeDescriptors)
-            if let apple = runtimeReadiness[.appleContainer], apple.state == .unsupported {
+                                            descriptors: supportedRuntimeDescriptors)
+            let anyReady = runtimeReadiness.values.contains { $0.state == .ready }
+            if !anyReady, let apple = runtimeReadiness[.appleContainer], apple.state == .unsupported {
                 bootstrap = .unsupported(version: apple.version ?? "")
                 logger.record("Unsupported container CLI version \(apple.version ?? "unknown")", category: .system, severity: .error)
                 return
@@ -261,27 +271,31 @@ final class AppModel {
         }
     }
 
-    func runtimeDescriptor(for kind: Core.Runtime.Kind) -> Core.Runtime.Descriptor {
+    func runtimeDescriptor(for kind: Core.Runtime.Kind) -> Core.Runtime.Descriptor? {
         client?.descriptor(for: kind)
-            ?? availableRuntimeDescriptors.first { $0.kind == kind }
-            ?? (kind == .docker ? .docker : .appleContainer)
+            ?? supportedRuntimeDescriptors.first { $0.kind == kind }
     }
 
     func core(for kind: Core.Runtime.Kind) -> Core.Orchestrator? {
-        guard let client, client.supportsRuntime(kind) else { return nil }
+        guard let client, runtimeIsReady(kind), client.supportsRuntime(kind) else { return nil }
         return client
     }
 
     func installRuntimeClientForTesting(_ orchestrator: Core.Orchestrator,
+                                        readiness: [Core.RuntimeReadiness]? = nil,
                                         bootstrap: Bootstrap = .ready) {
         client = orchestrator
         containers.client = orchestrator
-        runtimeReadiness = Dictionary(uniqueKeysWithValues: orchestrator.availableRuntimeDescriptors.compactMap { descriptor in
-            guard let cliURL = orchestrator.cliURL(for: descriptor.kind) else { return nil }
-            return (descriptor.kind, Core.RuntimeReadiness(kind: descriptor.kind, cliURL: cliURL))
-        })
+        if let readiness {
+            runtimeReadiness = Dictionary(uniqueKeysWithValues: readiness.map { ($0.kind, $0) })
+        } else {
+            runtimeReadiness = Dictionary(uniqueKeysWithValues: orchestrator.availableRuntimeDescriptors.compactMap { descriptor in
+                guard let cliURL = orchestrator.cliURL(for: descriptor.kind) else { return nil }
+                return (descriptor.kind, Core.RuntimeReadiness(kind: descriptor.kind, cliURL: cliURL))
+            })
+        }
         database.upsertRuntimeReadiness(Array(runtimeReadiness.values),
-                                        descriptors: orchestrator.availableRuntimeDescriptors)
+                                        descriptors: supportedRuntimeDescriptors)
         self.bootstrap = bootstrap
     }
 
@@ -292,15 +306,14 @@ final class AppModel {
     func refreshSystem() async {
         guard let client else { return }
         let started = Date()
-        var anyRuntimeRunning = false
         var firstStatus: Core.System.Status?
-        for descriptor in availableRuntimeDescriptors where descriptor.supports(.systemStatus) {
+        for descriptor in registeredRuntimeDescriptors where descriptor.supports(.systemStatus) {
+            guard runtimeReadiness[descriptor.kind]?.state != .unsupported else { continue }
             do {
                 let status = try await client.systemStatus(runtimeKind: descriptor.kind)
                 firstStatus = firstStatus ?? status
                 if descriptor.kind == .appleContainer { systemStatus = status }
                 if status.isRunning {
-                    anyRuntimeRunning = true
                     logger.record("\(descriptor.displayName) is running", category: .system, severity: .debug)
                     markRuntimeReadiness(descriptor.kind, state: .ready)
                 } else {
@@ -316,14 +329,15 @@ final class AppModel {
             }
         }
         if systemStatus == nil { systemStatus = firstStatus }
-        bootstrap = anyRuntimeRunning ? .ready : .serviceStopped
-        if anyRuntimeRunning {
+        let hasReadyRuntime = runtimeReadiness.values.contains { $0.state == .ready }
+        bootstrap = hasReadyRuntime ? .ready : .serviceStopped
+        if hasReadyRuntime {
             if settings.statsNormalizationMode == .machine { await loadPropertiesIfNeeded() }
             applyStatsNormalizationContext()
             await refreshDiskUsage()
         }
         await containers.refresh()
-        if anyRuntimeRunning || !containers.running.isEmpty {
+        if hasReadyRuntime || !containers.running.isEmpty {
             updateContainerStatsStream()
         } else {
             stopContainerStatsStream()
@@ -343,7 +357,7 @@ final class AppModel {
         readiness.message = message
         runtimeReadiness[kind] = readiness
         database.upsertRuntimeReadiness(Array(runtimeReadiness.values),
-                                        descriptors: availableRuntimeDescriptors)
+                                        descriptors: supportedRuntimeDescriptors)
     }
 
     /// `system df` is throttled during background refresh; the System panel can force a fresh read.
@@ -356,7 +370,7 @@ final class AppModel {
     private func refreshDiskUsage(force: Bool = false) async {
         guard let client else { return }
         if !force, let last = lastDiskUsageDate, Date().timeIntervalSince(last) < Self.diskUsageThrottle { return }
-        if appleRuntimeAvailable, let usage = try? await client.diskUsage(runtimeKind: .appleContainer) {
+        if appleRuntimeReady, let usage = try? await client.diskUsage(runtimeKind: .appleContainer) {
             diskUsage = usage
             lastDiskUsageDate = Date()
         }
@@ -528,7 +542,7 @@ final class AppModel {
     /// Force-reload the daemon's system properties (e.g. after a kernel change).
     func reloadProperties() async {
         guard let client, bootstrap == .ready else { return }
-        guard appleRuntimeAvailable else { return }
+        guard appleRuntimeReady else { return }
         if let p = try? await client.systemProperties(runtimeKind: .appleContainer) {
             properties = p
             applyStatsNormalizationContext()
@@ -692,7 +706,8 @@ final class AppModel {
             }
 
             await containers.refresh()
-            flash(AppText.string("container.migration.complete", defaultValue: "Container moved to \(runtimeDescriptor(for: targetRuntimeKind).displayName)."))
+            let runtimeName = runtimeDescriptor(for: targetRuntimeKind)?.displayName ?? targetRuntimeKind.rawValue
+            flash(AppText.string("container.migration.complete", defaultValue: "Container moved to \(runtimeName)."))
             logger.record("Migrated \(source.displayName) to \(targetRuntimeKind.rawValue)",
                           category: .lifecycle,
                           containerID: target.scopedID)
@@ -878,7 +893,7 @@ final class AppModel {
         guard let client else { return }
         bootstrap = .checking
         if resetWatchdog { watchdog.reset() }
-        for action in actions { _ = try? await client.performSystemAction(action) }
+        for action in actions { _ = try? await client.performSystemAction(action, runtimeKind: .appleContainer) }
         await refreshSystem()
     }
 

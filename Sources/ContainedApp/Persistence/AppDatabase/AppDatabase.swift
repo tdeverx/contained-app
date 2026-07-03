@@ -83,8 +83,8 @@ final class AppDatabase {
         return fetch(RuntimeRecord.self).first(where: { $0.runtimeKindRaw == raw })?.cliPathOverride ?? ""
     }
 
-    func setRuntimePathOverride(_ path: String, for descriptor: Core.Runtime.Descriptor) {
-        let record = runtimeRecord(for: descriptor.kind)
+    func setRuntimePathOverride(_ path: String, for kind: Core.Runtime.Kind) {
+        let record = runtimeRecord(for: kind)
         record.cliPathOverride = path
         record.updatedAt()
         save()
@@ -97,7 +97,7 @@ final class AppDatabase {
         for descriptor in descriptors {
             let record = runtimeRecord(for: descriptor.kind)
             let state = readyByKind[descriptor.kind]
-            record.isAvailable = state != nil
+            record.isAvailable = state?.state == .ready
             record.readinessRaw = state?.state.rawValue ?? "unavailable"
             record.lastCheckedAt = now
             record.lastError = state?.message

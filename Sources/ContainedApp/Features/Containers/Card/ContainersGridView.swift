@@ -378,7 +378,8 @@ struct ContainersGridView: View {
             statsNormalization: app.statsNormalizationContext,
             selectedWidgetIndex: selectedWidgetBinding(for: key),
             isBusy: store.busyIDs.contains(key),
-            hasImageUpdate: app.imageUpdateStatus(for: snapshot.image).state == .updateAvailable,
+            hasImageUpdate: app.imageUpdateStatus(for: snapshot.image,
+                                                  runtimeKind: snapshot.runtimeKind).state == .updateAvailable,
             isExpanded: isExpanded,
             cornerRadiusOverride: cornerRadiusOverride,
             controlsVisible: controlsVisible,
@@ -641,24 +642,26 @@ private enum ContainersGridPreviewDataset {
         let appleWeb = Core.Container.Snapshot.placeholder(
             id: "preview-web",
             image: "docker.io/library/nginx:latest",
-            state: .running
+            state: .running,
+            runtimeKind: .appleContainer
         )
         let dockerWeb = Core.Container.Snapshot.placeholder(
             id: "preview-web",
             image: "docker.io/library/nginx:latest",
-            state: .running
+            state: .running,
+            runtimeKind: .docker
         )
-        .scoped(to: .docker)
         let worker = Core.Container.Snapshot.placeholder(
             id: "preview-worker",
             image: "ghcr.io/example/worker:nightly",
-            state: .stopped
+            state: .stopped,
+            runtimeKind: .docker
         )
-        .scoped(to: .docker)
         let db = Core.Container.Snapshot.placeholder(
             id: "preview-db",
             image: "postgres:16",
-            state: .running
+            state: .running,
+            runtimeKind: .appleContainer
         )
 
         let snapshots = [appleWeb, dockerWeb, worker, db]

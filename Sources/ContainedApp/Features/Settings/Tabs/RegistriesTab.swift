@@ -62,7 +62,7 @@ struct RegistriesTab: View {
     }
 
     private func registrySubtitle(_ login: Core.Registry.Login) -> String {
-        let runtime = app.runtimeDescriptor(for: login.runtimeKind).displayName
+        let runtime = app.runtimeDescriptor(for: login.runtimeKind)?.displayName ?? login.runtimeKind.rawValue
         if let username = login.username {
             return AppText.string("settings.registries.usernameRuntime",
                                   defaultValue: "\(runtime), as \(username)")

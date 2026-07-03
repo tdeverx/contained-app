@@ -13,7 +13,10 @@
 - Unified Images at the group level while exposing runtime-specific local tag availability and actions for Apple container and Docker image stores.
 - Added runtime-scoped settings sections and Docker CLI path overrides; Apple service, kernel, and DNS controls remain Apple-only, while Docker endpoint failures show retry/runtime guidance.
 - Kept V1 image storage runtime-owned while centralizing registry search, remote digest/update metadata, and normalized tag grouping across runtimes.
+- Scoped local image update comparisons to each runtime-owned tag so one runtime can be current while another has an update available for the same image reference.
 - Removed implicit runtime fallbacks so create, pull, build, load, push, registry, network, volume, logs, stats, terminal, and migration actions route through an explicit runtime or an existing resource owner.
+- Split registered runtime clients from ready runtime endpoints so Docker can remain usable when Apple container is stopped or unsupported, while Apple-only service controls stay explicitly Apple-scoped.
+- Hardened the Core runtime boundary with module-driven Apple container and Docker adapters, runtime-keyed CLI overrides/readiness, runtime-owned schema profiles, and static checks preventing concrete runtime behavior from leaking out of `Runtimes/**`.
 - Replaced alert-based runtime picking for no-context Compose/image archive imports with an in-app runtime selection sheet that preselects only when one compatible runtime is available.
 - Moved migration visibility and runtime move progress into the app database/Core migration flow, retaining disappeared resources only when they carry Contained-owned value.
 - Fixed the container-card morph regression by keying measured card frames and expanded overlays by runtime-scoped container IDs.

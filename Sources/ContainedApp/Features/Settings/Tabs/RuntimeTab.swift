@@ -37,7 +37,7 @@ struct RuntimeTab: View {
                 }
             }
 
-            if app.appleRuntimeAvailable {
+            if app.appleRuntimeReady {
                 appleRuntimeControls
             }
             if app.supportedRuntimeDescriptors.contains(where: { $0.kind == .docker }) {
@@ -212,18 +212,18 @@ struct RuntimeTab: View {
         } else {
             await app.loadPropertiesIfNeeded()
         }
-        if app.appleRuntimeAvailable {
+        if app.appleRuntimeReady {
             await loadDNS()
         }
     }
 
     private func loadDNS() async {
-        guard app.appleRuntimeAvailable, let client = app.client else { return }
+        guard app.appleRuntimeReady, let client = app.client else { return }
         if let domains = try? await client.dnsDomains(runtimeKind: .appleContainer) { dnsDomains = domains }
     }
 
     private func installKernel() async {
-        guard app.appleRuntimeAvailable, let client = app.client else { return }
+        guard app.appleRuntimeReady, let client = app.client else { return }
         if let error = await app.captured({ _ = try await client.setRecommendedKernel(runtimeKind: .appleContainer) }) { app.flash(error) }
         else { app.flash(AppText.recommendedKernelInstalled); await app.reloadProperties() }
     }
@@ -231,13 +231,13 @@ struct RuntimeTab: View {
     private func addDNS() async {
         let domain = newDomain.trimmingCharacters(in: .whitespaces)
         newDomain = ""
-        guard app.appleRuntimeAvailable, !domain.isEmpty, let client = app.client else { return }
+        guard app.appleRuntimeReady, !domain.isEmpty, let client = app.client else { return }
         if let error = await app.captured({ _ = try await client.createDNSDomain(domain, runtimeKind: .appleContainer) }) { app.flash(error) }
         else { await loadDNS() }
     }
 
     private func deleteDNS(_ domain: String) async {
-        guard app.appleRuntimeAvailable, let client = app.client else { return }
+        guard app.appleRuntimeReady, let client = app.client else { return }
         if let error = await app.captured({ _ = try await client.deleteDNSDomain(domain, runtimeKind: .appleContainer) }) { app.flash(error) }
         else { await loadDNS() }
     }

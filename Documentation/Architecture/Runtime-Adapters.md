@@ -3,11 +3,11 @@
 Contained's app-facing backend boundary is `ContainedCore`.
 
 - `Core.Orchestrator` is the only backend object app stores own.
-- `Core.Runtime` owns runtime descriptors, capabilities, runtime-scoped checks, and unsupported-operation errors.
+- `Core.Runtime` owns runtime identity, descriptors, capabilities, runtime-scoped checks, module registration, and unsupported-operation errors.
 - `Core.Compose` owns Compose as a cross-runtime interchange format. Yams is internal to `Core.Compose.YAML`.
 - `Core.Container` owns canonical create/edit/import/export models.
 - `Core.Command` owns command previews, process execution, and host invocations.
-- Core-internal adapters (`Runtimes/AppleContainer` and `Runtimes/Docker`) translate canonical models to backend-specific behavior.
+- Core-internal adapters (`Runtimes/AppleContainer` and `Runtimes/Docker`) translate canonical models to backend-specific behavior through `Core.Runtime.Module`.
 
 The app owns settings, routing, persistence, localization, Activity presentation,
 and user decisions. It does not create adapter clients, call Apple CLI locators,
@@ -19,16 +19,30 @@ Runtime adapters are folders inside `ContainedCore`, not standalone app
 dependencies. Apple container lives under `Runtimes/AppleContainer`; Docker
 lives under `Runtimes/Docker`. Future runtimes such as Podman, Lima-backed,
 remote, or other runtimes should be added as sibling adapter folders under Core
-and registered with `Core.Orchestrator`.
+and registered in the built-in runtime module registry.
+
+Each adapter module owns its descriptor, capability preset, CLI lookup, client
+creation, readiness probing, command previews, terminal invocation, schema
+support profile, Compose projection, and runtime-specific Core strings. Shared
+Core owns the contracts and normalized models; it does not construct concrete
+clients, call concrete CLI locators, or branch on Docker/Apple command builders
+outside the runtime tree.
 
 Do not add backend `switch` statements to SwiftUI views or stores. Stores call
 Core. Core decides which adapter handles a selected runtime and returns typed
 errors or unavailable plans when a capability is missing.
 
 `Core.Runtime.Kind` is an open raw-value type, not a closed enum. New adapters
-can define stable identifiers without forcing app-store or SwiftUI changes. Use
-`Core.Runtime.Capability` and `Core.Runtime.Descriptor` to advertise support
-before a UI route enables a command.
+can define stable identifiers without forcing app-store or SwiftUI changes.
+Shipped kinds such as `apple-container` and `docker` are stable identity
+constants only; unknown or unregistered kinds are unsupported instead of being
+silently remapped. Use `Core.Runtime.Capability` and `Core.Runtime.Descriptor`
+to advertise support before a UI route enables a command.
+
+Bootstrap returns readiness for every registered module. A runtime can be
+`cliMissing`, `unsupported`, `endpointUnavailable`, or `ready`, so the app can
+present missing CLI, unsupported CLI, and stopped daemon/service states without
+guessing from a single global bootstrap value.
 
 ## Create, Import, Export, And Runtime Choice
 
@@ -37,9 +51,10 @@ round-trip through `Core.Schema.Document`, a runtime-neutral schema document.
 Each document carries its intended runtime, so the runtime choice is per-container
 or per-import item rather than a global app setting.
 
-Core translates into and out of the shared model:
+Core translates into and out of the shared model through the selected runtime
+module:
 
-- `schemaDefinition(for:runtimeKind:)` publishes the selected runtime's run/edit field metadata.
+- `schemaDefinition(for:runtimeKind:)` publishes canonical field definitions with the selected module's schema profile applied.
 - `previewCreateCommand(for:)` validates a schema document and returns the command preview for the selected runtime.
 - `createContainer(_:)` and `recreateContainer(originalID:document:)` create from schema documents.
 - `translateCompose(_:baseDirectory:runtimeKind:)` turns parsed Compose projects into schema documents plus warnings and provenance.
@@ -60,8 +75,9 @@ route through each resource's `runtimeKind`, so the container grid can aggregate
 Apple and Docker containers without app-side runtime switching.
 
 Images are unified at the group level by normalized reference or digest.
-Registry search, remote digest checks, update status, and shared tag metadata
-are app-wide, but local runnable availability is runtime-scoped: Docker
+Registry search, remote digest checks, and shared image metadata are app-wide,
+while local update status and runnable availability are runtime-scoped per tag:
+Docker
 `nginx:latest` and Apple container `nginx:latest` are different local tags and
 delete/tag/save/push through their owning runtime.
 
@@ -74,9 +90,10 @@ host` as default/blank networking, while Docker import maps it to
 `--network host`. Docker, Podman, and nerdctl-style runtimes may support native
 Compose execution or export later.
 
-Dialect differences belong under `Core.Compose.Dialect`; YAML parsing/writing
-belongs under `Core.Compose.YAML` and remains the only place that imports Yams.
-Public APIs expose Core models and typed plans, never Yams types.
+YAML parsing/writing belongs under `Core.Compose.YAML` and remains the only
+place that imports Yams. Runtime-specific host networking, unsupported-field
+preservation, and create/edit projection belong inside each runtime adapter
+folder. Public APIs expose Core models and typed plans, never Yams types.
 
 ## Errors And Stats
 

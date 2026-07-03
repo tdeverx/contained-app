@@ -96,6 +96,56 @@ struct AppDatabaseTests {
         ])
     }
 
+    @Test func imageUpdateStatusIsRuntimeScopedAtTagLevel() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let app = AppModel(database: database)
+        app.images = [
+            image(reference: "nginx:latest", id: "sha256:1", digest: "sha256:old", runtimeKind: .appleContainer),
+            image(reference: "docker.io/library/nginx:latest", id: "sha256:2", digest: "sha256:new", runtimeKind: .docker),
+        ]
+
+        let appleKey = app.imageUpdateKey("nginx:latest", runtimeKind: .appleContainer)
+        let dockerKey = app.imageUpdateKey("nginx:latest", runtimeKind: .docker)
+        app.imageUpdates = [
+            appleKey: .resolved(localDigest: "sha256:old", remoteDigest: "sha256:new"),
+            dockerKey: .resolved(localDigest: "sha256:new", remoteDigest: "sha256:new"),
+        ]
+
+        #expect(app.imageUpdateStatus(for: "nginx:latest").state == .updateAvailable)
+        #expect(app.imageUpdateStatus(for: "nginx:latest", runtimeKind: .appleContainer).state == .updateAvailable)
+        #expect(app.imageUpdateStatus(for: "nginx:latest", runtimeKind: .docker).state == .current)
+
+        let tags = Dictionary(uniqueKeysWithValues: database.fetch(ImageTagRecord.self).map { ($0.scopedID, $0) })
+        #expect(tags[appleKey]?.updateStatusData != nil)
+        #expect(tags[dockerKey]?.updateStatusData != nil)
+        #expect(database.fetch(ImageRecord.self).first?.updateStatusData == nil)
+    }
+
+    @Test func readyRuntimeDescriptorsExcludeRegisteredButUnavailableRuntimes() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let app = AppModel(database: database)
+        let orchestrator = Core.Orchestrator.testing(runners: [
+            .appleContainer: NoopRunner(),
+            .docker: NoopRunner(),
+        ])
+
+        app.installRuntimeClientForTesting(orchestrator,
+                                           readiness: [
+                                               Core.RuntimeReadiness(kind: .appleContainer,
+                                                                     cliURL: URL(fileURLWithPath: "/usr/bin/container"),
+                                                                     state: .unsupported,
+                                                                     message: "Unsupported"),
+                                               Core.RuntimeReadiness(kind: .docker,
+                                                                     cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                                                     state: .ready),
+                                           ])
+
+        #expect(Set(app.registeredRuntimeDescriptors.map(\.kind)) == [.appleContainer, .docker])
+        #expect(app.availableRuntimeDescriptors.map(\.kind) == [.docker])
+        #expect(app.core(for: .appleContainer) == nil)
+        #expect(app.core(for: .docker) != nil)
+    }
+
     private func image(reference: String,
                        id: String,
                        digest: String,
@@ -115,6 +165,21 @@ struct AppDatabaseTests {
           "runtimeKind": "\(runtimeKind.rawValue)"
         }
         """
-        return try! JSONDecoder().decode(Core.Image.Resource.self, from: Data(json.utf8))
+        return try! Core.Container.JSON.decode(Core.Image.Resource.self, from: Data(json.utf8))
+    }
+}
+
+private struct NoopRunner: Core.Command.Running {
+    func run(_ arguments: [String],
+             stdin: Data?,
+             priority: Core.Command.ExecutionPriority) async throws -> Data {
+        Data()
+    }
+
+    func stream(_ arguments: [String],
+                priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            continuation.finish()
+        }
     }
 }

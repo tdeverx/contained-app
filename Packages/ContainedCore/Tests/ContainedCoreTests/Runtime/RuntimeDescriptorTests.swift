@@ -51,11 +51,11 @@ struct RuntimeDescriptorTests {
     @Test func orchestratorAggregatesAndScopesContainersAcrossRuntimes() async throws {
         let apple = UnavailableRuntime(
             descriptor: .appleContainer,
-            containers: [.placeholder(id: "web", image: "nginx:latest")]
+            containers: [.placeholder(id: "web", image: "nginx:latest", runtimeKind: .appleContainer)]
         )
         let docker = UnavailableRuntime(
             descriptor: .docker,
-            containers: [.placeholder(id: "web", image: "nginx:latest")]
+            containers: [.placeholder(id: "web", image: "nginx:latest", runtimeKind: .docker)]
         )
         let orchestrator = Core.Orchestrator(
             cliURLs: [
@@ -65,24 +65,27 @@ struct RuntimeDescriptorTests {
             runtimes: [
                 .appleContainer: apple,
                 .docker: docker,
-            ]
+            ] as [Core.Runtime.Kind: any RuntimeClient]
         )
 
         let snapshots = try await orchestrator.listRuntimeContainers()
 
         #expect(snapshots.count == 2)
-        #expect(Set(snapshots.map(\.id)) == ["web"])
-        #expect(Set(snapshots.map(\.scopedID)) == [
+        #expect(Set(snapshots.map { $0.id }) == ["web"])
+        #expect(Set(snapshots.map { $0.scopedID }) == [
             "apple-container::web",
             "docker::web",
         ])
-        #expect(Set(snapshots.map(\.runtimeKind)) == [.appleContainer, .docker])
+        #expect(Set(snapshots.map { $0.runtimeKind }) == [
+            Core.Runtime.Kind.appleContainer,
+            Core.Runtime.Kind.docker,
+        ])
     }
 
     @Test func orchestratorPreservesPartialInventoryWhenOneRuntimeFails() async throws {
         let apple = UnavailableRuntime(
             descriptor: .appleContainer,
-            containers: [.placeholder(id: "apple-web", image: "nginx:latest")]
+            containers: [.placeholder(id: "apple-web", image: "nginx:latest", runtimeKind: .appleContainer)]
         )
         let docker = UnavailableRuntime(
             descriptor: .docker,
@@ -96,12 +99,12 @@ struct RuntimeDescriptorTests {
             runtimes: [
                 .appleContainer: apple,
                 .docker: docker,
-            ]
+            ] as [Core.Runtime.Kind: any RuntimeClient]
         )
 
         let snapshots = try await orchestrator.listRuntimeContainers()
 
-        #expect(snapshots.map(\.scopedID) == ["apple-container::apple-web"])
+        #expect(snapshots.map { $0.scopedID } == ["apple-container::apple-web"])
     }
 
     @Test func orchestratorTerminalInvocationRoutesByRuntimeKind() throws {
@@ -113,7 +116,7 @@ struct RuntimeDescriptorTests {
             runtimes: [
                 .appleContainer: UnavailableRuntime(descriptor: .appleContainer),
                 .docker: UnavailableRuntime(descriptor: .docker),
-            ]
+            ] as [Core.Runtime.Kind: any RuntimeClient]
         )
 
         let docker = try orchestrator.terminalInvocation(containerID: "web",
@@ -128,9 +131,43 @@ struct RuntimeDescriptorTests {
         #expect(apple.executableURL.path == "/usr/bin/container")
         #expect(apple.arguments == ContainerCommands.execInteractive("web", shell: "/bin/sh"))
     }
+
+    @Test func orchestratorDoesNotFabricateUnregisteredDescriptors() {
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: UnavailableRuntime(descriptor: .appleContainer)] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        #expect(orchestrator.descriptor(for: .appleContainer) == .appleContainer)
+        #expect(orchestrator.descriptor(for: .docker) == nil)
+        #expect(orchestrator.descriptor(for: Core.Runtime.Kind(rawValue: "future-runtime")) == nil)
+    }
+
+    @Test func serviceControlRequiresExplicitCapability() async {
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.docker: URL(fileURLWithPath: "/usr/local/bin/docker")],
+            runtimes: [.docker: UnavailableRuntime(descriptor: .docker)] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        await #expect(throws: Core.Runtime.UnsupportedCapability.self) {
+            _ = try await orchestrator.performSystemAction(.start, runtimeKind: .docker)
+        }
+    }
 }
 
-private struct UnavailableRuntime: ContainerRuntimeClient {
+private struct UnavailableRuntime: RuntimeClient,
+                                   RuntimeContainerClient,
+                                   RuntimeSystemStatusClient,
+                                   RuntimeDNSClient,
+                                   RuntimeKernelClient,
+                                   RuntimeExecClient,
+                                   RuntimeSystemLogsClient,
+                                   RuntimeComposeClient,
+                                   RuntimeNetworkClient,
+                                   RuntimeVolumeClient,
+                                   RuntimeImageClient,
+                                   RuntimeRegistryClient,
+                                   RuntimeServiceControlClient {
     let descriptor: Core.Runtime.Descriptor
     var containers: [Core.Container.Snapshot] = []
     var listError: TestStubError?

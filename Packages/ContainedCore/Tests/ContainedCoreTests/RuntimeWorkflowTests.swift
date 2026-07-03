@@ -54,7 +54,7 @@ struct RuntimeWorkflowTests {
     }
 
     @Test func dockerRunArgvIncludesDockerOnlyFields() {
-        var request = Core.Container.CreateRequest()
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
         request.runtimeKind = .docker
         request.image = "nginx:latest"
         request.name = "web"
@@ -160,7 +160,8 @@ struct RuntimeWorkflowTests {
             network_mode: host
         """
         let project = try Core.Compose.Parser.parse(yaml, projectName: "demo")
-        let apple = Core.Orchestrator.testing(runner: MockCommandRunner(result: .success(Data())))
+        let apple = Core.Orchestrator.testing(runner: MockCommandRunner(result: .success(Data())),
+                                                runtimeKind: .appleContainer)
         let docker = Core.Orchestrator.testing(runner: MockCommandRunner(result: .success(Data())),
                                                cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
                                                runtimeKind: .docker)

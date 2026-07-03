@@ -17,7 +17,7 @@ struct Resource: Codable, Sendable, Identifiable, Hashable {
     public init(configuration: Core.Network.Configuration,
                 id: String,
                 status: Core.Network.Status?,
-                runtimeKind: Core.Runtime.Kind = .appleContainer) {
+                runtimeKind: Core.Runtime.Kind) {
         self.configuration = configuration
         self.id = id
         self.status = status
@@ -29,7 +29,17 @@ struct Resource: Codable, Sendable, Identifiable, Hashable {
         configuration = try c.decode(Core.Network.Configuration.self, forKey: .configuration)
         id = try c.decode(String.self, forKey: .id)
         status = try c.decodeIfPresent(Core.Network.Status.self, forKey: .status)
-        runtimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) ?? .appleContainer
+        if let decodedRuntimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) {
+            runtimeKind = decodedRuntimeKind
+        } else if let contextRuntimeKind = decoder.coreRuntimeKindContext {
+            runtimeKind = contextRuntimeKind
+        } else {
+            throw DecodingError.keyNotFound(
+                CodingKeys.runtimeKind,
+                DecodingError.Context(codingPath: decoder.codingPath,
+                                      debugDescription: "Missing runtimeKind and no runtime decoding context was provided.")
+            )
+        }
     }
 
     public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Network.Resource {

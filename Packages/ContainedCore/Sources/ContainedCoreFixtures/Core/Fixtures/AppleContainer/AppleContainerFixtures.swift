@@ -8,13 +8,15 @@ public extension Core.Fixtures.AppleContainer {
     static let webContainer = Core.Container.Snapshot.placeholder(
         id: "preview-web",
         image: "docker.io/library/nginx:latest",
-        state: .running
+        state: .running,
+        runtimeKind: .appleContainer
     )
 
     static let workerContainer = Core.Container.Snapshot.placeholder(
         id: "preview-worker",
         image: "ghcr.io/example/worker:nightly",
-        state: .stopped
+        state: .stopped,
+        runtimeKind: .appleContainer
     )
 
     static let stats = Core.Metrics.StatsDelta(
@@ -109,8 +111,7 @@ public extension Core.Fixtures.AppleContainer {
     )
 
     static let createRequest: Core.Container.CreateRequest = {
-        var request = Core.Container.CreateRequest()
-        request.runtimeKind = .appleContainer
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
         request.image = image.reference
         request.platform = "linux/arm64"
         request.name = "preview-web"
@@ -127,10 +128,8 @@ public extension Core.Fixtures.AppleContainer {
 }
 
 private func decode<T: Decodable>(_ type: T.Type, from json: String) -> T {
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
     do {
-        return try decoder.decode(T.self, from: Data(json.utf8))
+        return try Core.Container.JSON.decode(type, from: Data(json.utf8), runtimeKind: .appleContainer)
     } catch {
         preconditionFailure("Invalid core fixture for \(T.self): \(error)")
     }

@@ -33,13 +33,32 @@ extension AppModel {
 
     /// The tracked update status for an image reference (defaults to an empty/unknown status).
     func imageUpdateStatus(for reference: String) -> Core.Image.UpdateStatus {
-        imageUpdates[imageUpdateKey(reference)] ?? Core.Image.UpdateStatus()
+        let runtimeStatuses = localRuntimeTargets(for: reference).compactMap {
+            imageUpdates[imageUpdateKey(reference, runtimeKind: $0)]
+        }
+        guard !runtimeStatuses.isEmpty else {
+            return imageUpdates[imageUpdateKey(reference)] ?? Core.Image.UpdateStatus()
+        }
+        return aggregateUpdateStatus(runtimeStatuses)
+    }
+
+    /// The tracked update status for a local tag in one runtime.
+    func imageUpdateStatus(for reference: String,
+                           runtimeKind: Core.Runtime.Kind) -> Core.Image.UpdateStatus {
+        imageUpdates[imageUpdateKey(reference, runtimeKind: runtimeKind)]
+            ?? imageUpdates[imageUpdateKey(reference)]
+            ?? Core.Image.UpdateStatus()
     }
 
     /// The normalized dictionary key for a reference, so `nginx` and `docker.io/library/nginx:latest`
     /// map to the same tracked status.
     func imageUpdateKey(_ reference: String) -> String {
         Core.Registry.ImageReference.normalizedKey(reference)
+    }
+
+    func imageUpdateKey(_ reference: String,
+                        runtimeKind: Core.Runtime.Kind) -> String {
+        runtimeKind.scopedID(for: imageUpdateKey(reference))
     }
 
     // MARK: Sweeps
@@ -90,21 +109,53 @@ extension AppModel {
     /// Compare one image's local digest against the registry. `notify` controls per-image banners
     /// (off during bulk sweeps, which summarize once at the end).
     func checkImageUpdate(_ reference: String, notify: Bool = true) async {
-        let key = imageUpdateKey(reference)
-        let localDigest = localDigest(for: key)
-        imageUpdates[key] = .checking(localDigest: localDigest)
+        let runtimeKinds = localRuntimeTargets(for: reference)
+        guard !runtimeKinds.isEmpty else {
+            let key = imageUpdateKey(reference)
+            imageUpdates[key] = .failed(localDigest: nil,
+                                        message: AppText.string("updates.localDigestUnavailable.short", defaultValue: "Local digest unavailable"))
+            if notify { flash(AppText.imageLocalDigestUnavailable(Format.shortImage(reference))) }
+            return
+        }
+        await checkImageUpdate(reference, runtimeKinds: runtimeKinds, notify: notify)
+    }
+
+    /// Compare one runtime-owned local tag against the registry.
+    func checkImageUpdate(_ reference: String,
+                          runtimeKind: Core.Runtime.Kind,
+                          notify: Bool = true) async {
+        await checkImageUpdate(reference, runtimeKinds: [runtimeKind], notify: notify)
+    }
+
+    private func checkImageUpdate(_ reference: String,
+                                  runtimeKinds: [Core.Runtime.Kind],
+                                  notify: Bool) async {
+        let runtimeKinds = Array(Set(runtimeKinds)).sorted { $0.rawValue < $1.rawValue }
+        for runtimeKind in runtimeKinds {
+            let key = imageUpdateKey(reference, runtimeKind: runtimeKind)
+            imageUpdates[key] = .checking(localDigest: localDigest(for: reference, runtimeKind: runtimeKind))
+        }
         do {
             let remoteDigest = try await manifestClient.remoteDigest(for: reference)
-            guard let localDigest, !localDigest.isEmpty else {
-                imageUpdates[key] = .failed(localDigest: nil,
-                                            message: AppText.string("updates.localDigestUnavailable.short", defaultValue: "Local digest unavailable"))
-                if notify { flash(AppText.imageLocalDigestUnavailable(Format.shortImage(reference))) }
-                return
+            var statuses: [Core.Image.UpdateStatus] = []
+            for runtimeKind in runtimeKinds {
+                let key = imageUpdateKey(reference, runtimeKind: runtimeKind)
+                guard let localDigest = localDigest(for: reference, runtimeKind: runtimeKind),
+                      !localDigest.isEmpty else {
+                    let status = Core.Image.UpdateStatus.failed(
+                        localDigest: nil,
+                        message: AppText.string("updates.localDigestUnavailable.short", defaultValue: "Local digest unavailable")
+                    )
+                    imageUpdates[key] = status
+                    statuses.append(status)
+                    continue
+                }
+                let status = Core.Image.UpdateStatus.resolved(localDigest: localDigest, remoteDigest: remoteDigest)
+                imageUpdates[key] = status
+                statuses.append(status)
             }
-            let status = Core.Image.UpdateStatus.resolved(localDigest: localDigest, remoteDigest: remoteDigest)
-            imageUpdates[key] = status
             if notify {
-                switch status.state {
+                switch aggregateUpdateStatus(statuses).state {
                 case .updateAvailable:
                     flash(AppText.imageUpdateAvailable(Format.shortImage(reference)))
                     logger.record("Update available for \(Format.shortImage(reference))",
@@ -118,7 +169,10 @@ extension AppModel {
             }
         } catch {
             let message = error.appDisplayMessage
-            imageUpdates[key] = .failed(localDigest: localDigest, message: message)
+            for runtimeKind in runtimeKinds {
+                let key = imageUpdateKey(reference, runtimeKind: runtimeKind)
+                imageUpdates[key] = .failed(localDigest: localDigest(for: reference, runtimeKind: runtimeKind), message: message)
+            }
             if notify { flash(message) }
             logger.recordFailure("Failed checking image update for \(Format.shortImage(reference))",
                                  error: error,
@@ -133,7 +187,7 @@ extension AppModel {
                          runtimeKind: Core.Runtime.Kind) async -> Bool {
         let ok = await pullImage(reference, runtimeKind: runtimeKind)
         if ok {
-            await checkImageUpdate(reference, notify: false)
+            await checkImageUpdate(reference, runtimeKind: runtimeKind, notify: false)
             flash(AppText.updatedImage(Format.shortImage(reference)))
             logger.record("Updated \(Format.shortImage(reference))", category: .image)
         }
@@ -192,14 +246,20 @@ extension AppModel {
     /// every reference with an update available and report the count.
     private func pullUpdates(over references: [String], emptyMessage: String,
                              summary: ImageUpdateSummaryScope, manual: Bool) async -> Int {
-        let pending = references.filter { imageUpdateStatus(for: $0).state == .updateAvailable }
+        let pending: [(reference: String, runtimeKind: Core.Runtime.Kind)] = references.flatMap { reference in
+            localRuntimeKinds(for: reference, summary: summary).compactMap { runtimeKind in
+                imageUpdateStatus(for: reference, runtimeKind: runtimeKind).state == .updateAvailable
+                    ? (reference, runtimeKind)
+                    : nil
+            }
+        }
         guard !pending.isEmpty else {
             if manual { flash(emptyMessage) }
             return 0
         }
         var updated = 0
-        for reference in pending {
-            for runtimeKind in localRuntimeKinds(for: reference, summary: summary) where await pullImageUpdate(reference, runtimeKind: runtimeKind) {
+        for item in pending {
+            if await pullImageUpdate(item.reference, runtimeKind: item.runtimeKind) {
                 updated += 1
             }
         }
@@ -233,8 +293,23 @@ extension AppModel {
         Array(Set(references)).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
-    private func localDigest(for key: String) -> String? {
-        images.first { imageUpdateKey($0.reference) == key }?.digest
+    private func localRuntimeTargets(for reference: String) -> [Core.Runtime.Kind] {
+        Array(Set(localRuntimeKinds(for: reference, summary: .localImages) +
+            localRuntimeKinds(for: reference, summary: .containerImages)))
+            .sorted { $0.rawValue < $1.rawValue }
+    }
+
+    private func localDigest(for reference: String,
+                             runtimeKind: Core.Runtime.Kind) -> String? {
+        let key = imageUpdateKey(reference)
+        return images.first { $0.runtimeKind == runtimeKind && imageUpdateKey($0.reference) == key }?.digest
+    }
+
+    private func aggregateUpdateStatus(_ statuses: [Core.Image.UpdateStatus]) -> Core.Image.UpdateStatus {
+        for state in [Core.Image.UpdateState.updateAvailable, .checking, .error, .current] {
+            if let status = statuses.first(where: { $0.state == state }) { return status }
+        }
+        return Core.Image.UpdateStatus()
     }
 
     // MARK: Persistence

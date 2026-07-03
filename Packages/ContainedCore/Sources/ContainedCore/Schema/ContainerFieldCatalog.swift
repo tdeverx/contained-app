@@ -104,31 +104,34 @@ public extension Core.Field.Path {
 public extension Core.Schema.Definition {
     static func containerRunEdit(runtimeKind: Core.Runtime.Kind,
                                  operation: Core.Schema.Operation = .containerCreate) -> Core.Schema.Definition {
-        Core.Schema.Definition(operation: operation,
-                               runtimeKind: runtimeKind,
-                               fields: Self.runtimeAwareRunFields(initialRuntime: runtimeKind))
+        let profile = Core.Runtime.module(for: runtimeKind)?.schemaProfile()
+            ?? Core.Schema.RuntimeProfile(kind: runtimeKind, supportedPaths: [])
+        return Core.Schema.Definition(operation: operation,
+                                      runtimeKind: runtimeKind,
+                                      fields: Self.runtimeAwareRunFields(initialRuntime: runtimeKind,
+                                                                         profile: profile))
     }
 
     static var appleContainerRunFields: [Core.Schema.FieldDescriptor] {
-        runtimeAwareRunFields(initialRuntime: .appleContainer)
+        let profile = Core.Runtime.module(for: .appleContainer)?.schemaProfile()
+            ?? Core.Schema.RuntimeProfile(kind: .appleContainer, supportedPaths: [])
+        return runtimeAwareRunFields(initialRuntime: .appleContainer, profile: profile)
     }
 
-    private static func runtimeAwareRunFields(initialRuntime: Core.Runtime.Kind) -> [Core.Schema.FieldDescriptor] {
-        appleContainerRunFieldsBase.map { descriptor in
+    static var canonicalRunFields: [Core.Schema.FieldDescriptor] {
+        appleContainerRunFieldsBase
+    }
+
+    private static func runtimeAwareRunFields(initialRuntime: Core.Runtime.Kind,
+                                              profile: Core.Schema.RuntimeProfile) -> [Core.Schema.FieldDescriptor] {
+        let fields = appleContainerRunFieldsBase.map { descriptor in
             var field = descriptor
             if field.path == .runtimeKind {
                 field.defaultValue = .string(initialRuntime.rawValue)
-                field.support[.docker] = .supported
-                field.tipRefs[.docker] = field.tipRefs[.appleContainer]
-                return field
-            }
-
-            field.support[.docker] = dockerSupport(for: field)
-            if field.support[.docker]?.state == .supported, field.tipRefs[.docker] == nil {
-                field.tipRefs[.docker] = field.tipRefs[.appleContainer]
             }
             return field
         }
+        return profile.apply(to: fields)
     }
 
     private static var appleContainerRunFieldsBase: [Core.Schema.FieldDescriptor] {
@@ -408,46 +411,5 @@ public extension Core.Schema.Definition {
             disabled(.composeModels, .stringList, "Models", defaultValue: .stringList([]), compose: ("models", "models: [ai_model]"), tip: "Compose model metadata is preserved for future runtimes."),
             disabled(.composeUseAPISocket, .bool, "Use API socket", defaultValue: .bool(false), compose: ("use_api_socket", "use_api_socket: true"), tip: "Compose API socket access is preserved for future runtimes."),
         ]
-    }
-
-    private static func dockerSupport(for descriptor: Core.Schema.FieldDescriptor) -> Core.Schema.FieldSupport {
-        let unsupported = Core.Schema.FieldSupport(
-            state: .disabled,
-            disabledReasonKey: "schema.disabled.docker.unsupportedAppleContainer",
-            defaultDisabledReason: "Known from Apple container or Compose, not executable by Docker."
-        )
-        let composeOnlyUnsupported = Core.Schema.FieldSupport(
-            state: .disabled,
-            disabledReasonKey: "schema.disabled.docker.composeOnly",
-            defaultDisabledReason: "Compose stack metadata is preserved, but V1 Docker support runs single containers only."
-        )
-
-        let sharedDockerPaths: Set<Core.Field.Path> = [
-            .imageReference, .imagePlatform, .containerName, .processCommand, .processEntrypoint,
-            .processDetach, .processRemoveOnExit, .processInteractive, .processTTY,
-            .processWorkingDirectory, .processUser, .processUlimits, .resourcesCPULimit,
-            .resourcesMemoryLimit, .resourcesSharedMemorySize, .environmentVariables,
-            .environmentFiles, .networkName, .networkPorts, .storageVolumes, .storageMounts,
-            .storageTmpfs, .metadataLabels, .lifecycleRestartPolicy, .securityReadOnlyRootFS,
-            .securityUseInit, .securityCapabilitiesAdd, .securityCapabilitiesDrop,
-            .outputContainerIDFile, .runtimeHandler, .networkDNSServers, .networkDNSSearchDomains,
-            .networkDNSOptions,
-        ]
-        let appleOnlyPaths: Set<Core.Field.Path> = [
-            .imageOS, .imageArchitecture, .networkSockets, .networkDNSDisabled,
-            .networkDNSDomain, .processUserID, .processGroupID, .securityRosetta,
-            .securitySSHAgent, .securityVirtualization, .imageInitReference, .kernelPath,
-            .registryScheme, .progressMode, .imageMaxConcurrentDownloads,
-        ]
-        let composeOnlyPaths: Set<Core.Field.Path> = [
-            .composeSecrets, .composeConfigs, .composeProfiles, .composeDeploy, .composeScale,
-            .composeLinks, .composeDependsOn, .composeProvider, .composeModels, .composeUseAPISocket,
-        ]
-
-        if sharedDockerPaths.contains(descriptor.path) { return .supported }
-        if appleOnlyPaths.contains(descriptor.path) { return unsupported }
-        if composeOnlyPaths.contains(descriptor.path) { return composeOnlyUnsupported }
-        if descriptor.sourceAliases.contains(where: { $0.source == .dockerCLI }) { return .supported }
-        return descriptor.support[.appleContainer] ?? unsupported
     }
 }

@@ -7,7 +7,7 @@ public extension Core.Schema.Definition {
 }
 
 public extension Core.Schema.Document {
-    static func containerCreate(runtimeKind: Core.Runtime.Kind = .appleContainer) -> Core.Schema.Document {
+    static func containerCreate(runtimeKind: Core.Runtime.Kind) -> Core.Schema.Document {
         var document = Core.Schema.Document(operation: .containerCreate, runtimeKind: runtimeKind)
         let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: runtimeKind)
         for field in definition.fields {
@@ -111,8 +111,7 @@ public extension Core.Schema.Document {
     }
 
     static func containerEdit(from configuration: Core.Container.Configuration) -> Core.Schema.Document {
-        var request = Core.Container.CreateRequest()
-        request.runtimeKind = configuration.runtimeKind
+        var request = Core.Container.CreateRequest(runtimeKind: configuration.runtimeKind)
         request.image = configuration.image.reference
         request.platform = configuration.platform.display
         request.name = configuration.id
@@ -171,8 +170,7 @@ public extension Core.Schema.Document {
         let errors = issues.filter { $0.severity == .error }
         if !errors.isEmpty { throw Core.Schema.ValidationError.invalid(errors) }
 
-        var request = Core.Container.CreateRequest()
-        request.runtimeKind = document.runtimeKind
+        var request = Core.Container.CreateRequest(runtimeKind: document.runtimeKind)
         request.image = document.string(.imageReference, in: definition)
         request.platform = document.string(.imagePlatform, in: definition)
         request.os = document.string(.imageOS, in: definition)

@@ -247,6 +247,46 @@ struct FieldDescriptor: Codable, Equatable, Hashable, Identifiable, Sendable {
     }
 }
 
+struct RuntimeProfile: Equatable, Sendable {
+    public var kind: Core.Runtime.Kind
+    public var supportedPaths: Set<Core.Field.Path>
+    public var disabledSupport: [Core.Field.Path: Core.Schema.FieldSupport]
+    public var tips: [Core.Field.Path: Core.Schema.FieldTipRef]
+    public var defaultDisabledSupport: Core.Schema.FieldSupport
+
+    public init(kind: Core.Runtime.Kind,
+                supportedPaths: Set<Core.Field.Path>,
+                disabledSupport: [Core.Field.Path: Core.Schema.FieldSupport] = [:],
+                tips: [Core.Field.Path: Core.Schema.FieldTipRef] = [:],
+                defaultDisabledSupport: Core.Schema.FieldSupport = Core.Schema.FieldSupport(
+                    state: .disabled,
+                    disabledReasonKey: "schema.disabled.unsupported",
+                    defaultDisabledReason: "This field is known to Core but is not available for the selected runtime."
+                )) {
+        self.kind = kind
+        self.supportedPaths = supportedPaths
+        self.disabledSupport = disabledSupport
+        self.tips = tips
+        self.defaultDisabledSupport = defaultDisabledSupport
+    }
+
+    public func apply(to descriptors: [Core.Schema.FieldDescriptor]) -> [Core.Schema.FieldDescriptor] {
+        descriptors.map { descriptor in
+            var field = descriptor
+            field.support[kind] = support(for: descriptor)
+            if let tip = tips[descriptor.path] {
+                field.tipRefs[kind] = tip
+            }
+            return field
+        }
+    }
+
+    public func support(for descriptor: Core.Schema.FieldDescriptor) -> Core.Schema.FieldSupport {
+        if supportedPaths.contains(descriptor.path) { return .supported }
+        return disabledSupport[descriptor.path] ?? defaultDisabledSupport
+    }
+}
+
 struct Definition: Codable, Equatable, Sendable {
     public var operation: Core.Schema.Operation
     public var version: Core.Schema.Version
@@ -299,7 +339,7 @@ struct Document: Codable, Equatable, Sendable {
 
     public init(operation: Core.Schema.Operation = .containerCreate,
                 schemaVersion: Core.Schema.Version = .current,
-                runtimeKind: Core.Runtime.Kind = .appleContainer,
+                runtimeKind: Core.Runtime.Kind,
                 values: [Core.Field.Path: Core.Schema.Value] = [:],
                 provenance: Core.Field.ProvenanceMap = Core.Field.ProvenanceMap()) {
         self.operation = operation

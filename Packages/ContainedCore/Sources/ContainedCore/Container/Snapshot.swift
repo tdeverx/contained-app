@@ -12,6 +12,7 @@ struct Snapshot: Codable, Sendable, Identifiable, Hashable {
     public let runtimeKind: Core.Runtime.Kind
 
     public var state: Core.Runtime.Status { status.state }
+    public var rawState: String { status.rawState }
     public var image: String { configuration.image.reference }
     public var startedDate: Date? { status.startedDate }
     public var scopedID: String { runtimeKind.scopedID(for: id) }
@@ -24,7 +25,7 @@ struct Snapshot: Codable, Sendable, Identifiable, Hashable {
     public init(configuration: Core.Container.Configuration,
                 id: String,
                 status: Core.Container.RuntimeState,
-                runtimeKind: Core.Runtime.Kind = .appleContainer) {
+                runtimeKind: Core.Runtime.Kind) {
         self.configuration = configuration
         self.id = id
         self.status = status
@@ -50,7 +51,8 @@ struct Snapshot: Codable, Sendable, Identifiable, Hashable {
     /// before any container from it exists). Encodes a minimal payload first so unusual image or
     /// volume names are escaped safely before decoding through the same defaults as real snapshots.
     public static func placeholder(id: String, image: String,
-                                   state: Core.Runtime.Status = .running) -> Core.Container.Snapshot {
+                                   state: Core.Runtime.Status = .running,
+                                   runtimeKind: Core.Runtime.Kind) -> Core.Container.Snapshot {
         let payload = PlaceholderSnapshotPayload(
             id: id,
             status: .init(state: state.rawValue),
@@ -58,7 +60,9 @@ struct Snapshot: Codable, Sendable, Identifiable, Hashable {
         )
         do {
             let data = try JSONEncoder().encode(payload)
-            return try JSONDecoder().decode(Core.Container.Snapshot.self, from: data)
+            return try Core.Container.JSON.decode(Core.Container.Snapshot.self,
+                                                 from: data,
+                                                 runtimeKind: runtimeKind)
         } catch {
             preconditionFailure("Invalid placeholder snapshot: \(error)")
         }
@@ -90,14 +94,40 @@ private struct PlaceholderSnapshotPayload: Encodable {
 /// The `status` object inside a snapshot.
 struct RuntimeState: Codable, Sendable, Hashable {
     public let state: Core.Runtime.Status
+    public let rawState: String
     public let networks: [NetworkInterfaceStatus]
     public let startedDate: Date?
 
+    enum CodingKeys: String, CodingKey {
+        case state
+        case networks
+        case startedDate
+    }
+
+    public init(state: Core.Runtime.Status,
+                rawState: String? = nil,
+                networks: [NetworkInterfaceStatus] = [],
+                startedDate: Date? = nil) {
+        self.state = state
+        self.rawState = rawState ?? state.rawValue
+        self.networks = networks
+        self.startedDate = startedDate
+    }
+
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.state = try c.decodeIfPresent(Core.Runtime.Status.self, forKey: .state) ?? .unknown
+        let rawState = try c.decodeIfPresent(String.self, forKey: .state) ?? Core.Runtime.Status.unknown.rawValue
+        self.rawState = rawState
+        self.state = Core.Runtime.Status(rawValue: rawState) ?? .unknown
         self.networks = try c.decodeIfPresent([NetworkInterfaceStatus].self, forKey: .networks) ?? []
         self.startedDate = try c.decodeIfPresent(Date.self, forKey: .startedDate)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(rawState, forKey: .state)
+        try c.encode(networks, forKey: .networks)
+        try c.encodeIfPresent(startedDate, forKey: .startedDate)
     }
 }
 
@@ -141,7 +171,17 @@ struct Configuration: Codable, Sendable, Hashable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        runtimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) ?? .appleContainer
+        if let decodedRuntimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) {
+            runtimeKind = decodedRuntimeKind
+        } else if let contextRuntimeKind = decoder.coreRuntimeKindContext {
+            runtimeKind = contextRuntimeKind
+        } else {
+            throw DecodingError.keyNotFound(
+                CodingKeys.runtimeKind,
+                DecodingError.Context(codingPath: decoder.codingPath,
+                                      debugDescription: "Missing runtimeKind and no runtime decoding context was provided.")
+            )
+        }
         id = try c.decode(String.self, forKey: .id)
         image = try c.decode(ImageReference.self, forKey: .image)
         initProcess = try c.decode(ProcessConfiguration.self, forKey: .initProcess)
@@ -167,7 +207,7 @@ struct Configuration: Codable, Sendable, Hashable {
         creationDate = try c.decodeIfPresent(Date.self, forKey: .creationDate)
     }
 
-    public init(runtimeKind: Core.Runtime.Kind = .appleContainer,
+    public init(runtimeKind: Core.Runtime.Kind,
                 id: String,
                 image: ImageReference,
                 initProcess: ProcessConfiguration,

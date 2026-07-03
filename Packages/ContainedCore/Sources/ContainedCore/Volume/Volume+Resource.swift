@@ -15,7 +15,7 @@ struct Resource: Codable, Sendable, Identifiable, Hashable {
     public var scopedID: String { runtimeKind.scopedID(for: id) }
 
     public init(configuration: Core.Volume.Configuration,
-                runtimeKind: Core.Runtime.Kind = .appleContainer) {
+                runtimeKind: Core.Runtime.Kind) {
         self.configuration = configuration
         self.runtimeKind = runtimeKind
     }
@@ -23,7 +23,17 @@ struct Resource: Codable, Sendable, Identifiable, Hashable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         configuration = try c.decode(Core.Volume.Configuration.self, forKey: .configuration)
-        runtimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) ?? .appleContainer
+        if let decodedRuntimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) {
+            runtimeKind = decodedRuntimeKind
+        } else if let contextRuntimeKind = decoder.coreRuntimeKindContext {
+            runtimeKind = contextRuntimeKind
+        } else {
+            throw DecodingError.keyNotFound(
+                CodingKeys.runtimeKind,
+                DecodingError.Context(codingPath: decoder.codingPath,
+                                      debugDescription: "Missing runtimeKind and no runtime decoding context was provided.")
+            )
+        }
     }
 
     public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Volume.Resource {

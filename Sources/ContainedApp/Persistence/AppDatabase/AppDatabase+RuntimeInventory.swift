@@ -99,7 +99,23 @@ extension AppDatabase {
         let seen = Set(statuses.keys)
         for (key, status) in statuses {
             let data = Self.encode(status)
-            if let image = fetch(ImageRecord.self).first(where: { $0.identity == key || Core.Registry.ImageReference.normalizedKey($0.primaryReference) == key }) {
+            if let scoped = Core.Runtime.Kind.parseScopedID(key) {
+                if let tag = fetch(ImageTagRecord.self).first(where: { $0.scopedID == key }) {
+                    tag.updateStatusData = data
+                    tag.lastCheckedAt = observedAt
+                    tag.updatedAt = observedAt
+                } else {
+                    context.insert(ImageTagRecord(scopedID: key,
+                                                  imageIdentity: scoped.id,
+                                                  reference: scoped.id,
+                                                  runtimeKindRaw: scoped.kind.rawValue,
+                                                  runtimeImageID: scoped.id,
+                                                  updateStatusData: data,
+                                                  isLocal: false,
+                                                  lastCheckedAt: observedAt,
+                                                  updatedAt: observedAt))
+                }
+            } else if let image = fetch(ImageRecord.self).first(where: { $0.identity == key || Core.Registry.ImageReference.normalizedKey($0.primaryReference) == key }) {
                 image.updateStatusData = data
                 image.lastCheckedAt = observedAt
                 image.updatedAt = observedAt
@@ -114,6 +130,10 @@ extension AppDatabase {
         for image in fetch(ImageRecord.self) where !seen.contains(image.identity) && !seen.contains(Core.Registry.ImageReference.normalizedKey(image.primaryReference)) {
             image.updateStatusData = nil
             image.updatedAt = observedAt
+        }
+        for tag in fetch(ImageTagRecord.self) where tag.updateStatusData != nil && !seen.contains(tag.scopedID) {
+            tag.updateStatusData = nil
+            tag.updatedAt = observedAt
         }
         save()
     }
@@ -131,6 +151,16 @@ extension AppDatabase {
             let value = status.state == .checking ? Core.Image.UpdateStatus() : status
             snapshot[record.identity] = value
             snapshot[Core.Registry.ImageReference.normalizedKey(record.primaryReference)] = value
+        }
+        for tag in fetch(ImageTagRecord.self) {
+            guard let data = tag.updateStatusData else { continue }
+            let status: Core.Image.UpdateStatus
+            do {
+                status = try JSONDecoder().decode(Core.Image.UpdateStatus.self, from: data)
+            } catch {
+                fatalError("Unable to decode image tag update status for \(tag.scopedID): \(error)")
+            }
+            snapshot[tag.scopedID] = status.state == .checking ? Core.Image.UpdateStatus() : status
         }
         return snapshot
     }

@@ -500,7 +500,7 @@ struct ToolbarImageGroupCard: View {
             UI.Card.FooterMini {
                 UI.Symbol.Image(systemName: "cpu", size: .caption2)
             } text: {
-                UI.Card.MetricText(text: app.runtimeDescriptor(for: tag.runtimeKind).displayName)
+                UI.Card.MetricText(text: app.runtimeDescriptor(for: tag.runtimeKind)?.displayName ?? tag.runtimeKind.rawValue)
             }
         } footerActions: {
             footerAction("play", help: AppText.run) {

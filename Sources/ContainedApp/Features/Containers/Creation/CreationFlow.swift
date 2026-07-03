@@ -58,7 +58,7 @@ struct CreationFlow: View {
         }
     }
     @State private var page: Page
-    @State private var spec = ContainerFormState()
+    @State private var spec = ContainerFormState(runtimeKind: .appleContainer)
     @State private var initialSearchQuery = ""
     @State private var localImageQuery = ""
     @State private var composeText = ""
@@ -270,7 +270,8 @@ struct CreationFlow: View {
 
     private var searchPage: some View {
         contentOnlyScaffold {
-            RegistryImageSearch(initialQuery: initialSearchQuery) { picked in
+            RegistryImageSearch(initialQuery: initialSearchQuery,
+                                runtimeKind: resourceRuntimeKind) { picked in
                 configure(with: pickedForSelectedRuntime(picked))
             }
         }
@@ -419,6 +420,11 @@ struct CreationFlow: View {
 
     private func configure(with picked: ContainerFormState, returningTo returnPage: Page? = nil) {
         let currentPage = page
+        var picked = picked
+        if picked.image.trimmingCharacters(in: .whitespaces).isEmpty ||
+            app.availableRuntimeDescriptors.contains(where: { $0.kind == picked.effectiveRuntimeKind }) == false {
+            picked.runtimeKind = resourceRuntimeKind
+        }
         spec = picked
         configureReturnPage = returnPage ?? (currentPage == .configure ? nil : currentPage)
         configureToken &+= 1

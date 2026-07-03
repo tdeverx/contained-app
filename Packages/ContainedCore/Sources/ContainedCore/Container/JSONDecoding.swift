@@ -10,6 +10,10 @@ public extension Core.Container {
 enum JSON {
 
     public static let decoder: JSONDecoder = {
+        makeDecoder()
+    }()
+
+    public static func makeDecoder(runtimeKind: Core.Runtime.Kind? = nil) -> JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
@@ -20,8 +24,11 @@ enum JSON {
                 debugDescription: "Unrecognized date format: \(raw)"
             )
         }
+        if let runtimeKind {
+            decoder.userInfo[.coreRuntimeKind] = runtimeKind
+        }
         return decoder
-    }()
+    }
 
     public static let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -43,8 +50,10 @@ enum JSON {
     }
 
     /// Decode a value of the given type from raw CLI stdout.
-    public static func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        try decoder.decode(type, from: data)
+    public static func decode<T: Decodable>(_ type: T.Type,
+                                            from data: Data,
+                                            runtimeKind: Core.Runtime.Kind? = nil) throws -> T {
+        try makeDecoder(runtimeKind: runtimeKind).decode(type, from: data)
     }
 }
 

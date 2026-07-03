@@ -188,8 +188,7 @@ private struct LegacyContainerTemplateSpec: Decodable {
     }
 
     var formState: ContainerFormState {
-        var request = Core.Container.CreateRequest()
-        request.runtimeKind = runtimeKind ?? .appleContainer
+        var request = Core.Container.CreateRequest(runtimeKind: runtimeKind ?? .appleContainer)
         request.image = image
         request.platform = platform
         request.name = name
@@ -269,7 +268,7 @@ enum BuiltinTemplate {
     private static func make(_ name: String, symbol: String, image: String,
                              command: String = "", ports: [(String, String)] = [],
                              env: [(String, String)] = []) -> (name: String, symbol: String, spec: ContainerFormState) {
-        var spec = ContainerFormState()
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = image
         spec.command = command
         spec.ports = ports.map { PortMap(hostPort: $0.0, containerPort: $0.1, proto: "tcp") }

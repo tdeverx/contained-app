@@ -12,6 +12,7 @@ import ContainedCore
 struct RegistryImageSearch: View {
     /// Called with a prefilled spec when the user picks a starter, a popular image, or a search result.
     var initialQuery = ""
+    var runtimeKind: Core.Runtime.Kind
     var onSelect: (ContainerFormState) -> Void
 
     @State private var query = ""
@@ -55,14 +56,15 @@ struct RegistryImageSearch: View {
                     ForEach(BuiltinTemplate.all, id: \.name) { item in
                         quickPick(symbol: item.symbol, title: item.name,
                                   subtitle: Format.shortImage(item.spec.image)) {
-                            onSelect(item.spec)
+                            onSelect(spec(item.spec, runtimeKind: runtimeKind))
                         }
                     }
                 }
                 suggestionSection("Popular") {
                     ForEach(RecommendedImage.all) { image in
                         quickPick(symbol: image.symbol, title: image.name, subtitle: image.reference) {
-                            onSelect(RecommendedImage.spec(for: image.reference))
+                            onSelect(RecommendedImage.spec(for: image.reference,
+                                                           runtimeKind: runtimeKind))
                         }
                     }
                 }
@@ -126,7 +128,8 @@ struct RegistryImageSearch: View {
         choiceCard(symbol: "shippingbox",
                    title: result.repoName,
                    subtitle: result.shortDescription?.isEmpty == false ? result.shortDescription : nil,
-                   action: { onSelect(RecommendedImage.spec(for: result.pullReference)) }) {
+                   action: { onSelect(RecommendedImage.spec(for: result.pullReference,
+                                                            runtimeKind: runtimeKind)) }) {
             HStack(spacing: UI.Layout.Spacing.s) {
                 if result.isOfficial {
                     UI.Symbol.Image(systemName: "checkmark.seal.fill",
@@ -196,6 +199,13 @@ struct RegistryImageSearch: View {
         query = trimmed
     }
 
+    private func spec(_ spec: ContainerFormState,
+                      runtimeKind: Core.Runtime.Kind) -> ContainerFormState {
+        var spec = spec
+        spec.runtimeKind = runtimeKind
+        return spec
+    }
+
     @MainActor
     private func runSearch(_ searchQuery: String) async {
         guard Core.Registry.HubSearch.url(query: searchQuery) != nil else {
@@ -240,7 +250,7 @@ struct RecommendedImage: Identifiable, Hashable {
 
     /// Build a minimal spec that just targets `reference` — the configure form fills in the rest.
     static func spec(for reference: String,
-                     runtimeKind: Core.Runtime.Kind = .appleContainer) -> ContainerFormState {
+                     runtimeKind: Core.Runtime.Kind) -> ContainerFormState {
         var spec = ContainerFormState(runtimeKind: runtimeKind)
         spec.image = reference
         return spec

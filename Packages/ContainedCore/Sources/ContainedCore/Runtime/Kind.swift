@@ -29,6 +29,14 @@ public extension Core.Runtime {
         public func scopedID(for id: String) -> String {
             "\(rawValue)::\(id)"
         }
+
+        public static func parseScopedID(_ scopedID: String) -> (kind: Core.Runtime.Kind, id: String)? {
+            guard let separator = scopedID.range(of: "::") else { return nil }
+            let rawKind = String(scopedID[..<separator.lowerBound])
+            let id = String(scopedID[separator.upperBound...])
+            guard !rawKind.isEmpty, !id.isEmpty else { return nil }
+            return (Core.Runtime.Kind(rawValue: rawKind), id)
+        }
     }
 }
 

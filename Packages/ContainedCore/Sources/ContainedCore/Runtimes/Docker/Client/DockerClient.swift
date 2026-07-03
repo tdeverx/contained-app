@@ -301,8 +301,6 @@ struct DockerClient: Sendable {
     }
 }
 
-extension DockerClient: ContainerRuntimeClient {}
-
 private struct DockerSystemDFRow: Decodable {
     var type: String
     var totalCountString: String?

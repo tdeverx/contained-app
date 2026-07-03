@@ -1,30 +1,15 @@
 import Foundation
 
 public extension Core {
-    struct Configuration: Sendable {
-        public var appleContainer: AppleContainerConfiguration
-        public var docker: DockerConfiguration
+    struct Configuration: Sendable, Equatable {
+        public var runtimes: [Core.Runtime.Kind: Core.Runtime.Configuration]
 
-        public init(appleContainer: AppleContainerConfiguration = AppleContainerConfiguration(),
-                    docker: DockerConfiguration = DockerConfiguration()) {
-            self.appleContainer = appleContainer
-            self.docker = docker
+        public init(runtimes: [Core.Runtime.Kind: Core.Runtime.Configuration] = [:]) {
+            self.runtimes = runtimes
         }
-    }
 
-    struct AppleContainerConfiguration: Sendable {
-        public var cliPathOverride: String?
-
-        public init(cliPathOverride: String? = nil) {
-            self.cliPathOverride = cliPathOverride
-        }
-    }
-
-    struct DockerConfiguration: Sendable {
-        public var cliPathOverride: String?
-
-        public init(cliPathOverride: String? = nil) {
-            self.cliPathOverride = cliPathOverride
+        public func configuration(for kind: Core.Runtime.Kind) -> Core.Runtime.Configuration {
+            runtimes[kind] ?? Core.Runtime.Configuration()
         }
     }
 }
@@ -32,13 +17,14 @@ public extension Core {
 public extension Core {
     struct RuntimeReadiness: Sendable, Equatable, Identifiable {
         public enum State: String, Sendable, Equatable {
+            case cliMissing
             case ready
             case unsupported
             case endpointUnavailable
         }
 
         public var kind: Core.Runtime.Kind
-        public var cliURL: URL
+        public var cliURL: URL?
         public var version: String?
         public var state: State
         public var message: String?
@@ -46,7 +32,7 @@ public extension Core {
         public var id: Core.Runtime.Kind { kind }
 
         public init(kind: Core.Runtime.Kind,
-                    cliURL: URL,
+                    cliURL: URL?,
                     version: String? = nil,
                     state: State = .ready,
                     message: String? = nil) {
@@ -60,104 +46,117 @@ public extension Core {
 
     struct Orchestrator: Sendable, Equatable {
         public enum Bootstrap: Sendable, Equatable {
-            case cliMissing
+            case cliMissing(runtimes: [Core.RuntimeReadiness])
             case ready(orchestrator: Core.Orchestrator, runtimes: [Core.RuntimeReadiness])
         }
 
-        private let runtimes: [Core.Runtime.Kind: any ContainerRuntimeClient]
+        private let runtimes: [Core.Runtime.Kind: any RuntimeClient]
         private let runtimeCLIURLs: [Core.Runtime.Kind: URL]
+        private let modules: [Core.Runtime.Kind: any Core.Runtime.Module]
 
         public static func == (lhs: Core.Orchestrator, rhs: Core.Orchestrator) -> Bool {
             lhs.runtimeCLIURLs == rhs.runtimeCLIURLs
         }
 
         public static func live(configuration: Core.Configuration = Core.Configuration()) -> Core.Orchestrator? {
-            var runtimes: [Core.Runtime.Kind: any ContainerRuntimeClient] = [:]
+            var runtimes: [Core.Runtime.Kind: any RuntimeClient] = [:]
             var cliURLs: [Core.Runtime.Kind: URL] = [:]
+            var modules: [Core.Runtime.Kind: any Core.Runtime.Module] = [:]
 
-            if let url = AppleContainerCLILocator.locate(override: configuration.appleContainer.cliPathOverride) {
-                cliURLs[.appleContainer] = url
-                runtimes[.appleContainer] = AppleContainerClient(runner: Core.Command.Runner(executableURL: url))
-            }
-
-            if let url = DockerCLILocator.locate(override: configuration.docker.cliPathOverride) {
-                cliURLs[.docker] = url
-                runtimes[.docker] = DockerClient(runner: Core.Command.Runner(executableURL: url))
+            for module in Core.Runtime.builtInModules {
+                let runtimeConfiguration = configuration.configuration(for: module.descriptor.kind)
+                guard let url = module.locateCLI(override: runtimeConfiguration.cliPathOverride) else { continue }
+                cliURLs[module.descriptor.kind] = url
+                modules[module.descriptor.kind] = module
+                runtimes[module.descriptor.kind] = module.makeClient(
+                    runner: Core.Command.Runner(executableURL: url)
+                )
             }
 
             guard !runtimes.isEmpty else { return nil }
-            return Core.Orchestrator(cliURLs: cliURLs, runtimes: runtimes)
+            return Core.Orchestrator(cliURLs: cliURLs, runtimes: runtimes, modules: modules)
         }
 
         public static func testing(runner: any Core.Command.Running,
                                    cliURL: URL = URL(fileURLWithPath: "/usr/bin/container"),
-                                   runtimeKind: Core.Runtime.Kind = .appleContainer) -> Core.Orchestrator {
-            let client: any ContainerRuntimeClient = runtimeKind == .docker
-                ? DockerClient(runner: runner)
-                : AppleContainerClient(runner: runner)
-            return Core.Orchestrator(cliURLs: [runtimeKind: cliURL],
-                                     runtimes: [runtimeKind: client])
+                                   runtimeKind: Core.Runtime.Kind) -> Core.Orchestrator {
+            guard let module = Core.Runtime.module(for: runtimeKind) else {
+                preconditionFailure("No runtime module registered for \(runtimeKind.rawValue)")
+            }
+            return Core.Orchestrator(
+                cliURLs: [runtimeKind: cliURL],
+                runtimes: [runtimeKind: module.makeClient(runner: runner)],
+                modules: [runtimeKind: module]
+            )
         }
 
         public static func testing(runners: [Core.Runtime.Kind: any Core.Command.Running],
                                    cliURLs: [Core.Runtime.Kind: URL] = [:]) -> Core.Orchestrator {
-            var clients: [Core.Runtime.Kind: any ContainerRuntimeClient] = [:]
+            var clients: [Core.Runtime.Kind: any RuntimeClient] = [:]
+            var modules: [Core.Runtime.Kind: any Core.Runtime.Module] = [:]
             for (kind, runner) in runners {
-                clients[kind] = kind == .docker
-                    ? DockerClient(runner: runner)
-                    : AppleContainerClient(runner: runner)
+                guard let module = Core.Runtime.module(for: kind) else {
+                    preconditionFailure("No runtime module registered for \(kind.rawValue)")
+                }
+                modules[kind] = module
+                clients[kind] = module.makeClient(runner: runner)
             }
             let resolvedURLs = Dictionary(uniqueKeysWithValues: clients.keys.map { kind in
-                (kind, cliURLs[kind] ?? URL(fileURLWithPath: kind == .docker ? "/usr/local/bin/docker" : "/usr/bin/container"))
+                let executableName = modules[kind]?.descriptor.executableName ?? kind.rawValue
+                return (kind, cliURLs[kind] ?? URL(fileURLWithPath: "/usr/bin/\(executableName)"))
             })
-            return Core.Orchestrator(cliURLs: resolvedURLs, runtimes: clients)
+            return Core.Orchestrator(cliURLs: resolvedURLs, runtimes: clients, modules: modules)
         }
 
         public static func bootstrap(configuration: Core.Configuration = Core.Configuration()) async -> Bootstrap {
-            guard let orchestrator = live(configuration: configuration) else { return .cliMissing }
             var readiness: [Core.RuntimeReadiness] = []
-            for descriptor in orchestrator.availableRuntimeDescriptors {
-                guard let cliURL = orchestrator.cliURL(for: descriptor.kind) else { continue }
-                let version: String?
-                let state: Core.RuntimeReadiness.State
-                switch descriptor.kind {
-                case .appleContainer:
-                    let runner = Core.Command.Runner(executableURL: cliURL)
-                    let versionData = try? await runner.run(ContainerCommands.version)
-                    version = versionData.map { String(decoding: $0, as: UTF8.self) }
-                        .flatMap(AppleContainerCLILocator.parseVersion)
-                    state = version.map(AppleContainerCLILocator.isSupported) == false ? .unsupported : .ready
-                case .docker:
-                    let runner = Core.Command.Runner(executableURL: cliURL)
-                    let versionData = try? await runner.run(DockerCommands.version)
-                    version = versionData.map { String(decoding: $0, as: UTF8.self) }
-                        .flatMap(DockerCLILocator.parseVersion)
-                    state = .ready
-                default:
-                    version = nil
-                    state = .ready
+            var runtimes: [Core.Runtime.Kind: any RuntimeClient] = [:]
+            var cliURLs: [Core.Runtime.Kind: URL] = [:]
+            var modules: [Core.Runtime.Kind: any Core.Runtime.Module] = [:]
+
+            for module in Core.Runtime.builtInModules {
+                let kind = module.descriptor.kind
+                let runtimeConfiguration = configuration.configuration(for: kind)
+                guard let cliURL = module.locateCLI(override: runtimeConfiguration.cliPathOverride) else {
+                    readiness.append(Core.RuntimeReadiness(kind: kind,
+                                                           cliURL: nil,
+                                                           state: .cliMissing,
+                                                           message: "\(module.descriptor.executableName ?? kind.rawValue) CLI was not found."))
+                    continue
                 }
-                readiness.append(Core.RuntimeReadiness(kind: descriptor.kind,
-                                                       cliURL: cliURL,
-                                                       version: version,
-                                                       state: state))
+
+                let runner = Core.Command.Runner(executableURL: cliURL)
+                cliURLs[kind] = cliURL
+                modules[kind] = module
+                runtimes[kind] = module.makeClient(runner: runner)
+                readiness.append(await module.readiness(cliURL: cliURL, runner: runner))
             }
-            return .ready(orchestrator: orchestrator, runtimes: readiness)
+
+            guard !runtimes.isEmpty else { return .cliMissing(runtimes: readiness) }
+            return .ready(
+                orchestrator: Core.Orchestrator(cliURLs: cliURLs, runtimes: runtimes, modules: modules),
+                runtimes: readiness
+            )
         }
 
         init(cliURLs: [Core.Runtime.Kind: URL],
-             runtimes: [Core.Runtime.Kind: any ContainerRuntimeClient]) {
+             runtimes: [Core.Runtime.Kind: any RuntimeClient],
+             modules: [Core.Runtime.Kind: any Core.Runtime.Module]? = nil) {
             self.runtimeCLIURLs = cliURLs
             self.runtimes = runtimes
+            self.modules = modules ?? Dictionary(
+                uniqueKeysWithValues: Core.Runtime.builtInModules
+                    .filter { runtimes.keys.contains($0.descriptor.kind) }
+                    .map { ($0.descriptor.kind, $0) }
+            )
         }
 
         public var availableRuntimeDescriptors: [Core.Runtime.Descriptor] {
             runtimes.values.map(\.descriptor).sorted { $0.displayName < $1.displayName }
         }
 
-        public func descriptor(for kind: Core.Runtime.Kind) -> Core.Runtime.Descriptor {
-            availableRuntimeDescriptors.first { $0.kind == kind }
-                ?? (kind == .docker ? .docker : .appleContainer)
+        public func descriptor(for kind: Core.Runtime.Kind) -> Core.Runtime.Descriptor? {
+            availableRuntimeDescriptors.first { $0.kind == kind } ?? modules[kind]?.descriptor
         }
 
         public func supportsRuntime(_ kind: Core.Runtime.Kind, capability: Core.Runtime.Capability = .containers) -> Bool {
@@ -165,12 +164,31 @@ public extension Core {
         }
 
         internal func requireRuntime(_ kind: Core.Runtime.Kind,
-                                     capability: Core.Runtime.Capability) throws -> any ContainerRuntimeClient {
+                                     capability: Core.Runtime.Capability) throws -> any RuntimeClient {
             guard let runtime = runtimes[kind] else {
                 throw Core.Runtime.UnsupportedCapability(kind: kind, capability: capability)
             }
             try runtime.descriptor.require(capability)
             return runtime
+        }
+
+        internal func requireRuntime<Capability>(_ kind: Core.Runtime.Kind,
+                                                 capability: Core.Runtime.Capability,
+                                                 as capabilityType: Capability.Type) throws -> Capability {
+            let runtime = try requireRuntime(kind, capability: capability)
+            guard let typed = runtime as? Capability else {
+                throw Core.Runtime.UnsupportedCapability(kind: kind, capability: capability)
+            }
+            return typed
+        }
+
+        private func requireModule(_ kind: Core.Runtime.Kind,
+                                   capability: Core.Runtime.Capability) throws -> any Core.Runtime.Module {
+            guard let module = modules[kind] ?? Core.Runtime.module(for: kind) else {
+                throw Core.Runtime.UnsupportedCapability(kind: kind, capability: capability)
+            }
+            try module.descriptor.require(capability)
+            return module
         }
 
         public func cliURL(for kind: Core.Runtime.Kind) -> URL? {
@@ -195,8 +213,11 @@ public extension Core {
             var successes = 0
             var firstError: Swift.Error?
             for kind in runtimes.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
-                guard let runtime = runtimes[kind] else { continue }
+                guard runtimes[kind]?.descriptor.supports(.containers) == true else { continue }
                 do {
+                    let runtime = try requireRuntime(kind,
+                                                     capability: .containers,
+                                                     as: (any RuntimeContainerClient).self)
                     snapshots += try await runtime.listContainers(all: all).map { $0.scoped(to: kind) }
                     successes += 1
                 } catch {
@@ -209,14 +230,18 @@ public extension Core {
 
         public func stats(ids: [String] = [],
                           runtimeKind: Core.Runtime.Kind) async throws -> [Core.Metrics.ContainerStats] {
-            let runtime = try requireRuntime(runtimeKind, capability: .containers)
+            let runtime = try requireRuntime(runtimeKind,
+                                             capability: .containers,
+                                             as: (any RuntimeContainerClient).self)
             return try await runtime.stats(ids: ids).map { $0.scoped(to: runtimeKind) }
         }
 
         public func streamStats(ids: [String] = [],
                                 runtimeKind: Core.Runtime.Kind) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Swift.Error> {
             do {
-                let runtime = try requireRuntime(runtimeKind, capability: .containers)
+                let runtime = try requireRuntime(runtimeKind,
+                                                 capability: .containers,
+                                                 as: (any RuntimeContainerClient).self)
                 let source = runtime.streamStats(ids: ids)
                 return AsyncThrowingStream { continuation in
                     let task = Task(priority: .utility) {
@@ -237,59 +262,76 @@ public extension Core {
         }
 
         public func diskUsage(runtimeKind: Core.Runtime.Kind) async throws -> Core.System.DiskUsage {
-            try await requireRuntime(runtimeKind, capability: .systemStatus).diskUsage()
+            try await requireRuntime(runtimeKind,
+                                     capability: .systemStatus,
+                                     as: (any RuntimeSystemStatusClient).self).diskUsage()
         }
 
         public func systemProperties(runtimeKind: Core.Runtime.Kind) async throws -> Core.System.Properties {
-            try await requireRuntime(runtimeKind, capability: .systemProperties).systemProperties()
+            try await requireRuntime(runtimeKind,
+                                     capability: .systemProperties,
+                                     as: (any RuntimeSystemStatusClient).self).systemProperties()
         }
 
         public func dnsDomains(runtimeKind: Core.Runtime.Kind) async throws -> [String] {
-            try await requireRuntime(runtimeKind, capability: .dnsManagement).dnsDomains()
+            try await requireRuntime(runtimeKind,
+                                     capability: .dnsManagement,
+                                     as: (any RuntimeDNSClient).self).dnsDomains()
         }
 
         @discardableResult public func createDNSDomain(_ domain: String,
                                                        runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .dnsManagement).createDNSDomain(domain)
+            try await requireRuntime(runtimeKind,
+                                     capability: .dnsManagement,
+                                     as: (any RuntimeDNSClient).self).createDNSDomain(domain)
         }
 
         @discardableResult public func deleteDNSDomain(_ domain: String,
                                                        runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .dnsManagement).deleteDNSDomain(domain)
+            try await requireRuntime(runtimeKind,
+                                     capability: .dnsManagement,
+                                     as: (any RuntimeDNSClient).self).deleteDNSDomain(domain)
         }
 
         @discardableResult public func setRecommendedKernel(runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .kernelManagement).setRecommendedKernel()
+            try await requireRuntime(runtimeKind,
+                                     capability: .kernelManagement,
+                                     as: (any RuntimeKernelClient).self).setRecommendedKernel()
         }
 
         public func execCapture(_ id: String,
                                 _ command: [String],
                                 runtimeKind: Core.Runtime.Kind) async throws -> String {
-            try await requireRuntime(runtimeKind, capability: .exec).execCapture(id, command)
+            try await requireRuntime(runtimeKind,
+                                     capability: .exec,
+                                     as: (any RuntimeExecClient).self).execCapture(id, command)
         }
 
         @discardableResult public func copy(source: String,
                                             destination: String,
                                             runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .copy).copy(source: source, destination: destination)
+            try await requireRuntime(runtimeKind,
+                                     capability: .copy,
+                                     as: (any RuntimeExecClient).self).copy(source: source, destination: destination)
         }
 
         public func terminalInvocation(containerID: String,
                                        shell: String,
                                        runtimeKind: Core.Runtime.Kind) throws -> Core.Command.Invocation {
-            _ = try requireRuntime(runtimeKind, capability: .exec)
-            let executable = try requireCLIURL(for: runtimeKind)
-            let arguments = runtimeKind == .docker
-                ? DockerCommands.execInteractive(containerID, shell: shell)
-                : ContainerCommands.execInteractive(containerID, shell: shell)
-            return Core.Command.Invocation(executableURL: executable, arguments: arguments)
+            _ = try requireRuntime(runtimeKind, capability: .exec, as: (any RuntimeExecClient).self)
+            let module = try requireModule(runtimeKind, capability: .exec)
+            return module.terminalInvocation(containerID: containerID,
+                                             shell: shell,
+                                             cliURL: try requireCLIURL(for: runtimeKind))
         }
 
         public func streamSystemLogs(follow: Bool,
                                      last: Int? = 500,
                                      runtimeKind: Core.Runtime.Kind) -> AsyncThrowingStream<String, Swift.Error> {
             do {
-                let runtime = try requireRuntime(runtimeKind, capability: .systemLogs)
+                let runtime = try requireRuntime(runtimeKind,
+                                                 capability: .systemLogs,
+                                                 as: (any RuntimeSystemLogsClient).self)
                 return runtime.streamSystemLogs(follow: follow, last: last)
             } catch {
                 return AsyncThrowingStream { continuation in continuation.finish(throwing: error) }
@@ -297,11 +339,15 @@ public extension Core {
         }
 
         public func systemStatus(runtimeKind: Core.Runtime.Kind) async throws -> Core.System.Status {
-            try await requireRuntime(runtimeKind, capability: .systemStatus).systemStatus()
+            try await requireRuntime(runtimeKind,
+                                     capability: .systemStatus,
+                                     as: (any RuntimeSystemStatusClient).self).systemStatus()
         }
 
         private func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
-            try requireRuntime(request.runtimeKind, capability: .containers).previewCreateCommand(for: request)
+            try requireRuntime(request.runtimeKind,
+                               capability: .containers,
+                               as: (any RuntimeContainerClient).self).previewCreateCommand(for: request)
         }
 
         public func previewCreateCommand(for document: Core.Schema.Document) throws -> Core.Command.Preview {
@@ -311,7 +357,9 @@ public extension Core {
         }
 
         @discardableResult private func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
-            try await requireRuntime(request.runtimeKind, capability: .containers).createContainer(request)
+            try await requireRuntime(request.runtimeKind,
+                                     capability: .containers,
+                                     as: (any RuntimeContainerClient).self).createContainer(request)
         }
 
         @discardableResult public func createContainer(_ document: Core.Schema.Document) async throws -> Core.Container.CreateResult {
@@ -322,7 +370,9 @@ public extension Core {
 
         @discardableResult private func recreateContainer(originalID: String,
                                                          request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
-            let runtime = try requireRuntime(request.runtimeKind, capability: .containers)
+            let runtime = try requireRuntime(request.runtimeKind,
+                                             capability: .containers,
+                                             as: (any RuntimeContainerClient).self)
             _ = try? await runtime.stop([originalID])
             _ = try await runtime.deleteContainers([originalID], force: true)
             return try await runtime.createContainer(request)
@@ -338,13 +388,17 @@ public extension Core {
         public func translateCompose(_ project: Core.Compose.Project,
                                      baseDirectory: URL?,
                                      runtimeKind: Core.Runtime.Kind) throws -> Core.Compose.ImportPlan {
-            try requireRuntime(runtimeKind, capability: .composeImport)
+            try requireRuntime(runtimeKind,
+                               capability: .composeImport,
+                               as: (any RuntimeComposeClient).self)
                 .translateCompose(project, baseDirectory: baseDirectory)
         }
 
         private func imageDefaults(for request: Core.Container.CreateRequest,
                                   in images: [Core.Image.Resource]) throws -> Core.Container.ImageDefaults? {
-            try requireRuntime(request.runtimeKind, capability: .containers)
+            try requireRuntime(request.runtimeKind,
+                               capability: .composeImport,
+                               as: (any RuntimeComposeClient).self)
                 .imageDefaults(for: request, in: images)
         }
 
@@ -358,14 +412,20 @@ public extension Core {
         public func planMigration(_ document: Core.Container.Document,
                                   to target: Core.Runtime.Kind?) throws -> Core.Migration.Plan {
             let source = document.canonical.createRequest.runtimeKind
-            return try requireRuntime(source, capability: .coreMigration)
-                .coreSwitchPlan(for: document.canonical.createRequest.effectiveName ?? "", to: target.map(descriptor(for:)))
+            return try requireRuntime(source,
+                                      capability: .coreMigration,
+                                      as: (any RuntimeComposeClient).self)
+                .coreSwitchPlan(for: document.canonical.createRequest.effectiveName ?? "",
+                                to: target.flatMap(descriptor(for:)))
         }
 
         public func coreSwitchPlan(for containerID: String,
                                    source: Core.Runtime.Kind,
                                    to target: Core.Runtime.Descriptor?) throws -> Core.Migration.Plan {
-            try requireRuntime(source, capability: .coreMigration).coreSwitchPlan(for: containerID, to: target)
+            try requireRuntime(source,
+                               capability: .coreMigration,
+                               as: (any RuntimeComposeClient).self)
+                .coreSwitchPlan(for: containerID, to: target)
         }
 
         public func runtimeNetworks() async throws -> [Core.Network.Resource] {
@@ -373,8 +433,11 @@ public extension Core {
             var successes = 0
             var firstError: Swift.Error?
             for kind in runtimes.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
-                guard let runtime = runtimes[kind] else { continue }
+                guard runtimes[kind]?.descriptor.supports(.networks) == true else { continue }
                 do {
+                    let runtime = try requireRuntime(kind,
+                                                     capability: .networks,
+                                                     as: (any RuntimeNetworkClient).self)
                     networks += try await runtime.networks().map { $0.scoped(to: kind) }
                     successes += 1
                 } catch {
@@ -390,8 +453,11 @@ public extension Core {
             var successes = 0
             var firstError: Swift.Error?
             for kind in runtimes.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
-                guard let runtime = runtimes[kind] else { continue }
+                guard runtimes[kind]?.descriptor.supports(.volumes) == true else { continue }
                 do {
+                    let runtime = try requireRuntime(kind,
+                                                     capability: .volumes,
+                                                     as: (any RuntimeVolumeClient).self)
                     volumes += try await runtime.volumes().map { $0.scoped(to: kind) }
                     successes += 1
                 } catch {
@@ -407,8 +473,11 @@ public extension Core {
             var successes = 0
             var firstError: Swift.Error?
             for kind in runtimes.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
-                guard let runtime = runtimes[kind] else { continue }
+                guard runtimes[kind]?.descriptor.supports(.images) == true else { continue }
                 do {
+                    let runtime = try requireRuntime(kind,
+                                                     capability: .images,
+                                                     as: (any RuntimeImageClient).self)
                     images += try await runtime.images().map { $0.scoped(to: kind) }
                     successes += 1
                 } catch {
@@ -421,7 +490,9 @@ public extension Core {
 
         public func inspectImage(_ ref: String,
                                  runtimeKind: Core.Runtime.Kind) async throws -> [Core.Image.Resource] {
-            let images = try await requireRuntime(runtimeKind, capability: .images).inspectImage(ref)
+            let images = try await requireRuntime(runtimeKind,
+                                                  capability: .images,
+                                                  as: (any RuntimeImageClient).self).inspectImage(ref)
             return images.map { $0.scoped(to: runtimeKind) }
         }
 
@@ -431,7 +502,9 @@ public extension Core {
                                tail: Int? = 200,
                                boot: Bool = false) -> AsyncThrowingStream<String, Swift.Error> {
             do {
-                let runtime = try requireRuntime(runtimeKind, capability: .containers)
+                let runtime = try requireRuntime(runtimeKind,
+                                                 capability: .containers,
+                                                 as: (any RuntimeContainerClient).self)
                 return runtime.streamLogs(id: id, follow: follow, tail: tail, boot: boot)
             } catch {
                 return AsyncThrowingStream { continuation in continuation.finish(throwing: error) }
@@ -442,7 +515,9 @@ public extension Core {
                                platform: String? = nil,
                                runtimeKind: Core.Runtime.Kind) -> AsyncThrowingStream<String, Swift.Error> {
             do {
-                let runtime = try requireRuntime(runtimeKind, capability: .images)
+                let runtime = try requireRuntime(runtimeKind,
+                                                 capability: .images,
+                                                 as: (any RuntimeImageClient).self)
                 return runtime.streamPull(ref, platform: platform)
             } catch {
                 return AsyncThrowingStream { continuation in continuation.finish(throwing: error) }
@@ -457,7 +532,9 @@ public extension Core {
                                 platform: String? = nil,
                                 runtimeKind: Core.Runtime.Kind) -> AsyncThrowingStream<String, Swift.Error> {
             do {
-                let runtime = try requireRuntime(runtimeKind, capability: .imageBuild)
+                let runtime = try requireRuntime(runtimeKind,
+                                                 capability: .imageBuild,
+                                                 as: (any RuntimeImageClient).self)
                 return runtime.streamBuild(context: context,
                                            tag: tag,
                                            dockerfile: dockerfile,
@@ -473,7 +550,9 @@ public extension Core {
                                platform: String? = nil,
                                runtimeKind: Core.Runtime.Kind) -> AsyncThrowingStream<String, Swift.Error> {
             do {
-                let runtime = try requireRuntime(runtimeKind, capability: .imagePush)
+                let runtime = try requireRuntime(runtimeKind,
+                                                 capability: .imagePush,
+                                                 as: (any RuntimeImageClient).self)
                 return runtime.streamPush(ref, platform: platform)
             } catch {
                 return AsyncThrowingStream { continuation in continuation.finish(throwing: error) }
@@ -482,102 +561,141 @@ public extension Core {
 
         @discardableResult public func runContainer(arguments: [String],
                                                     runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .containers).runContainer(arguments: arguments)
+            try await requireRuntime(runtimeKind,
+                                     capability: .containers,
+                                     as: (any RuntimeContainerClient).self).runContainer(arguments: arguments)
         }
 
-        @discardableResult public func performSystemAction(_ action: Core.Runtime.SystemAction) async throws -> Data {
-            try await requireRuntime(.appleContainer, capability: .systemStatus).performSystemAction(action)
+        @discardableResult public func performSystemAction(_ action: Core.Runtime.SystemAction,
+                                                           runtimeKind: Core.Runtime.Kind) async throws -> Data {
+            try await requireRuntime(runtimeKind,
+                                     capability: .serviceControl,
+                                     as: (any RuntimeServiceControlClient).self).performSystemAction(action)
         }
 
         public func registries(runtimeKind: Core.Runtime.Kind) async throws -> [Core.Registry.Login] {
-            try await requireRuntime(runtimeKind, capability: .registries).registries().map { $0.scoped(to: runtimeKind) }
+            try await requireRuntime(runtimeKind,
+                                     capability: .registries,
+                                     as: (any RuntimeRegistryClient).self).registries().map { $0.scoped(to: runtimeKind) }
         }
 
         @discardableResult public func registryLogin(server: String,
                                                      username: String,
                                                      password: String,
                                                      runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .registries)
+            try await requireRuntime(runtimeKind,
+                                     capability: .registries,
+                                     as: (any RuntimeRegistryClient).self)
                 .registryLogin(server: server, username: username, password: password)
         }
 
         @discardableResult public func registryLogout(server: String,
                                                       runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .registries).registryLogout(server: server)
+            try await requireRuntime(runtimeKind,
+                                     capability: .registries,
+                                     as: (any RuntimeRegistryClient).self).registryLogout(server: server)
         }
 
         @discardableResult public func deleteImages(_ refs: [String],
                                                     runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .images).deleteImages(refs)
+            try await requireRuntime(runtimeKind,
+                                     capability: .images,
+                                     as: (any RuntimeImageClient).self).deleteImages(refs)
         }
 
         @discardableResult public func tagImage(source: String,
                                                 target: String,
                                                 runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .images).tagImage(source: source, target: target)
+            try await requireRuntime(runtimeKind,
+                                     capability: .images,
+                                     as: (any RuntimeImageClient).self).tagImage(source: source, target: target)
         }
 
         @discardableResult public func saveImages(_ refs: [String],
                                                   to output: String,
                                                   runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .imageArchive).saveImages(refs, to: output)
+            try await requireRuntime(runtimeKind,
+                                     capability: .imageArchive,
+                                     as: (any RuntimeImageClient).self).saveImages(refs, to: output)
         }
 
         @discardableResult public func loadImages(from input: String,
                                                   runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .imageArchive).loadImages(from: input)
+            try await requireRuntime(runtimeKind,
+                                     capability: .imageArchive,
+                                     as: (any RuntimeImageClient).self).loadImages(from: input)
         }
 
         @discardableResult public func exportContainer(_ id: String,
                                                        to output: String,
                                                        runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .containerExport).exportContainer(id, to: output)
+            try await requireRuntime(runtimeKind,
+                                     capability: .containerExport,
+                                     as: (any RuntimeImageClient).self).exportContainer(id, to: output)
         }
 
         @discardableResult public func pruneImages(all: Bool = false,
                                                    runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .images).pruneImages(all: all)
+            try await requireRuntime(runtimeKind,
+                                     capability: .images,
+                                     as: (any RuntimeImageClient).self).pruneImages(all: all)
         }
 
         @discardableResult public func start(_ ids: [String],
                                              runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .containers).start(ids)
+            try await requireRuntime(runtimeKind,
+                                     capability: .containers,
+                                     as: (any RuntimeContainerClient).self).start(ids)
         }
 
         @discardableResult public func stop(_ ids: [String],
                                             runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .containers).stop(ids)
+            try await requireRuntime(runtimeKind,
+                                     capability: .containers,
+                                     as: (any RuntimeContainerClient).self).stop(ids)
         }
 
         @discardableResult public func deleteContainers(_ ids: [String],
                                                         force: Bool,
                                                         runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .containers).deleteContainers(ids, force: force)
+            try await requireRuntime(runtimeKind,
+                                     capability: .containers,
+                                     as: (any RuntimeContainerClient).self).deleteContainers(ids, force: force)
         }
 
         @discardableResult public func pruneContainers(runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .containers).pruneContainers()
+            try await requireRuntime(runtimeKind,
+                                     capability: .containers,
+                                     as: (any RuntimeContainerClient).self).pruneContainers()
         }
 
         @discardableResult public func pruneVolumes(runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .volumes).pruneVolumes()
+            try await requireRuntime(runtimeKind,
+                                     capability: .volumes,
+                                     as: (any RuntimeVolumeClient).self).pruneVolumes()
         }
 
         @discardableResult public func pruneNetworks(runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .networks).pruneNetworks()
+            try await requireRuntime(runtimeKind,
+                                     capability: .networks,
+                                     as: (any RuntimeNetworkClient).self).pruneNetworks()
         }
 
         @discardableResult public func createVolume(name: String,
                                                     size: String? = nil,
                                                     labels: [String: String] = [:],
                                                     runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .volumes)
+            try await requireRuntime(runtimeKind,
+                                     capability: .volumes,
+                                     as: (any RuntimeVolumeClient).self)
                 .createVolume(name: name, size: size, labels: labels)
         }
 
         @discardableResult public func deleteVolumes(_ names: [String],
                                                      runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .volumes).deleteVolumes(names)
+            try await requireRuntime(runtimeKind,
+                                     capability: .volumes,
+                                     as: (any RuntimeVolumeClient).self).deleteVolumes(names)
         }
 
         @discardableResult public func createNetwork(name: String,
@@ -585,7 +703,9 @@ public extension Core {
                                                      internalOnly: Bool = false,
                                                      labels: [String: String] = [:],
                                                      runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .networks)
+            try await requireRuntime(runtimeKind,
+                                     capability: .networks,
+                                     as: (any RuntimeNetworkClient).self)
                 .createNetwork(name: name,
                                subnet: subnet,
                                internalOnly: internalOnly,
@@ -594,7 +714,9 @@ public extension Core {
 
         @discardableResult public func deleteNetworks(_ names: [String],
                                                       runtimeKind: Core.Runtime.Kind) async throws -> Data {
-            try await requireRuntime(runtimeKind, capability: .networks).deleteNetworks(names)
+            try await requireRuntime(runtimeKind,
+                                     capability: .networks,
+                                     as: (any RuntimeNetworkClient).self).deleteNetworks(names)
         }
     }
 }

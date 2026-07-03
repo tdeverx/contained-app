@@ -245,11 +245,9 @@ struct AppleContainerClient: Sendable {
                                       priority: Core.Command.ExecutionPriority = .userInitiated) async throws -> T {
         let data = try await runner.run(args, stdin: nil, priority: priority)
         do {
-            return try Core.Container.JSON.decode(type, from: data)
+            return try Core.Container.JSON.decode(type, from: data, runtimeKind: descriptor.kind)
         } catch {
             throw Core.Command.Error.decodingFailed(underlying: String(describing: error), command: name)
         }
     }
 }
-
-extension AppleContainerClient: ContainerRuntimeClient {}

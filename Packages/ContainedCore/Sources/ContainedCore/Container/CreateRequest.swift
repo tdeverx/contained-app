@@ -132,7 +132,7 @@ struct CreateResult: Codable, Equatable, Sendable {
 }
 
 struct CreateRequest: Codable, Equatable, Sendable {
-    public var runtimeKind: Core.Runtime.Kind = .appleContainer
+    public var runtimeKind: Core.Runtime.Kind
     public var image = ""
     public var platform = ""
     public var os = ""
@@ -220,7 +220,9 @@ struct CreateRequest: Codable, Equatable, Sendable {
     public var storageOptions: [Core.Container.KeyValue] = []
     public var volumesFrom: [String] = []
 
-    public init() {}
+    public init(runtimeKind: Core.Runtime.Kind) {
+        self.runtimeKind = runtimeKind
+    }
 
     public var effectiveName: String? {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : name

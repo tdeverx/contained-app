@@ -26,43 +26,7 @@ struct Capability: OptionSet, Equatable, Sendable {
     public static let containerExport = Core.Runtime.Capability(rawValue: 1 << 15)
     public static let composeImport = Core.Runtime.Capability(rawValue: 1 << 16)
     public static let coreMigration = Core.Runtime.Capability(rawValue: 1 << 17)
-
-    public static let appleContainer: Core.Runtime.Capability = [
-        .containers,
-        .images,
-        .imageBuild,
-        .imagePush,
-        .imageArchive,
-        .registries,
-        .networks,
-        .volumes,
-        .systemStatus,
-        .systemLogs,
-        .systemProperties,
-        .dnsManagement,
-        .kernelManagement,
-        .exec,
-        .copy,
-        .containerExport,
-        .composeImport,
-    ]
-
-    public static let docker: Core.Runtime.Capability = [
-        .containers,
-        .images,
-        .imageBuild,
-        .imagePush,
-        .imageArchive,
-        .registries,
-        .networks,
-        .volumes,
-        .systemStatus,
-        .systemProperties,
-        .exec,
-        .copy,
-        .containerExport,
-        .composeImport,
-    ]
+    public static let serviceControl = Core.Runtime.Capability(rawValue: 1 << 18)
 }
 
 struct Descriptor: Equatable, Sendable {
@@ -90,20 +54,6 @@ struct Descriptor: Equatable, Sendable {
             throw Core.Runtime.UnsupportedCapability(kind: kind, capability: capability)
         }
     }
-
-    public static let appleContainer = Core.Runtime.Descriptor(
-        kind: .appleContainer,
-        displayName: "Apple container",
-        executableName: "container",
-        capabilities: .appleContainer
-    )
-
-    public static let docker = Core.Runtime.Descriptor(
-        kind: .docker,
-        displayName: "Docker",
-        executableName: "docker",
-        capabilities: .docker
-    )
 }
 
 struct UnsupportedCapability: Error, Equatable, Sendable {
@@ -134,64 +84,125 @@ enum SystemAction: String, CaseIterable, Sendable {
     case start
     case stop
 }
+
+struct Configuration: Sendable, Equatable {
+    public var cliPathOverride: String?
+
+    public init(cliPathOverride: String? = nil) {
+        self.cliPathOverride = cliPathOverride
+    }
 }
 
-protocol ContainerRuntimeClient: Sendable {
+internal protocol Module: Sendable {
     var descriptor: Core.Runtime.Descriptor { get }
 
+    func locateCLI(override: String?) -> URL?
+    func makeClient(runner: any Core.Command.Running) -> any RuntimeClient
+    func readiness(cliURL: URL, runner: any Core.Command.Running) async -> Core.RuntimeReadiness
+    func terminalInvocation(containerID: String, shell: String, cliURL: URL) -> Core.Command.Invocation
+    func runPreview(for request: Core.Container.CreateRequest) -> [String]
+    func buildPreview(context: String, tag: String?, dockerfile: String?,
+                      buildArgs: [String: String], noCache: Bool,
+                      platform: String?) -> [String]
+    func networkCreatePreview(name: String, subnet: String?, internalOnly: Bool) -> [String]
+    func volumeCreatePreview(name: String, size: String?) -> [String]
+    func schemaProfile() -> Core.Schema.RuntimeProfile
+}
+}
+
+protocol RuntimeDescribing: Sendable {
+    var descriptor: Core.Runtime.Descriptor { get }
+}
+
+protocol RuntimeContainerClient: RuntimeDescribing {
     func listContainers(all: Bool) async throws -> [Core.Container.Snapshot]
     func stats(ids: [String]) async throws -> [Core.Metrics.ContainerStats]
     func streamStats(ids: [String]) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Error>
+    func streamLogs(id: String, follow: Bool, tail: Int?, boot: Bool) -> AsyncThrowingStream<String, Error>
+    func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview
+    @discardableResult func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult
+    @discardableResult func runContainer(arguments: [String]) async throws -> Data
+    @discardableResult func start(_ ids: [String]) async throws -> Data
+    @discardableResult func stop(_ ids: [String]) async throws -> Data
+    @discardableResult func deleteContainers(_ ids: [String], force: Bool) async throws -> Data
+    @discardableResult func pruneContainers() async throws -> Data
+}
+
+protocol RuntimeSystemStatusClient: RuntimeDescribing {
     func diskUsage() async throws -> Core.System.DiskUsage
     func systemProperties() async throws -> Core.System.Properties
+    func systemStatus() async throws -> Core.System.Status
+}
+
+protocol RuntimeDNSClient: RuntimeDescribing {
     func dnsDomains() async throws -> [String]
     @discardableResult func createDNSDomain(_ domain: String) async throws -> Data
     @discardableResult func deleteDNSDomain(_ domain: String) async throws -> Data
+}
+
+protocol RuntimeKernelClient: RuntimeDescribing {
     @discardableResult func setRecommendedKernel() async throws -> Data
+}
+
+protocol RuntimeExecClient: RuntimeDescribing {
     func execCapture(_ id: String, _ command: [String]) async throws -> String
     @discardableResult func copy(source: String, destination: String) async throws -> Data
+}
+
+protocol RuntimeSystemLogsClient: RuntimeDescribing {
     func streamSystemLogs(follow: Bool, last: Int?) -> AsyncThrowingStream<String, Error>
-    func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview
-    @discardableResult func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult
+}
+
+protocol RuntimeComposeClient: RuntimeDescribing {
     func translateCompose(_ project: Core.Compose.Project, baseDirectory: URL?) throws -> Core.Compose.ImportPlan
     func imageDefaults(for request: Core.Container.CreateRequest, in images: [Core.Image.Resource]) throws -> Core.Container.ImageDefaults?
     func coreSwitchPlan(for containerID: String, to target: Core.Runtime.Descriptor?) throws -> Core.Migration.Plan
-    func systemStatus() async throws -> Core.System.Status
+}
+
+protocol RuntimeNetworkClient: RuntimeDescribing {
     func networks() async throws -> [Core.Network.Resource]
+    @discardableResult func pruneNetworks() async throws -> Data
+    @discardableResult func createNetwork(name: String, subnet: String?, internalOnly: Bool,
+                       labels: [String: String]) async throws -> Data
+    @discardableResult func deleteNetworks(_ names: [String]) async throws -> Data
+}
+
+protocol RuntimeVolumeClient: RuntimeDescribing {
     func volumes() async throws -> [Core.Volume.Resource]
+    @discardableResult func pruneVolumes() async throws -> Data
+    @discardableResult func createVolume(name: String, size: String?, labels: [String: String]) async throws -> Data
+    @discardableResult func deleteVolumes(_ names: [String]) async throws -> Data
+}
+
+protocol RuntimeImageClient: RuntimeDescribing {
     func images() async throws -> [Core.Image.Resource]
     func inspectImage(_ ref: String) async throws -> [Core.Image.Resource]
-    func streamLogs(id: String, follow: Bool, tail: Int?, boot: Bool) -> AsyncThrowingStream<String, Error>
     func streamPull(_ ref: String, platform: String?) -> AsyncThrowingStream<String, Error>
     func streamBuild(context: String, tag: String?, dockerfile: String?,
                      buildArgs: [String: String], noCache: Bool,
                      platform: String?) -> AsyncThrowingStream<String, Error>
     func streamPush(_ ref: String, platform: String?) -> AsyncThrowingStream<String, Error>
-    @discardableResult func runContainer(arguments: [String]) async throws -> Data
-    @discardableResult func performSystemAction(_ action: Core.Runtime.SystemAction) async throws -> Data
-    func registries() async throws -> [Core.Registry.Login]
-    @discardableResult func registryLogin(server: String, username: String, password: String) async throws -> Data
-    @discardableResult func registryLogout(server: String) async throws -> Data
     @discardableResult func deleteImages(_ refs: [String]) async throws -> Data
     @discardableResult func tagImage(source: String, target: String) async throws -> Data
     @discardableResult func saveImages(_ refs: [String], to output: String) async throws -> Data
     @discardableResult func loadImages(from input: String) async throws -> Data
     @discardableResult func exportContainer(_ id: String, to output: String) async throws -> Data
     @discardableResult func pruneImages(all: Bool) async throws -> Data
-    @discardableResult func start(_ ids: [String]) async throws -> Data
-    @discardableResult func stop(_ ids: [String]) async throws -> Data
-    @discardableResult func deleteContainers(_ ids: [String], force: Bool) async throws -> Data
-    @discardableResult func pruneContainers() async throws -> Data
-    @discardableResult func pruneVolumes() async throws -> Data
-    @discardableResult func pruneNetworks() async throws -> Data
-    @discardableResult func createVolume(name: String, size: String?, labels: [String: String]) async throws -> Data
-    @discardableResult func deleteVolumes(_ names: [String]) async throws -> Data
-    @discardableResult func createNetwork(name: String, subnet: String?, internalOnly: Bool,
-                       labels: [String: String]) async throws -> Data
-    @discardableResult func deleteNetworks(_ names: [String]) async throws -> Data
 }
 
-extension ContainerRuntimeClient {
+protocol RuntimeRegistryClient: RuntimeDescribing {
+    func registries() async throws -> [Core.Registry.Login]
+    @discardableResult func registryLogin(server: String, username: String, password: String) async throws -> Data
+    @discardableResult func registryLogout(server: String) async throws -> Data
+}
+
+protocol RuntimeServiceControlClient: RuntimeDescribing {
+    @discardableResult func performSystemAction(_ action: Core.Runtime.SystemAction) async throws -> Data
+}
+
+protocol RuntimeClient: RuntimeDescribing {}
+
+extension RuntimeContainerClient {
     func listContainers() async throws -> [Core.Container.Snapshot] {
         try await listContainers(all: true)
     }
@@ -212,14 +223,6 @@ extension ContainerRuntimeClient {
         streamLogs(id: id, follow: true, tail: 200, boot: false)
     }
 
-    func streamPull(_ ref: String) -> AsyncThrowingStream<String, Error> {
-        streamPull(ref, platform: nil)
-    }
-
-    func streamPush(_ ref: String) -> AsyncThrowingStream<String, Error> {
-        streamPush(ref, platform: nil)
-    }
-
     func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
         throw Core.Runtime.UnsupportedCapability(kind: descriptor.kind, capability: .containers)
     }
@@ -234,7 +237,19 @@ extension ContainerRuntimeClient {
         _ = try await deleteContainers([originalID], force: true)
         return try await createContainer(request)
     }
+}
 
+extension RuntimeImageClient {
+    func streamPull(_ ref: String) -> AsyncThrowingStream<String, Error> {
+        streamPull(ref, platform: nil)
+    }
+
+    func streamPush(_ ref: String) -> AsyncThrowingStream<String, Error> {
+        streamPush(ref, platform: nil)
+    }
+}
+
+extension RuntimeComposeClient {
     func translateCompose(_ project: Core.Compose.Project, baseDirectory: URL? = nil) throws -> Core.Compose.ImportPlan {
         throw Core.Runtime.UnsupportedCapability(kind: descriptor.kind, capability: .composeImport)
     }
@@ -255,7 +270,9 @@ extension ContainerRuntimeClient {
             target: target?.kind
         )
     }
+}
 
+extension RuntimeVolumeClient {
     @discardableResult func createVolume(name: String, size: String?) async throws -> Data {
         try await createVolume(name: name, size: size, labels: [:])
     }
@@ -263,7 +280,9 @@ extension ContainerRuntimeClient {
     @discardableResult func createVolume(name: String) async throws -> Data {
         try await createVolume(name: name, size: nil, labels: [:])
     }
+}
 
+extension RuntimeNetworkClient {
     @discardableResult func createNetwork(name: String, subnet: String?, internalOnly: Bool) async throws -> Data {
         try await createNetwork(name: name, subnet: subnet, internalOnly: internalOnly, labels: [:])
     }

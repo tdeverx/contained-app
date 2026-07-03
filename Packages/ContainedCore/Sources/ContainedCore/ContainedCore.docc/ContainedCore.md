@@ -8,11 +8,16 @@ interchange, metrics, and display-neutral errors for Contained.
 `ContainedCore` exposes a nested `Core.*` API, matching the `UI.*` and `UX.*`
 package style. App code talks to ``Core/Orchestrator``. Runtime adapters live
 inside Core, including Apple container and Docker CLI adapters, so
-the app does not create adapter clients or assemble backend argv.
+the app does not create adapter clients or assemble backend argv. Shared Core
+consumes `Core.Runtime.Module` registrations; concrete descriptors, CLI lookup,
+readiness probing, command previews, terminal invocations, schema support
+profiles, Compose projection, and client creation live under
+`Runtimes/AppleContainer` or `Runtimes/Docker`.
 
 Use Core for:
 
 - runtime descriptors and capabilities
+- runtime module registration and per-runtime readiness
 - canonical container create/edit/import/export models
 - multi-runtime container and image inventory
 - command previews and host command invocations
@@ -44,11 +49,12 @@ and plans rather than Yams types.
 ```swift
 import ContainedCore
 
-var document = Core.Schema.Document.containerCreate()
+var document = Core.Schema.Document.containerCreate(runtimeKind: .appleContainer)
 document.set(.containerName, .string("web"))
 document.set(.imageReference, .string("nginx:latest"))
 
-let core = Core.Orchestrator.testing(runner: PreviewRunner())
+let core = Core.Orchestrator.testing(runner: PreviewRunner(),
+                                     runtimeKind: .appleContainer)
 let preview = try core.previewCreateCommand(for: document)
 ```
 
