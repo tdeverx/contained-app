@@ -54,6 +54,7 @@ final class ContainersStore {
     var errorMessage: String?
     var busyIDs: Set<String> = []
     @ObservationIgnored var logger: AppLogger?
+    @ObservationIgnored weak var database: AppDatabase?
     @ObservationIgnored var now: () -> Date = Date.init
     @ObservationIgnored private var metricsStates: [String: ContainerMetricsState] = [:]
     @ObservationIgnored private var statsNormalizationContext: Core.Metrics.NormalizationContext = .containerSpecific
@@ -140,14 +141,17 @@ final class ContainersStore {
     private func performRefresh() async {
         guard let client else { return }
         do {
-            let listed = try await client.listContainers(all: true)
+            let listedAll = try await client.listRuntimeContainers(all: true)
                 .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+            database?.upsertContainers(listedAll)
+            let migratingIDs = database?.hiddenContainerScopedIDs() ?? []
+            let listed = listedAll.filter { !migratingIDs.contains($0.scopedID) }
             // Only publish when the list actually changed: reassigning an identical array would
             // needlessly invalidate the whole grid (and every card's sparkline) on each idle tick.
             if listed != snapshots { snapshots = listed }
             // Drop intentional-stop flags for containers that no longer exist, so the set can't grow
             // unbounded as containers are recreated/removed over a long session.
-            intentionalStops.formIntersection(Set(snapshots.map(\.id)))
+            intentionalStops.formIntersection(Set(snapshots.map(\.scopedID)))
             errorMessage = nil
             pruneStatsForCurrentRunningSet()
         } catch let error as Core.Command.Error {
@@ -158,8 +162,8 @@ final class ContainersStore {
     }
 
     private func pruneStatsForCurrentRunningSet() {
-        let currentSet = Set(snapshots.map(\.id))
-        let runningSet = Set(running.map(\.id))
+        let currentSet = Set(snapshots.map(\.scopedID))
+        let runningSet = Set(running.map(\.scopedID))
         let prunedStats = statsByID.filter { runningSet.contains($0.key) }
         if prunedStats.count != statsByID.count { statsByID = prunedStats }
         let prunedHistory = historyByID.filter { runningSet.contains($0.key) }
@@ -181,14 +185,14 @@ final class ContainersStore {
     }
 
     func applyStreamedStats(_ samples: [Core.Metrics.RuntimeStatsSnapshot], observedAt: Date? = nil) {
-        let runningSet = Set(running.map(\.id))
+        let runningSet = runtimeAndScopedIDs(for: running)
         let samples = samples.filter { runningSet.contains($0.id) }
         guard !samples.isEmpty else { return }
 
         let observedAt = observedAt ?? now()
         let rawInterval = lastStreamedStatsDate.map { observedAt.timeIntervalSince($0) }
         let interval = max(rawInterval ?? Self.minimumStreamedStatsInterval, Self.minimumStreamedStatsInterval)
-        let snapshotsByID = Dictionary(snapshots.map { ($0.id, $0) }, uniquingKeysWith: { current, _ in current })
+        let snapshotsByID = snapshotLookupByStatsID()
         var nextStats = statsByID
         var nextHistory = historyByID
         for sample in samples {
@@ -221,8 +225,8 @@ final class ContainersStore {
     }
 
     private func rebuildDisplayHistories() {
-        let snapshotsByID = Dictionary(snapshots.map { ($0.id, $0) }, uniquingKeysWith: { current, _ in current })
-        let runningSet = Set(running.map(\.id))
+        let snapshotsByID = snapshotLookupByStatsID()
+        let runningSet = runtimeAndScopedIDs(for: running)
         var rebuilt: [String: [Core.Metrics.GraphMetric: UI.Chart.SampleBuffer]] = [:]
         for (id, delta) in statsByID where runningSet.contains(id) {
             var metrics: [Core.Metrics.GraphMetric: UI.Chart.SampleBuffer] = [:]
@@ -245,19 +249,47 @@ final class ContainersStore {
         }
     }
 
+    private func snapshotLookupByStatsID() -> [String: Core.Container.Snapshot] {
+        var lookup = Dictionary(snapshots.map { ($0.scopedID, $0) }, uniquingKeysWith: { current, _ in current })
+        let byRuntimeID = Dictionary(grouping: snapshots, by: \.id)
+        for (runtimeID, matches) in byRuntimeID where matches.count == 1 {
+            lookup[runtimeID] = matches[0]
+        }
+        return lookup
+    }
+
+    private func runtimeAndScopedIDs(for snapshots: [Core.Container.Snapshot]) -> Set<String> {
+        Set(snapshots.flatMap { [$0.id, $0.scopedID] })
+    }
+
     // MARK: Lifecycle
 
-    func start(_ id: String) async { await act(id, verb: "Start") { try await $0.start([id]) } }
+    func start(_ id: String) async {
+        guard let snapshot = snapshot(for: id) else { return }
+        await act(snapshot.scopedID, verb: "Start") { client in
+            try await client.start([snapshot.id], runtimeKind: snapshot.runtimeKind)
+        }
+    }
     func stop(_ id: String) async {
-        intentionalStops.insert(id)
-        await act(id, verb: "Stop") { try await $0.stop([id]) }
+        guard let snapshot = snapshot(for: id) else { return }
+        intentionalStops.insert(snapshot.scopedID)
+        await act(snapshot.scopedID, verb: "Stop") { client in
+            try await client.stop([snapshot.id], runtimeKind: snapshot.runtimeKind)
+        }
     }
     func restart(_ id: String) async {
-        await act(id, verb: "Restart") { _ = try await $0.stop([id]); _ = try await $0.start([id]) }
+        guard let snapshot = snapshot(for: id) else { return }
+        await act(snapshot.scopedID, verb: "Restart") { client in
+            _ = try await client.stop([snapshot.id], runtimeKind: snapshot.runtimeKind)
+            _ = try await client.start([snapshot.id], runtimeKind: snapshot.runtimeKind)
+        }
     }
     func remove(_ id: String, force: Bool) async {
-        intentionalStops.insert(id)
-        await act(id, verb: "Remove") { try await $0.deleteContainers([id], force: force) }
+        guard let snapshot = snapshot(for: id) else { return }
+        intentionalStops.insert(snapshot.scopedID)
+        await act(snapshot.scopedID, verb: "Remove") { client in
+            try await client.deleteContainers([snapshot.id], force: force, runtimeKind: snapshot.runtimeKind)
+        }
     }
 
     /// Create + run a container from the Create/Edit form. Returns the new container's id on success
@@ -299,23 +331,26 @@ final class ContainersStore {
     @discardableResult
     func recreate(originalID: String, spec: ContainerFormState) async -> Bool {
         guard let client else { return false }
-        busyIDs.insert(originalID)
-        intentionalStops.insert(originalID)   // don't let the watchdog fight the teardown
-        defer { busyIDs.remove(originalID) }
+        let original = snapshot(for: originalID)
+        let trackingID = original?.scopedID ?? originalID
+        let runtimeID = original?.id ?? originalID
+        busyIDs.insert(trackingID)
+        intentionalStops.insert(trackingID)   // don't let the watchdog fight the teardown
+        defer { busyIDs.remove(trackingID) }
         let started = Date()
-        logger?.record("Recreating \(originalID)", category: .lifecycle, containerID: originalID)
-        diagnosticLogger.notice("Recreate started for \(originalID, privacy: .public)")
+        logger?.record("Recreating \(runtimeID)", category: .lifecycle, containerID: trackingID)
+        diagnosticLogger.notice("Recreate started for \(runtimeID, privacy: .public)")
         do {
-            _ = try await client.recreateContainer(originalID: originalID, document: spec.document)
+            _ = try await client.recreateContainer(originalID: runtimeID, document: spec.document)
             performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
-            logger?.record("Recreated \(originalID) in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
+            logger?.record("Recreated \(runtimeID) in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
                            category: .lifecycle,
                            severity: elapsed >= 1.5 ? .warning : .info,
-                           containerID: originalID)
+                           containerID: trackingID)
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
-                                 "Recreated \(originalID, privacy: .public) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
+                                 "Recreated \(runtimeID, privacy: .public) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
             return true
         } catch {
             errorMessage = error.appDisplayMessage
@@ -324,11 +359,15 @@ final class ContainersStore {
                                   error: error,
                                   category: .lifecycle,
                                   severity: .warning,
-                                  containerID: originalID)
+                                  containerID: trackingID)
             diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .public)")
             await refresh()
             return false
         }
+    }
+
+    private func snapshot(for id: String) -> Core.Container.Snapshot? {
+        snapshots.first { $0.scopedID == id || $0.id == id }
     }
 
     private func act(_ id: String,

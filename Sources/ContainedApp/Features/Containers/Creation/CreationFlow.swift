@@ -33,7 +33,7 @@ struct CreationFlow: View {
 
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @Query(sort: \Template.createdAt, order: .reverse) private var saved: [Template]
+    @Query(sort: \RecipeRecord.createdAt, order: .reverse) private var saved: [RecipeRecord]
 
     let start: Start
     let editSnapshot: Core.Container.Snapshot?
@@ -67,6 +67,7 @@ struct CreationFlow: View {
     @State private var networkName = ""
     @State private var networkSubnet = ""
     @State private var networkInternalOnly = false
+    @State private var resourceRuntimeKind = Core.Runtime.Kind.appleContainer
     @State private var working = false
     @State private var configureToken = 0
     @State private var configureReturnPage: Page?
@@ -120,7 +121,10 @@ struct CreationFlow: View {
             .morphPanelSize(size(for: page))
             .morphPanelPlacement(placement(for: page))
             .animation(springAnim, value: page)
-            .onAppear { publishSoftDismiss() }
+            .onAppear {
+                applyInitialRuntimeSelectionIfNeeded()
+                publishSoftDismiss()
+            }
             .onDisappear { onSoftDismissChange?(nil) }
             .onChange(of: page) { _, _ in publishSoftDismiss() }
     }
@@ -175,39 +179,44 @@ struct CreationFlow: View {
 
     private var chooserPage: some View {
         gridScaffold {
-            optionStack {
-                optionRow {
-                    if app.settings.hubSearchEnabled {
-                        box(symbol: "magnifyingglass", title: AppText.string("common.search", defaultValue: "Search"),
-                            subtitle: AppText.string("creation.option.search.subtitle", defaultValue: "Find an image on Docker Hub"),
-                            matchedID: "creation-option-0") { go(.search) }
+            VStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
+                CreationRuntimePickerRow(runtimeKind: $resourceRuntimeKind,
+                                         runtimes: app.availableRuntimeDescriptors,
+                                         disabledReason: app.runtimePickerDisabledReason)
+                optionStack {
+                    optionRow {
+                        if app.settings.hubSearchEnabled {
+                            box(symbol: "magnifyingglass", title: AppText.string("common.search", defaultValue: "Search"),
+                                subtitle: AppText.string("creation.option.search.subtitle", defaultValue: "Find an image on Docker Hub"),
+                                matchedID: "creation-option-0") { go(.search) }
+                        }
+                        box(symbol: "square.stack.3d.up", title: AppText.string("creation.option.localImage", defaultValue: "Local image"),
+                            subtitle: app.images.isEmpty
+                                ? AppText.string("creation.option.localImage.emptySubtitle", defaultValue: "Choose from pulled images")
+                                : AppText.string("creation.option.localImage.subtitle", defaultValue: "Use an image already pulled"),
+                            matchedID: "creation-option-1") {
+                            go(.localImages)
+                        }
+                        box(symbol: "slider.horizontal.3", title: AppText.string("creation.option.scratch", defaultValue: "Start from scratch"),
+                            subtitle: AppText.string("creation.option.scratch.subtitle", defaultValue: "Configure manually"),
+                            matchedID: "creation-option-2") { configure(with: ContainerFormState(runtimeKind: resourceRuntimeKind)) }
                     }
-                    box(symbol: "square.stack.3d.up", title: AppText.string("creation.option.localImage", defaultValue: "Local image"),
-                        subtitle: app.images.isEmpty
-                            ? AppText.string("creation.option.localImage.emptySubtitle", defaultValue: "Choose from pulled images")
-                            : AppText.string("creation.option.localImage.subtitle", defaultValue: "Use an image already pulled"),
-                        matchedID: "creation-option-1") {
-                        go(.localImages)
+                    optionRow {
+                        box(symbol: "shippingbox.and.arrow.backward", title: AppText.string("creation.option.compose", defaultValue: "Compose"),
+                            subtitle: AppText.string("creation.option.compose.subtitle", defaultValue: "Paste YAML or choose a file"),
+                            matchedID: "compose-option-0",
+                            enabled: app.settings.composeImportEnabled) {
+                            guard app.settings.composeImportEnabled else { return }
+                            go(.compose)
+                        }
+                        box(symbol: "archivebox", title: AppText.string("creation.option.imageArchive", defaultValue: "Image archive"),
+                            subtitle: AppText.string("creation.option.imageArchive.subtitle", defaultValue: "Load an image .tar")) { selectImageArchive() }
+                        box(symbol: "bookmark", title: AppText.sectionTemplates,
+                            subtitle: saved.isEmpty
+                                ? AppText.string("creation.option.templates.emptySubtitle", defaultValue: "None saved yet")
+                                : AppText.string("creation.option.templates.subtitle", defaultValue: "Reuse a saved recipe"),
+                            enabled: !saved.isEmpty) { go(.templates) }
                     }
-                    box(symbol: "slider.horizontal.3", title: AppText.string("creation.option.scratch", defaultValue: "Start from scratch"),
-                        subtitle: AppText.string("creation.option.scratch.subtitle", defaultValue: "Configure manually"),
-                        matchedID: "creation-option-2") { configure(with: ContainerFormState()) }
-                }
-                optionRow {
-                    box(symbol: "shippingbox.and.arrow.backward", title: AppText.string("creation.option.compose", defaultValue: "Compose"),
-                        subtitle: AppText.string("creation.option.compose.subtitle", defaultValue: "Paste YAML or choose a file"),
-                        matchedID: "compose-option-0",
-                        enabled: app.settings.composeImportEnabled) {
-                        guard app.settings.composeImportEnabled else { return }
-                        go(.compose)
-                    }
-                    box(symbol: "archivebox", title: AppText.string("creation.option.imageArchive", defaultValue: "Image archive"),
-                        subtitle: AppText.string("creation.option.imageArchive.subtitle", defaultValue: "Load an image .tar")) { selectImageArchive() }
-                    box(symbol: "bookmark", title: AppText.sectionTemplates,
-                        subtitle: saved.isEmpty
-                            ? AppText.string("creation.option.templates.emptySubtitle", defaultValue: "None saved yet")
-                            : AppText.string("creation.option.templates.subtitle", defaultValue: "Reuse a saved recipe"),
-                        enabled: !saved.isEmpty) { go(.templates) }
                 }
             }
         }
@@ -219,6 +228,9 @@ struct CreationFlow: View {
             CreationNetworkFields(name: $networkName,
                                   subnet: $networkSubnet,
                                   internalOnly: $networkInternalOnly,
+                                  runtimeKind: $resourceRuntimeKind,
+                                  runtimes: app.availableRuntimeDescriptors,
+                                  runtimePickerDisabledReason: app.runtimePickerDisabledReason,
                                   working: working,
                                   onSubmit: createNetwork)
         }
@@ -229,6 +241,9 @@ struct CreationFlow: View {
                      leading: resourceLeading, contentAlignment: .top) {
             CreationVolumeFields(name: $volumeName,
                                  size: $volumeSize,
+                                 runtimeKind: $resourceRuntimeKind,
+                                 runtimes: app.availableRuntimeDescriptors,
+                                 runtimePickerDisabledReason: app.runtimePickerDisabledReason,
                                  working: working,
                                  onSubmit: createVolume)
         }
@@ -246,7 +261,7 @@ struct CreationFlow: View {
     private var searchPage: some View {
         contentOnlyScaffold {
             RegistryImageSearch(initialQuery: initialSearchQuery) { picked in
-                configure(with: picked)
+                configure(with: pickedForSelectedRuntime(picked))
             }
         }
     }
@@ -400,6 +415,22 @@ struct CreationFlow: View {
         go(.configure)
     }
 
+    private func pickedForSelectedRuntime(_ picked: ContainerFormState) -> ContainerFormState {
+        var picked = picked
+        picked.runtimeKind = resourceRuntimeKind
+        return picked
+    }
+
+    private func applyInitialRuntimeSelectionIfNeeded() {
+        if let firstRuntime = app.availableRuntimeDescriptors.first?.kind {
+            resourceRuntimeKind = firstRuntime
+        }
+        guard editSnapshot == nil,
+              spec.image.trimmingCharacters(in: .whitespaces).isEmpty,
+              spec.name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        spec.runtimeKind = resourceRuntimeKind
+    }
+
     private func backFromConfigure() {
         guard let target = configureBackTarget else {
             onClose()
@@ -464,14 +495,14 @@ struct CreationFlow: View {
         panel.message = AppText.chooseComposeFile
         guard panel.runModal() == .OK, let url = panel.url else { return }
         onClose()
-        ComposeImport.importFile(at: url, app: app, ui: ui)
+        ComposeImport.importFile(at: url, runtimeKind: resourceRuntimeKind, app: app, ui: ui)
     }
 
     private func importPastedCompose() {
         let text = composeText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         onClose()
-        ComposeImport.importText(text, app: app, ui: ui)
+        ComposeImport.importText(text, runtimeKind: resourceRuntimeKind, app: app, ui: ui)
     }
 
     /// Pick an image tar archive and load it into the local image store.
@@ -483,7 +514,7 @@ struct CreationFlow: View {
         panel.message = AppText.chooseImageTarArchive
         guard panel.runModal() == .OK, let url = panel.url else { return }
         onClose()
-        app.loadImageTar(at: url)
+        app.loadImageTar(at: url, runtimeKind: resourceRuntimeKind)
     }
 
     private func createVolume() {
@@ -493,7 +524,8 @@ struct CreationFlow: View {
         Task {
             let ok = await app.createVolume(
                 name: name,
-                size: volumeSize.trimmingCharacters(in: .whitespaces).nilIfEmpty
+                size: volumeSize.trimmingCharacters(in: .whitespaces).nilIfEmpty,
+                runtimeKind: resourceRuntimeKind
             )
             working = false
             if ok { onClose() }
@@ -508,7 +540,8 @@ struct CreationFlow: View {
             let ok = await app.createNetwork(
                 name: name,
                 subnet: networkSubnet.trimmingCharacters(in: .whitespaces).nilIfEmpty,
-                internalOnly: networkInternalOnly
+                internalOnly: networkInternalOnly,
+                runtimeKind: resourceRuntimeKind
             )
             working = false
             if ok { onClose() }

@@ -70,3 +70,26 @@ public extension UI.Panel.Scaffold where Footer == EmptyView {
                   chrome: chrome, content: content, footer: { EmptyView() })
     }
 }
+
+#Preview("Panel Scaffold") {
+    UI.Panel.Scaffold(width: 460) {
+        UI.Panel.Header(symbol: "plus",
+                        title: "New container",
+                        subtitle: "Choose a source") {
+            UI.Action.Group(UI.Action.Item(systemName: "xmark", help: "Close") {})
+        }
+        Divider()
+    } content: {
+        UI.Control.OptionStack {
+            UI.Control.OptionTile(symbol: "shippingbox",
+                                  title: "Container",
+                                  subtitle: "Run from an image") {}
+            UI.Control.OptionTile(symbol: "doc.text",
+                                  title: "Compose",
+                                  subtitle: "Import services") {}
+        }
+        .padding(UI.Tokens.Space.l)
+    }
+    .frame(width: 460, height: 360)
+    .environment(\.buttonMaterial, .glassClear)
+}

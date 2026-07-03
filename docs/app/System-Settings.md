@@ -5,20 +5,24 @@ experimental gates, registries, and local data management.
 
 ## System
 
-The System page surfaces service status, runtime details, resource usage, image
-update status, and app/runtime actions. System content is shared between the
-classic sidebar page and toolbar morph panel when the experimental toolbar UI is
-enabled.
+The System page surfaces runtime status, runtime details, resource usage,
+image update status, and app/runtime actions. System content is shared between
+the classic sidebar page and toolbar morph panel when the experimental toolbar
+UI is enabled.
 
-Privileged kernel or DNS operations may trigger prompts handled by the CLI or
-macOS. Contained does not ask for or store administrator credentials.
+Apple container exposes service lifecycle, kernel, and DNS controls. Docker is
+reached through the Docker CLI and its configured endpoint, so Contained shows
+retry/runtime guidance instead of trying to start Docker Desktop or another
+external daemon. Privileged kernel or DNS operations may trigger prompts handled
+by the CLI or macOS. Contained does not ask for or store administrator
+credentials.
 
 ## Settings tabs
 
 - General: app behavior, menu bar, CLI previews, metric normalization, info tips, and related defaults.
 - Appearance: tint, material, card, panel, and theme choices.
 - Data: backup/export/import and local state controls.
-- Runtime: CLI path and runtime defaults.
+- Runtime: runtime reachability, Apple `container` and Docker CLI path overrides, Apple-only service/kernel/DNS controls, and Docker endpoint guidance.
 - Registries: registry login/logout and credential management.
 - Updates: app channel, Sparkle checks, release notes, and image update cadence.
 - Experimental: opt-in feature gates.
@@ -54,8 +58,9 @@ history charts:
 
 - Container: each container card is scaled against that container's configured
   CPU and memory limits.
-- Machine: every card is scaled against Apple container's machine CPU and memory
-  resources, so container usage appears in runtime-wide context.
+- Machine: every card is scaled against the available runtime machine CPU and
+  memory resources when available, so container usage appears in runtime-wide
+  context.
 
 Network and disk widgets remain raw bytes-per-second rates in both modes.
 History keeps raw samples on disk and applies the selected normalization mode

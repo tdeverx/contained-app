@@ -41,6 +41,9 @@ struct RootView: View {
                              html: app.updater.currentReleaseNotesHTML,
                              onClose: { app.updater.markWhatsNewSeen() })
         }
+        .sheet(item: runtimeSelectionBinding) { request in
+            RuntimeSelectionSheet(request: request)
+        }
         // Dispatch global actions from toolbar panels, pages, menus, and the command palette. Registry
         // credentials always live in Settings.
         .onChange(of: ui.pendingAction) { _, action in
@@ -67,7 +70,9 @@ struct RootView: View {
                 case "yaml", "yml":
                     guard app.settings.composeImportEnabled else { continue }
                     ComposeImport.importFile(at: url, app: app, ui: ui); return true
-                case "tar":         app.loadImageTar(at: url); return true
+                case "tar":
+                    loadImageTar(at: url)
+                    return true
                 default:            continue
                 }
             }
@@ -177,6 +182,11 @@ struct RootView: View {
                 set: { if !$0 { app.updater.markWhatsNewSeen() } })
     }
 
+    private var runtimeSelectionBinding: Binding<UIState.RuntimeSelectionRequest?> {
+        Binding(get: { ui.runtimeSelectionRequest },
+                set: { ui.runtimeSelectionRequest = $0 })
+    }
+
     /// The page-overflow menu, shown by right-clicking the background.
     @ViewBuilder
     private func backgroundMenu() -> some View {
@@ -234,12 +244,29 @@ struct RootView: View {
         panel.allowedContentTypes = [.init(filenameExtension: "tar") ?? .data]
         panel.message = AppText.chooseImageTarArchive
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        app.loadImageTar(at: url)
+        loadImageTar(at: url)
+    }
+
+    private func loadImageTar(at url: URL) {
+        let descriptors = app.availableRuntimeDescriptors.filter { $0.supports(.imageArchive) }
+        guard let first = descriptors.first else {
+            app.flash(AppText.containerRuntimeNotReady)
+            return
+        }
+        guard descriptors.count > 1 else {
+            app.loadImageTar(at: url, runtimeKind: first.kind)
+            return
+        }
+        ui.runtimeSelectionRequest = .imageArchive(url)
     }
 
     private func pruneImages(all: Bool) async {
         guard let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.pruneImages(all: all) }) { app.flash(error) }
+        if let error = await app.captured({
+            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.images) {
+                _ = try await client.pruneImages(all: all, runtimeKind: descriptor.kind)
+            }
+        }) { app.flash(error) }
         await app.refreshImagesIfNeeded(force: true)
     }
 

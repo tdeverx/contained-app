@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedUI
 
 public extension UX.Measurement {
 struct SourceFrameReader<ID: Hashable>: View {
@@ -56,5 +57,32 @@ public extension CGRect {
         abs(minY - other.minY) <= tolerance &&
         abs(width - other.width) <= tolerance &&
         abs(height - other.height) <= tolerance
+    }
+}
+
+#Preview("Source Frame Reader") {
+    SourceFrameReaderPreview()
+        .frame(width: 360, height: 220)
+}
+
+private struct SourceFrameReaderPreview: View {
+    @State private var frames: [String: CGRect] = [:]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: UI.Layout.Spacing.l) {
+            UI.Action.Group(UI.Action.Item(systemName: "plus", help: "Measured") {})
+                .background(UX.Measurement.SourceFrameReader("button", coordinateSpaceName: "preview-space"))
+            Text(frameSummary)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
+        .padding(UI.Layout.Spacing.xl)
+        .coordinateSpace(name: "preview-space")
+        .onPreferenceChange(UX.Measurement.SourceFramesKey<String>.self) { frames = $0 }
+    }
+
+    private var frameSummary: String {
+        guard let frame = frames["button"] else { return "measuring..." }
+        return "x:\(Int(frame.minX)) y:\(Int(frame.minY)) w:\(Int(frame.width)) h:\(Int(frame.height))"
     }
 }

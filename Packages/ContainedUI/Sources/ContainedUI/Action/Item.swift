@@ -31,3 +31,13 @@ struct Item {
     }
 }
 }
+
+#Preview("Action Item") {
+    UI.Action.Group([
+        UI.Action.Item(systemName: "play.fill", help: "Start") {},
+        UI.Action.Item(systemName: "pause.fill", help: "Pause", tint: .orange) {},
+        UI.Action.Item(systemName: "trash", help: "Delete", role: .destructive) {},
+    ])
+    .padding(UI.Tokens.Space.xl)
+    .environment(\.buttonMaterial, .glassClear)
+}

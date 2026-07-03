@@ -181,6 +181,44 @@ struct CreateRequest: Codable, Equatable, Sendable {
     public var scheme = ""
     public var progress = ""
     public var maxConcurrentDownloads = ""
+    public var extraHosts: [String] = []
+    public var hostname = ""
+    public var domainName = ""
+    public var macAddress = ""
+    public var expose: [String] = []
+    public var publishAll = false
+    public var pullPolicy = ""
+    public var attachStreams: [String] = []
+    public var loggingDriver = ""
+    public var loggingOptions: [Core.Container.KeyValue] = []
+    public var labelFiles: [String] = []
+    public var stopSignal = ""
+    public var stopGracePeriod = ""
+    public var devices: [String] = []
+    public var gpus = ""
+    public var supplementalGroups: [String] = []
+    public var privileged = false
+    public var securityOptions: [String] = []
+    public var sysctls: [Core.Container.KeyValue] = []
+    public var cgroupNamespace = ""
+    public var userNamespace = ""
+    public var pidNamespace = ""
+    public var ipcNamespace = ""
+    public var utsNamespace = ""
+    public var cpuShares = ""
+    public var cpuQuota = ""
+    public var cpuPeriod = ""
+    public var cpuSet = ""
+    public var cpuRealtimeRuntime = ""
+    public var cpuRealtimePeriod = ""
+    public var memoryReservation = ""
+    public var memorySwapLimit = ""
+    public var memorySwappiness = ""
+    public var oomKillDisable = false
+    public var oomScoreAdjust = ""
+    public var blockIOWeight = ""
+    public var storageOptions: [Core.Container.KeyValue] = []
+    public var volumesFrom: [String] = []
 
     public init() {}
 

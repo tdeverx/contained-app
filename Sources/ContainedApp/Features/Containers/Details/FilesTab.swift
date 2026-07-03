@@ -92,7 +92,9 @@ struct FilesTab: View {
         loading = true; error = nil
         defer { loading = false }
         do {
-            let out = try await client.execCapture(snapshot.id, ["ls", "-1ap", path])
+            let out = try await client.execCapture(snapshot.id,
+                                                   ["ls", "-1ap", path],
+                                                   runtimeKind: snapshot.runtimeKind)
             entries = out.split(separator: "\n").map(String.init)
                 .filter { $0 != "./" && $0 != "../" && !$0.isEmpty }
                 .sorted { ($0.hasSuffix("/") ? 0 : 1, $0.lowercased()) < ($1.hasSuffix("/") ? 0 : 1, $1.lowercased()) }
@@ -118,7 +120,9 @@ struct FilesTab: View {
         guard panel.runModal() == .OK, let dest = panel.url else { return }
         Task {
             do {
-                _ = try await app.client?.copy(source: "\(snapshot.id):\(joined(name))", destination: dest.path)
+                _ = try await app.client?.copy(source: "\(snapshot.id):\(joined(name))",
+                                               destination: dest.path,
+                                               runtimeKind: snapshot.runtimeKind)
                 app.flash(AppText.copiedFileToHost(name))
             } catch let e as Core.Command.Error { app.flash(e.appDisplayMessage) }
             catch { app.flash(error.appDisplayMessage) }
@@ -135,7 +139,8 @@ struct FilesTab: View {
         Task {
             do {
                 _ = try await app.client?.copy(source: src.path,
-                                               destination: "\(snapshot.id):\(joined(src.lastPathComponent))")
+                                               destination: "\(snapshot.id):\(joined(src.lastPathComponent))",
+                                               runtimeKind: snapshot.runtimeKind)
                 app.flash(AppText.copiedFileIntoContainer(src.lastPathComponent))
                 await load()
             } catch let e as Core.Command.Error { app.flash(e.appDisplayMessage) }

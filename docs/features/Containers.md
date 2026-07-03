@@ -1,6 +1,7 @@
 # Containers
 
-The Containers page is the main workload surface.
+The Containers page is the main workload surface. When more than one runtime is
+available, the grid aggregates containers from every reachable runtime.
 
 ## Grid and cards
 
@@ -14,7 +15,8 @@ The Containers page is the main workload surface.
 
 ## Lifecycle
 
-Container actions route through the shared app model and `container` CLI:
+Container actions route through the shared app model and each container's
+owning runtime:
 
 - start
 - stop
@@ -25,7 +27,9 @@ Container actions route through the shared app model and `container` CLI:
 - update image when an image update is available
 
 The app serializes refreshes around lifecycle actions so a user action and the
-background polling tick do not fight over `list` and `stats`.
+background polling tick do not fight over inventory and stats streams. Runtime
+identity is part of each container's internal key, so Apple and Docker
+containers with the same runtime ID do not collide.
 
 ## Detail
 
@@ -43,9 +47,9 @@ top and bottom toolbar bands when the experimental toolbar is visible.
 
 ## Restart and health
 
-`container` has no native restart policy or healthcheck. Contained stores
-restart intent and health probes as app-managed state, runs probes itself, and
-records events in Activity/History.
+Apple `container` has no native restart policy or healthcheck. Contained stores
+restart intent and health probes as app-managed state, runs probes through the
+container's owning runtime, and records events in Activity/History.
 
 ## Edit
 

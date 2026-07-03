@@ -22,7 +22,7 @@ struct RegistriesTab: View {
                     ForEach(app.registries) { login in
                         UI.List.MetadataRow(systemImage: "key",
                                           title: login.host,
-                                          subtitle: login.username.map { AppText.string("settings.registries.username", defaultValue: "as \($0)") }) {
+                                          subtitle: registrySubtitle(login)) {
                             Button("Log Out", role: .destructive) { loggingOut = login }
                         }
                         .contextMenu {
@@ -53,8 +53,20 @@ struct RegistriesTab: View {
 
     private func logout(_ login: Core.Registry.Login) async {
         guard let client = app.client else { return }
-        do { _ = try await client.registryLogout(server: login.host); await app.refreshRegistries() }
+        do {
+            _ = try await client.registryLogout(server: login.host, runtimeKind: login.runtimeKind)
+            await app.refreshRegistries()
+        }
         catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
+    }
+
+    private func registrySubtitle(_ login: Core.Registry.Login) -> String {
+        let runtime = app.runtimeDescriptor(for: login.runtimeKind).displayName
+        if let username = login.username {
+            return AppText.string("settings.registries.usernameRuntime",
+                                  defaultValue: "\(runtime), as \(username)")
+        }
+        return runtime
     }
 }

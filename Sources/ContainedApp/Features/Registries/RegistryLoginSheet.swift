@@ -10,6 +10,7 @@ struct RegistryLoginSheet: View {
     @State private var server = ""
     @State private var username = ""
     @State private var password = ""
+    @State private var runtimeKind = Core.Runtime.Kind.appleContainer
     @State private var busy = false
     @State private var error: String?
 
@@ -31,6 +32,15 @@ struct RegistryLoginSheet: View {
                 }
             }
             VStack(spacing: UI.Layout.Spacing.l) {
+                UI.Panel.Section(header: AppText.runtime) {
+                    Picker("", selection: $runtimeKind) {
+                        ForEach(registryRuntimes, id: \.kind) { descriptor in
+                            Text(descriptor.displayName).tag(descriptor.kind)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(registryRuntimes.count < 2)
+                }
                 UI.Panel.Section(header: AppText.string("registry.credentials", defaultValue: "Credentials")) {
                     UI.Panel.Field(label: AppText.string("registry.server", defaultValue: "Server")) {
                         TextField("", text: $server, prompt: Text("e.g. ghcr.io, docker.io"))
@@ -60,6 +70,17 @@ struct RegistryLoginSheet: View {
         }
         .frame(UI.Panel.SheetSize.small)
         .sheetMaterial()
+        .onAppear(perform: normalizeRuntimeSelection)
+    }
+
+    private var registryRuntimes: [Core.Runtime.Descriptor] {
+        let runtimes = app.availableRuntimeDescriptors.filter { $0.supports(.registries) }
+        return runtimes.isEmpty ? app.availableRuntimeDescriptors : runtimes
+    }
+
+    private func normalizeRuntimeSelection() {
+        guard let first = registryRuntimes.first, !registryRuntimes.contains(where: { $0.kind == runtimeKind }) else { return }
+        runtimeKind = first.kind
     }
 
     private func submit() {
@@ -69,7 +90,8 @@ struct RegistryLoginSheet: View {
             do {
                 _ = try await client.registryLogin(server: server.trimmingCharacters(in: .whitespaces),
                                                    username: username.trimmingCharacters(in: .whitespaces),
-                                                   password: password)
+                                                   password: password,
+                                                   runtimeKind: runtimeKind)
                 await app.refreshRegistries()
                 dismiss()
             } catch let e as Core.Command.Error { error = e.appDisplayMessage; busy = false }

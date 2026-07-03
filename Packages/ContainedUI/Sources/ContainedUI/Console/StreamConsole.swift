@@ -114,3 +114,21 @@ public extension UI.Console {
         }
     }
 }
+
+#Preview("Stream Console") {
+    UI.Console.Stream(stream: {
+        AsyncThrowingStream { continuation in
+            continuation.yield("Pulling docker.io/library/nginx:latest\n")
+            continuation.yield("Resolving manifest\n")
+            continuation.yield("Done\n")
+            continuation.finish()
+        }
+    },
+    workingLabel: "Working",
+    completedLabel: "Completed",
+    lineCountLabel: { "\($0) lines" },
+    copyLogHelp: "Copy log",
+    failureLabel: { error in error.localizedDescription })
+    .frame(width: 520, height: 320)
+    .padding(UI.Tokens.Space.xl)
+}

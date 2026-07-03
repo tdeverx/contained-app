@@ -78,7 +78,7 @@ enum SystemVolumeInventory {
 
     private static func merging(_ existing: Entry, with incoming: Entry) -> Entry {
         var containers = existing.containers
-        for snapshot in incoming.containers where !containers.contains(where: { $0.id == snapshot.id }) {
+        for snapshot in incoming.containers where !containers.contains(where: { $0.scopedID == snapshot.scopedID }) {
             containers.append(snapshot)
         }
         return Entry(id: existing.id,
@@ -129,7 +129,7 @@ enum SystemVolumeInventory {
 
         guard destination != nil || type == "tmpfs" else { return nil }
         let title = destination ?? "anonymous mount"
-        return Entry(id: "anon:\(snapshot.id):\(title)",
+        return Entry(id: "anon:\(snapshot.scopedID):\(title)",
                      kind: .anonymous,
                      title: title,
                      subtitle: typeLabel(type),

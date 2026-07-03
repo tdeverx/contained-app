@@ -25,6 +25,14 @@ such as `UI.Panel.Padding.top` or `UI.Toolbar.Size.controlHeight`.
 Contextual tokens mirror raw defaults unless their declaration explains an
 intentional divergence.
 
+Implementation-only helpers that remove repeated structure across elements live
+under `Sources/ContainedUI/Shared`. They are package-internal and are not app
+API; app code should keep using the public `UI.*` routes.
+
+SwiftUI previews are colocated with the element declarations they exercise. The
+package does not use a separate preview-only source tree, so opening an element
+file in Xcode should show that element's canvas sample directly.
+
 ## Topics
 
 ### Namespaces

@@ -69,31 +69,41 @@ struct MetadataRow<Accessory: View>: View {
     }
 
     public var body: some View {
-        HStack(spacing: UI.Tokens.Space.m) {
-            Image(systemName: systemImage)
-                .foregroundStyle(tint)
-                .frame(width: UI.Tokens.IconSize.rowIconColumn)
-            VStack(alignment: .leading, spacing: UI.Tokens.Card.compactTextSpacing) {
-                Text(title)
-                    .font(isMonospaced ? .system(.callout, design: .monospaced) : .callout)
-                    .lineLimit(1)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: UI.Tokens.Space.s)
+        SharedIconTextRow(systemImage: systemImage,
+                          tint: tint,
+                          subtitle: subtitle,
+                          action: action) {
+            Text(title)
+                .font(isMonospaced ? .system(.callout, design: .monospaced) : .callout)
+                .lineLimit(1)
+        } accessory: {
             accessory()
-        }
-        .padding(.vertical, UI.Tokens.Space.s)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            action?()
         }
     }
 }
+}
+
+#Preview("List Controls") {
+    UI.List.Stack {
+        UI.List.Section("Runtime") {
+            UI.List.MetadataBadgeRow(systemImage: "shippingbox",
+                                     title: "preview-web",
+                                     badge: "running",
+                                     subtitle: "docker.io/library/nginx:latest",
+                                     tint: .accentColor) {
+                UI.List.RowChevron()
+            }
+            UI.List.MetadataRow(systemImage: "externaldrive",
+                                title: "preview-data",
+                                subtitle: "/Users/preview/.contained") {
+                UI.Badge.Text(text: "10 GB")
+            }
+            UI.List.KeyValueRow(label: "Runtime", value: "Apple container")
+            UI.List.CompactInfoRow("Image", value: "nginx:latest")
+        }
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 460)
 }
 
 public extension UI.List.MetadataRow where Accessory == EmptyView {
@@ -141,29 +151,20 @@ struct MetadataBadgeRow<Accessory: View>: View {
     }
 
     public var body: some View {
-        HStack(spacing: UI.Tokens.Space.m) {
-            Image(systemName: systemImage)
-                .foregroundStyle(tint)
-                .frame(width: UI.Tokens.IconSize.rowIconColumn)
-            VStack(alignment: .leading, spacing: UI.Tokens.Card.compactTextSpacing) {
-                HStack(spacing: UI.Tokens.Space.xs) {
-                    Text(title)
-                        .font(isMonospaced ? .system(.callout, design: .monospaced) : .callout)
-                        .lineLimit(1)
-                    if let badge {
-                        UI.Badge.Text(text: badge)
-                    }
-                }
-                if let subtitle {
-                    Text(subtitle)
-                        .designSecondaryCaption()
-                        .lineLimit(1)
+        SharedIconTextRow(systemImage: systemImage,
+                          tint: tint,
+                          subtitle: subtitle) {
+            HStack(spacing: UI.Tokens.Space.xs) {
+                Text(title)
+                    .font(isMonospaced ? .system(.callout, design: .monospaced) : .callout)
+                    .lineLimit(1)
+                if let badge {
+                    UI.Badge.Text(text: badge)
                 }
             }
-            Spacer(minLength: UI.Tokens.Space.s)
+        } accessory: {
             accessory()
         }
-        .padding(.vertical, UI.Tokens.Space.s)
     }
 }
 

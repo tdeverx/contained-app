@@ -37,3 +37,13 @@ struct SelectionBar: View {
     }
 }
 }
+
+#Preview("Selection Bar") {
+    UI.Action.SelectionBar(count: 3,
+                           countLabel: { "\($0) selected" },
+                           actions: [
+                               UI.Action.Item(systemName: "tag", title: "Tag") {},
+                               UI.Action.Item(systemName: "trash", title: "Delete", role: .destructive) {},
+                           ])
+        .padding(UI.Tokens.Space.xl)
+}

@@ -3,60 +3,61 @@ import ContainedUI
 import ServiceManagement
 import ContainedCore
 
-/// User preferences, persisted to `UserDefaults`. `@Observable` so views update live.
+/// User preferences, persisted through the app database. `@Observable` so views update live.
 @MainActor
 @Observable
 final class SettingsStore {
-    var accentTint: UI.Theme.Tint { didSet { defaults.set(accentTint.rawValue, forKey: Keys.tint) } }
-    var appearance: UI.Theme.Appearance { didSet { defaults.set(appearance.rawValue, forKey: Keys.appearance) } }
-    var density: UI.Card.Density { didSet { defaults.set(density.rawValue, forKey: Keys.density) } }
+    var accentTint: UI.Theme.Tint { didSet { persist(accentTint.rawValue, for: Keys.tint) } }
+    var appearance: UI.Theme.Appearance { didSet { persist(appearance.rawValue, for: Keys.appearance) } }
+    var density: UI.Card.Density { didSet { persist(density.rawValue, for: Keys.density) } }
     /// Behind-window vibrancy material for the main content area.
-    var windowMaterial: UI.Theme.WindowMaterial { didSet { defaults.set(windowMaterial.rawValue, forKey: Keys.windowMaterial) } }
+    var windowMaterial: UI.Theme.WindowMaterial { didSet { persist(windowMaterial.rawValue, for: Keys.windowMaterial) } }
     /// Material behind modal sheets.
-    var modalMaterial: UI.Theme.WindowMaterial { didSet { defaults.set(modalMaterial.rawValue, forKey: Keys.modalMaterial) } }
+    var modalMaterial: UI.Theme.WindowMaterial { didSet { persist(modalMaterial.rawValue, for: Keys.modalMaterial) } }
     /// Material for toolbar control surfaces (glass buttons / search field).
-    var buttonMaterial: UI.Theme.WindowMaterial { didSet { defaults.set(buttonMaterial.rawValue, forKey: Keys.buttonMaterial) } }
+    var buttonMaterial: UI.Theme.WindowMaterial { didSet { persist(buttonMaterial.rawValue, for: Keys.buttonMaterial) } }
     /// Optional color wash applied inside toolbar glass buttons.
-    var buttonTintEnabled: Bool { didSet { defaults.set(buttonTintEnabled, forKey: Keys.buttonTintEnabled) } }
-    var buttonTint: UI.Theme.Tint { didSet { defaults.set(buttonTint.rawValue, forKey: Keys.buttonTint) } }
-    var buttonTintOpacity: Double { didSet { defaults.set(buttonTintOpacity, forKey: Keys.buttonTintOpacity) } }
-    var buttonTintGradient: Bool { didSet { defaults.set(buttonTintGradient, forKey: Keys.buttonTintGradient) } }
-    var buttonTintGradientAngle: Double { didSet { defaults.set(buttonTintGradientAngle, forKey: Keys.buttonTintGradientAngle) } }
-    var buttonTintBlendMode: UI.Theme.ColorBlendMode { didSet { defaults.set(buttonTintBlendMode.rawValue, forKey: Keys.buttonTintBlendMode) } }
+    var buttonTintEnabled: Bool { didSet { persist(buttonTintEnabled, for: Keys.buttonTintEnabled) } }
+    var buttonTint: UI.Theme.Tint { didSet { persist(buttonTint.rawValue, for: Keys.buttonTint) } }
+    var buttonTintOpacity: Double { didSet { persist(buttonTintOpacity, for: Keys.buttonTintOpacity) } }
+    var buttonTintGradient: Bool { didSet { persist(buttonTintGradient, for: Keys.buttonTintGradient) } }
+    var buttonTintGradientAngle: Double { didSet { persist(buttonTintGradientAngle, for: Keys.buttonTintGradientAngle) } }
+    var buttonTintBlendMode: UI.Theme.ColorBlendMode { didSet { persist(buttonTintBlendMode.rawValue, for: Keys.buttonTintBlendMode) } }
     /// Material for cards, both compact and expanded.
-    var cardMaterial: UI.Theme.WindowMaterial { didSet { defaults.set(cardMaterial.rawValue, forKey: Keys.cardMaterial) } }
+    var cardMaterial: UI.Theme.WindowMaterial { didSet { persist(cardMaterial.rawValue, for: Keys.cardMaterial) } }
     /// Show the info.circle help popovers throughout the app.
-    var showInfoTips: Bool { didSet { defaults.set(showInfoTips, forKey: Keys.showInfoTips) } }
+    var showInfoTips: Bool { didSet { persist(showInfoTips, for: Keys.showInfoTips) } }
     /// Let images without their own style inherit the default card design edited in Settings.
-    var imageDefaultStyleEnabled: Bool { didSet { defaults.set(imageDefaultStyleEnabled, forKey: Keys.imageDefaultStyleEnabled) } }
-    var keepInMenuBar: Bool { didSet { defaults.set(keepInMenuBar, forKey: Keys.keepInMenuBar) } }
-    var cliPathOverride: String { didSet { defaults.set(cliPathOverride, forKey: Keys.cliPath) } }
-    var refreshInterval: Double { didSet { defaults.set(refreshInterval, forKey: Keys.refresh) } }
+    var imageDefaultStyleEnabled: Bool { didSet { persist(imageDefaultStyleEnabled, for: Keys.imageDefaultStyleEnabled) } }
+    var keepInMenuBar: Bool { didSet { persist(keepInMenuBar, for: Keys.keepInMenuBar) } }
+    var cliPathOverride: String { didSet { database.setRuntimePathOverride(cliPathOverride, for: .appleContainer) } }
+    var dockerCLIPathOverride: String { didSet { database.setRuntimePathOverride(dockerCLIPathOverride, for: .docker) } }
+    var refreshInterval: Double { didSet { persist(refreshInterval, for: Keys.refresh) } }
     var statsNormalizationMode: Core.Metrics.NormalizationMode {
-        didSet { defaults.set(statsNormalizationMode.rawValue, forKey: Keys.statsNormalizationMode) }
+        didSet { persist(statsNormalizationMode.rawValue, for: Keys.statsNormalizationMode) }
     }
-    var imageUpdateIntervalHours: Int { didSet { defaults.set(imageUpdateIntervalHours, forKey: Keys.imageUpdateIntervalHours) } }
+    var imageUpdateIntervalHours: Int { didSet { persist(imageUpdateIntervalHours, for: Keys.imageUpdateIntervalHours) } }
     /// Automation toggles (surfaced in System → Automation). Each gates a background task.
-    var imageUpdateChecksEnabled: Bool { didSet { defaults.set(imageUpdateChecksEnabled, forKey: Keys.imageUpdateChecksEnabled) } }
-    var appUpdateChecksEnabled: Bool { didSet { defaults.set(appUpdateChecksEnabled, forKey: Keys.appUpdateChecksEnabled) } }
-    var autoRestartEnabled: Bool { didSet { defaults.set(autoRestartEnabled, forKey: Keys.autoRestartEnabled) } }
-    var notifyOnCrash: Bool { didSet { defaults.set(notifyOnCrash, forKey: Keys.notifyOnCrash) } }
+    var imageUpdateChecksEnabled: Bool { didSet { persist(imageUpdateChecksEnabled, for: Keys.imageUpdateChecksEnabled) } }
+    var appUpdateChecksEnabled: Bool { didSet { persist(appUpdateChecksEnabled, for: Keys.appUpdateChecksEnabled) } }
+    var autoRestartEnabled: Bool { didSet { persist(autoRestartEnabled, for: Keys.autoRestartEnabled) } }
+    var notifyOnCrash: Bool { didSet { persist(notifyOnCrash, for: Keys.notifyOnCrash) } }
     /// Show "Reveal CLI" affordances on destructive/privileged actions (global gate).
-    var revealCLI: Bool { didSet { defaults.set(revealCLI, forKey: Keys.revealCLI) } }
+    var revealCLI: Bool { didSet { persist(revealCLI, for: Keys.revealCLI) } }
     /// How many days of metrics/events the on-disk history keeps before pruning.
-    var historyRetentionDays: Int { didSet { defaults.set(historyRetentionDays, forKey: Keys.historyRetention) } }
+    var historyRetentionDays: Int { didSet { persist(historyRetentionDays, for: Keys.historyRetention) } }
     /// App event logging verbosity.
-    var loggingLevel: AppLogLevel { didSet { defaults.set(loggingLevel.rawValue, forKey: Keys.loggingLevel) } }
+    var loggingLevel: AppLogLevel { didSet { persist(loggingLevel.rawValue, for: Keys.loggingLevel) } }
     /// Logging outputs. Activity history keeps events in-app; Console writes to macOS unified logging.
     var enabledLogDestinations: Set<AppLogDestination> {
-        didSet { defaults.set(enabledLogDestinations.map(\.rawValue).sorted(), forKey: Keys.logDestinations) }
+        didSet { persist(enabledLogDestinations.map(\.rawValue).sorted(), for: Keys.logDestinations) }
     }
     /// Event categories the user wants recorded.
     var enabledLogCategories: Set<AppLogCategory> {
-        didSet { defaults.set(enabledLogCategories.map(\.rawValue).sorted(), forKey: Keys.logCategories) }
+        didSet { persist(enabledLogCategories.map(\.rawValue).sorted(), for: Keys.logCategories) }
     }
     /// Which Sparkle update channel the user opts into (stable / beta / nightly).
-    var updateChannel: UpdateChannel { didSet { defaults.set(updateChannel.rawValue, forKey: Keys.updateChannel) } }
+    var updateChannel: UpdateChannel { didSet { persist(updateChannel.rawValue, for: Keys.updateChannel) } }
     // MARK: Experimental features
     //
     // Opt-in gates for surfaces that aren't fully baked yet. All default **off** so a fresh install
@@ -65,24 +66,24 @@ final class SettingsStore {
     // regardless of any activation path.
 
     /// The `⌘K` command palette (toolbar search escalation + menu command + morph).
-    var commandPaletteEnabled: Bool { didSet { defaults.set(commandPaletteEnabled, forKey: Keys.commandPaletteEnabled) } }
+    var commandPaletteEnabled: Bool { didSet { persist(commandPaletteEnabled, for: Keys.commandPaletteEnabled) } }
     /// Inline Docker Hub / registry image search (the creation "Search" path + palette Hub scope).
-    var hubSearchEnabled: Bool { didSet { defaults.set(hubSearchEnabled, forKey: Keys.hubSearchEnabled) } }
+    var hubSearchEnabled: Bool { didSet { persist(hubSearchEnabled, for: Keys.hubSearchEnabled) } }
     /// Compose (YAML) import — paste, file pick, and drag-and-drop.
-    var composeImportEnabled: Bool { didSet { defaults.set(composeImportEnabled, forKey: Keys.composeImportEnabled) } }
+    var composeImportEnabled: Bool { didSet { persist(composeImportEnabled, for: Keys.composeImportEnabled) } }
     /// The Dockerfile image-build workspace.
-    var imageBuildEnabled: Bool { didSet { defaults.set(imageBuildEnabled, forKey: Keys.imageBuildEnabled) } }
+    var imageBuildEnabled: Bool { didSet { persist(imageBuildEnabled, for: Keys.imageBuildEnabled) } }
     /// Menu keyboard shortcuts and command shortcuts. Disabled by default.
-    var keyboardShortcutsEnabled: Bool { didSet { defaults.set(keyboardShortcutsEnabled, forKey: Keys.keyboardShortcutsEnabled) } }
+    var keyboardShortcutsEnabled: Bool { didSet { persist(keyboardShortcutsEnabled, for: Keys.keyboardShortcutsEnabled) } }
     /// Floating toolbar chrome. Off by default so the sidebar shell is the stable fresh-install path.
-    var experimentalToolbarUI: Bool { didSet { defaults.set(experimentalToolbarUI, forKey: Keys.experimentalToolbarUI) } }
+    var experimentalToolbarUI: Bool { didSet { persist(experimentalToolbarUI, for: Keys.experimentalToolbarUI) } }
     /// Route eligible actions through toolbar morph panels instead of classic pages/sheets. Depends on
     /// the floating toolbar so page routing never targets panels without visible toolbar origins.
-    var experimentalPanelNavigation: Bool { didSet { defaults.set(experimentalPanelNavigation, forKey: Keys.experimentalPanelNavigation) } }
+    var experimentalPanelNavigation: Bool { didSet { persist(experimentalPanelNavigation, for: Keys.experimentalPanelNavigation) } }
     var usesPanelNavigation: Bool { experimentalToolbarUI && experimentalPanelNavigation }
     /// Classic-shell sidebar visibility. Separate from the toolbar toggle so users can keep the
     /// stable content shell but reclaim width when they want a page-only layout.
-    var sidebarNavigationEnabled: Bool { didSet { defaults.set(sidebarNavigationEnabled, forKey: Keys.sidebarNavigationEnabled) } }
+    var sidebarNavigationEnabled: Bool { didSet { persist(sidebarNavigationEnabled, for: Keys.sidebarNavigationEnabled) } }
 
     /// Register/unregister the app as a login item via `SMAppService`. Backed by the live service
     /// status; failures (e.g. unsigned dev build) leave the stored value and the status governs.
@@ -98,57 +99,60 @@ final class SettingsStore {
         }
     }
 
-    private let defaults: UserDefaults
+    private let database: AppDatabase
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        accentTint = UI.Theme.Tint(rawValue: defaults.string(forKey: Keys.tint) ?? "") ?? .multicolor
-        appearance = UI.Theme.Appearance(rawValue: defaults.string(forKey: Keys.appearance) ?? "") ?? .system
-        density = UI.Card.Density(stored: defaults.string(forKey: Keys.density))
-        windowMaterial = UI.Theme.WindowMaterial(rawValue: defaults.string(forKey: Keys.windowMaterial) ?? "") ?? .fullScreenUI
-        modalMaterial = UI.Theme.WindowMaterial(rawValue: defaults.string(forKey: Keys.modalMaterial) ?? "") ?? .sheet
-        buttonMaterial = UI.Theme.WindowMaterial(rawValue: defaults.string(forKey: Keys.buttonMaterial) ?? "") ?? .glassClear
-        buttonTintEnabled = defaults.object(forKey: Keys.buttonTintEnabled) as? Bool ?? false
-        buttonTint = UI.Theme.Tint(rawValue: defaults.string(forKey: Keys.buttonTint) ?? "") ?? .multicolor
-        buttonTintOpacity = defaults.object(forKey: Keys.buttonTintOpacity) as? Double ?? 0.18
-        buttonTintGradient = defaults.object(forKey: Keys.buttonTintGradient) as? Bool ?? true
-        buttonTintGradientAngle = defaults.object(forKey: Keys.buttonTintGradientAngle) as? Double ?? Personalization.defaultGradientAngle
-        buttonTintBlendMode = UI.Theme.ColorBlendMode(rawValue: defaults.string(forKey: Keys.buttonTintBlendMode) ?? "") ?? .softLight
-        cardMaterial = UI.Theme.WindowMaterial(rawValue: defaults.string(forKey: Keys.cardMaterial) ?? "") ?? .glassRegular
-        showInfoTips = defaults.object(forKey: Keys.showInfoTips) as? Bool ?? true
-        imageDefaultStyleEnabled = defaults.object(forKey: Keys.imageDefaultStyleEnabled) as? Bool ?? true
-        keepInMenuBar = defaults.object(forKey: Keys.keepInMenuBar) as? Bool ?? true
-        cliPathOverride = defaults.string(forKey: Keys.cliPath) ?? ""
-        refreshInterval = defaults.object(forKey: Keys.refresh) as? Double ?? 2.0
-        statsNormalizationMode = Core.Metrics.NormalizationMode(rawValue: defaults.string(forKey: Keys.statsNormalizationMode) ?? "") ?? .container
-        imageUpdateIntervalHours = defaults.object(forKey: Keys.imageUpdateIntervalHours) as? Int ?? 6
-        imageUpdateChecksEnabled = defaults.object(forKey: Keys.imageUpdateChecksEnabled) as? Bool ?? true
-        appUpdateChecksEnabled = defaults.object(forKey: Keys.appUpdateChecksEnabled) as? Bool ?? true
-        autoRestartEnabled = defaults.object(forKey: Keys.autoRestartEnabled) as? Bool ?? true
-        notifyOnCrash = defaults.object(forKey: Keys.notifyOnCrash) as? Bool ?? true
-        revealCLI = defaults.object(forKey: Keys.revealCLI) as? Bool ?? true
-        historyRetentionDays = defaults.object(forKey: Keys.historyRetention) as? Int ?? 7
-        loggingLevel = AppLogLevel(rawValue: defaults.string(forKey: Keys.loggingLevel) ?? "") ?? .important
-        enabledLogDestinations = Self.loadSet(AppLogDestination.self,
-                                              key: Keys.logDestinations,
-                                              defaults: defaults,
-                                              fallback: [.activity])
-        enabledLogCategories = Self.loadSet(AppLogCategory.self,
-                                            key: Keys.logCategories,
-                                            defaults: defaults,
-                                            fallback: Set(AppLogCategory.allCases))
+    init(database: AppDatabase = AppDatabase()) {
+        self.database = database
+        _ = database.runtimeRecord(for: .appleContainer)
+        _ = database.runtimeRecord(for: .docker)
+        accentTint = UI.Theme.Tint(rawValue: database.setting(Keys.tint, fallback: "")) ?? .multicolor
+        appearance = UI.Theme.Appearance(rawValue: database.setting(Keys.appearance, fallback: "")) ?? .system
+        density = UI.Card.Density(stored: database.setting(Keys.density, fallback: ""))
+        windowMaterial = UI.Theme.WindowMaterial(rawValue: database.setting(Keys.windowMaterial, fallback: "")) ?? .fullScreenUI
+        modalMaterial = UI.Theme.WindowMaterial(rawValue: database.setting(Keys.modalMaterial, fallback: "")) ?? .sheet
+        buttonMaterial = UI.Theme.WindowMaterial(rawValue: database.setting(Keys.buttonMaterial, fallback: "")) ?? .glassClear
+        buttonTintEnabled = database.setting(Keys.buttonTintEnabled, fallback: false)
+        buttonTint = UI.Theme.Tint(rawValue: database.setting(Keys.buttonTint, fallback: "")) ?? .multicolor
+        buttonTintOpacity = database.setting(Keys.buttonTintOpacity, fallback: 0.18)
+        buttonTintGradient = database.setting(Keys.buttonTintGradient, fallback: true)
+        buttonTintGradientAngle = database.setting(Keys.buttonTintGradientAngle, fallback: Personalization.defaultGradientAngle)
+        buttonTintBlendMode = UI.Theme.ColorBlendMode(rawValue: database.setting(Keys.buttonTintBlendMode, fallback: "")) ?? .softLight
+        cardMaterial = UI.Theme.WindowMaterial(rawValue: database.setting(Keys.cardMaterial, fallback: "")) ?? .glassRegular
+        showInfoTips = database.setting(Keys.showInfoTips, fallback: true)
+        imageDefaultStyleEnabled = database.setting(Keys.imageDefaultStyleEnabled, fallback: true)
+        keepInMenuBar = database.setting(Keys.keepInMenuBar, fallback: true)
+        cliPathOverride = database.runtimePathOverride(for: .appleContainer)
+        dockerCLIPathOverride = database.runtimePathOverride(for: .docker)
+        refreshInterval = database.setting(Keys.refresh, fallback: 2.0)
+        statsNormalizationMode = Core.Metrics.NormalizationMode(rawValue: database.setting(Keys.statsNormalizationMode, fallback: "")) ?? .container
+        imageUpdateIntervalHours = database.setting(Keys.imageUpdateIntervalHours, fallback: 6)
+        imageUpdateChecksEnabled = database.setting(Keys.imageUpdateChecksEnabled, fallback: true)
+        appUpdateChecksEnabled = database.setting(Keys.appUpdateChecksEnabled, fallback: true)
+        autoRestartEnabled = database.setting(Keys.autoRestartEnabled, fallback: true)
+        notifyOnCrash = database.setting(Keys.notifyOnCrash, fallback: true)
+        revealCLI = database.setting(Keys.revealCLI, fallback: true)
+        historyRetentionDays = database.setting(Keys.historyRetention, fallback: 7)
+        loggingLevel = AppLogLevel(rawValue: database.setting(Keys.loggingLevel, fallback: "")) ?? .important
+        enabledLogDestinations = Self.decodeRawSet(AppLogDestination.self,
+                                                   raw: database.setting(Keys.logDestinations,
+                                                                         fallback: [AppLogDestination.activity.rawValue]),
+                                                   fallback: [.activity])
+        enabledLogCategories = Self.decodeRawSet(AppLogCategory.self,
+                                                 raw: database.setting(Keys.logCategories,
+                                                                       fallback: AppLogCategory.allCases.map(\.rawValue)),
+                                                 fallback: Set(AppLogCategory.allCases))
         // Default to Nightly while the app is pre-1.0 — that's where the only builds ship, so a fresh
         // install actually receives updates. Users can switch to Beta/Stable in Settings → Updates.
-        updateChannel = UpdateChannel(rawValue: defaults.string(forKey: Keys.updateChannel) ?? "") ?? .nightly
+        updateChannel = UpdateChannel(rawValue: database.setting(Keys.updateChannel, fallback: "")) ?? .nightly
         // Experimental features default off (opt-in).
-        commandPaletteEnabled = defaults.object(forKey: Keys.commandPaletteEnabled) as? Bool ?? false
-        hubSearchEnabled = defaults.object(forKey: Keys.hubSearchEnabled) as? Bool ?? false
-        composeImportEnabled = defaults.object(forKey: Keys.composeImportEnabled) as? Bool ?? false
-        imageBuildEnabled = defaults.object(forKey: Keys.imageBuildEnabled) as? Bool ?? false
-        keyboardShortcutsEnabled = defaults.object(forKey: Keys.keyboardShortcutsEnabled) as? Bool ?? false
-        experimentalToolbarUI = defaults.object(forKey: Keys.experimentalToolbarUI) as? Bool ?? false
-        experimentalPanelNavigation = defaults.object(forKey: Keys.experimentalPanelNavigation) as? Bool ?? false
-        sidebarNavigationEnabled = defaults.object(forKey: Keys.sidebarNavigationEnabled) as? Bool ?? true
+        commandPaletteEnabled = database.setting(Keys.commandPaletteEnabled, fallback: false)
+        hubSearchEnabled = database.setting(Keys.hubSearchEnabled, fallback: false)
+        composeImportEnabled = database.setting(Keys.composeImportEnabled, fallback: false)
+        imageBuildEnabled = database.setting(Keys.imageBuildEnabled, fallback: false)
+        keyboardShortcutsEnabled = database.setting(Keys.keyboardShortcutsEnabled, fallback: false)
+        experimentalToolbarUI = database.setting(Keys.experimentalToolbarUI, fallback: false)
+        experimentalPanelNavigation = database.setting(Keys.experimentalPanelNavigation, fallback: false)
+        sidebarNavigationEnabled = database.setting(Keys.sidebarNavigationEnabled, fallback: true)
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
@@ -170,6 +174,7 @@ final class SettingsStore {
                        imageDefaultStyleEnabled: imageDefaultStyleEnabled,
                        keepInMenuBar: keepInMenuBar,
                        cliPathOverride: cliPathOverride,
+                       dockerCLIPathOverride: dockerCLIPathOverride,
                        refreshInterval: refreshInterval,
                        statsNormalizationMode: statsNormalizationMode,
                        imageUpdateIntervalHours: imageUpdateIntervalHours,
@@ -211,6 +216,7 @@ final class SettingsStore {
         imageDefaultStyleEnabled = snapshot.imageDefaultStyleEnabled
         keepInMenuBar = snapshot.keepInMenuBar
         cliPathOverride = snapshot.cliPathOverride
+        dockerCLIPathOverride = snapshot.dockerCLIPathOverride
         refreshInterval = snapshot.refreshInterval
         statsNormalizationMode = snapshot.statsNormalizationMode
         imageUpdateIntervalHours = snapshot.imageUpdateIntervalHours
@@ -234,11 +240,14 @@ final class SettingsStore {
         sidebarNavigationEnabled = snapshot.sidebarNavigationEnabled
     }
 
-    private static func loadSet<T: RawRepresentable & Hashable>(_ type: T.Type,
-                                                                key: String,
-                                                                defaults: UserDefaults,
-                                                                fallback: Set<T>) -> Set<T> where T.RawValue == String {
-        guard let raw = defaults.stringArray(forKey: key) else { return fallback }
+    private func persist<T: Codable>(_ value: T, for key: String) {
+        database.setSetting(value, for: key)
+    }
+
+    private static func decodeRawSet<T: RawRepresentable & Hashable>(_ type: T.Type,
+                                                                     raw: [String],
+                                                                     fallback: Set<T>) -> Set<T> where T.RawValue == String {
+        guard !raw.isEmpty else { return fallback }
         return Set(raw.compactMap { T(rawValue: $0) })
     }
 
@@ -259,7 +268,6 @@ final class SettingsStore {
         static let showInfoTips = "showInfoTips"
         static let imageDefaultStyleEnabled = "imageDefaultStyleEnabled"
         static let keepInMenuBar = "keepInMenuBar"
-        static let cliPath = "cliPathOverride"
         static let refresh = "refreshInterval"
         static let statsNormalizationMode = "statsNormalizationMode"
         static let imageUpdateIntervalHours = "imageUpdateIntervalHours"

@@ -55,8 +55,8 @@ struct ContainerSchemaForm: View {
 
     private var generalSection: some View {
         Group {
-            UI.Panel.Row(title: AppText.runtimeCore,
-                     subtitle: app.runtimeCoreSelectorIsEnabled ? AppText.runtimeCoreSubtitle : app.runtimeCoreSelectorDisabledReason) {
+            UI.Panel.Row(title: AppText.runtime,
+                     subtitle: app.runtimePickerIsEnabled ? AppText.runtimeSubtitle : app.runtimePickerDisabledReason) {
                 Picker("", selection: runtimeKindBinding) {
                     ForEach(app.availableRuntimeDescriptors, id: \.kind) { descriptor in
                         Text(descriptor.displayName).tag(descriptor.kind)
@@ -64,7 +64,7 @@ struct ContainerSchemaForm: View {
                 }
                 .labelsHidden()
                 .fixedSize()
-                .disabled(!app.runtimeCoreSelectorIsEnabled)
+                .disabled(!app.runtimePickerIsEnabled)
             }
             UI.Panel.Field(label: AppText.string("runSpec.image", defaultValue: "Image"),
                        info: fieldInfo(.imageReference),
@@ -578,7 +578,7 @@ struct ContainerSchemaForm: View {
                 ForEach(fields) { field in
                     UI.Panel.Field(label: fieldLabel(field),
                                info: fieldInfo(field.path),
-                               error: field.support(for: spec.effectiveRuntimeKind).defaultDisabledReason) {
+                               error: field.support(for: spec.effectiveRuntimeKind).localizedDisabledReason()) {
                         Text(valueDescription(for: field))
                             .designSecondaryCallout()
                             .textSelection(.enabled)
@@ -703,7 +703,7 @@ struct ContainerSchemaForm: View {
     }
 
     private func fieldLabel(_ field: Core.Schema.FieldDescriptor) -> String {
-        AppText.dynamicString(field.labelKey, defaultValue: field.defaultLabel)
+        field.localizedLabel()
     }
 
     private func fieldLabel(_ path: Core.Field.Path, fallback: String) -> String {
@@ -714,7 +714,7 @@ struct ContainerSchemaForm: View {
     private func fieldInfo(_ path: Core.Field.Path) -> String {
         guard let field = spec.definition.descriptor(for: path) else { return "" }
         let tip = field.tip(for: spec.effectiveRuntimeKind)
-        let body = tip.map { AppText.dynamicString($0.key, defaultValue: $0.defaultText) } ?? field.defaultLabel
+        let body = tip?.localizedText() ?? field.localizedLabel()
         let aliases = field.sourceAliases
             .filter { !$0.name.isEmpty || !$0.example.isEmpty }
             .map { alias -> String in

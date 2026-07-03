@@ -49,3 +49,11 @@ public extension UI.Control {
         }
     }
 }
+
+#Preview("Info Button") {
+    HStack(spacing: UI.Tokens.Space.s) {
+        Text("Runtime path")
+        UI.Control.InfoButton("The executable path used for this runtime.")
+    }
+    .padding(UI.Tokens.Space.xl)
+}

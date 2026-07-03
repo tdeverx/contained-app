@@ -5,11 +5,11 @@ import Testing
 @Suite("Runtime adapter boundary")
 struct AppleContainerAdapterTests {
     @Test func runtimeKindAcceptsFutureAdapters() throws {
-        let descriptor = Core.Runtime.Descriptor(kind: Core.Runtime.Kind(rawValue: "future-engine"),
-                                           displayName: "Future Engine",
+        let descriptor = Core.Runtime.Descriptor(kind: Core.Runtime.Kind(rawValue: "future-runtime"),
+                                           displayName: "Future Runtime",
                                            capabilities: [.containers])
 
-        #expect(descriptor.kind.rawValue == "future-engine")
+        #expect(descriptor.kind.rawValue == "future-runtime")
         #expect(descriptor.executableName == nil)
         #expect(descriptor.supports(.containers))
         #expect(!descriptor.supports(.imageBuild))
@@ -21,7 +21,7 @@ struct AppleContainerAdapterTests {
         } catch let error as Core.Runtime.UnsupportedCapability {
             #expect(error.packageName == "ContainedCore")
             #expect(error.packageErrorCode == "unsupportedRuntimeCapability")
-            #expect(error.packageErrorContext["kind"] == "future-engine")
+            #expect(error.packageErrorContext["kind"] == "future-runtime")
         }
     }
 

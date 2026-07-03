@@ -8,7 +8,7 @@
 ### Runtime & Creation
 
 - Consolidated runtime contracts, the Core orchestrator, the Apple `container` adapter, command previews, typed runtime methods, typed stats streams, Compose translation, image defaults, and runtime-neutral schema/import models inside `ContainedCore`.
-- Added open-ended runtime identifiers and disabled per-container runtime selection so future Docker-compatible, Podman, Lima-backed, remote, or other adapters can plug into Core without becoming app-side switches.
+- Added open-ended runtime identifiers and runtime-scoped resource routing so future Docker, Podman, Lima-backed, remote, or other adapters can plug into Core without becoming app-side switches.
 - Replaced the app-owned Run/Edit request shape with Core-published schema documents that carry generic field paths, Apple/Docker/Compose source aliases, runtime-specific tips, disabled-field explanations, provenance, schema-conformance migration, and Apple `--os`/`--arch` support.
 - Routed terminal exec, service lifecycle actions, package errors, and reusable-package copy through Core/app-owned presentation boundaries.
 
@@ -16,6 +16,8 @@
 
 - Extracted Liquid Glass cards, panels, controls, toolbar chrome, command previews, charts, console surfaces, badges, keycaps, status indicators, tint controls, and contextual tokens into `ContainedUI`.
 - Moved toolbar safe-area measurement, morph geometry, panel placement, and single-surface expansion infrastructure into `ContainedUX`.
+- Added colocated SwiftUI previews for design-system and UX primitives, removed the separate preview-only source directories, and documented that design previews live beside each element declaration.
+- Introduced package-internal `ContainedUI/Shared` helpers for repeated capsule, swatch, label, row, and surface-rendering anatomy while keeping app-facing calls on the public `UI.*` routes.
 - Centralized resource-card anatomy in `UI.Card.Scaffold`, with stable headers, sticky large widgets, body-hosted medium/small details, typed page controls, and packaged action/status routes.
 - Reduced idle UI churn with one app-wide low-priority stats stream, narrower per-container metric invalidation, lazy long panels, deferred heavyweight expanded-card pages, cached style/tag lookups, and coalesced image refreshes.
 - Improved metric rendering with chronological sparkline windows, fixed CPU/memory percentage scales, raw network/disk throughput shapes, configurable CPU/memory normalization, and clearer sub-1% CPU/memory readouts.

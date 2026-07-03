@@ -31,12 +31,22 @@ struct Status: View {
     }
 
     public var body: some View {
-        SwiftUI.Text(text)
-            .font(font)
-            .foregroundStyle(tint)
-            .padding(.horizontal, UI.Tokens.Badge.horizontalPadding)
-            .padding(.vertical, UI.Tokens.Badge.verticalPadding)
-            .background(tint.opacity(UI.Tokens.Badge.statusOpacity), in: Capsule())
+        SharedCapsuleLabel(horizontalPadding: UI.Tokens.Badge.horizontalPadding,
+                           verticalPadding: UI.Tokens.Badge.verticalPadding,
+                           foreground: AnyShapeStyle(tint),
+                           fill: AnyShapeStyle(tint.opacity(UI.Tokens.Badge.statusOpacity))) {
+            SwiftUI.Text(text)
+                .font(font)
+        }
     }
 }
+}
+
+#Preview("Badges") {
+    HStack(spacing: UI.Tokens.Space.m) {
+        UI.Badge.Dot(color: .green)
+        UI.Badge.Status(text: "Running", tint: .green)
+        UI.Badge.Status(text: "Failed", tint: .red)
+    }
+    .padding(UI.Tokens.Space.xl)
 }

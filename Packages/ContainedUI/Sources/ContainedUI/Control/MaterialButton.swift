@@ -234,3 +234,24 @@ struct MaterialButton<Content: View>: View {
         return AnyShapeStyle(color.opacity(tintStyle.opacity))
     }
 }
+
+#Preview("Material Button") {
+    VStack(alignment: .leading, spacing: UI.Tokens.Space.l) {
+        MaterialButton {
+            MaterialButtonItem(systemName: "play.fill", tint: .green, help: "Start") {}
+            MaterialButtonItem(systemName: "stop.fill", role: .destructive, help: "Stop") {}
+        }
+
+        MaterialButton(singleItem: true) {
+            MaterialButtonInputItem {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                Text("Search")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 220)
+    }
+    .padding(UI.Tokens.Space.xl)
+    .environment(\.buttonMaterial, .glassClear)
+}

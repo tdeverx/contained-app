@@ -2,8 +2,8 @@ import Foundation
 import ContainedCore
 import ContainedUI
 
-/// App-owned user-facing copy. Packages receive resolved strings from here; they do not own
-/// localized resources or English defaults.
+/// App-owned user-facing copy. UI/UX package components receive resolved strings from here;
+/// Core may provide display-neutral semantic strings for backend concepts.
 enum AppText {
     static func string(_ key: StaticString, defaultValue: String.LocalizationValue) -> String {
         String(localized: key, defaultValue: defaultValue, bundle: .main)
@@ -99,11 +99,11 @@ enum AppText {
     static var sectionGroupSystem: String { string("sectionGroup.system", defaultValue: "System") }
     static var tint: String { string("common.tint", defaultValue: "Tint") }
     static var unread: String { string("common.unread", defaultValue: "Unread") }
-    static var runtimeCore: String { string("runtime.core", defaultValue: "Core") }
-    static var runtimeCoreSubtitle: String {
+    static var runtime: String { string("runtime.label", defaultValue: "Runtime") }
+    static var runtimeSubtitle: String {
         string(
-            "runtime.core.subtitle",
-            defaultValue: "Runtime adapter used for create, recreate, imports, images, logs, stats, and system actions."
+            "runtime.subtitle",
+            defaultValue: "Container runtime used for this action. Existing resources keep their originating runtime."
         )
     }
     static var containerRuntimeNotReady: String {

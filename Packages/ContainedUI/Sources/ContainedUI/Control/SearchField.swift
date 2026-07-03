@@ -43,3 +43,20 @@ struct SearchField: View {
     }
 }
 }
+
+#Preview("Search Field") {
+    ControlSearchFieldPreview()
+        .padding(UI.Tokens.Space.xl)
+        .frame(width: 360)
+}
+
+private struct ControlSearchFieldPreview: View {
+    @State private var text = "nginx"
+
+    var body: some View {
+        UI.Control.SearchField(text: $text,
+                               prompt: "Search images",
+                               clearLabel: "Clear search",
+                               isSearching: false)
+    }
+}

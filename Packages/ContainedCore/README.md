@@ -1,18 +1,18 @@
 # ContainedCore
 
 `ContainedCore` is Contained's standalone backend/orchestration package. It
-contains no SwiftUI, app state, Sparkle, SwiftTerm, localization resources,
-persistence, or presentation policy.
+contains no SwiftUI, app state, Sparkle, SwiftTerm, app persistence, or
+product-specific presentation policy.
 
 ## Owns
 
 - `Core.Orchestrator`, the app-facing backend facade.
-- `Core.Runtime` descriptors, capabilities, selected-runtime checks, and typed
+- `Core.Runtime` descriptors, capabilities, runtime-scoped checks, and typed
   unsupported-operation errors.
 - `Core.Container` semantic create/edit/import/export models.
 - `Core.Compose` import/export plans and Compose YAML parsing/writing internals.
 - `Core.Command` command previews, command execution, and host invocations.
-- Core-internal runtime adapters, beginning with Apple container.
+- Core-internal runtime adapters for Apple container and Docker CLI runtimes.
 - Metrics, stats normalization, decoded resources, registry helpers, and
   display-neutral package errors.
 - A separate `ContainedCoreFixtures` product for deterministic semantic samples
@@ -20,9 +20,15 @@ persistence, or presentation policy.
 
 ## Does Not Own
 
-- Localized strings or user-facing copy.
+- Product navigation, onboarding, toasts, alerts, and other app-owned copy.
 - SwiftUI views, app routing, settings, stores, or Activity presentation.
 - UI/UX packages, Sparkle, SwiftTerm, SwiftData, or app persistence.
+
+`ContainedCore` may own display-neutral semantic localization for schema labels,
+validation messages, runtime capability reasons, and typed package-error fallback
+descriptions. Downstream consumers can override or wrap those strings; Contained
+uses the Core-owned semantic strings directly because the app and package live in
+the same repo.
 
 ## Runtime Example
 
@@ -31,20 +37,21 @@ import ContainedCore
 
 let result = await Core.Orchestrator.bootstrap(
     configuration: Core.Configuration(
-        appleContainer: .init(cliPathOverride: nil)
+        appleContainer: .init(cliPathOverride: nil),
+        docker: .init(cliPathOverride: nil)
     )
 )
 
 let core: Core.Orchestrator
 switch result {
-case .ready(let orchestrator, _, _),
-     .unsupported(let orchestrator, _, _):
+case .ready(let orchestrator, _):
     core = orchestrator
 case .cliMissing:
     throw Core.Error.Command.cliNotFound(searched: ["PATH"])
 }
 
 let descriptors = core.availableRuntimeDescriptors
+let containers = try await core.listRuntimeContainers(all: true)
 ```
 
 ## Create Preview Example
@@ -63,7 +70,9 @@ let command = preview.command
 
 ```swift
 let project = try Core.Compose.parse(composeText, projectName: "stack")
-let plan = try core.translateCompose(project, baseDirectory: composeDirectory)
+let plan = try core.translateCompose(project,
+                                     baseDirectory: composeDirectory,
+                                     runtimeKind: .docker)
 let documents = plan.items.map(\.document)
 ```
 
@@ -84,7 +93,7 @@ let document = Core.Container.Document(
     canonical: .init(createRequest: request)
 )
 
-let plan = try core.planMigration(document, to: .dockerCompatible)
+let plan = try core.planMigration(document, to: .docker)
 if !plan.isAvailable {
     // The app maps the typed reason/context to localized Activity or alert copy.
 }

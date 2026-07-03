@@ -138,7 +138,7 @@ struct ContainerFormStateTests {
               retries: 5
         """
         let project = try Core.Compose.parse(yaml, projectName: "demo")
-        let plan = try core.translateCompose(project, baseDirectory: nil)
+        let plan = try core.translateCompose(project, baseDirectory: nil, runtimeKind: .appleContainer)
         let item = try #require(plan.items.first)
         let spec = ContainerFormState(document: item.document, healthCheck: item.healthCheck)
         #expect(spec.image == "postgres:16")
@@ -164,7 +164,7 @@ struct ContainerFormStateTests {
         let base = URL(filePath: "/Volumes/Vault/.Docker/compose", directoryHint: .isDirectory)
         let project = try! Core.Compose.parse(yaml, projectName: "demo")
         let definition = Core.Schema.Definition.appleContainerCreate
-        let resolved = try core.translateCompose(project, baseDirectory: base)
+        let resolved = try core.translateCompose(project, baseDirectory: base, runtimeKind: .appleContainer)
             .items
             .first?
             .document
@@ -233,7 +233,8 @@ struct ContainerFormStateTests {
 
         let project = try Core.Compose.parse(yaml, projectName: "demo")
         let plan = try core.translateCompose(project,
-                                             baseDirectory: URL(filePath: "/opt/stacks/demo", directoryHint: .isDirectory))
+                                             baseDirectory: URL(filePath: "/opt/stacks/demo", directoryHint: .isDirectory),
+                                             runtimeKind: .appleContainer)
         let item = try #require(plan.items.first)
         let spec = ContainerFormState(document: item.document, healthCheck: item.healthCheck)
         let args = try arguments(spec)

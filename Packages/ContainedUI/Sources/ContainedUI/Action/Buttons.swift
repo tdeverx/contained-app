@@ -100,3 +100,19 @@ struct ToggleButton: View {
     }
 }
 }
+
+#Preview("Action Buttons") {
+    VStack(alignment: .leading, spacing: UI.Tokens.Space.l) {
+        UI.Action.TextButton(title: "Save",
+                             systemName: "checkmark",
+                             prominence: .prominent) {}
+        UI.Action.TextButton(title: "Remove",
+                             systemName: "trash",
+                             role: .destructive) {}
+        UI.Action.ToggleButton(isOn: .constant(true),
+                               title: "Pinned",
+                               systemName: "pin.fill")
+        UI.Action.ProgressCapsule()
+    }
+    .padding(UI.Tokens.Space.xl)
+}

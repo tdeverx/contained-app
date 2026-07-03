@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedUI
 
 public extension UX.SafeArea {
 struct ToolbarExclusion: OptionSet, Equatable, Sendable {
@@ -78,4 +79,32 @@ struct Manager: Equatable, Sendable {
 
 public extension EnvironmentValues {
     @Entry var morphSafeAreaManager = UX.SafeArea.Manager()
+}
+
+#Preview("Morph Safe Area") {
+    SafeAreaManagerPreview()
+        .frame(width: 420, height: 260)
+}
+
+private struct SafeAreaManagerPreview: View {
+    private let manager = UX.SafeArea.Manager(topToolbarHeight: UI.Toolbar.Size.band,
+                                              bottomToolbarHeight: UI.Toolbar.Size.band)
+
+    var body: some View {
+        GeometryReader { proxy in
+            let bounds = manager.bounds(in: proxy.size, policy: .content)
+            ZStack(alignment: .topLeading) {
+                Rectangle()
+                    .fill(.quaternary)
+                RoundedRectangle(cornerRadius: UI.Card.Radius.container, style: .continuous)
+                    .stroke(Color.accentColor, lineWidth: 2)
+                    .frame(width: bounds.width, height: bounds.height)
+                    .position(x: bounds.midX, y: bounds.midY)
+                Text("content bounds")
+                    .font(.caption)
+                    .padding(UI.Layout.Spacing.s)
+            }
+        }
+        .padding(UI.Layout.Spacing.xl)
+    }
 }

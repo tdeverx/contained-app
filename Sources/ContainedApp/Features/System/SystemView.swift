@@ -22,14 +22,14 @@ struct SystemContent: View {
     @State private var page: SystemPage
 
     enum SystemPage: String, CaseIterable, Identifiable {
-        case engine = "Engine"
+        case runtime = "Runtime"
         case automation = "Automation"
         case volumes = "Volumes"
 
         var id: String { rawValue }
         var systemImage: String {
             switch self {
-            case .engine: return "server.rack"
+            case .runtime: return "server.rack"
             case .automation: return "clock.arrow.circlepath"
             case .volumes: return "externaldrive"
             }
@@ -37,7 +37,7 @@ struct SystemContent: View {
 
         var subtitle: String {
             switch self {
-            case .engine: return AppText.string("system.page.engine.subtitle", defaultValue: "Container engine")
+            case .runtime: return AppText.string("system.page.runtime.subtitle", defaultValue: "Container runtime")
             case .automation: return AppText.string("system.page.automation.subtitle", defaultValue: "Background work")
             case .volumes: return AppText.string("system.page.volumes.subtitle", defaultValue: "Named, temp, and path mounts")
             }
@@ -45,7 +45,7 @@ struct SystemContent: View {
 
         var title: String {
             switch self {
-            case .engine: return AppText.string("system.page.engine", defaultValue: "Engine")
+            case .runtime: return AppText.string("system.page.runtime", defaultValue: "Runtime")
             case .automation: return AppText.string("system.page.automation", defaultValue: "Automation")
             case .volumes: return AppText.sectionVolumes
             }
@@ -68,7 +68,7 @@ struct SystemContent: View {
         }
     }
 
-    init(initialPage: SystemPage = .engine,
+    init(initialPage: SystemPage = .runtime,
          showClose: Bool = true,
          elevated: Bool = true,
          usesToolbarSelection: Bool = true,
@@ -106,7 +106,7 @@ struct SystemContent: View {
         } content: {
             LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.l) {
                 switch activePage {
-                case .engine: engineStatusCard
+                case .runtime: runtimeStatusCard
                 case .automation: automationCard
                 case .volumes: volumesCard
                 }
@@ -140,7 +140,7 @@ struct SystemContent: View {
                     title: AppText.sectionSystem,
                     subtitle: activePage.subtitle) {
             HStack(spacing: UI.Toolbar.Spacing.groupSpacing) {
-                engineControls
+                runtimeControls
                 UI.Action.Cluster {
                     UI.Action.Items(pageActions)
                     storageMenu
@@ -165,15 +165,24 @@ struct SystemContent: View {
         }
     }
 
-    private var engineControls: some View {
-        UI.Action.Group([
-            servicePowerAction,
-            UI.Action.Item(systemName: "arrow.clockwise",
-                         help: AppText.restartService,
-                         isEnabled: !working) {
-                run { await app.restartService() }
-            }
-        ])
+    @ViewBuilder
+    private var runtimeControls: some View {
+        if app.appleRuntimeAvailable {
+            UI.Action.Group([
+                servicePowerAction,
+                UI.Action.Item(systemName: "arrow.clockwise",
+                             help: AppText.restartService,
+                             isEnabled: !working) {
+                    run { await app.restartService() }
+                }
+            ])
+        } else {
+            UI.Action.Group(UI.Action.Item(systemName: "arrow.clockwise",
+                                           help: AppText.string("common.retry", defaultValue: "Retry"),
+                                           isEnabled: !working) {
+                run { await app.retryBootstrap() }
+            })
+        }
     }
 
     private var servicePowerAction: UI.Action.Item {
@@ -290,7 +299,9 @@ struct SystemContent: View {
 
     private func deleteVolume(_ volume: Core.Volume.Resource) async {
         guard let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.deleteVolumes([volume.name]) }) { app.flash(error) }
+        if let error = await app.captured({
+            _ = try await client.deleteVolumes([volume.name], runtimeKind: volume.runtimeKind)
+        }) { app.flash(error) }
         await app.refreshVolumes()
     }
 
@@ -396,10 +407,22 @@ struct SystemContent: View {
         guard let client = app.client else { return }
         do {
             switch target {
-            case .containers: _ = try await client.pruneContainers()
-            case .images: _ = try await client.pruneImages(all: false)
-            case .volumes: _ = try await client.pruneVolumes()
-            case .networks: _ = try await client.pruneNetworks()
+            case .containers:
+                for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.containers) {
+                    _ = try await client.pruneContainers(runtimeKind: descriptor.kind)
+                }
+            case .images:
+                for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.images) {
+                    _ = try await client.pruneImages(all: false, runtimeKind: descriptor.kind)
+                }
+            case .volumes:
+                for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.volumes) {
+                    _ = try await client.pruneVolumes(runtimeKind: descriptor.kind)
+                }
+            case .networks:
+                for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.networks) {
+                    _ = try await client.pruneNetworks(runtimeKind: descriptor.kind)
+                }
             }
             await app.refreshSystemResources()
             await app.refreshSystem()
@@ -410,10 +433,18 @@ struct SystemContent: View {
     private func reclaimAll() async {
         guard let client = app.client else { return }
         if let error = await app.captured({
-            _ = try await client.pruneContainers()
-            _ = try await client.pruneImages(all: false)
-            _ = try await client.pruneVolumes()
-            _ = try await client.pruneNetworks()
+            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.containers) {
+                _ = try await client.pruneContainers(runtimeKind: descriptor.kind)
+            }
+            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.images) {
+                _ = try await client.pruneImages(all: false, runtimeKind: descriptor.kind)
+            }
+            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.volumes) {
+                _ = try await client.pruneVolumes(runtimeKind: descriptor.kind)
+            }
+            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.networks) {
+                _ = try await client.pruneNetworks(runtimeKind: descriptor.kind)
+            }
         }) { app.flash(error) }
         await app.refreshSystemResources()
         await app.refreshSystem()
@@ -421,12 +452,12 @@ struct SystemContent: View {
 
     // MARK: Runtime
 
-    private var engineStatusCard: some View {
+    private var runtimeStatusCard: some View {
         card {
             HStack(spacing: UI.Layout.Spacing.s) {
                 UI.Badge.Dot(color: app.serviceHealthy ? .green : .orange,
                                 size: UI.Control.Size.serviceDot)
-                Text(AppText.string("system.containerEngine", defaultValue: "Container engine")).designHeadlineLabelStyle()
+                Text(AppText.string("system.containerRuntime", defaultValue: "Container runtime")).designHeadlineLabelStyle()
                 UI.Badge.Status(text: app.serviceLabel,
                                   tint: app.serviceHealthy ? .green : .orange)
                 Spacer(minLength: 0)

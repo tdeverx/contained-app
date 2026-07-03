@@ -69,12 +69,16 @@ public struct ContainedApplication: App {
                     Button(app.serviceLabel) { }
                         .disabled(true)
                     Divider()
-                    if app.serviceHealthy {
-                        Button("Stop Service") { Task { await app.stopService() } }
+                    if app.appleRuntimeAvailable {
+                        if app.serviceHealthy {
+                            Button("Stop Service") { Task { await app.stopService() } }
+                        } else {
+                            Button("Start Service") { Task { await app.startService() } }
+                        }
+                        Button("Restart Service") { Task { await app.restartService() } }
                     } else {
-                        Button("Start Service") { Task { await app.startService() } }
+                        Button("Retry Docker Connection") { Task { await app.retryBootstrap() } }
                     }
-                    Button("Restart Service") { Task { await app.restartService() } }
                 }
                 Divider()
                 Button("Open Contained") { activateMainWindow() }
@@ -235,7 +239,7 @@ public struct ContainedApplication: App {
 
     /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).
     private func revealCLIBinary() {
-        guard let url = app.client?.cliURL else { return }
+        guard let url = app.runtimeCLIURL(for: .appleContainer) else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 

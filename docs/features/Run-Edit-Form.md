@@ -28,7 +28,7 @@ strings, paths, names, or raw specs.
 The form uses native grouped macOS settings-style sections rather than mirroring
 CLI flag order:
 
-- Essentials: core, image, platform/OS/architecture, name, command, and basic run behavior
+- Essentials: runtime, image, platform/OS/architecture, name, command, and basic run behavior
 - Resources: CPU and memory limits
 - Networking: published ports, network attachment, and socket forwarding
 - Storage: volume mounts
@@ -62,7 +62,7 @@ These controls deliberately do not mirror the CLI one-to-one:
 
 | UI control | CLI output | Notes |
 | --- | --- | --- |
-| Core picker | runtime adapter selection | Apple container is currently the only available core, so the picker is disabled. Future adapters publish the same generic schema paths instead of adding backend-specific forms. |
+| Runtime picker | runtime adapter selection | Available runtimes publish the same generic schema paths instead of adding backend-specific forms. The picker is enabled when more than one runtime descriptor is available. |
 | Platform picker | `--platform <os/arch[/variant]>` | The UI offers common Apple-silicon presets plus Custom. |
 | Image OS and architecture | `--os <os>` / `--arch <arch>` | Separate generic fields for Apple container's split image selectors. `--platform` takes precedence when both are present. |
 | Memory limit toggle + slider | `--memory <size>` | The user chooses a host-bounded amount; the app formats it as `M` or `G`. |

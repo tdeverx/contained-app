@@ -24,6 +24,18 @@ and card-selection overlays. Components that read `AppModel`, settings stores,
 feature routes, or runtime models stay in the app target, but they should pass
 values into package components instead of recreating style locally.
 
+Repeated package implementation structure belongs in
+`Packages/ContainedUI/Sources/ContainedUI/Shared`. The `Shared` tree is
+package-internal: it can factor common capsule, swatch, row, label, or surface
+rendering anatomy, but app code should still consume the named public `UI.*`
+components rather than reaching for shared helpers.
+
+Package SwiftUI previews live beside the declaration they exercise. Do not add
+new preview-only folders for design-system elements; add a focused `#Preview`
+to the element file so Xcode Canvas opens directly on that component. The main
+app should keep a small fixture-free fake-data preview at the app surface that
+needs it instead of linking fixture products into shipping targets.
+
 ## Localization boundary
 
 The design system is a building block package. It owns layout, materials,
@@ -44,9 +56,12 @@ Guidelines:
   names, raw values, chart field identifiers, and accessibility-hidden chart
   dimensions
 
-Only `ContainedApp` owns localization catalogs. The local packages should
-remain reusable without shipping their own language bundles unless a future
-package genuinely owns standalone user-facing copy.
+Only `ContainedApp` owns product-facing localization catalogs. `ContainedUI`
+and `ContainedUX` should remain reusable without shipping language bundles
+unless a future package genuinely owns standalone user-facing copy.
+`ContainedCore` is the exception: it may ship display-neutral semantic strings
+for schema labels/help, validation messages, capability reasons, projection
+warnings, and typed package-error fallback descriptions.
 
 ## Core principles
 
@@ -240,6 +255,11 @@ styles, or raw `UI.Tokens`; use named package routes such as
 `UI.Control.InputCluster`, `UI.Action.TextButton`, and `UI.Card.InsetSection`.
 If a new visual value appears, add or extend a contextual element token or
 package primitive before using it in the app.
+
+When two design-system elements have the same internal anatomy, factor only the
+shared implementation into the package-internal `Shared` tree. Keep distinct
+public routes when callers need different semantics, names, or capability
+boundaries.
 
 ## Verification
 

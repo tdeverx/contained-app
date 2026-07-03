@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "ContainedCore",
+    defaultLocalization: "en",
     platforms: [.macOS(.v26)],
     products: [
         .library(name: "ContainedCore", targets: ["ContainedCore"]),
@@ -14,7 +15,8 @@ let package = Package(
     targets: [
         .target(
             name: "ContainedCore",
-            dependencies: [.product(name: "Yams", package: "Yams")]
+            dependencies: [.product(name: "Yams", package: "Yams")],
+            resources: [.process("Resources")]
         ),
         .target(
             name: "ContainedCoreFixtures",

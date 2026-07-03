@@ -223,3 +223,41 @@ struct TitleSubtitle: View {
     }
 }
 }
+
+#Preview("Toolbar Controls") {
+    ToolbarControlsPreview()
+        .padding(UI.Tokens.Space.xl)
+        .frame(width: 620)
+        .environment(\.buttonMaterial, .glassClear)
+}
+
+private struct ToolbarControlsPreview: View {
+    @State private var text = "preview"
+    @FocusState private var searchFocused: Bool
+
+    var body: some View {
+        HStack(spacing: UI.Tokens.Space.m) {
+            UI.Toolbar.VanitySlot()
+            UI.Toolbar.SearchField(text: $text,
+                                   prompt: "Search",
+                                   clearSearchLabel: "Clear search",
+                                   focused: $searchFocused,
+                                   onClear: { text = "" }) {
+                Image(systemName: "command")
+                    .foregroundStyle(.secondary)
+            }
+            UI.Toolbar.ActionCluster {
+                UI.Toolbar.MenuButton(systemName: "line.3.horizontal.decrease.circle",
+                                      help: "Filter") {
+                    Button("Running") {}
+                    Button("Stopped") {}
+                }
+                UI.Toolbar.StatusButton(help: "Runtime status", action: {}) {
+                    UI.Toolbar.TitleSubtitle(symbol: "shippingbox",
+                                             title: "Runtime",
+                                             subtitle: "Ready")
+                }
+            }
+        }
+    }
+}

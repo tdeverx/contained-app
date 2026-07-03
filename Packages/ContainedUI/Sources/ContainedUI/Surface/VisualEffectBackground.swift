@@ -44,3 +44,13 @@ struct BackgroundLayer: View {
     }
 }
 }
+
+#Preview("Visual Effect Background") {
+    ZStack {
+        UI.Theme.BackgroundLayer(material: .fullScreenUI)
+        Text("Background layer")
+            .padding(UI.Tokens.Space.l)
+            .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card)
+    }
+    .frame(width: 360, height: 220)
+}

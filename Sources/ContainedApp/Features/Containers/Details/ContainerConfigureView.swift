@@ -154,7 +154,7 @@ struct ContainerConfigureView: View {
         var out: [String] = []
         let name = spec.name.trimmingCharacters(in: .whitespaces)
         if !name.isEmpty,
-           app.containers.snapshots.contains(where: { $0.id == name || $0.displayName == name }) {
+           app.containers.snapshots.contains(where: { $0.runtimeKind == spec.effectiveRuntimeKind && ($0.id == name || $0.displayName == name) }) {
             out.append("A container named “\(name)” already exists — creating this will fail unless you rename it.")
         }
         // Two ports mapping the same host port within this spec.
@@ -168,14 +168,18 @@ struct ContainerConfigureView: View {
     private func saveTemplate() {
         let name = templateName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
-        modelContext.insert(Template(name: name, spec: spec))
-        try? modelContext.save()
-        app.flash(AppText.savedTemplate(name))
+        modelContext.insert(RecipeRecord(name: name, spec: spec))
+        do {
+            try modelContext.save()
+            app.flash(AppText.savedTemplate(name))
+        } catch {
+            app.flash(error.appDisplayMessage)
+        }
     }
 
     /// The id of the container being edited (empty in `.new` mode).
     private var editID: String {
-        if case .edit(let snapshot, _) = mode { return snapshot.id }
+        if case .edit(let snapshot, _) = mode { return snapshot.scopedID }
         return ""
     }
 
@@ -184,11 +188,15 @@ struct ContainerConfigureView: View {
         loaded = true
         switch mode {
         case .new:
-            break   // spec was prefilled at init
+            if spec.image.trimmingCharacters(in: .whitespaces).isEmpty,
+               spec.name.trimmingCharacters(in: .whitespaces).isEmpty,
+               let firstRuntime = app.availableRuntimeDescriptors.first?.kind {
+                spec.runtimeKind = firstRuntime
+            }
         case .edit(let snapshot, _):
             // Pull the current style + healthcheck from the local stores so edits start from what's set.
             spec.personalization = app.containerStyle(for: snapshot)
-            spec.healthCheck = app.healthChecks.check(for: snapshot.id) ?? Core.Container.HealthCheck()
+            spec.healthCheck = app.healthChecks.check(for: snapshot.scopedID) ?? Core.Container.HealthCheck()
         }
     }
 
@@ -212,7 +220,7 @@ struct ContainerConfigureView: View {
         guard case .edit(let snapshot, let onComplete) = mode else { return }
         working = true
         Task {
-            let newID = await app.recreateContainer(originalID: snapshot.id, spec: spec)
+            let newID = await app.recreateContainer(originalID: snapshot.scopedID, spec: spec)
             working = false
             if newID != nil {
                 onComplete()

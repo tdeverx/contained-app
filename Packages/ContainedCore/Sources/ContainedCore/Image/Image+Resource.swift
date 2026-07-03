@@ -7,15 +7,35 @@ struct Resource: Codable, Sendable, Identifiable, Hashable {
     public let configuration: Core.Image.Configuration
     public let id: String
     public let variants: [Core.Image.Variant]
+    public let runtimeKind: Core.Runtime.Kind
 
     public var reference: String { configuration.name }
     public var digest: String? { configuration.descriptor?.digest }
+    public var scopedID: String { runtimeKind.scopedID(for: id) }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         configuration = try c.decode(Core.Image.Configuration.self, forKey: .configuration)
         id = try c.decode(String.self, forKey: .id)
         variants = try c.decodeIfPresent([Core.Image.Variant].self, forKey: .variants) ?? []
+        runtimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) ?? .appleContainer
+    }
+
+    public init(configuration: Core.Image.Configuration,
+                id: String,
+                variants: [Core.Image.Variant] = [],
+                runtimeKind: Core.Runtime.Kind = .appleContainer) {
+        self.configuration = configuration
+        self.id = id
+        self.variants = variants
+        self.runtimeKind = runtimeKind
+    }
+
+    public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Image.Resource {
+        Core.Image.Resource(configuration: configuration,
+                            id: id,
+                            variants: variants,
+                            runtimeKind: runtimeKind)
     }
 }
 

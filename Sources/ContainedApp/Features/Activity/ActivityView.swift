@@ -147,7 +147,7 @@ struct ActivityContent: View {
         let unread = events.filter { !$0.isRead }
         guard !unread.isEmpty else { return }
         for event in unread { event.isRead = true }
-        try? modelContext.save()
+        saveActivityChanges()
     }
 
     /// Header action: marks only the currently-shown (filtered) events read.
@@ -155,7 +155,7 @@ struct ActivityContent: View {
         let unread = filtered.filter { !$0.isRead }
         guard !unread.isEmpty else { return }
         for event in unread { event.isRead = true }
-        try? modelContext.save()
+        saveActivityChanges()
     }
 
     /// Header action: clears only the currently-shown events. With no filter that's everything; with a
@@ -164,8 +164,20 @@ struct ActivityContent: View {
         if let filter = ui.activityFilter {
             for event in events where event.kind == filter { modelContext.delete(event) }
         } else {
-            try? modelContext.delete(model: EventRecord.self)
+            do {
+                try modelContext.delete(model: EventRecord.self)
+            } catch {
+                fatalError("Failed to delete activity records: \(error)")
+            }
         }
-        try? modelContext.save()
+        saveActivityChanges()
+    }
+
+    private func saveActivityChanges() {
+        do {
+            try modelContext.save()
+        } catch {
+            fatalError("Failed to save activity records: \(error)")
+        }
     }
 }

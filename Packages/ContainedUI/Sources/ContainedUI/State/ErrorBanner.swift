@@ -23,3 +23,9 @@ struct ErrorBanner: View {
     }
 }
 }
+
+#Preview("Error Banner") {
+    UI.State.ErrorBanner(message: "Docker runtime is not reachable.")
+        .padding(UI.Tokens.Space.xl)
+        .frame(width: 460)
+}

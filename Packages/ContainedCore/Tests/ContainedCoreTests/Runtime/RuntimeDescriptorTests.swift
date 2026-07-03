@@ -20,13 +20,13 @@ struct RuntimeDescriptorTests {
 
     @Test func unsupportedCapabilityIsDisplayNeutralPackageError() {
         let error = Core.Runtime.UnsupportedCapability(
-            kind: .dockerCompatible,
+            kind: .docker,
             capability: .imageBuild
         )
 
         #expect(error.packageName == "ContainedCore")
         #expect(error.packageErrorCode == "unsupportedRuntimeCapability")
-        #expect(error.packageErrorContext["kind"] == Core.Runtime.Kind.dockerCompatible.rawValue)
+        #expect(error.packageErrorContext["kind"] == Core.Runtime.Kind.docker.rawValue)
         #expect(error.packageErrorContext["capability"] == String(Core.Runtime.Capability.imageBuild.rawValue))
     }
 
@@ -47,12 +47,98 @@ struct RuntimeDescriptorTests {
         #expect(plan.context["source"] == "future-runtime")
         #expect(plan.context["target"] == Core.Runtime.Kind.appleContainer.rawValue)
     }
+
+    @Test func orchestratorAggregatesAndScopesContainersAcrossRuntimes() async throws {
+        let apple = UnavailableRuntime(
+            descriptor: .appleContainer,
+            containers: [.placeholder(id: "web", image: "nginx:latest")]
+        )
+        let docker = UnavailableRuntime(
+            descriptor: .docker,
+            containers: [.placeholder(id: "web", image: "nginx:latest")]
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [
+                .appleContainer: URL(fileURLWithPath: "/usr/bin/container"),
+                .docker: URL(fileURLWithPath: "/usr/local/bin/docker"),
+            ],
+            runtimes: [
+                .appleContainer: apple,
+                .docker: docker,
+            ]
+        )
+
+        let snapshots = try await orchestrator.listRuntimeContainers()
+
+        #expect(snapshots.count == 2)
+        #expect(Set(snapshots.map(\.id)) == ["web"])
+        #expect(Set(snapshots.map(\.scopedID)) == [
+            "apple-container::web",
+            "docker::web",
+        ])
+        #expect(Set(snapshots.map(\.runtimeKind)) == [.appleContainer, .docker])
+    }
+
+    @Test func orchestratorPreservesPartialInventoryWhenOneRuntimeFails() async throws {
+        let apple = UnavailableRuntime(
+            descriptor: .appleContainer,
+            containers: [.placeholder(id: "apple-web", image: "nginx:latest")]
+        )
+        let docker = UnavailableRuntime(
+            descriptor: .docker,
+            listError: TestStubError.unused
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [
+                .appleContainer: URL(fileURLWithPath: "/usr/bin/container"),
+                .docker: URL(fileURLWithPath: "/usr/local/bin/docker"),
+            ],
+            runtimes: [
+                .appleContainer: apple,
+                .docker: docker,
+            ]
+        )
+
+        let snapshots = try await orchestrator.listRuntimeContainers()
+
+        #expect(snapshots.map(\.scopedID) == ["apple-container::apple-web"])
+    }
+
+    @Test func orchestratorTerminalInvocationRoutesByRuntimeKind() throws {
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [
+                .appleContainer: URL(fileURLWithPath: "/usr/bin/container"),
+                .docker: URL(fileURLWithPath: "/usr/local/bin/docker"),
+            ],
+            runtimes: [
+                .appleContainer: UnavailableRuntime(descriptor: .appleContainer),
+                .docker: UnavailableRuntime(descriptor: .docker),
+            ]
+        )
+
+        let docker = try orchestrator.terminalInvocation(containerID: "web",
+                                                         shell: "/bin/sh",
+                                                         runtimeKind: .docker)
+        let apple = try orchestrator.terminalInvocation(containerID: "web",
+                                                        shell: "/bin/sh",
+                                                        runtimeKind: .appleContainer)
+
+        #expect(docker.executableURL.path == "/usr/local/bin/docker")
+        #expect(docker.arguments == DockerCommands.execInteractive("web", shell: "/bin/sh"))
+        #expect(apple.executableURL.path == "/usr/bin/container")
+        #expect(apple.arguments == ContainerCommands.execInteractive("web", shell: "/bin/sh"))
+    }
 }
 
 private struct UnavailableRuntime: ContainerRuntimeClient {
     let descriptor: Core.Runtime.Descriptor
+    var containers: [Core.Container.Snapshot] = []
+    var listError: TestStubError?
 
-    func listContainers(all: Bool) async throws -> [Core.Container.Snapshot] { [] }
+    func listContainers(all: Bool) async throws -> [Core.Container.Snapshot] {
+        if let listError { throw listError }
+        return containers
+    }
     func stats(ids: [String]) async throws -> [Core.Metrics.ContainerStats] { [] }
     func streamStats(ids: [String]) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Error> {
         AsyncThrowingStream { $0.finish() }

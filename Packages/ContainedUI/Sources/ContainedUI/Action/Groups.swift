@@ -84,6 +84,34 @@ struct Cluster<Content: View>: View {
 }
 }
 
+#Preview("Action Groups") {
+    VStack(alignment: .leading, spacing: UI.Tokens.Space.l) {
+        UI.Action.Group([
+            UI.Action.Item(systemName: "play.fill", help: "Start") {},
+            UI.Action.Item(systemName: "stop.fill", help: "Stop", role: .destructive) {},
+        ])
+
+        UI.Action.Cluster {
+            UI.Action.MenuLabel(systemName: "ellipsis",
+                                help: "More actions")
+            UI.Action.Items([
+                UI.Action.Item(systemName: "doc.on.doc", help: "Duplicate") {},
+                UI.Action.Item(systemName: "trash", help: "Delete", role: .destructive) {},
+            ])
+        }
+
+        UI.Control.InputCluster {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            Text("Search field")
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: 240)
+    }
+    .padding(UI.Tokens.Space.xl)
+    .environment(\.buttonMaterial, .glassClear)
+}
+
 /// Package-owned input cluster for search fields and compact inline controls.
 public extension UI.Control {
 struct InputCluster<Content: View>: View {

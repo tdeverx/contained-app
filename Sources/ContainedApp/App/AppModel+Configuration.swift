@@ -30,11 +30,11 @@ extension AppModel {
         let imported = try JSONDecoder.containedBackup().decode(AppStateEnvelope.self, from: data)
         let envelope = try migrator.migrateToCurrent(imported)
         try apply(envelope: envelope, selected: selected, replace: replace)
-        UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
+        database.setSetting(StateMigrator.currentSchemaVersion, for: StateMigrator.schemaVersionSettingKey)
     }
 
     func resolveDowngradeByKeepingReadableData() {
-        UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
+        database.setSetting(StateMigrator.currentSchemaVersion, for: StateMigrator.schemaVersionSettingKey)
         downgradeSchemaVersion = nil
         flash(AppText.keptReadableLocalData)
     }
@@ -57,11 +57,11 @@ extension AppModel {
 
     func resetIncompatibleLocalState() {
         historyStore.clearAll()
-        UserDefaults.standard.set(StateMigrator.currentSchemaVersion, forKey: StateMigrator.schemaVersionKey)
+        database.setSetting(StateMigrator.currentSchemaVersion, for: StateMigrator.schemaVersionSettingKey)
     }
 
     func purgeDeadRows() {
-        let liveContainerIDs = Set(containers.snapshots.map(\.id))
+        let liveContainerIDs = Set(containers.snapshots.map(\.scopedID))
         let liveImageRefs = Set(images.map(\.reference))
         let personalizations = personalization.purgeOrphans(liveContainerIDs: liveContainerIDs,
                                                             liveImageRefs: liveImageRefs)
@@ -84,7 +84,7 @@ extension AppModel {
             healthChecks.applyBackup(try value.decode([String: Core.Container.HealthCheck].self), replace: replace)
         }
         if selected.contains(.templates), let value = envelope.sections[.templates] {
-            historyStore.applyTemplates(try value.decode([TemplateSnapshot].self), replace: replace)
+            historyStore.applyTemplates(try value.decode([RecipeSnapshot].self), replace: replace)
         }
         if selected.contains(.history), let value = envelope.sections[.history] {
             historyStore.applyHistory(try value.decode(HistoryBackup.self), replace: replace)

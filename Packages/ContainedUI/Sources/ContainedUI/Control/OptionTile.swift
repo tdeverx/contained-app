@@ -117,3 +117,17 @@ private extension View {
             .glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
     }
 }
+
+#Preview("Option Tiles") {
+    UI.Control.OptionStack {
+        UI.Control.OptionTile(symbol: "shippingbox",
+                              title: "Container",
+                              subtitle: "Create from an image") {}
+        UI.Control.OptionTile(symbol: "square.stack.3d.up",
+                              title: "Image",
+                              subtitle: "Pull or build",
+                              enabled: false) {}
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 420)
+}

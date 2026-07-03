@@ -20,6 +20,18 @@ struct ContainerStats: Codable, Sendable, Identifiable, Hashable {
         guard let used = memoryUsageBytes, let limit = memoryLimitBytes, limit > 0 else { return nil }
         return Double(used) / Double(limit)
     }
+
+    public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Metrics.ContainerStats {
+        Core.Metrics.ContainerStats(id: runtimeKind.scopedID(for: id),
+                                    cpuUsageUsec: cpuUsageUsec,
+                                    memoryUsageBytes: memoryUsageBytes,
+                                    memoryLimitBytes: memoryLimitBytes,
+                                    blockReadBytes: blockReadBytes,
+                                    blockWriteBytes: blockWriteBytes,
+                                    networkRxBytes: networkRxBytes,
+                                    networkTxBytes: networkTxBytes,
+                                    numProcesses: numProcesses)
+    }
 }
 
 /// Runtime-agnostic resource counters parsed from a streaming source.
@@ -57,6 +69,18 @@ struct RuntimeStatsSnapshot: Sendable, Identifiable, Hashable {
         self.networkRxBytes = networkRxBytes
         self.networkTxBytes = networkTxBytes
         self.numProcesses = numProcesses
+    }
+
+    public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Metrics.RuntimeStatsSnapshot {
+        Core.Metrics.RuntimeStatsSnapshot(id: runtimeKind.scopedID(for: id),
+                                          cpuCoreFraction: cpuCoreFraction,
+                                          memoryUsageBytes: memoryUsageBytes,
+                                          memoryLimitBytes: memoryLimitBytes,
+                                          blockReadBytes: blockReadBytes,
+                                          blockWriteBytes: blockWriteBytes,
+                                          networkRxBytes: networkRxBytes,
+                                          networkTxBytes: networkTxBytes,
+                                          numProcesses: numProcesses)
     }
 }
 

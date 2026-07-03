@@ -1,17 +1,17 @@
 # Architecture
 
-Contained is a SwiftUI-native macOS app that wraps Apple's `container` CLI. It shells out to public CLI commands, usually with `--format json`, and decodes typed models. Visible container stats are the exception: Apple container only streams stats in table mode, so Contained parses that public table stream behind the same runtime boundary. There is no private API or daemon.
+Contained is a SwiftUI-native macOS app that wraps CLI-backed container runtimes. It shells out to public CLI commands, usually with structured output, and decodes typed models. Apple `container` and Docker CLI support live behind the same Core runtime boundary. There is no private API or daemon.
 
 ```text
  SwiftUI Views  ──>  @Observable Stores  ──>  Core.Orchestrator  ──>  Core runtime adapters
- (Features/*)        (AppModel, …)            (ContainedCore)         (Runtimes/AppleContainer, future engines)
+ (Features/*)        (AppModel, …)            (ContainedCore)         (AppleContainer, Docker)
        ^                    │                         │
        └──── ContainedUI + ContainedUX ───────────────┘
 ```
 
 ## Targets
 
-- **`ContainedCore`** — the single backend/orchestration package. It owns `Core.*` namespaces for runtime descriptors/capabilities, canonical container models, command previews, command execution, Compose import/export semantics, Apple `container` adapter internals, metrics, typed display-neutral errors, and future migration/export planning. It depends on Foundation and Yams only. No SwiftUI.
+- **`ContainedCore`** — the single backend/orchestration package. It owns `Core.*` namespaces for runtime descriptors/capabilities, canonical container models, command previews, command execution, Compose import/export semantics, Apple `container` and Docker adapter internals, metrics, typed display-neutral errors, and future migration/export planning. It depends on Foundation and Yams only. No SwiftUI.
 - **`ContainedUI`** — a local reusable Swift package for app-agnostic SwiftUI/AppKit visual primitives. It must not depend on stores, Sparkle, SwiftData, app routing, or feature modules.
 - **`ContainedUX`** — a local reusable Swift package for navigation and layout infrastructure that should not own app-specific routing. It currently owns toolbar safe-area policy/measurement primitives.
 - **`ContainedApp`** — the shared SwiftUI app implementation: views, `@Observable` stores, app-specific presentation mappings, localization, navigation, and the SwiftData history stack. Depends on `ContainedCore`, `ContainedUI`, `ContainedUX`, SwiftTerm, and Sparkle.
@@ -22,12 +22,14 @@ Ownership shorthand: UI owns visuals, UX owns interaction/morph/panel movement,
 Core owns backend orchestration, and ContainedApp joins those packages with
 localization, persistence, settings, routing, and feature policy.
 
-`ContainedApp` owns localization. Reusable packages do not ship localized
-resources or English UI defaults; app code supplies user-facing text through
-package parameters and routes reusable enum labels/dynamic templates through
-`AppText`. `ContainedCore` stays language-free unless it exposes technical
-identifiers such as raw values, runtime descriptors, package error codes, or
-backend command output.
+`ContainedApp` owns product copy such as navigation, settings layout, toasts,
+alerts, onboarding, and Activity presentation. `ContainedCore` owns
+display-neutral semantic localization where it helps the package stand alone:
+schema labels/help, validation messages, runtime capability reasons,
+projection/Compose warnings, and package-error fallback descriptions. Core
+localization APIs support downstream override/wrap behavior; Contained uses the
+Core-owned semantic strings directly because the app and package live in the
+same repo.
 
 Package errors follow the same ownership boundary. Core exposes
 stable codes and compact context through `Core.Error.PackageError`; the app maps
@@ -53,11 +55,12 @@ bundles, signing, notarization, and appcast scripts.
 
 ## Core Runtime Wrapper
 
-- **`Core.Orchestrator`** — the only backend object app stores own. It bootstraps the Apple CLI today, exposes available runtime descriptors, routes selected-runtime operations, and returns typed command invocations for host-owned UI integrations such as SwiftTerm.
-- **`Core.Runtime.Kind` / `Core.Runtime.Descriptor` / `Core.Runtime.Capability`** — open runtime identifiers and support metadata. Future engines register descriptors inside Core; the app reads capabilities instead of switching on backend names.
+- **`Core.Orchestrator`** — the only backend object app stores own. It bootstraps available CLI-backed runtimes, exposes runtime descriptors, routes runtime-scoped calls, aggregates multi-runtime container and image inventory, and returns typed command invocations for host-owned UI integrations such as SwiftTerm.
+- **`Core.Runtime.Kind` / `Core.Runtime.Descriptor` / `Core.Runtime.Capability`** — open runtime identifiers and support metadata. Future runtimes register descriptors inside Core; the app reads capabilities instead of switching on backend names.
 - **`Core.Schema.Document`** — runtime-neutral run/edit/recreate fields published by Core. Documents carry the intended runtime per container, generic field paths, source aliases, tips, support state, provenance, and validation; Core conforms documents to the selected schema before projecting executable values into `Core.Container.CreateRequest` internally.
 - **`Core.Compose`** — Core-level interchange semantics for Compose import/export. Yams is internal to `Core.Compose.YAML`; public APIs expose Core models and typed plans, never Yams types.
 - **`Runtimes/AppleContainer`** — Core-internal Apple adapter implementation. It owns CLI discovery, command execution, Apple create/import/default translation, command builders, and the Apple stats-table parser.
+- **`Runtimes/Docker`** — Core-internal Docker CLI-compatible adapter implementation. It owns Docker CLI discovery, command builders, decoders, create/Compose translation, image actions, and Docker endpoint readiness mapping.
 - **`Core.Error.PackageError`** — display-neutral error metadata shared by reusable packages. It gives the app a package name, stable code, and context without forcing packages to own localized copy.
 
 ## Stores (app)

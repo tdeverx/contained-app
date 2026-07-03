@@ -13,7 +13,7 @@ struct ToolbarImageGroupCard: View {
     var onTap: () -> Void
     var onClose: () -> Void
 
-    @State private var deletingReference: String?
+    @State private var deletingTag: Core.Image.LocalTag?
     @State private var pruning = false
     /// Detailed image pages grow the image-detail morph in place, matching container cards: tags are
     /// the default body page, while history/tag/push reuse the same card shell.
@@ -58,10 +58,10 @@ struct ToolbarImageGroupCard: View {
                 rootCard
             }
         }
-        .confirmationDialog("Delete \(Format.shortImage(deletingReference ?? ""))?",
+        .confirmationDialog("Delete \(Format.shortImage(deletingTag?.reference ?? ""))?",
                             isPresented: deletingBinding,
-                            presenting: deletingReference) { reference in
-            Button("Delete", role: .destructive) { Task { await delete(reference) } }
+                            presenting: deletingTag) { tag in
+            Button("Delete", role: .destructive) { Task { await delete(tag) } }
         } message: { _ in Text("This removes the selected local image reference.") }
         .confirmationDialog("Prune images?", isPresented: $pruning) {
             Button("Remove unused", role: .destructive) { Task { await prune(all: false) } }
@@ -202,8 +202,11 @@ struct ToolbarImageGroupCard: View {
 
     private func pushPage(_ reference: String) -> some View {
         imagePageBody(title: AppText.string("image.pushImage", defaultValue: "Push image"), subtitle: Format.shortImage(reference)) {
-            if pushStartedReference == reference, let client = app.client {
-                UI.Console.Stream(stream: { client.streamPush(reference) },
+            if pushStartedReference == reference,
+               let client = app.client,
+               let runtimeKind = pushRuntimeKind(for: reference) {
+                UI.Console.Stream(stream: { client.streamPush(reference,
+                                                              runtimeKind: runtimeKind) },
                               workingLabel: AppText.working,
                               completedLabel: AppText.completed,
                               lineCountLabel: AppText.lineCount,
@@ -334,13 +337,16 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func submitTag(source: String) {
-        guard let client = app.client else { return }
+        guard let client = app.client,
+              let runtimeKind = pushRuntimeKind(for: source) else { return }
         let target = tagTarget.trimmingCharacters(in: .whitespaces)
         guard !target.isEmpty else { return }
         tagBusy = true
         Task {
             do {
-                _ = try await client.tagImage(source: source, target: target)
+                _ = try await client.tagImage(source: source,
+                                              target: target,
+                                              runtimeKind: runtimeKind)
                 await app.refreshImagesIfNeeded(force: true)
                 tagBusy = false
                 tagTarget = ""
@@ -411,22 +417,29 @@ struct ToolbarImageGroupCard: View {
         UI.Card.FooterMini {
             UI.Symbol.Image(systemName: "tag", size: .caption)
         } text: {
-            UI.Card.MetricText(text: "\(group.references.count)")
+            UI.Card.MetricText(text: "\(group.tags.count)")
         }
     }
 
     @ViewBuilder
     private func imageFooterActions(_ group: Core.Image.LocalTagGroup) -> some View {
-        footerAction("play", help: AppText.run) {
-            ui.runImage(group.primaryReference)
-            if isExpanded { onClose() }
+        if let runtimeKind = runRuntimeKind(for: group) {
+            footerAction("play", help: AppText.run) {
+                ui.runImage(group.primaryReference,
+                            runtimeKind: runtimeKind)
+                if isExpanded { onClose() }
+            }
         }
         footerAction("arrow.triangle.2.circlepath", help: AppText.checkForUpdates) {
             Task { await app.checkImageUpdate(group.primaryReference) }
         }
-        if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
+        if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable,
+           let runtimeKind = primaryImage(group)?.runtimeKind {
             footerAction("arrow.down.circle", help: AppText.pullUpdate, tint: .orange) {
-                Task { await app.pullImageUpdate(group.primaryReference) }
+                Task {
+                    await app.pullImageUpdate(group.primaryReference,
+                                              runtimeKind: runtimeKind)
+                }
             }
         }
         if let image = primaryImage(group) {
@@ -442,8 +455,8 @@ struct ToolbarImageGroupCard: View {
                 .padding(.leading, UI.Layout.Spacing.xs)
             ScrollView(.vertical) {
                 LazyVStack(spacing: UI.Layout.Spacing.s) {
-                    ForEach(group.references, id: \.self) { reference in
-                        tagRow(reference, in: group)
+                    ForEach(group.tags) { tag in
+                        tagRow(tag, in: group)
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -453,7 +466,8 @@ struct ToolbarImageGroupCard: View {
         }
     }
 
-    private func tagRow(_ reference: String, in group: Core.Image.LocalTagGroup) -> some View {
+    private func tagRow(_ tag: Core.Image.LocalTag, in group: Core.Image.LocalTagGroup) -> some View {
+        let reference = tag.reference
         let style = app.imageStyle(for: reference)
         return UI.Card.Scaffold(size: .medium,
                             fill: style.fillBackground ? style.color : nil,
@@ -478,31 +492,32 @@ struct ToolbarImageGroupCard: View {
             EmptyView()
         } footerLeading: {
             UI.Card.FooterMini {
-                UI.Symbol.Image(systemName: "tag", size: .caption2)
+                UI.Symbol.Image(systemName: "cpu", size: .caption2)
             } text: {
-                UI.Card.MetricText(text: "Local tag")
+                UI.Card.MetricText(text: app.runtimeDescriptor(for: tag.runtimeKind).displayName)
             }
         } footerActions: {
             footerAction("play", help: AppText.run) {
-                ui.runImage(reference)
+                ui.runImage(reference, runtimeKind: tag.runtimeKind)
                 if isExpanded { onClose() }
             }
             footerAction("doc.on.doc", help: AppText.copyReference) { copyToPasteboard(reference) }
-            footerAction("trash", help: AppText.deleteTag, role: .destructive) { deletingReference = reference }
+            footerAction("trash", help: AppText.deleteTag, role: .destructive) { deletingTag = tag }
         } widget: {
             EmptyView()
         }
-        .contextMenu { tagMenu(reference, in: group) }
+        .contextMenu { tagMenu(tag, in: group) }
     }
 
     /// Right-click actions for a single tag — mirrors the footer buttons so the row is consistent with
     /// the group card (which has its own context menu).
     @ViewBuilder
-    private func tagMenu(_ reference: String, in group: Core.Image.LocalTagGroup) -> some View {
-        Button { ui.runImage(reference); if isExpanded { onClose() } } label: { Label("Run…", systemImage: "play") }
+    private func tagMenu(_ tag: Core.Image.LocalTag, in group: Core.Image.LocalTagGroup) -> some View {
+        let reference = tag.reference
+        Button { ui.runImage(reference, runtimeKind: tag.runtimeKind); if isExpanded { onClose() } } label: { Label("Run…", systemImage: "play") }
         Button { copyToPasteboard(reference) } label: { Label("Copy reference", systemImage: "doc.on.doc") }
         Divider()
-        Button(role: .destructive) { deletingReference = reference } label: { Label("Delete tag", systemImage: "trash") }
+        Button(role: .destructive) { deletingTag = tag } label: { Label("Delete tag", systemImage: "trash") }
     }
 
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,
@@ -517,7 +532,12 @@ struct ToolbarImageGroupCard: View {
 
     @ViewBuilder
     private func cardMenu(_ group: Core.Image.LocalTagGroup) -> some View {
-        Button { ui.runImage(group.primaryReference) } label: { Label("Run…", systemImage: "play") }
+        if let runtimeKind = runRuntimeKind(for: group) {
+            Button {
+                ui.runImage(group.primaryReference,
+                            runtimeKind: runtimeKind)
+            } label: { Label("Run…", systemImage: "play") }
+        }
         if let image = primaryImage(group) {
             // History / Tag / Push grow the detail morph into a sub-page, so they're offered only
             // from the expanded detail (a collapsed card opens the detail first).
@@ -534,13 +554,19 @@ struct ToolbarImageGroupCard: View {
         Button { Task { await app.checkImageUpdate(group.primaryReference) } } label: {
             Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
         }
-        if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
-            Button { Task { await app.pullImageUpdate(group.primaryReference) } } label: {
+        if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable,
+           let runtimeKind = primaryImage(group)?.runtimeKind {
+            Button {
+                Task {
+                    await app.pullImageUpdate(group.primaryReference,
+                                              runtimeKind: runtimeKind)
+                }
+            } label: {
                 Label("Pull Update", systemImage: "arrow.down.circle")
             }
         }
         Divider()
-        Button(role: .destructive) { deletingReference = group.primaryReference } label: {
+        Button(role: .destructive) { deletingTag = primaryTag(group) } label: {
             Label("Delete Primary Tag", systemImage: "trash")
         }
     }
@@ -605,7 +631,7 @@ struct ToolbarImageGroupCard: View {
     }
 
     private var deletingBinding: Binding<Bool> {
-        Binding(get: { deletingReference != nil }, set: { if !$0 { deletingReference = nil } })
+        Binding(get: { deletingTag != nil }, set: { if !$0 { deletingTag = nil } })
     }
 
     private var pushConfirmationBinding: Binding<Bool> {
@@ -639,20 +665,42 @@ struct ToolbarImageGroupCard: View {
         normalizedRegistryHost(registry) == "docker.io" ? "docker.io" : registry
     }
 
-    private func delete(_ reference: String) async {
+    private func primaryTag(_ group: Core.Image.LocalTagGroup) -> Core.Image.LocalTag? {
+        if let image = primaryImage(group) {
+            return group.tags.first { $0.reference == image.reference && $0.runtimeKind == image.runtimeKind }
+        }
+        return group.tags.first
+    }
+
+    private func pushRuntimeKind(for reference: String) -> Core.Runtime.Kind? {
+        group.images.first { $0.reference == reference }?.runtimeKind
+            ?? primaryImage(group)?.runtimeKind
+            ?? group.tags.first?.runtimeKind
+    }
+
+    private func runRuntimeKind(for group: Core.Image.LocalTagGroup) -> Core.Runtime.Kind? {
+        primaryImage(group)?.runtimeKind ?? primaryTag(group)?.runtimeKind
+    }
+
+    private func delete(_ tag: Core.Image.LocalTag) async {
         guard let client = app.client else { return }
         do {
-            _ = try await client.deleteImages([reference])
+            _ = try await client.deleteImages([tag.reference], runtimeKind: tag.runtimeKind)
             await app.refreshImagesIfNeeded(force: true)
-            app.flash(AppText.deletedImage(Format.shortImage(reference)))
-            deletingReference = nil
+            app.flash(AppText.deletedImage(Format.shortImage(tag.reference)))
+            deletingTag = nil
         } catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
     }
 
     private func prune(all: Bool) async {
         guard let client = app.client else { return }
-        do { _ = try await client.pruneImages(all: all); await app.refreshImagesIfNeeded(force: true) }
+        do {
+            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.images) {
+                _ = try await client.pruneImages(all: all, runtimeKind: descriptor.kind)
+            }
+            await app.refreshImagesIfNeeded(force: true)
+        }
         catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
     }
@@ -665,7 +713,9 @@ struct ToolbarImageGroupCard: View {
         panel.message = AppText.saveImageTarArchive(Format.shortImage(image.reference))
         guard panel.runModal() == .OK, let url = panel.url else { return }
         Task {
-            if let error = await app.captured({ _ = try await client.saveImages([image.reference], to: url.path) }) {
+            if let error = await app.captured({ _ = try await client.saveImages([image.reference],
+                                                                                to: url.path,
+                                                                                runtimeKind: image.runtimeKind) }) {
                 app.flash(error)
             } else {
                 app.flash(AppText.savedFile(url.lastPathComponent))

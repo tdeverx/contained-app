@@ -140,6 +140,12 @@ struct Empty: View {
     }
 }
 
+// TODO(design-system): `UI.State.Empty`, `UI.State.Hero`, and `UI.State.Loading` all render centered
+// state stacks, but their action slots and sizing contracts differ today. If this area gets another
+// layout pass, consider a Shared centered-state scaffold and re-check current app call sites in:
+// `Sources/ContainedApp/Features/Containers/Card/ContainersGridView.swift`,
+// `Sources/ContainedApp/Features/Onboarding/BootstrapView.swift`, and
+// `Sources/ContainedApp/Features/Images/Registry/RegistryImageSearch.swift`.
 struct Hero<Actions: View>: View {
     public var systemImage: String
     public var title: String
@@ -338,4 +344,34 @@ public extension View {
         font(.largeTitle)
             .foregroundStyle(.secondary)
     }
+}
+
+#Preview("Content States") {
+    VStack(spacing: UI.Tokens.Space.l) {
+        HStack(spacing: UI.Tokens.Space.m) {
+            UI.Symbol.Image(systemName: "shippingbox", tone: .accent, size: .title3)
+            UI.State.StatusText("Ready", tone: .success)
+            UI.State.InlineStatus("Checking", isWorking: true)
+            UI.State.SectionLabel("Section")
+        }
+
+        UI.State.Empty("No containers",
+                       systemImage: "shippingbox",
+                       description: "Create or import a container to begin.",
+                       tone: .neutral,
+                       minHeight: 120)
+
+        UI.State.Hero(systemImage: "square.stack.3d.up",
+                      title: "Images",
+                      message: "Pull, build, and tag runtime images.") {
+            UI.Action.TextButton(title: "Pull",
+                                 systemName: "arrow.down.circle",
+                                 prominence: .prominent) {}
+        }
+
+        UI.State.Loading("Loading runtimes", minHeight: 80)
+        UI.State.ProgressIndicator(frameSize: 24)
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 520)
 }

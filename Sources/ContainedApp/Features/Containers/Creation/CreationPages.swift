@@ -6,6 +6,9 @@ struct CreationNetworkFields: View {
     @Binding var name: String
     @Binding var subnet: String
     @Binding var internalOnly: Bool
+    @Binding var runtimeKind: Core.Runtime.Kind
+    let runtimes: [Core.Runtime.Descriptor]
+    let runtimePickerDisabledReason: String
     let working: Bool
     var onSubmit: () -> Void
 
@@ -15,6 +18,9 @@ struct CreationNetworkFields: View {
                              subtitle: networkSubtitle,
                              command: previewCommand) {
             UI.Panel.Section(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
+                CreationRuntimePickerRow(runtimeKind: $runtimeKind,
+                                         runtimes: runtimes,
+                                         disabledReason: runtimePickerDisabledReason)
                 UI.Panel.Field(label: AppText.string("creation.name", defaultValue: "Name"),
                            info: AppText.string("creation.network.name.info", defaultValue: "A readable name used by containers with `--network`."),
                            error: nameError) {
@@ -55,7 +61,8 @@ struct CreationNetworkFields: View {
     private var previewCommand: [String] {
         Core.Command.networkCreatePreview(name: trimmedName.isEmpty ? "<name>" : trimmedName,
                                         subnet: trimmedSubnet.isEmpty ? nil : trimmedSubnet,
-                                        internalOnly: internalOnly)
+                                        internalOnly: internalOnly,
+                                        runtimeKind: runtimeKind)
     }
 
     private func submitIfReady() {
@@ -67,6 +74,9 @@ struct CreationNetworkFields: View {
 struct CreationVolumeFields: View {
     @Binding var name: String
     @Binding var size: String
+    @Binding var runtimeKind: Core.Runtime.Kind
+    let runtimes: [Core.Runtime.Descriptor]
+    let runtimePickerDisabledReason: String
     let working: Bool
     var onSubmit: () -> Void
 
@@ -76,6 +86,9 @@ struct CreationVolumeFields: View {
                              subtitle: volumeSubtitle,
                              command: previewCommand) {
             UI.Panel.Section(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
+                CreationRuntimePickerRow(runtimeKind: $runtimeKind,
+                                         runtimes: runtimes,
+                                         disabledReason: runtimePickerDisabledReason)
                 UI.Panel.Field(label: AppText.string("creation.name", defaultValue: "Name"),
                            info: AppText.string("creation.volume.name.info", defaultValue: "A persistent storage name you can mount into containers."),
                            error: nameError) {
@@ -108,12 +121,37 @@ struct CreationVolumeFields: View {
     private var volumeSubtitle: String { trimmedSize.isEmpty ? AppText.string("creation.volume.defaultSize", defaultValue: "default size") : trimmedSize }
     private var previewCommand: [String] {
         Core.Command.volumeCreatePreview(name: trimmedName.isEmpty ? "<name>" : trimmedName,
-                                       size: trimmedSize.isEmpty ? nil : trimmedSize)
+                                       size: trimmedSize.isEmpty ? nil : trimmedSize,
+                                       runtimeKind: runtimeKind)
     }
 
     private func submitIfReady() {
         guard canSubmit else { return }
         onSubmit()
+    }
+}
+
+struct CreationRuntimePickerRow: View {
+    @Binding var runtimeKind: Core.Runtime.Kind
+    let runtimes: [Core.Runtime.Descriptor]
+    let disabledReason: String
+
+    var body: some View {
+        UI.Panel.Row(title: AppText.runtime,
+                     subtitle: runtimes.count > 1 ? AppText.runtimeSubtitle : disabledReason) {
+            Picker("", selection: $runtimeKind) {
+                ForEach(runtimes, id: \.kind) { descriptor in
+                    Text(descriptor.displayName).tag(descriptor.kind)
+                }
+            }
+            .labelsHidden()
+            .fixedSize()
+            .disabled(runtimes.count < 2)
+        }
+        .onAppear {
+            guard let first = runtimes.first, !runtimes.contains(where: { $0.kind == runtimeKind }) else { return }
+            runtimeKind = first.kind
+        }
     }
 }
 
@@ -139,7 +177,8 @@ struct CreationLocalImagesContent: View {
                     LazyVStack(spacing: UI.Layout.Spacing.xs) {
                         ForEach(filteredLocalImages) { image in
                             CreationLocalImageRow(image: image) {
-                                onSelect(RecommendedImage.spec(for: image.reference))
+                                onSelect(RecommendedImage.spec(for: image.reference,
+                                                               runtimeKind: image.runtimeKind))
                             }
                             .accessibilityAddTraits(.isButton)
                         }
@@ -188,7 +227,7 @@ struct CreationPastedComposeContent: View {
 }
 
 struct CreationTemplatesContent: View {
-    let templates: [Template]
+    let templates: [RecipeRecord]
     var onSelect: (ContainerFormState) -> Void
 
     var body: some View {

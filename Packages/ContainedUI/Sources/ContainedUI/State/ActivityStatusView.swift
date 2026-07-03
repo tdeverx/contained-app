@@ -89,3 +89,23 @@ struct ActivityStatusIndicator: View {
     }
 }
 }
+
+#Preview("Activity Status") {
+    VStack(alignment: .leading, spacing: UI.Tokens.Space.l) {
+        UI.State.ActivityStatusIndicator(activity: UI.State.ActivityStatus(title: "Pulling image",
+                                                                           detail: "sha256:preview",
+                                                                           fraction: 0.64),
+                                         style: .inline)
+            .padding(UI.Tokens.Space.s)
+            .materialCapsuleSurface(shadow: false)
+
+        UI.State.ActivityStatusIndicator(activity: UI.State.ActivityStatus(title: "Building image",
+                                                                           detail: "RUN swift build",
+                                                                           fraction: 0.42),
+                                         style: .expanded)
+            .padding(UI.Tokens.Space.l)
+            .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card)
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 420)
+}

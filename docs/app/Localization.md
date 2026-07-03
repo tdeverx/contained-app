@@ -5,11 +5,13 @@ localization-ready APIs.
 
 ## Ownership
 
-- `Sources/ContainedApp` owns all user-facing strings and the localization catalog.
+- `Sources/ContainedApp` owns product-facing strings and the app localization catalog.
 - `ContainedUI` and `ContainedUX` are building-block packages:
   they own structure and visuals, not app copy.
-- `ContainedCore` should stay language-free except for stable technical
-  identifiers, raw values, package error codes, and backend command output.
+- `ContainedCore` owns display-neutral semantic localization where the backend
+  needs to stand alone: schema labels/help, validation messages, runtime
+  capability reasons, Compose/projection warnings, and package-error fallback
+  descriptions. Its localization APIs support downstream override/wrap behavior.
 
 If a package component needs visible text, add an explicit parameter instead of
 adding an English default in the package. Examples include action help, close
@@ -18,11 +20,11 @@ color/tint display names.
 
 Package failures follow the same ownership rule. Reusable targets should throw
 typed errors with stable codes/context, usually by conforming to
-`Core.Error.PackageError`. The app maps those errors through
-`AppErrorPresentation` and `AppText`, then decides whether to show a toast,
-inline error, alert, or Activity entry. Do not attempt to localize arbitrary
-backend stderr; preserve it as runtime-provided detail unless an adapter can map
-it to a known typed case.
+`Core.Error.PackageError`. Core may provide display-neutral fallback
+descriptions for those codes. The app maps errors through `AppErrorPresentation`
+and `AppText`, then decides whether to show a toast, inline error, alert, or
+Activity entry. Do not attempt to localize arbitrary backend stderr; preserve it
+as runtime-provided detail unless an adapter can map it to a known typed case.
 
 ## App Strings
 
@@ -64,6 +66,8 @@ should go through `AppText` or an app-side localized display extension.
 ## English-Only Baseline
 
 The root package declares `defaultLocalization: "en"` and the app carries
-`Sources/ContainedApp/Resources/Localizable.xcstrings`. English currently comes
-from `String(localized:defaultValue:bundle:)` fallbacks in app code. Future
-translations can fill the string catalog without changing package APIs.
+`Sources/ContainedApp/Resources/Localizable.xcstrings`. `ContainedCore` also
+declares package resources for its semantic defaults. English currently comes
+from localized resources plus `String(localized:defaultValue:bundle:)`
+fallbacks. Future translations can fill the catalogs without changing package
+APIs.

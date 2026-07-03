@@ -7,13 +7,14 @@ interchange, metrics, and display-neutral errors for Contained.
 
 `ContainedCore` exposes a nested `Core.*` API, matching the `UI.*` and `UX.*`
 package style. App code talks to ``Core/Orchestrator``. Runtime adapters live
-inside Core, beginning with the Apple container adapter, so the app does not
-create adapter clients or assemble backend argv.
+inside Core, including Apple container and Docker CLI adapters, so
+the app does not create adapter clients or assemble backend argv.
 
 Use Core for:
 
 - runtime descriptors and capabilities
 - canonical container create/edit/import/export models
+- multi-runtime container and image inventory
 - command previews and host command invocations
 - Compose import/export plans
 - run/edit schema conformance before validation and execution
@@ -22,8 +23,11 @@ Use Core for:
 - typed display-neutral package errors
 
 `ContainedCore` does not import SwiftUI, Sparkle, SwiftTerm, ContainedUI, or
-ContainedUX. It owns no localized resources; the app maps Core errors and
-technical identifiers to user-facing copy.
+ContainedUX. It may own display-neutral semantic localization for schema
+labels/help, validation messages, runtime capability reasons, Compose or
+projection warnings, and typed package-error fallback descriptions. The app
+still maps Core errors and technical identifiers into product-specific copy
+where presentation policy matters.
 
 Deterministic dev/test samples live in the separate `ContainedCoreFixtures`
 product. Import that product only from tests, previews, or sandbox-only targets;

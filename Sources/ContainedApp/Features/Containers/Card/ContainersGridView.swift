@@ -197,11 +197,12 @@ struct ContainersGridView: View {
                     let target = cardDetailTarget.rect(origin: .zero,
                                                        in: viewport.size,
                                                        safeAreaManager: cardDetailSafeAreaManager)
-                    let source = cardFrames[detail.id].flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
-                    let rect = expanded ? target : source
-                    expandedCard(detail)
-                        .frame(width: rect.width, height: rect.height, alignment: .top)
-                        .position(x: rect.midX, y: rect.midY)
+                    let source = cardFrames[detail.scopedID].flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
+                    UX.Morph.SingleSurface(source: source,
+                                           target: target,
+                                           progress: expanded ? 1 : 0) {
+                        expandedCard(detail)
+                    }
                         .zIndex(10)
                 }
             }
@@ -218,7 +219,7 @@ struct ContainersGridView: View {
             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })
         ) {
             Button("Delete", role: .destructive) {
-                if let id = deleting?.id { Task { await store.remove(id, force: true) } }
+                if let id = deleting?.scopedID { Task { await store.remove(id, force: true) } }
                 deleting = nil
             }
             Button("Cancel", role: .cancel) { deleting = nil }
@@ -235,7 +236,7 @@ struct ContainersGridView: View {
         // Report the in-page search count so the toolbar can escalate an empty search into the palette.
         .onAppear { ui.search.pageResultCount = filtered.count }
         .onChange(of: filtered.count) { _, count in ui.search.pageResultCount = count }
-        .onChange(of: store.snapshots.map(\.id)) { _, ids in
+        .onChange(of: store.snapshots.map(\.scopedID)) { _, ids in
             selectedWidgetIndices = selectedWidgetIndices.filter { ids.contains($0.key) }
         }
     }
@@ -310,14 +311,17 @@ struct ContainersGridView: View {
 
     private func deleteNetwork(_ network: Core.Network.Resource) async {
         guard let client = app.client else { return }
-        do { _ = try await client.deleteNetworks([network.name]); await app.refreshNetworks() }
+        do {
+            _ = try await client.deleteNetworks([network.name], runtimeKind: network.runtimeKind)
+            await app.refreshNetworks()
+        }
         catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
     }
 
     @ViewBuilder
     private func gridCard(_ snapshot: Core.Container.Snapshot) -> some View {
-        let selected = detail?.id == snapshot.id
+        let selected = detail?.scopedID == snapshot.scopedID
         compactCard(snapshot)
             // Stays laid out (so the slot is reserved and its frame keeps publishing) but invisible
             // while the promoted overlay grows out of it — no second card to see double.
@@ -327,10 +331,10 @@ struct ContainersGridView: View {
                 GeometryReader { proxy in
                     Color.clear
                         .onAppear {
-                            updateCardFrame(proxy.frame(in: .named("grid")), for: snapshot.id)
+                            updateCardFrame(proxy.frame(in: .named("grid")), for: snapshot.scopedID)
                         }
                         .onChange(of: proxy.frame(in: .named("grid"))) { _, frame in
-                            updateCardFrame(frame, for: snapshot.id)
+                            updateCardFrame(frame, for: snapshot.scopedID)
                         }
                 }
             }
@@ -344,7 +348,7 @@ struct ContainersGridView: View {
 
     private func compactCard(_ snapshot: Core.Container.Snapshot) -> some View {
         containerCard(snapshot, isExpanded: false) {
-            selecting ? toggle(snapshot.id) : openDetail(snapshot)
+            selecting ? toggle(snapshot.scopedID) : openDetail(snapshot)
         }
     }
 
@@ -362,34 +366,35 @@ struct ContainersGridView: View {
                                controlsVisible: Bool = true,
                                onTap: @escaping () -> Void) -> some View {
         let style = app.containerStyle(for: snapshot)
-        let hasStyleOverride = app.personalization.hasOverride(id: snapshot.id)
+        let key = snapshot.scopedID
+        let hasStyleOverride = app.personalization.hasOverride(id: key)
         return ContainerCardMetricsRenderer(
-            metrics: store.metricsState(for: snapshot.id),
+            metrics: store.metricsState(for: key),
             snapshot: snapshot,
             style: style,
             hasStyleOverride: hasStyleOverride,
             density: app.settings.density,
             statsNormalization: app.statsNormalizationContext,
-            selectedWidgetIndex: selectedWidgetBinding(for: snapshot.id),
-            isBusy: store.busyIDs.contains(snapshot.id),
+            selectedWidgetIndex: selectedWidgetBinding(for: key),
+            isBusy: store.busyIDs.contains(key),
             hasImageUpdate: app.imageUpdateStatus(for: snapshot.image).state == .updateAvailable,
             isExpanded: isExpanded,
             cornerRadiusOverride: cornerRadiusOverride,
             controlsVisible: controlsVisible,
             onTap: onTap,
-            onStart: { Task { await store.start(snapshot.id) } },
-            onStop: { Task { await store.stop(snapshot.id) } },
-            onRestart: { Task { await store.restart(snapshot.id) } },
+            onStart: { Task { await store.start(key) } },
+            onStop: { Task { await store.stop(key) } },
+            onRestart: { Task { await store.restart(key) } },
             onEdit: { ui.openCreationPanel(editing: snapshot) },
             onUpdate: { updateContainer(snapshot) },
             onDelete: { deleting = snapshot },
             onClose: closeDetail,
-            onSelectMultiple: { beginSelecting(snapshot.id) },
-            onToggleSelected: { toggle(snapshot.id) },
+            onSelectMultiple: { beginSelecting(key) },
+            onToggleSelected: { toggle(key) },
             onEndSelecting: { endSelecting() },
-            health: app.health.status(for: snapshot.id),
+            health: app.health.status(for: key),
             selecting: selecting,
-            isSelected: selection.contains(snapshot.id)
+            isSelected: selection.contains(key)
         )
     }
 
@@ -488,7 +493,7 @@ struct ContainersGridView: View {
 
     private func updateContainer(_ snapshot: Core.Container.Snapshot) {
         Task {
-            if await app.pullImageUpdate(snapshot.image) {
+            if await app.pullImageUpdate(snapshot.image, runtimeKind: snapshot.runtimeKind) {
                 ui.openCreationPanel(editing: snapshot)
             }
         }
@@ -585,5 +590,104 @@ private extension CGRect {
         abs(minY - other.minY) <= tolerance &&
         abs(width - other.width) <= tolerance &&
         abs(height - other.height) <= tolerance
+    }
+}
+
+#Preview("Containers Grid Fake Dataset") {
+    ContainersGridFakeDatasetPreview()
+}
+
+@MainActor
+private struct ContainersGridFakeDatasetPreview: View {
+    @State private var app: AppModel
+    @State private var ui: UIState
+
+    init() {
+        let preview = ContainersGridPreviewDataset.make()
+        _app = State(initialValue: preview.app)
+        _ui = State(initialValue: preview.ui)
+    }
+
+    var body: some View {
+        ContainersGridView()
+            .environment(app)
+            .environment(ui)
+            .environment(\.morphSafeAreaManager,
+                          UX.SafeArea.Manager(topToolbarHeight: UI.Toolbar.Size.band,
+                                              bottomToolbarHeight: UI.Toolbar.Size.band))
+            .frame(width: 900, height: 640)
+    }
+}
+
+@MainActor
+private enum ContainersGridPreviewDataset {
+    static func make() -> (app: AppModel, ui: UIState) {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let app = AppModel(database: database)
+        let ui = UIState()
+        ui.grouping = .flat
+        ui.sort = .name
+        ui.toolbarUIEnabled = true
+
+        let appleWeb = Core.Container.Snapshot.placeholder(
+            id: "preview-web",
+            image: "docker.io/library/nginx:latest",
+            state: .running
+        )
+        let dockerWeb = Core.Container.Snapshot.placeholder(
+            id: "preview-web",
+            image: "docker.io/library/nginx:latest",
+            state: .running
+        )
+        .scoped(to: .docker)
+        let worker = Core.Container.Snapshot.placeholder(
+            id: "preview-worker",
+            image: "ghcr.io/example/worker:nightly",
+            state: .stopped
+        )
+        .scoped(to: .docker)
+        let db = Core.Container.Snapshot.placeholder(
+            id: "preview-db",
+            image: "postgres:16",
+            state: .running
+        )
+
+        let snapshots = [appleWeb, dockerWeb, worker, db]
+        app.containers.snapshots = snapshots
+        for snapshot in snapshots {
+            app.containers.statsByID[snapshot.scopedID] = Core.Metrics.StatsDelta.sample(id: snapshot.scopedID)
+            app.containers.historyByID[snapshot.scopedID] = [
+                .cpu: buffer([0.14, 0.22, 0.18, 0.42, 0.36, 0.62]),
+                .memory: buffer([0.28, 0.30, 0.34, 0.38, 0.42, 0.40]),
+                .netRx: buffer([0.12, 0.28, 0.20, 0.50, 0.44, 0.58]),
+                .netTx: buffer([0.08, 0.10, 0.16, 0.22, 0.18, 0.26]),
+            ]
+        }
+
+        setStyle(tint: .azure, icon: "globe", nickname: "Apple web", for: appleWeb, app: app)
+        setStyle(tint: .teal, icon: "shippingbox.fill", nickname: "Docker web", for: dockerWeb, app: app)
+        setStyle(tint: .indigo, icon: "gearshape.2.fill", nickname: "Worker", for: worker, app: app)
+        setStyle(tint: .green, icon: "cylinder.split.1x2.fill", nickname: "Database", for: db, app: app)
+
+        return (app, ui)
+    }
+
+    private static func buffer(_ values: [Double]) -> UI.Chart.SampleBuffer {
+        var buffer = UI.Chart.SampleBuffer(capacity: 24)
+        values.forEach { buffer.append($0) }
+        return buffer
+    }
+
+    private static func setStyle(tint: UI.Theme.Tint,
+                                 icon: String,
+                                 nickname: String,
+                                 for snapshot: Core.Container.Snapshot,
+                                 app: AppModel) {
+        var style = Personalization()
+        style.tint = tint
+        style.icon = icon
+        style.nickname = nickname
+        style.backgroundOpacity = 0.18
+        app.personalization.setOverride(style, for: snapshot.scopedID)
     }
 }

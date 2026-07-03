@@ -1,0 +1,12 @@
+"runtime.capability.unsupported" = "This runtime does not support the requested capability.";
+"schema.disabled.unsupported" = "This field is known to Core but is not available for the selected runtime.";
+"schema.disabled.appleContainer.unsupportedDockerCompose" = "Known from Docker CLI or Compose, not executable by Apple container.";
+"schema.disabled.docker.unsupportedAppleContainer" = "Known from Apple container or Compose, not executable by Docker.";
+"schema.disabled.docker.composeOnly" = "Compose stack metadata is preserved, but V1 Docker support runs single containers only.";
+"schema.validation.disabledField" = "This field is not executable by the selected runtime.";
+"schema.field.image.reference" = "Image";
+"schema.field.runtime.kind" = "Runtime";
+"schema.option.default" = "Default";
+"schema.option.restart.no" = "No";
+"schema.option.restart.always" = "Always";
+"schema.option.restart.onFailure" = "On failure";

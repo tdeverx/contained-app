@@ -9,7 +9,7 @@ struct ToolbarPageSwitcher: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @Query private var events: [EventRecord]
-    @Query private var templates: [Template]
+    @Query private var templates: [RecipeRecord]
 
     var body: some View {
         UI.Control.MenuButton {
@@ -197,6 +197,14 @@ struct ToolbarPageContextOptions: View {
     }
 
     private var serviceActions: [UI.Action.Item] {
+        guard app.appleRuntimeAvailable else {
+            return [
+                UI.Action.Item(systemName: "arrow.clockwise",
+                               help: AppText.string("common.retry", defaultValue: "Retry")) {
+                    Task { await app.retryBootstrap() }
+                }
+            ]
+        }
         let power = app.serviceHealthy
             ? UI.Action.Item(systemName: "stop.fill", help: AppText.stopService, role: .destructive) {
                 Task { await app.stopService() }

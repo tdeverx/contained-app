@@ -149,9 +149,14 @@ UI.Panel.Scaffold(width: UI.Panel.Size.settings.width) {
 
 ## Previews
 
-Package-local SwiftUI previews are guarded by `CONTAINED_UI_PREVIEWS`. Normal
-app builds do not define that flag, so sample preview values are not linked into
-debug, release, notarized, or non-notarized app bundles.
+Package-local SwiftUI previews live beside the element declaration they
+exercise. Opening a design-system source file in Xcode should show the matching
+canvas preview without looking in a separate preview-only folder. Keep preview
+sample state app-neutral and fixture-free.
+
+Internal helpers that only exist to remove repeated implementation structure
+live under `Sources/ContainedUI/Shared`. They are not app-facing API; prefer the
+public `UI.*` routes from app code.
 
 ## Verification
 

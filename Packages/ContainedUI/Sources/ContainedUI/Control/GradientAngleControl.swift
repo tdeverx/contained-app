@@ -62,3 +62,17 @@ private struct AngleDial: View {
         }
     }
 }
+
+#Preview("Gradient Angle") {
+    GradientAnglePreview()
+        .padding(UI.Tokens.Space.xl)
+        .frame(width: 420)
+}
+
+private struct GradientAnglePreview: View {
+    @State private var angle = 135.0
+
+    var body: some View {
+        UI.Control.GradientAngle(angle: $angle, title: "Gradient angle")
+    }
+}

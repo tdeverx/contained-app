@@ -1,4 +1,5 @@
 import SwiftUI
+import ContainedUI
 
 public extension UX.Morph {
 struct Frame: Equatable, Sendable {
@@ -193,5 +194,85 @@ public extension UX.Morph.Geometry {
 public extension CGRect {
     func morphInterpolated(to target: CGRect, progress: CGFloat) -> CGRect {
         UX.Morph.Geometry.interpolatedRect(from: self, to: target, progress: progress)
+    }
+}
+
+#Preview("Single Surface") {
+    SingleSurfacePreview()
+        .frame(width: 620, height: 360)
+        .environment(\.buttonMaterial, .glassClear)
+}
+
+private struct SingleSurfacePreview: View {
+    @State private var isPresented = true
+
+    private let source = CGRect(x: 24, y: 24, width: 180, height: 120)
+    private let target = CGRect(x: 180, y: 70, width: 360, height: 220)
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            UI.Card.Scaffold(title: "preview-web",
+                             subtitle: "Collapsed") {
+                UI.Card.IconChip(symbol: "shippingbox.fill", tint: .accentColor)
+            } titleAccessory: {
+                EmptyView()
+            } subtitleAccessory: {
+                EmptyView()
+            } headerAccessory: {
+                EmptyView()
+            } bodyContent: {
+                EmptyView()
+            } footerLeading: {
+                EmptyView()
+            } footerActions: {
+                EmptyView()
+            } widget: {
+                EmptyView()
+            }
+            .frame(width: source.width, height: source.height)
+            .position(x: source.midX, y: source.midY)
+
+            UX.Morph.SingleSurface(source: source,
+                                   target: target,
+                                   progress: 0.65) {
+                UI.Card.Scaffold(size: .large,
+                                 isExpanded: true,
+                                 title: "preview-web",
+                                 subtitle: "Expanded") {
+                    UI.Card.IconChip(symbol: "shippingbox.fill", tint: .accentColor)
+                } titleAccessory: {
+                    UI.Badge.Text(text: "Running")
+                } subtitleAccessory: {
+                    EmptyView()
+                } headerAccessory: {
+                    EmptyView()
+                } bodyContent: {
+                    UI.Card.InsetSection {
+                        UI.Chart.Sparkline(samples: [0.1, 0.3, 0.2, 0.62],
+                                           scale: .fraction)
+                            .frame(height: 64)
+                    }
+                } footerLeading: {
+                    UI.Card.MetricText(text: "62%")
+                } footerActions: {
+                    UI.Card.FooterButton(systemName: "xmark", help: "Close") {}
+                } widget: {
+                    EmptyView()
+                }
+            }
+
+            if isPresented {
+                UX.Morph.SingleSurfaceExpander(isPresented: $isPresented,
+                                               originFrame: source,
+                                               target: .centered(size: CGSize(width: 320, height: 180)),
+                                               showsBackdrop: false) {
+                    UI.Surface.Content(elevated: true) {
+                        Text("Lifecycle expander")
+                    }
+                }
+                .opacity(0.001)
+                .allowsHitTesting(false)
+            }
+        }
     }
 }

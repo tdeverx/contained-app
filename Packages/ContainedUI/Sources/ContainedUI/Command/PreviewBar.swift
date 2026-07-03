@@ -48,3 +48,11 @@ public extension UI.Command {
         }
     }
 }
+
+#Preview("Command Preview Bar") {
+    UI.Command.PreviewBar(command: ["run", "--name", "preview-web", "nginx"],
+                          copyHelp: "Copy command",
+                          copiedAccessibilityLabel: "Copied")
+        .padding(UI.Tokens.Space.xl)
+        .frame(width: 520)
+}

@@ -9,15 +9,42 @@ struct Snapshot: Codable, Sendable, Identifiable, Hashable {
     public let configuration: Core.Container.Configuration
     public let id: String
     public let status: Core.Container.RuntimeState
+    public let runtimeKind: Core.Runtime.Kind
 
     public var state: Core.Runtime.Status { status.state }
     public var image: String { configuration.image.reference }
     public var startedDate: Date? { status.startedDate }
+    public var scopedID: String { runtimeKind.scopedID(for: id) }
 
     /// Functional restart policy label consumed by the app-managed watchdog.
     public var restartLabel: String? { configuration.labels["contained.restart"] }
 
     public var displayName: String { id }
+
+    public init(configuration: Core.Container.Configuration,
+                id: String,
+                status: Core.Container.RuntimeState,
+                runtimeKind: Core.Runtime.Kind = .appleContainer) {
+        self.configuration = configuration
+        self.id = id
+        self.status = status
+        self.runtimeKind = runtimeKind
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        configuration = try c.decode(Core.Container.Configuration.self, forKey: .configuration)
+        id = try c.decode(String.self, forKey: .id)
+        status = try c.decode(Core.Container.RuntimeState.self, forKey: .status)
+        runtimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) ?? configuration.runtimeKind
+    }
+
+    public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Container.Snapshot {
+        Core.Container.Snapshot(configuration: configuration.scoped(to: runtimeKind),
+                                id: id,
+                                status: status,
+                                runtimeKind: runtimeKind)
+    }
 
     /// A synthetic snapshot for previews and image-level customization (styling an image's default
     /// before any container from it exists). Encodes a minimal payload first so unusual image or
@@ -87,6 +114,7 @@ struct NetworkInterfaceStatus: Codable, Sendable, Hashable {
 
 /// The persistent `configuration` of a container.
 struct Configuration: Codable, Sendable, Hashable {
+    public let runtimeKind: Core.Runtime.Kind
     public let id: String
     public let image: ImageReference
     public let initProcess: ProcessConfiguration
@@ -113,6 +141,7 @@ struct Configuration: Codable, Sendable, Hashable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        runtimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) ?? .appleContainer
         id = try c.decode(String.self, forKey: .id)
         image = try c.decode(ImageReference.self, forKey: .image)
         initProcess = try c.decode(ProcessConfiguration.self, forKey: .initProcess)
@@ -136,6 +165,83 @@ struct Configuration: Codable, Sendable, Hashable {
         shmSize = try c.decodeIfPresent(UInt64.self, forKey: .shmSize)
         stopSignal = try c.decodeIfPresent(String.self, forKey: .stopSignal)
         creationDate = try c.decodeIfPresent(Date.self, forKey: .creationDate)
+    }
+
+    public init(runtimeKind: Core.Runtime.Kind = .appleContainer,
+                id: String,
+                image: ImageReference,
+                initProcess: ProcessConfiguration,
+                resources: ResourceConfiguration = .default,
+                platform: Platform = .init(architecture: "arm64", os: "linux", variant: nil),
+                labels: [String: String] = [:],
+                mounts: [Mount] = [],
+                networks: [NetworkAttachment] = [],
+                publishedPorts: [PublishedPort] = [],
+                publishedSockets: [PublishedSocket] = [],
+                dns: DNSConfiguration? = nil,
+                sysctls: [String: String] = [:],
+                capAdd: [String] = [],
+                capDrop: [String] = [],
+                rosetta: Bool = false,
+                runtimeHandler: String? = nil,
+                ssh: Bool = false,
+                readOnly: Bool = false,
+                useInit: Bool = false,
+                virtualization: Bool = false,
+                shmSize: UInt64? = nil,
+                stopSignal: String? = nil,
+                creationDate: Date? = nil) {
+        self.runtimeKind = runtimeKind
+        self.id = id
+        self.image = image
+        self.initProcess = initProcess
+        self.resources = resources
+        self.platform = platform
+        self.labels = labels
+        self.mounts = mounts
+        self.networks = networks
+        self.publishedPorts = publishedPorts
+        self.publishedSockets = publishedSockets
+        self.dns = dns
+        self.sysctls = sysctls
+        self.capAdd = capAdd
+        self.capDrop = capDrop
+        self.rosetta = rosetta
+        self.runtimeHandler = runtimeHandler
+        self.ssh = ssh
+        self.readOnly = readOnly
+        self.useInit = useInit
+        self.virtualization = virtualization
+        self.shmSize = shmSize
+        self.stopSignal = stopSignal
+        self.creationDate = creationDate
+    }
+
+    public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Container.Configuration {
+        Core.Container.Configuration(runtimeKind: runtimeKind,
+                                     id: id,
+                                     image: image,
+                                     initProcess: initProcess,
+                                     resources: resources,
+                                     platform: platform,
+                                     labels: labels,
+                                     mounts: mounts,
+                                     networks: networks,
+                                     publishedPorts: publishedPorts,
+                                     publishedSockets: publishedSockets,
+                                     dns: dns,
+                                     sysctls: sysctls,
+                                     capAdd: capAdd,
+                                     capDrop: capDrop,
+                                     rosetta: rosetta,
+                                     runtimeHandler: runtimeHandler,
+                                     ssh: ssh,
+                                     readOnly: readOnly,
+                                     useInit: useInit,
+                                     virtualization: virtualization,
+                                     shmSize: shmSize,
+                                     stopSignal: stopSignal,
+                                     creationDate: creationDate)
     }
 }
 
@@ -180,6 +286,12 @@ struct Platform: Codable, Sendable, Hashable {
     public let architecture: String
     public let os: String
     public let variant: String?
+
+    public init(architecture: String, os: String, variant: String? = nil) {
+        self.architecture = architecture
+        self.os = os
+        self.variant = variant
+    }
 
     public var display: String {
         var s = "\(os)/\(architecture)"

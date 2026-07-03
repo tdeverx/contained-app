@@ -27,3 +27,16 @@ struct Input<Content: View>: View {
     }
 }
 }
+
+#Preview("Input Surface") {
+    UI.Surface.Input {
+        HStack {
+            Image(systemName: "terminal")
+                .foregroundStyle(.secondary)
+            Text("container run nginx")
+                .font(.system(.caption, design: .monospaced))
+        }
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 420)
+}

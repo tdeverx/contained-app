@@ -239,8 +239,9 @@ struct RecommendedImage: Identifiable, Hashable {
     ]
 
     /// Build a minimal spec that just targets `reference` — the configure form fills in the rest.
-    static func spec(for reference: String) -> ContainerFormState {
-        var spec = ContainerFormState()
+    static func spec(for reference: String,
+                     runtimeKind: Core.Runtime.Kind = .appleContainer) -> ContainerFormState {
+        var spec = ContainerFormState(runtimeKind: runtimeKind)
         spec.image = reference
         return spec
     }

@@ -5,8 +5,11 @@ updates, archives, and the experimental build workspace.
 
 ## Local images
 
-Images are grouped by reference and tag. Image group and tag styling can inherit
-from app defaults or local overrides.
+Images are grouped by normalized reference and digest. When multiple runtimes are
+available, the Images surface still shows one image group, while tag rows expose
+where that tag exists locally. For example, Docker `nginx:latest` and Apple
+container `nginx:latest` share registry/update metadata but remain separate
+runtime-owned local tags.
 
 Common actions:
 
@@ -20,6 +23,10 @@ Common actions:
 - history
 - prune
 
+Tag/delete/save/push actions use the tag's owning runtime. Pull, build, and load
+flows ask for a target runtime at the action surface unless they are launched
+from an existing runtime-scoped tag or context.
+
 ## Docker Hub search
 
 Docker Hub search is experimental and defaults off. Enable **Settings →
@@ -31,9 +38,9 @@ flow.
 
 ## Image updates
 
-Image update checks compare local and remote digests. Status is stored locally so
-cards, palette results, toolbar panels, and System can show whether an update is
-available.
+Image update checks compare local and remote digests by normalized registry
+reference or digest. Remote metadata is shared across runtimes; actual runnable
+image availability remains owned by each runtime.
 
 Manual checks are available from Images, System, the toolbar, and the command
 palette. Background cadence is configured in [Updates](/docs/app/Updates.md).

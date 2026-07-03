@@ -10,7 +10,7 @@ struct StatsTab: View {
 
     @State private var processes: String = ""
 
-    private var metrics: ContainerMetricsState { app.containers.metricsState(for: snapshot.id) }
+    private var metrics: ContainerMetricsState { app.containers.metricsState(for: snapshot.scopedID) }
     private var delta: Core.Metrics.StatsDelta? { metrics.stats }
     private var history: [Core.Metrics.GraphMetric: UI.Chart.SampleBuffer] { metrics.historyByMetric }
     private var normalization: Core.Metrics.NormalizationContext { app.statsNormalizationContext }
@@ -46,7 +46,7 @@ struct StatsTab: View {
                 UI.State.Loading(AppText.string("stats.collecting", defaultValue: "Collecting stats..."))
             }
         }
-        .task(id: snapshot.id) { await refreshVisibleProcesses() }
+        .task(id: snapshot.scopedID) { await refreshVisibleProcesses() }
     }
 
     @ViewBuilder
@@ -66,7 +66,7 @@ struct StatsTab: View {
     private func loadProcesses() async {
         guard snapshot.state == .running, let client = app.client else { processes = ""; return }
         // `ps` is present in most images (busybox/coreutils); ignore failures (e.g. distroless).
-        processes = (try? await client.execCapture(snapshot.id, ["ps"]))?
+        processes = (try? await client.execCapture(snapshot.id, ["ps"], runtimeKind: snapshot.runtimeKind))?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 

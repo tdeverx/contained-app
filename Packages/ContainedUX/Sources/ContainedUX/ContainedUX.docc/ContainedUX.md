@@ -12,6 +12,10 @@ surface opens and why.
 `UI.Panel.Size`, `UI.Panel.Radius`, `UI.Toolbar.Size`, and `UI.Layout.Spacing`.
 Raw `UI.Tokens` stay inside `ContainedUI`.
 
+SwiftUI previews are colocated with the morph, placement, measurement, and
+safe-area declarations they exercise. The package does not use a separate
+preview-only source tree.
+
 ```swift
 UX.Morph.Expander(isPresented: $isPresented,
                   originFrame: originFrame,

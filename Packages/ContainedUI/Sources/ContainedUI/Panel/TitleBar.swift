@@ -55,3 +55,14 @@ struct Header<Trailing: View>: View {
     }
 }
 }
+
+#Preview("Panel Header") {
+    UI.Panel.Header(symbol: "gearshape",
+                    title: "Runtime settings",
+                    subtitle: "Apple container") {
+        UI.Action.Group(UI.Action.Item(systemName: "arrow.clockwise", help: "Refresh") {})
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 520)
+    .environment(\.buttonMaterial, .glassClear)
+}

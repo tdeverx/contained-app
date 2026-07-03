@@ -26,7 +26,11 @@ struct AboutTab: View {
             }
 
             UI.Panel.Section(header: AppText.sectionSettingsRuntime) {
-                UI.Panel.Row(title: AppText.string("settings.about.containerCLI", defaultValue: "Container CLI")) { Text(app.cliVersion ?? "—").designSecondaryValueStyle() }
+                ForEach(app.availableRuntimeDescriptors, id: \.kind) { descriptor in
+                    UI.Panel.Row(title: descriptor.displayName) {
+                        Text(app.runtimeVersion(for: descriptor.kind) ?? "—").designSecondaryValueStyle()
+                    }
+                }
                 UI.Panel.Row(title: AppText.string("settings.about.apiServer", defaultValue: "API server")) { Text(app.systemStatus?.apiServerVersion ?? "—").designSecondaryValueStyle() }
             }
 

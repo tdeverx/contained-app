@@ -338,7 +338,7 @@ private struct NetworksPage: View {
     private func deleteNetwork(_ network: Core.Network.Resource) async {
         guard let client = app.client else { return }
         do {
-            _ = try await client.deleteNetworks([network.name])
+            _ = try await client.deleteNetworks([network.name], runtimeKind: network.runtimeKind)
             await app.refreshNetworks()
         } catch let error as Core.Command.Error {
             app.flash(error.appDisplayMessage)

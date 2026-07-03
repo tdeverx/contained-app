@@ -43,7 +43,7 @@
 ### System, Settings & Activity
 
 - Bootstrap states for missing CLI, unsupported CLI version, stopped service, and ready service.
-- System page for engine/service state, resource usage, background work, volume inventory, runtime defaults, system logs, and prune/service lifecycle actions.
+- System page for runtime/service state, resource usage, background work, volume inventory, system logs, and runtime-scoped prune/service lifecycle actions.
 - Settings tabs for General, Appearance, Runtime, Registries, Experimental, Updates, and About.
 - Configurable appearance, tint, materials, card density, menu-bar behavior, CLI previews, info tips, logging, update cadence, image update cadence, and experimental feature gates.
 - Activity history for lifecycle, image, compose, system, registry, pull, build, watchdog, healthcheck, alert, and UI events, including unread state, filtering, copy/delete actions, and clear controls.

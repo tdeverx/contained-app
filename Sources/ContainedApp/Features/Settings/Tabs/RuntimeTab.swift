@@ -16,35 +16,32 @@ struct RuntimeTab: View {
     @State private var deletingDomain: String?
 
     var body: some View {
+        @Bindable var settings = app.settings
         LazyVStack(spacing: UI.Layout.Spacing.l) {
-            UI.Panel.Section(header: AppText.string("settings.runtime.kernel", defaultValue: "Kernel"),
-                         footer: AppText.string("settings.runtime.kernel.footer", defaultValue: "Downloads and sets the recommended kernel as the default. May prompt for your administrator password - handled by the container CLI; Contained never sees it.")) {
-                UI.Panel.Row(title: AppText.string("settings.runtime.recommendedKernel", defaultValue: "Recommended kernel")) {
-                    Button("Install…") { confirmingKernel = true }
-                }
-                revealCLIHint("container system kernel set --recommended")
-            }
-
-            UI.Panel.Section(header: AppText.string("settings.runtime.localDNSDomains", defaultValue: "Local DNS domains"),
-                         footer: AppText.string("settings.runtime.localDNSDomains.footer", defaultValue: "Creating or deleting a domain may prompt for your administrator password - handled by the container CLI.")) {
-                if dnsDomains.isEmpty {
-                    Text("No local DNS domains.")
-                        .designSecondaryValueStyle()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    ForEach(dnsDomains, id: \.self) { domain in
-                        UI.List.MetadataRow(systemImage: "network",
-                                          title: domain,
-                                          isMonospaced: true) {
-                            Button(role: .destructive) { deletingDomain = domain } label: {
-                                Image(systemName: "trash")
-                            }
-                            .buttonStyle(.borderless)
-                        }
+            UI.Panel.Section(header: AppText.string("settings.runtime.available", defaultValue: "Container runtimes"),
+                             footer: AppText.runtimeSubtitle) {
+                ForEach(app.supportedRuntimeDescriptors, id: \.kind) { descriptor in
+                    let reachable = app.availableRuntimeDescriptors.contains { $0.kind == descriptor.kind }
+                    UI.Panel.Row(title: descriptor.displayName) {
+                        Text(reachable ? AppText.string("settings.runtime.reachable", defaultValue: "Reachable")
+                             : AppText.string("settings.runtime.notReachable", defaultValue: "Not reachable"))
+                            .designSecondaryValueStyle()
                     }
                 }
-                Button("Add Domain…") { newDomain = ""; addingDNS = true }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            UI.Panel.Section(header: AppText.string("settings.runtime.cliPaths", defaultValue: "Runtime paths"),
+                             footer: AppText.string("settings.runtime.cliPaths.footer", defaultValue: "Path overrides are optional. Leave blank to use auto-detection; press Return after changing a path to reconnect.")) {
+                ForEach(app.supportedRuntimeDescriptors, id: \.kind) { descriptor in
+                    runtimePathField(for: descriptor)
+                }
+            }
+
+            if app.appleRuntimeAvailable {
+                appleRuntimeControls
+            }
+            if app.supportedRuntimeDescriptors.contains(where: { $0.kind == .docker }) {
+                dockerRuntimeGuidance
             }
 
             if let props = app.properties {
@@ -66,7 +63,7 @@ struct RuntimeTab: View {
                 }
             }
         }
-        .task { await app.loadPropertiesIfNeeded(); await loadDNS() }
+        .task { await loadRuntimeDetails() }
         .confirmationDialog("Install the recommended kernel?", isPresented: $confirmingKernel) {
             Button("Download & install") { Task { await installKernel() } }
         } message: {
@@ -82,6 +79,54 @@ struct RuntimeTab: View {
             Button("Create") { Task { await addDNS() } }
         } message: {
             Text("Creating a domain may prompt for your administrator password (handled by the container CLI).")
+        }
+    }
+
+    @ViewBuilder
+    private var appleRuntimeControls: some View {
+        UI.Panel.Section(header: AppText.string("settings.runtime.kernel", defaultValue: "Kernel"),
+                     footer: AppText.string("settings.runtime.kernel.footer", defaultValue: "Downloads and sets the recommended kernel as the default. May prompt for your administrator password - handled by the container CLI; Contained never sees it.")) {
+            UI.Panel.Row(title: AppText.string("settings.runtime.recommendedKernel", defaultValue: "Recommended kernel")) {
+                Button("Install…") { confirmingKernel = true }
+            }
+            revealCLIHint("container system kernel set --recommended")
+        }
+
+        UI.Panel.Section(header: AppText.string("settings.runtime.localDNSDomains", defaultValue: "Local DNS domains"),
+                     footer: AppText.string("settings.runtime.localDNSDomains.footer", defaultValue: "Creating or deleting a domain may prompt for your administrator password - handled by the container CLI.")) {
+            if dnsDomains.isEmpty {
+                Text("No local DNS domains.")
+                    .designSecondaryValueStyle()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                ForEach(dnsDomains, id: \.self) { domain in
+                    UI.List.MetadataRow(systemImage: "network",
+                                      title: domain,
+                                      isMonospaced: true) {
+                        Button(role: .destructive) { deletingDomain = domain } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+            Button("Add Domain…") { newDomain = ""; addingDNS = true }
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var dockerRuntimeGuidance: some View {
+        UI.Panel.Section(header: AppText.string("settings.runtime.dockerEndpoint", defaultValue: "Docker endpoint"),
+                         footer: AppText.string("settings.runtime.dockerEndpoint.footer", defaultValue: "Contained talks to the Docker CLI and its configured endpoint. If Docker is not reachable, start Docker externally and retry.")) {
+            UI.Panel.Row(title: AppText.string("settings.runtime.endpointStatus", defaultValue: "Endpoint")) {
+                Text(app.availableRuntimeDescriptors.contains(where: { $0.kind == .docker }) ? AppText.string("settings.runtime.endpointReachable", defaultValue: "Reachable")
+                     : AppText.string("settings.runtime.endpointUnavailable", defaultValue: "Unavailable"))
+                    .designSecondaryValueStyle()
+            }
+            Button(AppText.string("common.retry", defaultValue: "Retry")) {
+                Task { await app.retryBootstrap() }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -105,28 +150,99 @@ struct RuntimeTab: View {
         Binding(get: { deletingDomain != nil }, set: { if !$0 { deletingDomain = nil } })
     }
 
+    private func runtimePathField(for descriptor: Core.Runtime.Descriptor) -> some View {
+        UI.Panel.Field(label: runtimePathLabel(for: descriptor),
+                       info: runtimePathInfo(for: descriptor)) {
+            TextField("", text: runtimePathBinding(for: descriptor.kind),
+                      prompt: Text(defaultPathPrompt(for: descriptor)))
+                .textFieldStyle(.roundedBorder)
+                .onSubmit { Task { await app.retryBootstrap() } }
+        }
+    }
+
+    private func runtimePathLabel(for descriptor: Core.Runtime.Descriptor) -> String {
+        switch descriptor.kind {
+        case .appleContainer:
+            return AppText.string("settings.runtime.path.appleContainer", defaultValue: "Apple container CLI path")
+        case .docker:
+            return AppText.string("settings.runtime.path.docker", defaultValue: "Docker CLI path")
+        default:
+            return "\(descriptor.displayName) CLI path"
+        }
+    }
+
+    private func runtimePathInfo(for descriptor: Core.Runtime.Descriptor) -> String {
+        switch descriptor.kind {
+        case .appleContainer:
+            return AppText.string("settings.runtime.path.info.appleContainer",
+                                  defaultValue: "Override the auto-detected container binary location.")
+        case .docker:
+            return AppText.string("settings.runtime.path.info.docker",
+                                  defaultValue: "Override the auto-detected docker binary location.")
+        default:
+            let executable = descriptor.executableName ?? descriptor.displayName
+            return "Override the auto-detected \(executable) binary location."
+        }
+    }
+
+    private func runtimePathBinding(for kind: Core.Runtime.Kind) -> Binding<String> {
+        Binding {
+            switch kind {
+            case .appleContainer: app.settings.cliPathOverride
+            case .docker: app.settings.dockerCLIPathOverride
+            default: ""
+            }
+        } set: { value in
+            switch kind {
+            case .appleContainer: app.settings.cliPathOverride = value
+            case .docker: app.settings.dockerCLIPathOverride = value
+            default: break
+            }
+        }
+    }
+
+    private func defaultPathPrompt(for descriptor: Core.Runtime.Descriptor) -> String {
+        switch descriptor.kind {
+        case .appleContainer: return "/usr/local/bin/container"
+        case .docker: return "/usr/local/bin/docker"
+        default: return descriptor.executableName.map { "/usr/local/bin/\($0)" } ?? ""
+        }
+    }
+
+    private func loadRuntimeDetails(force: Bool = false) async {
+        if force {
+            dnsDomains = []
+            await app.reloadProperties()
+        } else {
+            await app.loadPropertiesIfNeeded()
+        }
+        if app.appleRuntimeAvailable {
+            await loadDNS()
+        }
+    }
+
     private func loadDNS() async {
-        guard let client = app.client else { return }
-        if let domains = try? await client.dnsDomains() { dnsDomains = domains }
+        guard app.appleRuntimeAvailable, let client = app.client else { return }
+        if let domains = try? await client.dnsDomains(runtimeKind: .appleContainer) { dnsDomains = domains }
     }
 
     private func installKernel() async {
-        guard let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.setRecommendedKernel() }) { app.flash(error) }
+        guard app.appleRuntimeAvailable, let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.setRecommendedKernel(runtimeKind: .appleContainer) }) { app.flash(error) }
         else { app.flash(AppText.recommendedKernelInstalled); await app.reloadProperties() }
     }
 
     private func addDNS() async {
         let domain = newDomain.trimmingCharacters(in: .whitespaces)
         newDomain = ""
-        guard !domain.isEmpty, let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.createDNSDomain(domain) }) { app.flash(error) }
+        guard app.appleRuntimeAvailable, !domain.isEmpty, let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.createDNSDomain(domain, runtimeKind: .appleContainer) }) { app.flash(error) }
         else { await loadDNS() }
     }
 
     private func deleteDNS(_ domain: String) async {
-        guard let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.deleteDNSDomain(domain) }) { app.flash(error) }
+        guard app.appleRuntimeAvailable, let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.deleteDNSDomain(domain, runtimeKind: .appleContainer) }) { app.flash(error) }
         else { await loadDNS() }
     }
 }

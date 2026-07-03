@@ -129,8 +129,9 @@ extension AppModel {
 
     /// Pull one image and re-check its status. Returns true on a successful pull.
     @discardableResult
-    func pullImageUpdate(_ reference: String) async -> Bool {
-        let ok = await pullImage(reference)
+    func pullImageUpdate(_ reference: String,
+                         runtimeKind: Core.Runtime.Kind) async -> Bool {
+        let ok = await pullImage(reference, runtimeKind: runtimeKind)
         if ok {
             await checkImageUpdate(reference, notify: false)
             flash(AppText.updatedImage(Format.shortImage(reference)))
@@ -146,7 +147,7 @@ extension AppModel {
         if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < imageUpdateInterval { return }
         if images.isEmpty, let client {
             do {
-                images = try await client.images()
+                images = try await client.runtimeImages()
                 imagesError = nil
             } catch let error as Core.Command.Error {
                 imagesError = error.appDisplayMessage
@@ -197,9 +198,27 @@ extension AppModel {
             return 0
         }
         var updated = 0
-        for reference in pending where await pullImageUpdate(reference) { updated += 1 }
+        for reference in pending {
+            for runtimeKind in localRuntimeKinds(for: reference, summary: summary) where await pullImageUpdate(reference, runtimeKind: runtimeKind) {
+                updated += 1
+            }
+        }
         if manual { flash(AppText.updatedItems(updated, singular: summary.noun)) }
         return updated
+    }
+
+    private func localRuntimeKinds(for reference: String,
+                                   summary: ImageUpdateSummaryScope) -> [Core.Runtime.Kind] {
+        let key = imageUpdateKey(reference)
+        let runtimes: Set<Core.Runtime.Kind>
+        switch summary {
+        case .localImages:
+            runtimes = Set(images.filter { imageUpdateKey($0.reference) == key }.map(\.runtimeKind))
+        case .containerImages:
+            runtimes = Set(containers.snapshots.filter { imageUpdateKey($0.image) == key }.map(\.runtimeKind))
+        }
+        let ordered = runtimes.sorted { $0.rawValue < $1.rawValue }
+        return ordered
     }
 
     private func uniqueImageReferences() -> [String] {
@@ -221,30 +240,16 @@ extension AppModel {
     // MARK: Persistence
 
     static func loadImageUpdates(defaults: UserDefaults = .standard) -> [String: Core.Image.UpdateStatus] {
-        guard let data = defaults.data(forKey: imageUpdatesKey),
-              let decoded = try? JSONDecoder().decode([String: Core.Image.UpdateStatus].self, from: data) else {
-            return [:]
-        }
-        // Never persist a transient "checking" state; restore it as unknown.
-        return decoded.mapValues { $0.state == .checking ? Core.Image.UpdateStatus() : $0 }
+        [:]
     }
 
     static func saveImageUpdates(_ updates: [String: Core.Image.UpdateStatus], defaults: UserDefaults = .standard) {
-        let stable = updates.mapValues { $0.state == .checking ? Core.Image.UpdateStatus() : $0 }
-        if let data = try? JSONEncoder().encode(stable) {
-            defaults.set(data, forKey: imageUpdatesKey)
-        }
     }
 
     static func loadLastImageUpdateSweep(defaults: UserDefaults = .standard) -> Date? {
-        defaults.object(forKey: imageUpdateLastSweepKey) as? Date
+        nil
     }
 
     static func saveLastImageUpdateSweep(_ date: Date?, defaults: UserDefaults = .standard) {
-        if let date {
-            defaults.set(date, forKey: imageUpdateLastSweepKey)
-        } else {
-            defaults.removeObject(forKey: imageUpdateLastSweepKey)
-        }
     }
 }

@@ -67,7 +67,7 @@ private extension CustomizeSheet.Target {
     func hasOwnStyle(in app: AppModel) -> Bool {
         switch self {
         case .container(let snapshot):
-            return app.personalization.hasOverride(id: snapshot.id)
+            return app.personalization.hasOverride(id: snapshot.scopedID)
         case .image(let reference), .imageTag(let reference, _):
             return app.personalization.imageDefault(for: reference) != nil
         case .imageGroup(let id, _):

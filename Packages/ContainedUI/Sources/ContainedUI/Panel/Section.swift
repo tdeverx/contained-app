@@ -130,11 +130,6 @@ struct Row<Trailing: View>: View {
     @Environment(\.panelSectionHighlighted) private var sectionHighlighted
     @State private var labelHovering = false
 
-    private var labelColor: Color {
-        if error != nil { return .red }
-        return sectionHighlighted ? .accentColor : .primary
-    }
-
     public init(title: String,
                 subtitle: String? = nil,
                 info: String? = nil,
@@ -151,10 +146,11 @@ struct Row<Trailing: View>: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: UI.Tokens.Space.m) {
                 VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: UI.Tokens.Space.xs) {
-                        Text(title).foregroundStyle(labelColor)
-                        if let info { UI.Control.InfoButton(info, visible: labelHovering) }
-                    }
+                    SharedPanelLabel(title: title,
+                                     info: info,
+                                     error: error,
+                                     highlighted: sectionHighlighted,
+                                     hovering: labelHovering)
                     if let subtitle {
                         Text(subtitle).font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -172,6 +168,36 @@ struct Row<Trailing: View>: View {
         .frame(maxWidth: .infinity)
     }
 }
+}
+
+#Preview("Panel Section") {
+    PanelSectionPreview()
+        .padding(UI.Tokens.Space.xl)
+        .frame(width: 520)
+}
+
+private struct PanelSectionPreview: View {
+    @State private var enabled = true
+    @State private var path = "/usr/bin/container"
+
+    var body: some View {
+        UI.Panel.Section(header: "Runtime",
+                         footer: "Use explicit paths when a runtime is installed outside the default shell path.",
+                         collapsible: true,
+                         highlighted: true,
+                         enabled: $enabled) {
+            UI.Panel.Row(title: "Status", subtitle: "Last checked just now") {
+                UI.Badge.Status(text: "Ready", tint: .green)
+            }
+            UI.Panel.ToggleRow(title: "Service controls",
+                               subtitle: "Available for Apple container",
+                               isOn: $enabled)
+            UI.Panel.Field(label: "CLI path") {
+                TextField("/usr/bin/container", text: $path)
+                    .textFieldStyle(.roundedBorder)
+            }
+        }
+    }
 }
 
 public extension UI.Panel.Row where Trailing == EmptyView {
@@ -222,11 +248,6 @@ struct Field<Control: View>: View {
     @Environment(\.panelSectionHighlighted) private var sectionHighlighted
     @State private var labelHovering = false
 
-    private var labelColor: Color {
-        if error != nil { return .red }
-        return sectionHighlighted ? .accentColor : .primary
-    }
-
     public init(label: String,
                 info: String? = nil,
                 error: String? = nil,
@@ -242,12 +263,12 @@ struct Field<Control: View>: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: UI.Tokens.Space.m) {
-                HStack(spacing: UI.Tokens.Space.xs) {
-                    Text(label)
-                        .foregroundStyle(labelColor)
-                    if let info { UI.Control.InfoButton(info, visible: labelHovering) }
-                }
-                .frame(width: labelWidth, alignment: .leading)
+                SharedPanelLabel(title: label,
+                                 info: info,
+                                 error: error,
+                                 highlighted: sectionHighlighted,
+                                 hovering: labelHovering,
+                                 width: labelWidth)
                 control().frame(maxWidth: .infinity)
             }
             .contentShape(Rectangle())

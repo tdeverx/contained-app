@@ -15,7 +15,7 @@ Toolbar-first UI and toolbar panel navigation are experimental opt-ins from
   tag, push, history, image updates, Docker Hub search, and the build workspace.
 - **[Resources](/docs/features/Resources.md)** — volumes, networks, registries,
   templates, and activity history.
-- **[System & Settings](/docs/app/System-Settings.md)** — service status, runtime defaults,
+- **[System & Settings](/docs/app/System-Settings.md)** — runtime status, runtime controls,
   app settings, experimental gates, updates, and local data.
 
 ## Shared workflows

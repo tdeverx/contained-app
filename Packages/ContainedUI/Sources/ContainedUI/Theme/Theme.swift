@@ -261,3 +261,27 @@ public extension View {
         modifier(ToolbarControlMaterial(shape: shape))
     }
 }
+
+#Preview("Theme Materials") {
+    VStack(spacing: UI.Tokens.Space.l) {
+        HStack(spacing: UI.Tokens.Space.s) {
+            ForEach(UI.Theme.Tint.allCases) { tint in
+                UI.Control.TintSwatch(color: tint.color, followsAccent: tint.followsAccent)
+            }
+        }
+
+        Text("Floating panel material")
+            .frame(maxWidth: .infinity)
+            .padding(UI.Tokens.Space.l)
+            .floatingPanelMaterial()
+
+        Text("Toolbar control material")
+            .padding(.horizontal, UI.Tokens.Space.l)
+            .padding(.vertical, UI.Tokens.Space.s)
+            .toolbarControlMaterial(in: Capsule())
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 420)
+    .environment(\.modalMaterial, .glassRegular)
+    .environment(\.buttonMaterial, .glassClear)
+}

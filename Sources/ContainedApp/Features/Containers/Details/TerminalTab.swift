@@ -30,7 +30,9 @@ struct TerminalTab: View {
                              systemImage: "terminal",
                              description: AppText.string("terminal.notRunning.description", defaultValue: "Start the container to open a shell."))
         } else if let client = app.client,
-                  let invocation = try? client.terminalInvocation(containerID: snapshot.id, shell: shell) {
+                  let invocation = try? client.terminalInvocation(containerID: snapshot.id,
+                                                                 shell: shell,
+                                                                 runtimeKind: snapshot.runtimeKind) {
             ContainerToolTabScaffold {
                 controls
             } content: {
@@ -40,7 +42,7 @@ struct TerminalTab: View {
                     }
                     // Recreating the view tears down the exec. Include container/shell so rapid
                     // card switches cannot reuse a terminal process for a different target.
-                    .id("\(snapshot.id)-\(shell)-\(session)")
+                    .id("\(snapshot.scopedID)-\(shell)-\(session)")
                     .terminalSurfaceChrome()
                     if let ended {
                         endedOverlay(code: ended.code)

@@ -21,6 +21,7 @@ struct SettingsBackup: Codable, Equatable {
     var imageDefaultStyleEnabled: Bool
     var keepInMenuBar: Bool
     var cliPathOverride: String
+    var dockerCLIPathOverride: String
     var refreshInterval: Double
     var statsNormalizationMode: Core.Metrics.NormalizationMode
     var imageUpdateIntervalHours: Int
@@ -48,7 +49,8 @@ struct SettingsBackup: Codable, Equatable {
         case buttonTintEnabled, buttonTint, buttonTintOpacity, buttonTintGradient, buttonTintGradientAngle
         case buttonTintBlendMode
         case cardMaterial
-        case showInfoTips, imageDefaultStyleEnabled, keepInMenuBar, cliPathOverride, refreshInterval
+        case showInfoTips, imageDefaultStyleEnabled, keepInMenuBar, cliPathOverride
+        case dockerCLIPathOverride, refreshInterval
         case statsNormalizationMode, imageUpdateIntervalHours, imageUpdateChecksEnabled, appUpdateChecksEnabled, autoRestartEnabled
         case notifyOnCrash, revealCLI, historyRetentionDays, loggingLevel, enabledLogDestinations
         case enabledLogCategories, updateChannel, commandPaletteEnabled, hubSearchEnabled
@@ -73,6 +75,7 @@ struct SettingsBackup: Codable, Equatable {
          imageDefaultStyleEnabled: Bool,
          keepInMenuBar: Bool,
          cliPathOverride: String,
+         dockerCLIPathOverride: String = "",
          refreshInterval: Double,
          statsNormalizationMode: Core.Metrics.NormalizationMode = .container,
          imageUpdateIntervalHours: Int,
@@ -111,6 +114,7 @@ struct SettingsBackup: Codable, Equatable {
         self.imageDefaultStyleEnabled = imageDefaultStyleEnabled
         self.keepInMenuBar = keepInMenuBar
         self.cliPathOverride = cliPathOverride
+        self.dockerCLIPathOverride = dockerCLIPathOverride
         self.refreshInterval = refreshInterval
         self.statsNormalizationMode = statsNormalizationMode
         self.imageUpdateIntervalHours = imageUpdateIntervalHours
@@ -155,6 +159,7 @@ struct SettingsBackup: Codable, Equatable {
         imageDefaultStyleEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageDefaultStyleEnabled) ?? true
         keepInMenuBar = try container.decodeIfPresent(Bool.self, forKey: .keepInMenuBar) ?? true
         cliPathOverride = try container.decodeIfPresent(String.self, forKey: .cliPathOverride) ?? ""
+        dockerCLIPathOverride = try container.decodeIfPresent(String.self, forKey: .dockerCLIPathOverride) ?? ""
         refreshInterval = try container.decodeIfPresent(Double.self, forKey: .refreshInterval) ?? 2
         statsNormalizationMode = try container.decodeIfPresent(Core.Metrics.NormalizationMode.self, forKey: .statsNormalizationMode) ?? .container
         imageUpdateIntervalHours = try container.decodeIfPresent(Int.self, forKey: .imageUpdateIntervalHours) ?? 6
@@ -200,6 +205,7 @@ struct SettingsBackup: Codable, Equatable {
         try container.encode(imageDefaultStyleEnabled, forKey: .imageDefaultStyleEnabled)
         try container.encode(keepInMenuBar, forKey: .keepInMenuBar)
         try container.encode(cliPathOverride, forKey: .cliPathOverride)
+        try container.encode(dockerCLIPathOverride, forKey: .dockerCLIPathOverride)
         try container.encode(refreshInterval, forKey: .refreshInterval)
         try container.encode(statsNormalizationMode, forKey: .statsNormalizationMode)
         try container.encode(imageUpdateIntervalHours, forKey: .imageUpdateIntervalHours)

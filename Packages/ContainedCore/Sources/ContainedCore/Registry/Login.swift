@@ -8,11 +8,20 @@ struct Login: Codable, Sendable, Identifiable, Hashable {
     public let username: String?
     public let created: Date?
     public let modified: Date?
+    public var runtimeKind: Core.Runtime.Kind
 
-    public var id: String { host }
+    public var id: String { runtimeKind.scopedID(for: host) }
 
-    public init(host: String, username: String? = nil, created: Date? = nil, modified: Date? = nil) {
-        self.host = host; self.username = username; self.created = created; self.modified = modified
+    public init(host: String,
+                username: String? = nil,
+                created: Date? = nil,
+                modified: Date? = nil,
+                runtimeKind: Core.Runtime.Kind = .appleContainer) {
+        self.host = host
+        self.username = username
+        self.created = created
+        self.modified = modified
+        self.runtimeKind = runtimeKind
     }
 
     public init(from decoder: Decoder) throws {
@@ -35,6 +44,15 @@ struct Login: Codable, Sendable, Identifiable, Hashable {
         username = string(["username", "user"])
         created = date(["created", "createdAt", "creationDate"])
         modified = date(["modified", "modifiedAt", "updated"])
+        runtimeKind = .appleContainer
+    }
+
+    public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Registry.Login {
+        Core.Registry.Login(host: host,
+                            username: username,
+                            created: created,
+                            modified: modified,
+                            runtimeKind: runtimeKind)
     }
 }
 

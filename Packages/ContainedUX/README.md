@@ -109,9 +109,10 @@ UX.Morph.SingleSurface(source: sourceFrame,
 
 ## Previews
 
-Package-local SwiftUI previews are guarded by `CONTAINED_UX_PREVIEWS`. Normal
-app builds do not define that flag, so package preview sample values are kept out
-of debug, release, notarized, and non-notarized app bundles.
+Package-local SwiftUI previews live beside the interaction primitive they
+exercise. Opening a morph, measurement, placement, or safe-area source file in
+Xcode should show the matching canvas preview without looking in a separate
+preview-only folder.
 
 ## Verification
 

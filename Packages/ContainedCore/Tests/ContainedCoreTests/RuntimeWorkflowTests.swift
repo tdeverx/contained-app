@@ -16,6 +16,16 @@ struct RuntimeWorkflowTests {
         #expect(ContainerCommands.logs("web", follow: true, tail: 500) == ["logs", "--follow", "-n", "500", "web"])
     }
 
+    @Test func dockerContainerImageAndStreamingArgv() {
+        #expect(DockerCommands.containerIDs(all: true) == ["container", "ls", "--all", "--no-trunc", "--quiet"])
+        #expect(DockerCommands.inspectContainers(["web"]) == ["container", "inspect", "web"])
+        #expect(DockerCommands.stats(ids: ["web"]) == ["stats", "--no-stream", "--format", "{{json .}}", "web"])
+        #expect(DockerCommands.logs("web", follow: true, tail: 500) == ["container", "logs", "--follow", "--tail", "500", "web"])
+        #expect(DockerCommands.execInteractive("web", shell: "/bin/sh")
+                == ["container", "exec", "--interactive", "--tty", "web", "/bin/sh"])
+        #expect(DockerCommands.imageList() == ["image", "ls", "--digests", "--no-trunc", "--format", "{{json .}}"])
+    }
+
     @Test func volumeAndNetworkWriteArgv() {
         #expect(ContainerCommands.volumeCreate(name: "data") == ["volume", "create", "data"])
         #expect(ContainerCommands.volumeCreate(name: "data", size: "10G", labels: ["a": "1"])
@@ -43,6 +53,45 @@ struct RuntimeWorkflowTests {
                     "--build-arg", "A=1", "--no-cache", "ctx"])
     }
 
+    @Test func dockerRunArgvIncludesDockerOnlyFields() {
+        var request = Core.Container.CreateRequest()
+        request.runtimeKind = .docker
+        request.image = "nginx:latest"
+        request.name = "web"
+        request.detach = true
+        request.network = "host"
+        request.publishAll = true
+        request.pullPolicy = "always"
+        request.extraHosts = ["host.docker.internal:host-gateway"]
+        request.loggingDriver = "json-file"
+        request.loggingOptions = [Core.Container.KeyValue(key: "max-size", value: "10m")]
+        request.gpus = "all"
+        request.privileged = true
+        request.securityOptions = ["no-new-privileges"]
+        request.stopGracePeriod = "30"
+        request.env = [Core.Container.KeyValue(key: "FOO", value: "bar")]
+        request.ports = [Core.Container.Port(hostPort: "8080", containerPort: "80", proto: "tcp")]
+
+        #expect(DockerCommands.run(request) == [
+            "container", "run",
+            "--detach",
+            "--name", "web",
+            "--privileged",
+            "--publish-all",
+            "--pull", "always",
+            "--network", "host",
+            "--stop-timeout", "30",
+            "--gpus", "all",
+            "--add-host", "host.docker.internal:host-gateway",
+            "--publish", "8080:80",
+            "--env", "FOO=bar",
+            "--security-opt", "no-new-privileges",
+            "--log-driver", "json-file",
+            "--log-opt", "max-size=10m",
+            "nginx:latest",
+        ])
+    }
+
     @Test func registryAndPushArgv() {
         #expect(ContainerCommands.registryList() == ["registry", "list", "--format", "json"])
         #expect(ContainerCommands.registryLogin(server: "ghcr.io", username: "me")
@@ -50,6 +99,11 @@ struct RuntimeWorkflowTests {
         #expect(ContainerCommands.registryLogout(server: "ghcr.io") == ["registry", "logout", "ghcr.io"])
         #expect(ContainerCommands.imagePush("ghcr.io/me/app:1")
                 == ["image", "push", "--progress", "plain", "ghcr.io/me/app:1"])
+        #expect(DockerCommands.registryLogin(server: "ghcr.io", username: "me")
+                == ["login", "--username", "me", "--password-stdin", "ghcr.io"])
+        #expect(DockerCommands.registryLogout(server: "ghcr.io") == ["logout", "ghcr.io"])
+        #expect(DockerCommands.imagePush("ghcr.io/me/app:1", platform: "linux/arm64")
+                == ["image", "push", "--platform", "linux/arm64", "ghcr.io/me/app:1"])
     }
 
     @Test func pruneSystemAndCopyArgv() {
@@ -96,6 +150,34 @@ struct RuntimeWorkflowTests {
         #expect(db?.volumes == ["pgdata:/var/lib/postgresql/data"])
         // The top-level `networks` key is reported as not translated.
         #expect(project.warnings.contains { $0.contains("networks") })
+    }
+
+    @Test func composeHostNetworkIsRuntimeSpecific() throws {
+        let yaml = """
+        services:
+          web:
+            image: nginx:latest
+            network_mode: host
+        """
+        let project = try Core.Compose.Parser.parse(yaml, projectName: "demo")
+        let apple = Core.Orchestrator.testing(runner: MockCommandRunner(result: .success(Data())))
+        let docker = Core.Orchestrator.testing(runner: MockCommandRunner(result: .success(Data())),
+                                               cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                               runtimeKind: .docker)
+
+        let appleDocument = try #require(apple.translateCompose(project,
+                                                                baseDirectory: nil,
+                                                                runtimeKind: .appleContainer).items.first?.document)
+        let dockerDocument = try #require(docker.translateCompose(project,
+                                                                  baseDirectory: nil,
+                                                                  runtimeKind: .docker).items.first?.document)
+
+        #expect(appleDocument.runtimeKind == .appleContainer)
+        #expect(appleDocument.string(.networkName) == "")
+        #expect(dockerDocument.runtimeKind == .docker)
+        #expect(dockerDocument.string(.networkName) == "host")
+        #expect(try docker.previewCreateCommand(for: dockerDocument).command.contains("--network"))
+        #expect(try docker.previewCreateCommand(for: dockerDocument).command.contains("host"))
     }
 
     // MARK: Restart watchdog decision logic

@@ -55,33 +55,20 @@ struct MaterialSurface: ViewModifier {
             .glassEffect(glass, in: shape)
             .background {
                 if let fill {
-                    shape.fill(fillStyle(fill))
+                    shape.fill(SharedSurfaceRendering.fillStyle(color: fill,
+                                                                opacity: fillOpacity,
+                                                                gradient: gradient,
+                                                                gradientAngle: gradientAngle))
                 }
             }
     }
 
-    private func fillStyle(_ color: Color) -> AnyShapeStyle {
-        if gradient {
-            let radians = gradientAngle * .pi / 180
-            let dx = cos(radians) / 2
-            let dy = sin(radians) / 2
-            return AnyShapeStyle(LinearGradient(
-                colors: [color.opacity(fillOpacity * 1.35), color.opacity(fillOpacity * 0.4)],
-                startPoint: UnitPoint(x: 0.5 - dx, y: 0.5 - dy),
-                endPoint: UnitPoint(x: 0.5 + dx, y: 0.5 + dy)))
-        }
-        return AnyShapeStyle(color.opacity(fillOpacity))
+    private var shadowColor: Color {
+        SharedSurfaceRendering.shadowColor(for: colorScheme, scale: shadowScale)
     }
 
-    private var shadowColor: Color {
-        let base = colorScheme == .dark ? 0.55 : 0.18
-        let scale: Double
-        switch level {
-        case .regular: scale = 1.0
-        case .thin: scale = 0.6
-        case .ultraThin: scale = 0.4
-        }
-        return .black.opacity(base * scale)
+    private var shadowScale: Double {
+        switch level { case .regular: return 1.0; case .thin: return 0.6; case .ultraThin: return 0.4 }
     }
 
     private var shadowRadius: CGFloat {
@@ -129,14 +116,11 @@ struct MaterialCapsuleSurface: ViewModifier {
     }
 
     private var shadowColor: Color {
-        let base = colorScheme == .dark ? 0.55 : 0.18
-        let scale: Double
-        switch level {
-        case .regular: scale = 1.0
-        case .thin: scale = 0.6
-        case .ultraThin: scale = 0.4
-        }
-        return .black.opacity(base * scale)
+        SharedSurfaceRendering.shadowColor(for: colorScheme, scale: shadowScale)
+    }
+
+    private var shadowScale: Double {
+        switch level { case .regular: return 1.0; case .thin: return 0.6; case .ultraThin: return 0.4 }
     }
 
     private var shadowRadius: CGFloat {
@@ -173,4 +157,24 @@ extension View {
                                      fill: fill,
                                      fillOpacity: fillOpacity))
     }
+}
+
+#Preview("Material Surfaces") {
+    VStack(spacing: UI.Tokens.Space.l) {
+        Text("Card surface")
+            .frame(maxWidth: .infinity)
+            .padding(UI.Tokens.Space.l)
+            .materialSurface(.regular,
+                             cornerRadius: UI.Tokens.Radius.card,
+                             fill: .accentColor,
+                             fillOpacity: 0.10,
+                             gradient: true)
+
+        Text("Capsule surface")
+            .padding(.horizontal, UI.Tokens.Space.l)
+            .padding(.vertical, UI.Tokens.Space.s)
+            .materialCapsuleSurface(shadow: false, fill: .teal, fillOpacity: 0.12)
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 360)
 }

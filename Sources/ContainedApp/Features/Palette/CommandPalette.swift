@@ -181,7 +181,7 @@ struct PaletteItem: Identifiable {
                                      visual: .container(snapshot),
                                      icon: "arrow.down.circle", tint: .blue) {
                 Task {
-                    if await app.pullImageUpdate(snapshot.image) {
+                    if await app.pullImageUpdate(snapshot.image, runtimeKind: snapshot.runtimeKind) {
                         ui.openCreationPanel(editing: snapshot)
                     }
                 }
@@ -190,18 +190,18 @@ struct PaletteItem: Identifiable {
                 items.append(PaletteItem(title: AppText.paletteStopContainer(name),
                                          subtitle: AppText.paletteContainerSubtitle,
                                          kind: .container, visual: .container(snapshot), icon: "stop.fill", tint: .orange) {
-                    Task { await app.containers.stop(snapshot.id) }
+                    Task { await app.containers.stop(snapshot.scopedID) }
                 })
                 items.append(PaletteItem(title: AppText.paletteRestartContainer(name),
                                          subtitle: AppText.paletteContainerSubtitle,
                                          kind: .container, visual: .container(snapshot), icon: "arrow.clockwise", tint: .blue) {
-                    Task { await app.containers.restart(snapshot.id) }
+                    Task { await app.containers.restart(snapshot.scopedID) }
                 })
             } else {
                 items.append(PaletteItem(title: AppText.paletteStartContainer(name),
                                          subtitle: AppText.paletteContainerSubtitle,
                                          kind: .container, visual: .container(snapshot), icon: "play.fill", tint: .green) {
-                    Task { await app.containers.start(snapshot.id) }
+                    Task { await app.containers.start(snapshot.scopedID) }
                 })
             }
         }
@@ -291,15 +291,19 @@ struct PaletteItem: Identifiable {
         var items: [PaletteItem] = []
         let groups = app.localImageGroups()
         for group in groups {
-            items.append(PaletteItem(title: AppText.paletteRunImage(Format.shortImage(group.primaryReference)),
-                                     subtitle: AppText.paletteLocalImageSubtitle,
-                                     keywords: group.references,
-                                     kind: .image,
-                                     visual: .imageGroup(group),
-                                     icon: "play.fill",
-                                     tint: .green) {
-                ui.runImage(group.primaryReference)
-            })
+            if let runtimeKind = group.images.first(where: { $0.reference == group.primaryReference })?.runtimeKind
+                ?? group.tags.first?.runtimeKind {
+                items.append(PaletteItem(title: AppText.paletteRunImage(Format.shortImage(group.primaryReference)),
+                                         subtitle: AppText.paletteLocalImageSubtitle,
+                                         keywords: group.references,
+                                         kind: .image,
+                                         visual: .imageGroup(group),
+                                         icon: "play.fill",
+                                         tint: .green) {
+                    ui.runImage(group.primaryReference,
+                                runtimeKind: runtimeKind)
+                })
+            }
             items.append(PaletteItem(title: AppText.paletteCheckImageUpdate(Format.shortImage(group.primaryReference)),
                                      subtitle: AppText.paletteImageSubtitle,
                                      keywords: group.references,
@@ -310,25 +314,32 @@ struct PaletteItem: Identifiable {
                 Task { await app.checkImageUpdate(group.primaryReference) }
             })
             if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
-                items.append(PaletteItem(title: AppText.palettePullImageUpdate(Format.shortImage(group.primaryReference)),
-                                         subtitle: AppText.paletteImageSubtitle,
-                                         keywords: group.references,
-                                         kind: .image,
-                                         visual: .imageGroup(group),
-                                         icon: "arrow.down.circle",
-                                         tint: .orange) {
-                    Task { await app.pullImageUpdate(group.primaryReference) }
-                })
+                if let runtimeKind = group.images.first(where: { $0.reference == group.primaryReference })?.runtimeKind {
+                    items.append(PaletteItem(title: AppText.palettePullImageUpdate(Format.shortImage(group.primaryReference)),
+                                             subtitle: AppText.paletteImageSubtitle,
+                                             keywords: group.references,
+                                             kind: .image,
+                                             visual: .imageGroup(group),
+                                             icon: "arrow.down.circle",
+                                             tint: .orange) {
+                        Task {
+                            await app.pullImageUpdate(group.primaryReference,
+                                                      runtimeKind: runtimeKind)
+                        }
+                    })
+                }
             }
-            for reference in group.references where reference != group.primaryReference {
-                items.append(PaletteItem(title: AppText.paletteRunImage(Format.shortImage(reference)),
+            let primaryRuntime = group.images.first { $0.reference == group.primaryReference }?.runtimeKind
+                ?? group.tags.first?.runtimeKind
+            for tag in group.tags where tag.reference != group.primaryReference || tag.runtimeKind != primaryRuntime {
+                items.append(PaletteItem(title: AppText.paletteRunImage(Format.shortImage(tag.reference)),
                                          subtitle: AppText.paletteImageTagSubtitle,
-                                         keywords: [group.primaryReference, reference],
+                                         keywords: [group.primaryReference, tag.reference],
                                          kind: .image,
-                                         visual: .imageTag(reference, groupID: group.id),
+                                         visual: .imageTag(tag.reference, groupID: group.id),
                                          icon: "tag",
                                          tint: .green) {
-                    ui.runImage(reference)
+                    ui.runImage(tag.reference, runtimeKind: tag.runtimeKind)
                 })
             }
         }
@@ -346,7 +357,7 @@ struct PaletteItem: Identifiable {
                             visual: .volume(volume),
                             icon: "externaldrive",
                             tint: .secondary) {
-                    var spec = ContainerFormState()
+                    var spec = ContainerFormState(runtimeKind: volume.runtimeKind)
                     spec.volumes = [VolumeMap(source: volume.name, target: "/data")]
                     ui.openCreationPanel(entry: .configure, prefill: spec)
                 }
@@ -364,7 +375,7 @@ struct PaletteItem: Identifiable {
                             visual: .network(network),
                             icon: "network",
                             tint: .secondary) {
-                    var spec = ContainerFormState()
+                    var spec = ContainerFormState(runtimeKind: network.runtimeKind)
                     spec.network = network.name
                     ui.openCreationPanel(entry: .configure, prefill: spec)
                 }

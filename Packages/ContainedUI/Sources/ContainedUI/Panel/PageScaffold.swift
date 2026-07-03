@@ -70,3 +70,16 @@ public extension UI.Panel.PageScaffold where Actions == EmptyView {
                   actions: { EmptyView() }, content: content)
     }
 }
+
+#Preview("Page Scaffold") {
+    UI.Panel.PageScaffold(symbol: "shippingbox",
+                          title: "Containers",
+                          subtitle: "All reachable runtimes") {
+        UI.Panel.Section(header: "Runtime inventory") {
+            UI.List.MetadataRow(systemImage: "shippingbox",
+                                title: "preview-web",
+                                subtitle: "docker.io/library/nginx:latest")
+        }
+    }
+    .frame(width: 520, height: 420)
+}

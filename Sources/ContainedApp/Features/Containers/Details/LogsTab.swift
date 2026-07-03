@@ -25,7 +25,7 @@ struct LogsTab: View {
         }
         // Stream is tied to the view's lifetime and the container id: switching tabs or containers
         // cancels it, terminating the child process (SIGTERM via the stream's onTermination).
-        .task(id: snapshot.id) { await stream() }
+        .task(id: snapshot.scopedID) { await stream() }
     }
 
     private var controls: some View {
@@ -93,7 +93,10 @@ struct LogsTab: View {
         streaming = true
         defer { streaming = false }
         do {
-            for try await chunk in client.streamLogs(id: snapshot.id, follow: true, tail: 500) {
+            for try await chunk in client.streamLogs(id: snapshot.id,
+                                                     runtimeKind: snapshot.runtimeKind,
+                                                     follow: true,
+                                                     tail: 500) {
                 ingest(chunk)
             }
             // Stream ended (process exited): flush any trailing partial line.

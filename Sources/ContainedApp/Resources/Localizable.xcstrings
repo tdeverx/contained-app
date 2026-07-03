@@ -1,847 +1,5728 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "activity.clearActivity": {},
-    "activity.clearFiltered.help": {},
-    "activity.empty": {},
-    "activity.empty.description": {},
-    "activity.filter": {},
-    "activity.filter.allEvents": {},
-    "activity.filter.current": {},
-    "activity.filterActivity": {},
-    "activity.markAllRead": {},
-    "activity.markAllRead.help": {},
-    "activity.markFilteredRead.help": {},
-    "activity.pullingImage": {},
-    "activity.subtitle.events": {},
-    "activity.subtitle.unread": {},
-    "appearance.dark": {},
-    "appearance.light": {},
-    "appearance.system": {},
-    "automation.appUpdateCheck": {},
-    "automation.appUpdateCheck.detail": {},
-    "automation.autoRestart": {},
-    "automation.autoRestart.detail": {},
-    "automation.imageUpdateCheck": {},
-    "automation.refreshLoop": {},
-    "backup.exported": {},
-    "backup.exportedAndReset": {},
-    "backup.importMode.merge": {},
-    "backup.importMode.replace": {},
-    "backup.imported": {},
-    "backup.keptReadableLocalData": {},
-    "backup.section.caches": {},
-    "backup.section.healthChecks": {},
-    "backup.section.history": {},
-    "backup.section.personalization": {},
-    "backup.section.settings": {},
-    "backup.section.templates": {},
-    "blendMode.multiply": {},
-    "blendMode.normal": {},
-    "blendMode.overlay": {},
-    "blendMode.screen": {},
-    "blendMode.softLight": {},
-    "build.addBuildArg.short": {},
-    "build.addBuildArgument": {},
-    "build.arg": {},
-    "build.arguments": {},
-    "build.arguments.count": {},
-    "build.arguments.empty": {},
-    "build.build": {},
-    "build.buildImage": {},
-    "build.cancelBuild": {},
-    "build.chooseContextFolder": {},
-    "build.chooseContextFolderPanel": {},
-    "build.chooseFolderPlaceholder": {},
-    "build.context": {},
-    "build.context.info": {},
-    "build.dockerfile": {},
-    "build.dockerfile.info": {},
-    "build.empty.description": {},
-    "build.empty.title": {},
-    "build.noCache": {},
-    "build.noCache.info": {},
-    "build.options": {},
-    "build.platform": {},
-    "build.removeBuildArgument": {},
-    "build.source": {},
-    "build.subtitle.context": {},
-    "build.tag": {},
-    "build.tag.info": {},
-    "cardDensity.large": {},
-    "cardDensity.medium": {},
-    "cardDensity.small": {},
-    "cleanup.cleanedOrphanedRows": {},
-    "cleanup.reclaimAll": {},
-    "cleanup.removeStoppedContainers.title": {},
-    "cleanup.removeUnusedImages.title": {},
-    "cleanup.removeUnusedNetworks.title": {},
-    "cleanup.removeUnusedVolumes.title": {},
-    "cleanup.stoppedContainers": {},
-    "cleanup.unusedImages": {},
-    "cleanup.unusedNetworks": {},
-    "cleanup.unusedVolumes": {},
-    "cli.selectContainerBinary": {},
-    "common.add": {},
-    "common.back": {},
-    "common.cancel": {},
-    "common.checkNow": {},
-    "common.choose": {},
-    "common.clear": {},
-    "common.clearSearch": {},
-    "common.close": {},
-    "common.completed": {},
-    "common.copied": {},
-    "common.copyAll": {},
-    "common.copyCommand": {},
-    "common.copyLog": {},
-    "common.copyReference": {},
-    "common.current": {},
-    "common.delete": {},
-    "common.direction": {},
-    "common.done": {},
-    "common.edit": {},
-    "common.follow": {},
-    "common.import": {},
-    "common.logIn": {},
-    "common.new": {},
-    "common.parent": {},
-    "common.quit": {},
-    "common.reconnect": {},
-    "common.refresh": {},
-    "common.remove": {},
-    "common.restart": {},
-    "common.retry": {},
-    "common.run": {},
-    "common.runNow": {},
-    "common.save": {},
-    "common.search": {},
-    "common.start": {},
-    "common.stop": {},
-    "common.tint": {},
-    "common.unread": {},
-    "common.use": {},
-    "common.working": {},
-    "compose.chooseFile": {},
-    "compose.noServicesWithImages": {},
-    "compose.warnings": {},
-    "container.created": {},
-    "container.restartedAttempt": {},
-    "container.unhealthy": {},
-    "containerCard.accessibilityLabel": {},
-    "containerForm.healthcheck.enabled.info": {},
-    "containerForm.healthcheck.probeCommand.info": {},
-    "containerForm.imageDefaults.info": {},
-    "containerForm.personalization.blendMode.info": {},
-    "containerForm.personalization.color.info": {},
-    "containerForm.personalization.colorCardBackground.info": {},
-    "containerForm.personalization.gradient.info": {},
-    "containerForm.personalization.icon.info": {},
-    "containerForm.personalization.nickname.info": {},
-    "containerForm.restartPolicy.info": {},
-    "creation.badge.new": {},
-    "creation.compose.paste": {},
-    "creation.compose.paste.subtitle": {},
-    "creation.compose.pasteYAML": {},
-    "creation.compose.pasteYAML.subtitle": {},
-    "creation.compose.selectFile": {},
-    "creation.compose.selectFile.subtitle": {},
-    "creation.details": {},
-    "creation.localImages.choose": {},
-    "creation.localImages.empty": {},
-    "creation.localImages.filter": {},
-    "creation.localImages.noMatches": {},
-    "creation.localImages.tryDifferentFilter": {},
-    "creation.name": {},
-    "creation.network.create": {},
-    "creation.network.internalOnly": {},
-    "creation.network.internalOnly.subtitle": {},
-    "creation.network.mode.bridge": {},
-    "creation.network.mode.internal": {},
-    "creation.network.name.info": {},
-    "creation.network.name.required": {},
-    "creation.network.new": {},
-    "creation.network.subnet.info": {},
-    "creation.option.build.subtitle": {},
-    "creation.option.compose": {},
-    "creation.option.compose.subtitle": {},
-    "creation.option.container": {},
-    "creation.option.container.subtitle": {},
-    "creation.option.imageArchive": {},
-    "creation.option.imageArchive.subtitle": {},
-    "creation.option.localImage": {},
-    "creation.option.localImage.emptySubtitle": {},
-    "creation.option.localImage.subtitle": {},
-    "creation.option.network.subtitle": {},
-    "creation.option.scratch": {},
-    "creation.option.scratch.subtitle": {},
-    "creation.option.search.subtitle": {},
-    "creation.option.templates.emptySubtitle": {},
-    "creation.option.templates.subtitle": {},
-    "creation.option.volume.subtitle": {},
-    "creation.subnet": {},
-    "creation.volume.create": {},
-    "creation.volume.defaultSize": {},
-    "creation.volume.name.info": {},
-    "creation.volume.name.required": {},
-    "creation.volume.new": {},
-    "creation.volume.size": {},
-    "creation.volume.size.info": {},
-    "customize.accessibilityLabel": {},
-    "customize.addWidget": {},
-    "customize.addWidget.slotsFull": {},
-    "customize.addWidget.subtitle": {},
-    "customize.apply": {},
-    "customize.applyToImage": {},
-    "customize.applyToImage.subtitle": {},
-    "customize.background": {},
-    "customize.blendMode": {},
-    "customize.cardColor": {},
-    "customize.color": {},
-    "customize.color.info": {},
-    "customize.colorCardBackground": {},
-    "customize.customIcon": {},
-    "customize.displayName": {},
-    "customize.gradient": {},
-    "customize.header.card": {},
-    "customize.header.imageStyle": {},
-    "customize.header.volume": {},
-    "customize.icon": {},
-    "customize.icon.defaultSubtitle": {},
-    "customize.imageStyleAccessibilityLabel": {},
-    "customize.inheritance": {},
-    "customize.nickname": {},
-    "customize.opacity": {},
-    "customize.override.containerHint": {},
-    "customize.override.defaultImageDesign": {},
-    "customize.override.groupStyle": {},
-    "customize.override.imageGroupHint": {},
-    "customize.override.imageHint": {},
-    "customize.override.imageStyle": {},
-    "customize.override.imageTagHint": {},
-    "customize.override.style": {},
-    "customize.reset": {},
-    "customize.reset.noOverride": {},
-    "customize.reset.subtitle": {},
-    "customize.resetImageStyle": {},
-    "customize.showStatusIndicator": {},
-    "customize.status": {},
-    "customize.style": {},
-    "customize.subtitle.imageDefault": {},
-    "customize.subtitle.imageGroupDefault": {},
-    "customize.subtitle.imageTag": {},
-    "customize.subtitle.volume": {},
-    "customize.widget.barWidth": {},
-    "customize.widget.chart": {},
-    "customize.widget.compare": {},
-    "customize.widget.compare.subtitle": {},
-    "customize.widget.data": {},
-    "customize.widget.display": {},
-    "customize.widget.gradientFill": {},
-    "customize.widget.interpolation": {},
-    "customize.widget.lineWidth": {},
-    "customize.widget.metric": {},
-    "customize.widget.metric.read": {},
-    "customize.widget.metric.write": {},
-    "customize.widget.moveDown": {},
-    "customize.widget.moveDown.help": {},
-    "customize.widget.moveUp": {},
-    "customize.widget.moveUp.help": {},
-    "customize.widget.order": {},
-    "customize.widget.order.subtitle": {},
-    "customize.widget.pointSize": {},
-    "customize.widget.remove.help": {},
-    "customize.widget.showIcon": {},
-    "customize.widget.showText": {},
-    "customize.widget.title": {},
-    "customize.widget.type": {},
-    "customize.widgets": {},
-    "customize.widgets.footer": {},
-    "downgrade.description": {},
-    "downgrade.exportBackupThenReset": {},
-    "downgrade.keepReadableData": {},
-    "downgrade.quitContained": {},
-    "downgrade.subtitle": {},
-    "downgrade.title": {},
-    "error.command.cliNotFound": {},
-    "error.command.decodingFailed": {},
-    "error.command.launchFailed": {},
-    "error.command.nonZeroExit": {},
-    "error.compose.invalid": {},
-    "error.compose.invalidWithReason": {},
-    "error.registry.httpStatus": {},
-    "error.registry.invalidResponse": {},
-    "error.registry.missingDigest": {},
-    "error.registry.notFound": {},
-    "error.registry.tokenUnavailable": {},
-    "error.registry.unauthorized": {},
-    "error.runtime.unsupportedCapability": {},
-    "file.loaded": {},
-    "file.saved": {},
-    "files.chooseHostFileOrFolder": {},
-    "files.copiedIntoContainer": {},
-    "files.copiedToHost": {},
-    "files.copyFromContainerPanel": {},
-    "files.copyIntoContainerPanel": {},
-    "files.copyIntoFolder": {},
-    "filter.allImages": {},
-    "filter.allNetworks": {},
-    "filter.builtInOnly": {},
-    "filter.customOnly": {},
-    "filter.errorsOnly": {},
-    "filter.flat": {},
-    "filter.image": {},
-    "filter.kind": {},
-    "filter.mode": {},
-    "filter.name": {},
-    "filter.network": {},
-    "filter.newest": {},
-    "filter.none": {},
-    "filter.plugin": {},
-    "filter.registry": {},
-    "filter.runningOnly": {},
-    "filter.status": {},
-    "filter.updatesOnly": {},
-    "filter.volume": {},
-    "graphMetric.cpu": {},
-    "graphMetric.diskRead": {},
-    "graphMetric.diskWrite": {},
-    "graphMetric.memory": {},
-    "graphMetric.netRx": {},
-    "graphMetric.netTx": {},
-    "graphStyle.area": {},
-    "graphStyle.bar": {},
-    "graphStyle.line": {},
-    "graphStyle.multiLine": {},
-    "graphStyle.points": {},
-    "graphStyle.range": {},
-    "graphStyle.scatter": {},
-    "history.cleared": {},
-    "image.addTag": {},
-    "image.chooseTarArchive": {},
-    "image.deleteTag": {},
-    "image.deleted": {},
-    "image.empty": {},
-    "image.empty.subtitle": {},
-    "image.history": {},
-    "image.history.empty": {},
-    "image.history.empty.description": {},
-    "image.loadImageTar": {},
-    "image.prune": {},
-    "image.pruneImages": {},
-    "image.pullUpdate": {},
-    "image.push": {},
-    "image.push.namespaceRequired": {},
-    "image.push.namespaceRequired.detail": {},
-    "image.push.namespaceRequired.message": {},
-    "image.push.ready": {},
-    "image.push.ready.detail": {},
-    "image.push.ready.message": {},
-    "image.push.runtimeUnavailable": {},
-    "image.push.runtimeUnavailable.message": {},
-    "image.push.signInRequired": {},
-    "image.push.signInRequired.detail": {},
-    "image.push.signInRequired.message": {},
-    "image.push.tagRequired": {},
-    "image.push.tagRequired.detail": {},
-    "image.push.tagRequired.message": {},
-    "image.pushImage": {},
-    "image.saveTarArchive": {},
-    "image.tag.newReference": {},
-    "image.tag.source": {},
-    "image.tags": {},
-    "image.updates.subtitle": {},
-    "imageDefaults.adopted": {},
-    "imageDefaults.alreadyRepresented": {},
-    "logging.category.compose": {},
-    "logging.category.health": {},
-    "logging.category.image": {},
-    "logging.category.lifecycle": {},
-    "logging.category.registry": {},
-    "logging.category.system": {},
-    "logging.category.ui": {},
-    "logging.destination.activity": {},
-    "logging.destination.console": {},
-    "logging.level.errors": {},
-    "logging.level.errors.footnote": {},
-    "logging.level.important": {},
-    "logging.level.important.footnote": {},
-    "logging.level.off": {},
-    "logging.level.off.footnote": {},
-    "logging.level.verbose": {},
-    "logging.level.verbose.footnote": {},
-    "menu.networkActions": {},
-    "menu.volumeActions": {},
-    "network.count": {},
-    "network.created": {},
-    "network.delete.confirmation": {},
-    "network.delete.message": {},
-    "network.empty": {},
-    "network.empty.description": {},
-    "network.newNetwork": {},
-    "network.newNetwork.lowercase": {},
-    "network.refreshNetworks": {},
-    "notification.containerRestarted.body": {},
-    "notification.containerRestarted.bodyWithAttempt": {},
-    "notification.containerRestarted.title": {},
-    "notification.containerStopped.body": {},
-    "notification.containerStopped.title": {},
-    "notification.containerUnhealthy.body": {},
-    "notification.containerUnhealthy.title": {},
-    "palette.action.checkAllContainerImages": {},
-    "palette.action.checkAllImageUpdates": {},
-    "palette.action.checkAppUpdates": {},
-    "palette.action.checkImageUpdate": {},
-    "palette.action.editContainer": {},
-    "palette.action.hideCLIPreviews": {},
-    "palette.action.hideInfoTips": {},
-    "palette.action.hideMenuBarItem": {},
-    "palette.action.importCompose": {},
-    "palette.action.loadImageTar": {},
-    "palette.action.newNetwork": {},
-    "palette.action.newVolume": {},
-    "palette.action.pruneImages": {},
-    "palette.action.pullContainerImageUpdates": {},
-    "palette.action.pullImageUpdate": {},
-    "palette.action.refresh": {},
-    "palette.action.registryLogin": {},
-    "palette.action.restartContainer": {},
-    "palette.action.runContainer": {},
-    "palette.action.runImage": {},
-    "palette.action.runOnNetwork": {},
-    "palette.action.searchDockerHub": {},
-    "palette.action.searchLocalImages": {},
-    "palette.action.showAllContainers": {},
-    "palette.action.showCLIPreviews": {},
-    "palette.action.showInfoTips": {},
-    "palette.action.showMenuBarItem": {},
-    "palette.action.showRunningOnly": {},
-    "palette.action.startContainer": {},
-    "palette.action.stopContainer": {},
-    "palette.action.systemLogs": {},
-    "palette.action.updateAllImages": {},
-    "palette.action.updateContainerImage": {},
-    "palette.action.useVolume": {},
-    "palette.backToCommands": {},
-    "palette.commands": {},
-    "palette.couldNotSearchDockerHub": {},
-    "palette.dockerHub": {},
-    "palette.dockerHubUnreachable": {},
-    "palette.filterLocalImagesPlaceholder": {},
-    "palette.imagesCount": {},
-    "palette.keyboard.clearScope": {},
-    "palette.keyboard.run": {},
-    "palette.keyboard.select": {},
-    "palette.kind.action": {},
-    "palette.kind.container": {},
-    "palette.kind.create": {},
-    "palette.kind.image": {},
-    "palette.kind.navigate": {},
-    "palette.kind.resource": {},
-    "palette.kind.search": {},
-    "palette.kind.settings": {},
-    "palette.kind.toggle": {},
-    "palette.localImages": {},
-    "palette.localImagesCount": {},
-    "palette.matchesCount": {},
-    "palette.network": {},
-    "palette.network.builtIn": {},
-    "palette.network.footer": {},
-    "palette.noImagesFound": {},
-    "palette.noMatches": {},
-    "palette.noMatchesDescription": {},
-    "palette.officialImage": {},
-    "palette.popularImages": {},
-    "palette.removeScopeAccessibilityLabel": {},
-    "palette.resultsCount": {},
-    "palette.searchDockerHubFor": {},
-    "palette.searchDockerHubPlaceholder": {},
-    "palette.searchOrRunPlaceholder": {},
-    "palette.searching": {},
-    "palette.searchingDockerHub": {},
-    "palette.section.actions": {},
-    "palette.section.containers": {},
-    "palette.section.createSearch": {},
-    "palette.section.images": {},
-    "palette.section.volumesNetworks": {},
-    "palette.setDesignTint": {},
-    "palette.settingsTitle": {},
-    "palette.subtitle.action": {},
-    "palette.subtitle.appearance": {},
-    "palette.subtitle.builtInNetwork": {},
-    "palette.subtitle.container": {},
-    "palette.subtitle.containerCount": {},
-    "palette.subtitle.create": {},
-    "palette.subtitle.doesNotRecreateContainers": {},
-    "palette.subtitle.image": {},
-    "palette.subtitle.imageTag": {},
-    "palette.subtitle.localImage": {},
-    "palette.subtitle.network": {},
-    "palette.subtitle.pullNewerTags": {},
-    "palette.subtitle.scope": {},
-    "palette.subtitle.settings": {},
-    "palette.subtitle.tagCount": {},
-    "palette.subtitle.toggle": {},
-    "palette.subtitle.updates": {},
-    "palette.subtitle.volume": {},
-    "palette.typeToSearchDockerHub": {},
-    "palette.unavailable": {},
-    "palette.volume": {},
-    "palette.volume.footer": {},
-    "registry.credentials": {},
-    "registry.login.title": {},
-    "registry.openRegistries": {},
-    "registry.password": {},
-    "registry.server": {},
-    "registry.username": {},
-    "releaseNotes.availableUpdate": {},
-    "releaseNotes.whatsNew": {},
-    "releaseNotes.whatsNewInAvailableUpdate": {},
-    "releaseNotes.whatsNewInVersion": {},
-    "restartPolicy.always": {},
-    "restartPolicy.no": {},
-    "restartPolicy.onFailure": {},
-    "runSpec.addCapability": {},
-    "runSpec.addDNSOption": {},
-    "runSpec.addEnvFile": {},
-    "runSpec.addLabel": {},
-    "runSpec.addMount": {},
-    "runSpec.addNameserver": {},
-    "runSpec.addPort": {},
-    "runSpec.addSearchDomain": {},
-    "runSpec.addSocket": {},
-    "runSpec.addTmpfsMount": {},
-    "runSpec.addUlimit": {},
-    "runSpec.addVariable": {},
-    "runSpec.addVolume": {},
-    "runSpec.adopt": {},
-    "runSpec.allocateTTY": {},
-    "runSpec.blendMode": {},
-    "runSpec.chooseFileOrFolder": {},
-    "runSpec.color": {},
-    "runSpec.colorCardBackground": {},
-    "runSpec.command": {},
-    "runSpec.containerIDFile": {},
-    "runSpec.cpus": {},
-    "runSpec.createNewVolume": {},
-    "runSpec.customPlatform": {},
-    "runSpec.default": {},
-    "runSpec.detach": {},
-    "runSpec.disableDNS": {},
-    "runSpec.dropCapability": {},
-    "runSpec.enableHealthcheck": {},
-    "runSpec.entrypoint": {},
-    "runSpec.exposeVirtualization": {},
-    "runSpec.forwardSSHAgent": {},
-    "runSpec.gradient": {},
-    "runSpec.icon": {},
-    "runSpec.image": {},
-    "runSpec.image.required": {},
-    "runSpec.imageDefaults": {},
-    "runSpec.imageDefaults.subtitle": {},
-    "runSpec.importedValuesHint": {},
-    "runSpec.initImage": {},
-    "runSpec.keepStdinOpen": {},
-    "runSpec.kernel": {},
-    "runSpec.limitMemory": {},
-    "runSpec.limitParallelDownloads": {},
-    "runSpec.memory": {},
-    "runSpec.name": {},
-    "runSpec.network": {},
-    "runSpec.nickname": {},
-    "runSpec.opacity": {},
-    "runSpec.platform": {},
-    "runSpec.probeCommand": {},
-    "runSpec.progress": {},
-    "runSpec.readOnlyFilesystem": {},
-    "runSpec.registryScheme": {},
-    "runSpec.removeWhenStopped": {},
-    "runSpec.restartPolicy": {},
-    "runSpec.rosetta": {},
-    "runSpec.runtime": {},
-    "runSpec.searchDomain": {},
-    "runSpec.section.advancedOptions": {},
-    "runSpec.section.advancedOptions.footer": {},
-    "runSpec.section.appManaged": {},
-    "runSpec.section.environment": {},
-    "runSpec.section.essentials": {},
-    "runSpec.section.networking": {},
-    "runSpec.section.resources": {},
-    "runSpec.section.storage": {},
-    "runSpec.setSharedMemorySize": {},
-    "runSpec.sharedMemory": {},
-    "runSpec.sourcePicker.help": {},
-    "runSpec.useInitProcess": {},
-    "runSpec.user": {},
-    "runSpec.userID": {},
-    "runSpec.validation.chooseImage": {},
-    "runSpec.validation.completePortMappings": {},
-    "runSpec.validation.completeVolumeMounts": {},
-    "runSpec.validation.environmentNeedsNames": {},
-    "runSpec.validation.memoryFormat": {},
-    "runSpec.workingDirectory": {},
-    "runtime.core": {},
-    "runtime.core.subtitle": {},
-    "runtime.coreSelector.disabledReason": {},
-    "runtime.notReady": {},
-    "runtime.recommendedKernelInstalled": {},
-    "section.activity": {},
-    "section.build": {},
-    "section.containers": {},
-    "section.images": {},
-    "section.networks": {},
-    "section.registries": {},
-    "section.settings": {},
-    "section.system": {},
-    "section.templates": {},
-    "section.volumes": {},
-    "sectionGroup.infra": {},
-    "sectionGroup.system": {},
-    "sectionGroup.workloads": {},
-    "selection.count": {},
-    "service.restart": {},
-    "service.start": {},
-    "service.stop": {},
-    "settings.about.apiServer": {},
-    "settings.about.containerCLI": {},
-    "settings.about.copyright": {},
-    "settings.appearance.accentTint": {},
-    "settings.appearance.appearance": {},
-    "settings.appearance.blendMode": {},
-    "settings.appearance.buttonMaterial": {},
-    "settings.appearance.buttonMaterial.info": {},
-    "settings.appearance.buttonTint": {},
-    "settings.appearance.buttonTint.footer": {},
-    "settings.appearance.cardMaterial": {},
-    "settings.appearance.cardMaterial.info": {},
-    "settings.appearance.cardSize": {},
-    "settings.appearance.color": {},
-    "settings.appearance.colorCardBackground": {},
-    "settings.appearance.customIcon": {},
-    "settings.appearance.defaultImageCardStyle": {},
-    "settings.appearance.defaultImageCardStyle.footer": {},
-    "settings.appearance.gradient": {},
-    "settings.appearance.icon": {},
-    "settings.appearance.imageCards": {},
-    "settings.appearance.imageCards.inherited": {},
-    "settings.appearance.layout": {},
-    "settings.appearance.mainBackgroundMaterial": {},
-    "settings.appearance.mainBackgroundMaterial.info": {},
-    "settings.appearance.materials": {},
-    "settings.appearance.materials.footer": {},
-    "settings.appearance.opacity": {},
-    "settings.appearance.panelSheetMaterial": {},
-    "settings.appearance.panelSheetMaterial.info": {},
-    "settings.appearance.showInfoTips": {},
-    "settings.appearance.theme": {},
-    "settings.experimental.commandPalette": {},
-    "settings.experimental.commandPalette.info": {},
-    "settings.experimental.composeImport": {},
-    "settings.experimental.composeImport.info": {},
-    "settings.experimental.dockerHubSearch": {},
-    "settings.experimental.dockerHubSearch.info": {},
-    "settings.experimental.footer": {},
-    "settings.experimental.imageBuildWorkspace": {},
-    "settings.experimental.imageBuildWorkspace.info": {},
-    "settings.experimental.keyboardShortcuts": {},
-    "settings.experimental.keyboardShortcuts.info": {},
-    "settings.experimental.sidebarNavigation": {},
-    "settings.experimental.sidebarNavigation.info": {},
-    "settings.experimental.toolbarFirstUI": {},
-    "settings.experimental.toolbarFirstUI.info": {},
-    "settings.experimental.toolbarPanelNavigation": {},
-    "settings.experimental.toolbarPanelNavigation.info": {},
-    "settings.general.activityAlerts": {},
-    "settings.general.advanced": {},
-    "settings.general.containerCLIPath": {},
-    "settings.general.containerCLIPath.info": {},
-    "settings.general.data": {},
-    "settings.general.data.footer": {},
-    "settings.general.keepHistoryFor": {},
-    "settings.general.keepInMenuBar": {},
-    "settings.general.launchAtLogin": {},
-    "settings.general.listRefreshInterval": {},
-    "settings.general.logging": {},
-    "settings.general.loggingLevel": {},
-    "settings.general.normalizeStats": {},
-    "settings.general.notifyOnCrash": {},
-    "settings.general.showRevealCLI": {},
-    "settings.general.showRevealCLI.info": {},
-    "settings.general.startup": {},
-    "settings.registries.footer": {},
-    "settings.registries.signedIn": {},
-    "settings.runtime.builderImage": {},
-    "settings.runtime.builderRosetta": {},
-    "settings.runtime.defaultCPUs": {},
-    "settings.runtime.defaultMemory": {},
-    "settings.runtime.kernel": {},
-    "settings.runtime.kernel.footer": {},
-    "settings.runtime.localDNSDomains": {},
-    "settings.runtime.localDNSDomains.footer": {},
-    "settings.runtime.machineCPUs": {},
-    "settings.runtime.machineMemory": {},
-    "settings.runtime.recommendedKernel": {},
-    "settings.runtime.resources": {},
-    "settings.runtime.resources.footer": {},
-    "settings.updates.automaticallyCheck": {},
-    "settings.updates.channel": {},
-    "settings.updates.checkImages": {},
-    "settings.updates.footer": {},
-    "settings.updates.imageUpdates": {},
-    "settings.updates.imageUpdates.footer": {},
-    "stats.collecting": {},
-    "stats.memory.detail": {},
-    "stats.notRunning": {},
-    "stats.notRunning.description": {},
-    "stats.processes": {},
-    "statsNormalization.container": {},
-    "statsNormalization.container.footnote": {},
-    "statsNormalization.machine": {},
-    "statsNormalization.machine.footnote": {},
-    "status.errored": {},
-    "status.off": {},
-    "status.paused": {},
-    "status.running": {},
-    "status.running.lowercase": {},
-    "status.stopped": {},
-    "status.stopping": {},
-    "status.unavailableInBuild": {},
-    "status.unknown": {},
-    "streamConsole.lineCount": {},
-    "system.containerEngine": {},
-    "system.diskUsed": {},
-    "system.page.automation": {},
-    "system.page.automation.subtitle": {},
-    "system.page.engine": {},
-    "system.page.engine.subtitle": {},
-    "system.page.volumes.subtitle": {},
-    "system.storageCleanup": {},
-    "system.systemLogs": {},
-    "template.empty": {},
-    "template.empty.subtitle": {},
-    "template.saveAsTemplate": {},
-    "template.saved": {},
-    "template.savedCount": {},
-    "terminal.execInto": {},
-    "terminal.reconnectTerminal": {},
-    "terminal.sessionEnded": {},
-    "terminal.sessionEndedWithExit": {},
-    "tint.amber": {},
-    "tint.amber.alias.gold": {},
-    "tint.amber.alias.honey": {},
-    "tint.amber.alias.mustard": {},
-    "tint.amber.alias.yellow": {},
-    "tint.azure": {},
-    "tint.azure.alias.blue": {},
-    "tint.azure.alias.cobalt": {},
-    "tint.azure.alias.ocean": {},
-    "tint.azure.alias.sky": {},
-    "tint.coral": {},
-    "tint.coral.alias.burnt": {},
-    "tint.coral.alias.orange": {},
-    "tint.coral.alias.rust": {},
-    "tint.coral.alias.salmon": {},
-    "tint.coral.alias.terracotta": {},
-    "tint.graphite": {},
-    "tint.graphite.alias.charcoal": {},
-    "tint.graphite.alias.gray": {},
-    "tint.graphite.alias.grey": {},
-    "tint.graphite.alias.mono": {},
-    "tint.graphite.alias.neutral": {},
-    "tint.graphite.alias.silver": {},
-    "tint.graphite.alias.slate": {},
-    "tint.green": {},
-    "tint.green.alias.emerald": {},
-    "tint.green.alias.forest": {},
-    "tint.green.alias.lime": {},
-    "tint.green.alias.moss": {},
-    "tint.green.alias.olive": {},
-    "tint.indigo": {},
-    "tint.indigo.alias.blurple": {},
-    "tint.indigo.alias.purple": {},
-    "tint.indigo.alias.royal": {},
-    "tint.indigo.alias.violet": {},
-    "tint.multicolor": {},
-    "tint.multicolor.alias.appAccent": {},
-    "tint.multicolor.alias.auto": {},
-    "tint.multicolor.alias.default": {},
-    "tint.multicolor.alias.rainbow": {},
-    "tint.multicolor.alias.system": {},
-    "tint.pink": {},
-    "tint.pink.alias.crimson": {},
-    "tint.pink.alias.fuchsia": {},
-    "tint.pink.alias.hotPink": {},
-    "tint.pink.alias.magenta": {},
-    "tint.pink.alias.rose": {},
-    "tint.teal": {},
-    "tint.teal.alias.aqua": {},
-    "tint.teal.alias.cyan": {},
-    "tint.teal.alias.mint": {},
-    "tint.teal.alias.seafoam": {},
-    "tint.teal.alias.turquoise": {},
-    "toolbar.containerFilters": {},
-    "toolbar.groupBy": {},
-    "toolbar.groupSortSubtitle": {},
-    "toolbar.groupedBy": {},
-    "toolbar.imageFilters": {},
-    "toolbar.networkFilters": {},
-    "toolbar.sortBy": {},
-    "toolbar.templateGrouping": {},
-    "updateChannel.beta": {},
-    "updateChannel.beta.footnote": {},
-    "updateChannel.nightly": {},
-    "updateChannel.nightly.footnote": {},
-    "updateChannel.stable": {},
-    "updateChannel.stable.footnote": {},
-    "updates.checkForUpdates": {},
-    "updates.checkForUpdatesNow": {},
-    "updates.containerImageNoun": {},
-    "updates.containerImagesTitle": {},
-    "updates.imageNoun": {},
-    "updates.imageUpToDate": {},
-    "updates.imageUpdateAvailable": {},
-    "updates.imagesTitle": {},
-    "updates.localDigestUnavailable": {},
-    "updates.localDigestUnavailable.short": {},
-    "updates.noContainerImageUpdatesAvailable": {},
-    "updates.noContainerImagesToCheck": {},
-    "updates.noImageUpdatesAvailable": {},
-    "updates.noLocalImagesToCheck": {},
-    "updates.runImageUpdateCheckNow": {},
-    "updates.sweepAvailable": {},
-    "updates.sweepUpToDate": {},
-    "updates.unavailable": {},
-    "updates.updatedImage": {},
-    "updates.updatedItems": {},
-    "volume.copyDestination": {},
-    "volume.copySource": {},
-    "volume.created": {},
-    "volume.inventory.empty": {},
-    "volume.newVolume": {},
-    "volume.refreshVolumes": {},
-    "widgetInterpolation.cardinal": {},
-    "widgetInterpolation.catmullRom": {},
-    "widgetInterpolation.linear": {},
-    "widgetInterpolation.monotone": {},
-    "widgetInterpolation.stepCenter": {},
-    "widgetInterpolation.stepEnd": {},
-    "widgetInterpolation.stepStart": {},
-    "windowMaterial.contentBackground": {},
-    "windowMaterial.fullScreenUI": {},
-    "windowMaterial.glassClear": {},
-    "windowMaterial.glassRegular": {},
-    "windowMaterial.headerView": {},
-    "windowMaterial.hudWindow": {},
-    "windowMaterial.menu": {},
-    "windowMaterial.popover": {},
-    "windowMaterial.selection": {},
-    "windowMaterial.sheet": {},
-    "windowMaterial.sidebar": {},
-    "windowMaterial.titlebar": {},
-    "windowMaterial.toolTip": {},
-    "windowMaterial.underPageBackground": {},
-    "windowMaterial.underWindowBackground": {},
-    "windowMaterial.windowBackground": {}
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "/usr/local/bin/container" : {
+
+    },
+    "%@ · %lld unread" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld unread"
+          }
+        }
+      }
+    },
+    "%@ are up to date" : {
+
+    },
+    "%@ Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds." : {
+
+    },
+    "%@ exited unexpectedly." : {
+      "comment" : "A notification that a container stopped unexpectedly.",
+      "isCommentAutoGenerated" : true
+    },
+    "%@ failed its healthcheck." : {
+
+    },
+    "%@ is unhealthy" : {
+
+    },
+    "%@ is up to date" : {
+
+    },
+    "%@ Settings" : {
+
+    },
+    "%@ was restarted (attempt %lld)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ was restarted (attempt %2$lld)."
+          }
+        }
+      }
+    },
+    "%@ was restarted." : {
+
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld %@ update%@ available" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ update%3$@ available"
+          }
+        }
+      }
+    },
+    "%lld argument(s)" : {
+
+    },
+    "%lld containers" : {
+
+    },
+    "%lld event%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld event%2$@"
+          }
+        }
+      }
+    },
+    "%lld image%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld image%2$@"
+          }
+        }
+      }
+    },
+    "%lld lines" : {
+
+    },
+    "%lld local · %lld update%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld local · %2$lld update%3$@"
+          }
+        }
+      }
+    },
+    "%lld local image%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld local image%2$@"
+          }
+        }
+      }
+    },
+    "%lld match%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld match%2$@"
+          }
+        }
+      }
+    },
+    "%lld network%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld network%2$@"
+          }
+        }
+      }
+    },
+    "%lld of %lld widgets" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld widgets"
+          }
+        }
+      }
+    },
+    "%lld result%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld result%2$@"
+          }
+        }
+      }
+    },
+    "%lld saved" : {
+
+    },
+    "%lld selected" : {
+
+    },
+    "%lld tag%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld tag%2$@"
+          }
+        }
+      }
+    },
+    "%lld volume%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld volume%2$@"
+          }
+        }
+      }
+    },
+    "%lld%%" : {
+
+    },
+    "%llds" : {
+      "comment" : "A readout of the current refresh interval in seconds.",
+      "isCommentAutoGenerated" : true
+    },
+    "© 2026 Contained" : {
+
+    },
+    "1 day" : {
+
+    },
+    "7 days" : {
+
+    },
+    "14 days" : {
+
+    },
+    "30 days" : {
+
+    },
+    "A display name for the card only. It does not rename the real container." : {
+
+    },
+    "A native macOS UI for Apple’s container runtime." : {
+
+    },
+    "A network name is required." : {
+
+    },
+    "A persistent storage name you can mount into containers." : {
+
+    },
+    "A readable name used by containers with `--network`." : {
+
+    },
+    "A volume name is required." : {
+
+    },
+    "About" : {
+
+    },
+    "About Contained" : {
+
+    },
+    "Accent tint" : {
+
+    },
+    "action" : {
+
+    },
+    "Action" : {
+
+    },
+    "Actions" : {
+
+    },
+    "Activity" : {
+
+    },
+    "Activity & alerts" : {
+
+    },
+    "Activity history" : {
+
+    },
+    "activity.clearActivity" : {
+
+    },
+    "activity.clearFiltered.help" : {
+
+    },
+    "activity.empty" : {
+
+    },
+    "activity.empty.description" : {
+
+    },
+    "activity.filter" : {
+
+    },
+    "activity.filter.allEvents" : {
+
+    },
+    "activity.filter.current" : {
+
+    },
+    "activity.filterActivity" : {
+
+    },
+    "activity.markAllRead" : {
+
+    },
+    "activity.markAllRead.help" : {
+
+    },
+    "activity.markFilteredRead.help" : {
+
+    },
+    "activity.pullingImage" : {
+
+    },
+    "activity.subtitle.events" : {
+
+    },
+    "activity.subtitle.unread" : {
+
+    },
+    "Add" : {
+
+    },
+    "Add a tag under a namespace you control before pushing." : {
+
+    },
+    "Add a writable tag such as ghcr.io/me/app:v1, then push that tag." : {
+
+    },
+    "Add another metric chip or chart to this card." : {
+
+    },
+    "Add build arg" : {
+
+    },
+    "Add build argument" : {
+
+    },
+    "Add capability" : {
+      "comment" : "Label for a list of capabilities to be added to the container.",
+      "isCommentAutoGenerated" : true
+    },
+    "Add DNS option" : {
+
+    },
+    "Add Domain…" : {
+
+    },
+    "Add env file" : {
+
+    },
+    "Add label" : {
+
+    },
+    "Add mount" : {
+
+    },
+    "Add nameserver" : {
+
+    },
+    "Add port" : {
+
+    },
+    "Add search domain" : {
+
+    },
+    "Add socket" : {
+
+    },
+    "Add Tag" : {
+
+    },
+    "Add Tag…" : {
+
+    },
+    "Add tmpfs mount" : {
+
+    },
+    "Add ulimit" : {
+
+    },
+    "Add variable" : {
+
+    },
+    "Add volume" : {
+
+    },
+    "Add widget" : {
+
+    },
+    "Adds a soft color wash behind the glass. Turn it off for clear glass with only a colored icon." : {
+
+    },
+    "Adds routine refreshes and background work." : {
+
+    },
+    "Adopt" : {
+
+    },
+    "Adopted %lld image default%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Adopted %1$lld image default%2$@"
+          }
+        }
+      }
+    },
+    "Advanced" : {
+
+    },
+    "Advanced Options" : {
+
+    },
+    "All events" : {
+
+    },
+    "All images" : {
+
+    },
+    "All networks" : {
+
+    },
+    "All widget slots are in use." : {
+
+    },
+    "Allocate TTY" : {
+
+    },
+    "Always" : {
+
+    },
+    "Amber" : {
+
+    },
+    "An image reference is required." : {
+
+    },
+    "An SF Symbol name for the card icon, such as `shippingbox` or `bolt`." : {
+
+    },
+    "ANSI" : {
+
+    },
+    "API server" : {
+
+    },
+    "app accent" : {
+
+    },
+    "App Accent" : {
+
+    },
+    "App Accent follows the accent tint from Settings; other swatches pin this style." : {
+
+    },
+    "App Managed" : {
+
+    },
+    "App update check" : {
+
+    },
+    "App update checks are unavailable in this build" : {
+
+    },
+    "appearance" : {
+
+    },
+    "Appearance" : {
+
+    },
+    "appearance.dark" : {
+
+    },
+    "appearance.light" : {
+
+    },
+    "appearance.system" : {
+
+    },
+    "Apple container is the only available core in this build. Additional cores will enable this selector." : {
+
+    },
+    "Apply" : {
+
+    },
+    "Apply to image" : {
+
+    },
+    "aqua" : {
+
+    },
+    "Architecture" : {
+
+    },
+    "Area" : {
+
+    },
+    "arm64" : {
+      "comment" : "A label for the architecture of an image.",
+      "isCommentAutoGenerated" : true
+    },
+    "as %@" : {
+
+    },
+    "auto" : {
+      "comment" : "Alias for the tint.multicolor.auto tint.",
+      "isCommentAutoGenerated" : true
+    },
+    "Auto" : {
+      "comment" : "A label for the \"auto\" registry scheme.",
+      "isCommentAutoGenerated" : true
+    },
+    "Auto-restart crashed containers" : {
+
+    },
+    "Automatically check for updates" : {
+
+    },
+    "Automation" : {
+
+    },
+    "automation.appUpdateCheck" : {
+
+    },
+    "automation.appUpdateCheck.detail" : {
+
+    },
+    "automation.autoRestart" : {
+
+    },
+    "automation.autoRestart.detail" : {
+
+    },
+    "automation.imageUpdateCheck" : {
+
+    },
+    "automation.refreshLoop" : {
+
+    },
+    "Available Update" : {
+
+    },
+    "Azure" : {
+
+    },
+    "Back" : {
+
+    },
+    "Back to commands" : {
+
+    },
+    "Background" : {
+
+    },
+    "Background work" : {
+
+    },
+    "backup.exported" : {
+
+    },
+    "backup.exportedAndReset" : {
+
+    },
+    "backup.imported" : {
+
+    },
+    "backup.importMode.merge" : {
+
+    },
+    "backup.importMode.replace" : {
+
+    },
+    "backup.keptReadableLocalData" : {
+
+    },
+    "backup.section.caches" : {
+
+    },
+    "backup.section.healthChecks" : {
+
+    },
+    "backup.section.history" : {
+
+    },
+    "backup.section.personalization" : {
+
+    },
+    "backup.section.settings" : {
+
+    },
+    "backup.section.templates" : {
+
+    },
+    "Bar" : {
+      "comment" : "Display name for a bar graph style.",
+      "isCommentAutoGenerated" : true
+    },
+    "Bar width" : {
+
+    },
+    "Beta" : {
+
+    },
+    "Blend mode" : {
+
+    },
+    "blendMode.multiply" : {
+
+    },
+    "blendMode.normal" : {
+
+    },
+    "blendMode.overlay" : {
+
+    },
+    "blendMode.screen" : {
+
+    },
+    "blendMode.softLight" : {
+
+    },
+    "Blends the color across the card instead of using one flat wash." : {
+
+    },
+    "blue" : {
+
+    },
+    "Blue sections contain explicit values from an import, edit, template, or manual change." : {
+
+    },
+    "blurple" : {
+
+    },
+    "bridge" : {
+
+    },
+    "Build" : {
+      "comment" : "Build button title.",
+      "isCommentAutoGenerated" : true
+    },
+    "Build an image" : {
+
+    },
+    "Build an image from a Dockerfile" : {
+
+    },
+    "Build an image from a Dockerfile + build context, streaming the BuildKit log." : {
+
+    },
+    "Build arg" : {
+
+    },
+    "Build arguments" : {
+
+    },
+    "Build every layer from scratch (--no-cache)." : {
+
+    },
+    "Build image" : {
+
+    },
+    "Build Image…" : {
+
+    },
+    "build.addBuildArg.short" : {
+
+    },
+    "build.addBuildArgument" : {
+
+    },
+    "build.arg" : {
+
+    },
+    "build.arguments" : {
+
+    },
+    "build.arguments.count" : {
+
+    },
+    "build.arguments.empty" : {
+
+    },
+    "build.build" : {
+
+    },
+    "build.buildImage" : {
+
+    },
+    "build.cancelBuild" : {
+
+    },
+    "build.chooseContextFolder" : {
+
+    },
+    "build.chooseContextFolderPanel" : {
+
+    },
+    "build.chooseFolderPlaceholder" : {
+
+    },
+    "build.context" : {
+
+    },
+    "build.context.info" : {
+
+    },
+    "build.dockerfile" : {
+
+    },
+    "build.dockerfile.info" : {
+
+    },
+    "build.empty.description" : {
+
+    },
+    "build.empty.title" : {
+
+    },
+    "build.noCache" : {
+
+    },
+    "build.noCache.info" : {
+
+    },
+    "build.options" : {
+
+    },
+    "build.platform" : {
+
+    },
+    "build.removeBuildArgument" : {
+
+    },
+    "build.source" : {
+
+    },
+    "build.subtitle.context" : {
+
+    },
+    "build.tag" : {
+
+    },
+    "build.tag.info" : {
+
+    },
+    "Builder image" : {
+
+    },
+    "Builder Rosetta" : {
+
+    },
+    "built-in network" : {
+
+    },
+    "Built-in network" : {
+
+    },
+    "Built-in only" : {
+
+    },
+    "burnt" : {
+
+    },
+    "Button material" : {
+
+    },
+    "Button tint" : {
+
+    },
+    "Button tint uses the same color layer model as card backgrounds, applied inside toolbar glass controls." : {
+      "comment" : "Tooltip for button tint.",
+      "isCommentAutoGenerated" : true
+    },
+    "by %@" : {
+
+    },
+    "by %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "by %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Caches" : {
+      "comment" : "Section name for app state containing caches.",
+      "isCommentAutoGenerated" : true
+    },
+    "Cancel" : {
+      "comment" : "A button that cancels a task.",
+      "isCommentAutoGenerated" : true
+    },
+    "Cancel build" : {
+
+    },
+    "Card Color" : {
+
+    },
+    "Card material" : {
+
+    },
+    "Card size" : {
+
+    },
+    "Card Size" : {
+
+    },
+    "cardDensity.large" : {
+
+    },
+    "cardDensity.medium" : {
+
+    },
+    "cardDensity.small" : {
+
+    },
+    "Cardinal" : {
+
+    },
+    "Categories" : {
+
+    },
+    "Changes all cards, including compact cards and expanded detail cards." : {
+
+    },
+    "Changes floating panels, popovers, and sheets such as Settings and create/edit flows." : {
+
+    },
+    "Changes the material behind the main container grid." : {
+
+    },
+    "Changes toolbar glass buttons and grouped icon controls." : {
+
+    },
+    "charcoal" : {
+      "comment" : "Alias for the tint color \"charcoal\".",
+      "isCommentAutoGenerated" : true
+    },
+    "Chart" : {
+
+    },
+    "Check all container images for updates" : {
+
+    },
+    "Check all image updates" : {
+
+    },
+    "Check for app updates now" : {
+
+    },
+    "Check for app updates..." : {
+
+    },
+    "Check for Updates" : {
+
+    },
+    "Check for Updates…" : {
+
+    },
+    "Check images" : {
+
+    },
+    "Check now" : {
+
+    },
+    "Check update for %@" : {
+
+    },
+    "Choose" : {
+
+    },
+    "Choose a compose.yaml" : {
+
+    },
+    "Choose a context folder and a tag, then Build. Output streams here." : {
+
+    },
+    "Choose a folder..." : {
+
+    },
+    "Choose a host file or folder" : {
+
+    },
+    "Choose a host path, existing volume, or create a new volume" : {
+
+    },
+    "Choose a local image" : {
+
+    },
+    "Choose an image tar archive" : {
+
+    },
+    "Choose an image to run." : {
+
+    },
+    "Choose compose.yaml" : {
+
+    },
+    "Choose context folder" : {
+
+    },
+    "Choose File or Folder..." : {
+
+    },
+    "Choose from pulled images" : {
+
+    },
+    "Choose the build context folder" : {
+
+    },
+    "Clean Up Orphans" : {
+
+    },
+    "Cleaned %lld orphaned row(s)" : {
+
+    },
+    "cleanup.cleanedOrphanedRows" : {
+
+    },
+    "cleanup.reclaimAll" : {
+
+    },
+    "cleanup.removeStoppedContainers.title" : {
+
+    },
+    "cleanup.removeUnusedImages.title" : {
+
+    },
+    "cleanup.removeUnusedNetworks.title" : {
+
+    },
+    "cleanup.removeUnusedVolumes.title" : {
+
+    },
+    "cleanup.stoppedContainers" : {
+
+    },
+    "cleanup.unusedImages" : {
+
+    },
+    "cleanup.unusedNetworks" : {
+
+    },
+    "cleanup.unusedVolumes" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear %@ events" : {
+
+    },
+    "Clear activity" : {
+
+    },
+    "Clear all history?" : {
+
+    },
+    "Clear History" : {
+
+    },
+    "Clear History…" : {
+
+    },
+    "Clear scope" : {
+
+    },
+    "Clear search" : {
+
+    },
+    "cli.selectContainerBinary" : {
+
+    },
+    "Close" : {
+
+    },
+    "cobalt" : {
+
+    },
+    "Collecting stats..." : {
+
+    },
+    "Color" : {
+
+    },
+    "Color the card background" : {
+
+    },
+    "Command" : {
+      "comment" : "Label for the command field in the container form.",
+      "isCommentAutoGenerated" : true
+    },
+    "Command palette (Command-K)" : {
+
+    },
+    "Command Palette…" : {
+
+    },
+    "Commands" : {
+
+    },
+    "common.add" : {
+
+    },
+    "common.back" : {
+
+    },
+    "common.cancel" : {
+
+    },
+    "common.checkNow" : {
+
+    },
+    "common.choose" : {
+
+    },
+    "common.clear" : {
+
+    },
+    "common.clearSearch" : {
+
+    },
+    "common.close" : {
+
+    },
+    "common.completed" : {
+
+    },
+    "common.copied" : {
+
+    },
+    "common.copyAll" : {
+
+    },
+    "common.copyCommand" : {
+
+    },
+    "common.copyLog" : {
+
+    },
+    "common.copyReference" : {
+
+    },
+    "common.current" : {
+
+    },
+    "common.delete" : {
+
+    },
+    "common.direction" : {
+
+    },
+    "common.done" : {
+
+    },
+    "common.edit" : {
+
+    },
+    "common.follow" : {
+
+    },
+    "common.import" : {
+
+    },
+    "common.logIn" : {
+
+    },
+    "common.new" : {
+
+    },
+    "common.parent" : {
+
+    },
+    "common.quit" : {
+
+    },
+    "common.reconnect" : {
+
+    },
+    "common.refresh" : {
+
+    },
+    "common.remove" : {
+
+    },
+    "common.restart" : {
+
+    },
+    "common.retry" : {
+
+    },
+    "common.run" : {
+
+    },
+    "common.runNow" : {
+
+    },
+    "common.save" : {
+
+    },
+    "common.search" : {
+
+    },
+    "common.start" : {
+
+    },
+    "common.stop" : {
+
+    },
+    "common.tint" : {
+
+    },
+    "common.unread" : {
+
+    },
+    "common.use" : {
+
+    },
+    "common.working" : {
+
+    },
+    "Compare" : {
+
+    },
+    "Complete or remove partial port mappings." : {
+
+    },
+    "Complete or remove partial volume mounts." : {
+
+    },
+    "Completed" : {
+
+    },
+    "Compose" : {
+      "comment" : "Title of the \"Compose\" option in the creation flow.",
+      "isCommentAutoGenerated" : true
+    },
+    "Compose import" : {
+
+    },
+    "compose.chooseFile" : {
+
+    },
+    "compose.noServicesWithImages" : {
+
+    },
+    "compose.warnings" : {
+
+    },
+    "Configure and run an image" : {
+
+    },
+    "Configure manually" : {
+
+    },
+    "Contained" : {
+
+    },
+    "Contained checks for a saved container registry login before starting a push." : {
+
+    },
+    "Contained Help" : {
+
+    },
+    "Contained probes the container on an interval (app-managed; the runtime has no native healthcheck)." : {
+
+    },
+    "Contained restarts the container automatically based on this setting." : {
+      "comment" : "Text displayed in a tooltip describing the restart policy setting.",
+      "isCommentAutoGenerated" : true
+    },
+    "Contained will stop and delete the current container, then run a replacement from the command preview. Local style and health settings are reapplied. Data not stored in volumes is lost." : {
+
+    },
+    "container" : {
+
+    },
+    "Container" : {
+
+    },
+    "Container CLI" : {
+
+    },
+    "Container CLI path" : {
+
+    },
+    "Container filters" : {
+
+    },
+    "Container ID file" : {
+
+    },
+    "container image" : {
+
+    },
+    "Container images" : {
+
+    },
+    "Container restarted" : {
+
+    },
+    "Container runtime is not ready." : {
+
+    },
+    "Container socket path" : {
+
+    },
+    "Container stopped" : {
+
+    },
+    "Container unhealthy" : {
+
+    },
+    "container.created" : {
+
+    },
+    "container.restartedAttempt" : {
+
+    },
+    "container.unhealthy" : {
+
+    },
+    "containerCard.accessibilityLabel" : {
+
+    },
+    "containerForm.healthcheck.enabled.info" : {
+
+    },
+    "containerForm.healthcheck.probeCommand.info" : {
+
+    },
+    "containerForm.imageDefaults.info" : {
+
+    },
+    "containerForm.personalization.blendMode.info" : {
+
+    },
+    "containerForm.personalization.color.info" : {
+
+    },
+    "containerForm.personalization.colorCardBackground.info" : {
+
+    },
+    "containerForm.personalization.gradient.info" : {
+
+    },
+    "containerForm.personalization.icon.info" : {
+
+    },
+    "containerForm.personalization.nickname.info" : {
+
+    },
+    "containerForm.restartPolicy.info" : {
+
+    },
+    "Containers" : {
+
+    },
+    "Content" : {
+
+    },
+    "Context" : {
+
+    },
+    "Continue anyway" : {
+
+    },
+    "Contributing" : {
+
+    },
+    "Controls how the card color wash blends with the glass behind it." : {
+
+    },
+    "Controls the background registry digest check cadence. Manual checks are always available from Images, System, and the toolbar." : {
+
+    },
+    "Copied" : {
+
+    },
+    "Copied %@ into container" : {
+
+    },
+    "Copied %@ to host" : {
+
+    },
+    "Copy %@ from the container" : {
+
+    },
+    "Copy a file into %@" : {
+
+    },
+    "Copy a file into this folder" : {
+
+    },
+    "Copy all" : {
+
+    },
+    "Copy command" : {
+
+    },
+    "Copy destination" : {
+
+    },
+    "Copy ID" : {
+
+    },
+    "Copy IPv4 Subnet" : {
+
+    },
+    "Copy log" : {
+
+    },
+    "Copy Message" : {
+
+    },
+    "Copy Name" : {
+
+    },
+    "Copy reference" : {
+
+    },
+    "Copy Server" : {
+
+    },
+    "Copy source" : {
+
+    },
+    "Copy to host" : {
+
+    },
+    "Copyright" : {
+
+    },
+    "Coral" : {
+
+    },
+    "Core" : {
+
+    },
+    "Couldn't compare %@: local digest unavailable" : {
+
+    },
+    "Couldn't find the container CLI (looked in %@)." : {
+
+    },
+    "Couldn't get a registry authorization token." : {
+
+    },
+    "Couldn't reach Docker Hub" : {
+
+    },
+    "Couldn't read folder" : {
+
+    },
+    "Couldn't read logs" : {
+
+    },
+    "Couldn't read the response from the container CLI." : {
+
+    },
+    "Couldn't run the container CLI: %@" : {
+
+    },
+    "Couldn't search Docker Hub" : {
+
+    },
+    "CPU" : {
+
+    },
+    "CPU and memory are scaled against Apple container's machine CPU and memory resources." : {
+
+    },
+    "CPU and memory are scaled against each container's own configured limits." : {
+
+    },
+    "CPUs" : {
+
+    },
+    "create" : {
+
+    },
+    "Create" : {
+
+    },
+    "Create & Search" : {
+
+    },
+    "Create a container network" : {
+
+    },
+    "Create network" : {
+
+    },
+    "Create New Network…" : {
+
+    },
+    "Create New Volume..." : {
+
+    },
+    "Create or refresh container networks to see them here." : {
+
+    },
+    "Create persistent storage" : {
+
+    },
+    "Create volume" : {
+
+    },
+    "Created %@" : {
+
+    },
+    "Created network %@" : {
+
+    },
+    "Created volume %@" : {
+
+    },
+    "Creating a domain may prompt for your administrator password (handled by the container CLI)." : {
+
+    },
+    "Creating or deleting a domain may prompt for your administrator password - handled by the container CLI." : {
+
+    },
+    "creation.badge.new" : {
+
+    },
+    "creation.compose.paste" : {
+
+    },
+    "creation.compose.paste.subtitle" : {
+
+    },
+    "creation.compose.pasteYAML" : {
+
+    },
+    "creation.compose.pasteYAML.subtitle" : {
+
+    },
+    "creation.compose.selectFile" : {
+
+    },
+    "creation.compose.selectFile.subtitle" : {
+
+    },
+    "creation.details" : {
+
+    },
+    "creation.localImages.choose" : {
+
+    },
+    "creation.localImages.empty" : {
+
+    },
+    "creation.localImages.filter" : {
+
+    },
+    "creation.localImages.noMatches" : {
+
+    },
+    "creation.localImages.tryDifferentFilter" : {
+
+    },
+    "creation.name" : {
+
+    },
+    "creation.network.create" : {
+
+    },
+    "creation.network.internalOnly" : {
+
+    },
+    "creation.network.internalOnly.subtitle" : {
+
+    },
+    "creation.network.mode.bridge" : {
+
+    },
+    "creation.network.mode.internal" : {
+
+    },
+    "creation.network.name.info" : {
+
+    },
+    "creation.network.name.required" : {
+
+    },
+    "creation.network.new" : {
+
+    },
+    "creation.network.subnet.info" : {
+
+    },
+    "creation.option.build.subtitle" : {
+
+    },
+    "creation.option.compose" : {
+
+    },
+    "creation.option.compose.subtitle" : {
+
+    },
+    "creation.option.container" : {
+
+    },
+    "creation.option.container.subtitle" : {
+
+    },
+    "creation.option.imageArchive" : {
+
+    },
+    "creation.option.imageArchive.subtitle" : {
+
+    },
+    "creation.option.localImage" : {
+
+    },
+    "creation.option.localImage.emptySubtitle" : {
+
+    },
+    "creation.option.localImage.subtitle" : {
+
+    },
+    "creation.option.network.subtitle" : {
+
+    },
+    "creation.option.scratch" : {
+
+    },
+    "creation.option.scratch.subtitle" : {
+
+    },
+    "creation.option.search.subtitle" : {
+
+    },
+    "creation.option.templates.emptySubtitle" : {
+
+    },
+    "creation.option.templates.subtitle" : {
+
+    },
+    "creation.option.volume.subtitle" : {
+
+    },
+    "creation.subnet" : {
+
+    },
+    "creation.volume.create" : {
+
+    },
+    "creation.volume.defaultSize" : {
+
+    },
+    "creation.volume.name.info" : {
+
+    },
+    "creation.volume.name.required" : {
+
+    },
+    "creation.volume.new" : {
+
+    },
+    "creation.volume.size" : {
+
+    },
+    "creation.volume.size.info" : {
+
+    },
+    "Credentials" : {
+
+    },
+    "Credentials are typed by you and piped to the CLI via stdin, so the password never lands in the process list. Contained doesn't store it." : {
+
+    },
+    "crimson" : {
+
+    },
+    "curl -f http://localhost/ || exit 1" : {
+
+    },
+    "Current" : {
+
+    },
+    "Custom" : {
+
+    },
+    "Custom icon" : {
+
+    },
+    "custom network" : {
+
+    },
+    "Custom only" : {
+
+    },
+    "Custom platform" : {
+
+    },
+    "Customize %@" : {
+
+    },
+    "Customize %@ image style" : {
+
+    },
+    "Customize card" : {
+
+    },
+    "Customize image style" : {
+
+    },
+    "Customize volume" : {
+
+    },
+    "customize.accessibilityLabel" : {
+
+    },
+    "customize.addWidget" : {
+
+    },
+    "customize.addWidget.slotsFull" : {
+
+    },
+    "customize.addWidget.subtitle" : {
+
+    },
+    "customize.apply" : {
+
+    },
+    "customize.applyToImage" : {
+
+    },
+    "customize.applyToImage.subtitle" : {
+
+    },
+    "customize.background" : {
+
+    },
+    "customize.blendMode" : {
+
+    },
+    "customize.cardColor" : {
+
+    },
+    "customize.color" : {
+
+    },
+    "customize.color.info" : {
+
+    },
+    "customize.colorCardBackground" : {
+
+    },
+    "customize.customIcon" : {
+
+    },
+    "customize.displayName" : {
+
+    },
+    "customize.gradient" : {
+
+    },
+    "customize.header.card" : {
+
+    },
+    "customize.header.imageStyle" : {
+
+    },
+    "customize.header.volume" : {
+
+    },
+    "customize.icon" : {
+
+    },
+    "customize.icon.defaultSubtitle" : {
+
+    },
+    "customize.imageStyleAccessibilityLabel" : {
+
+    },
+    "customize.inheritance" : {
+
+    },
+    "customize.nickname" : {
+
+    },
+    "customize.opacity" : {
+
+    },
+    "customize.override.containerHint" : {
+
+    },
+    "customize.override.defaultImageDesign" : {
+
+    },
+    "customize.override.groupStyle" : {
+
+    },
+    "customize.override.imageGroupHint" : {
+
+    },
+    "customize.override.imageHint" : {
+
+    },
+    "customize.override.imageStyle" : {
+
+    },
+    "customize.override.imageTagHint" : {
+
+    },
+    "customize.override.style" : {
+
+    },
+    "customize.reset" : {
+
+    },
+    "customize.reset.noOverride" : {
+
+    },
+    "customize.reset.subtitle" : {
+
+    },
+    "customize.resetImageStyle" : {
+
+    },
+    "customize.showStatusIndicator" : {
+
+    },
+    "customize.status" : {
+
+    },
+    "customize.style" : {
+
+    },
+    "customize.subtitle.imageDefault" : {
+
+    },
+    "customize.subtitle.imageGroupDefault" : {
+
+    },
+    "customize.subtitle.imageTag" : {
+
+    },
+    "customize.subtitle.volume" : {
+
+    },
+    "customize.widget.barWidth" : {
+
+    },
+    "customize.widget.chart" : {
+
+    },
+    "customize.widget.compare" : {
+
+    },
+    "customize.widget.compare.subtitle" : {
+
+    },
+    "customize.widget.data" : {
+
+    },
+    "customize.widget.display" : {
+
+    },
+    "customize.widget.gradientFill" : {
+
+    },
+    "customize.widget.interpolation" : {
+
+    },
+    "customize.widget.lineWidth" : {
+
+    },
+    "customize.widget.metric" : {
+
+    },
+    "customize.widget.metric.read" : {
+
+    },
+    "customize.widget.metric.write" : {
+
+    },
+    "customize.widget.moveDown" : {
+
+    },
+    "customize.widget.moveDown.help" : {
+
+    },
+    "customize.widget.moveUp" : {
+
+    },
+    "customize.widget.moveUp.help" : {
+
+    },
+    "customize.widget.order" : {
+
+    },
+    "customize.widget.order.subtitle" : {
+
+    },
+    "customize.widget.pointSize" : {
+
+    },
+    "customize.widget.remove.help" : {
+
+    },
+    "customize.widget.showIcon" : {
+
+    },
+    "customize.widget.showText" : {
+
+    },
+    "customize.widget.title" : {
+
+    },
+    "customize.widget.type" : {
+
+    },
+    "customize.widgets" : {
+
+    },
+    "customize.widgets.footer" : {
+
+    },
+    "cyan" : {
+
+    },
+    "Dark" : {
+
+    },
+    "Data" : {
+
+    },
+    "default" : {
+
+    },
+    "Default" : {
+
+    },
+    "Default CPUs" : {
+
+    },
+    "Default for every container from %@" : {
+
+    },
+    "Default for this local image group" : {
+
+    },
+    "Default image card style" : {
+
+    },
+    "Default memory" : {
+
+    },
+    "default size" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete %@?" : {
+
+    },
+    "Delete current container and run replacement" : {
+
+    },
+    "Delete DNS domain %@?" : {
+
+    },
+    "Delete Event" : {
+
+    },
+    "Delete Network" : {
+
+    },
+    "Delete network %@?" : {
+
+    },
+    "Delete Primary Tag" : {
+
+    },
+    "Delete tag" : {
+      "comment" : "A label for a context menu action that deletes a tag.",
+      "isCommentAutoGenerated" : true
+    },
+    "Delete volume %@?" : {
+
+    },
+    "Deleted %@" : {
+
+    },
+    "Deselect" : {
+
+    },
+    "Details" : {
+
+    },
+    "Digest references cannot be pushed directly." : {
+
+    },
+    "Dir" : {
+
+    },
+    "Direction" : {
+
+    },
+    "Disable DNS" : {
+
+    },
+    "Disabled" : {
+      "comment" : "Text for a disabled state.",
+      "isCommentAutoGenerated" : true
+    },
+    "Disk Read" : {
+
+    },
+    "Disk used" : {
+
+    },
+    "Disk Write" : {
+
+    },
+    "Display" : {
+
+    },
+    "Display name" : {
+
+    },
+    "display name (optional)" : {
+
+    },
+    "Docker & Compose" : {
+
+    },
+    "Docker Hub" : {
+
+    },
+    "Docker Hub search" : {
+
+    },
+    "Dockerfile" : {
+
+    },
+    "does not recreate containers" : {
+
+    },
+    "Done" : {
+
+    },
+    "Done Selecting" : {
+
+    },
+    "downgrade.description" : {
+
+    },
+    "downgrade.exportBackupThenReset" : {
+
+    },
+    "downgrade.keepReadableData" : {
+
+    },
+    "downgrade.quitContained" : {
+
+    },
+    "downgrade.subtitle" : {
+
+    },
+    "downgrade.title" : {
+
+    },
+    "Download & install" : {
+
+    },
+    "Downloads and sets the recommended kernel as the default. May prompt for your administrator password - handled by the container CLI; Contained never sees it." : {
+
+    },
+    "Downloads and sets the recommended kernel as the default. This may take a moment." : {
+
+    },
+    "Drop capability" : {
+
+    },
+    "e.g. ghcr.io, docker.io" : {
+
+    },
+    "e.g. ghcr.io/me/app:v1" : {
+
+    },
+    "e.g. nginx:latest" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit %@" : {
+
+    },
+    "Edit…" : {
+
+    },
+    "emerald" : {
+
+    },
+    "Enable healthcheck" : {
+
+    },
+    "Enable menu and command keyboard shortcuts. Off by default so the experimental surface stays opt-in." : {
+
+    },
+    "Enabled" : {
+
+    },
+    "Entrypoint" : {
+
+    },
+    "Environment" : {
+
+    },
+    "Environment variables with values need names." : {
+
+    },
+    "error.command.cliNotFound" : {
+
+    },
+    "error.command.decodingFailed" : {
+
+    },
+    "error.command.launchFailed" : {
+
+    },
+    "error.command.nonZeroExit" : {
+
+    },
+    "error.compose.invalid" : {
+
+    },
+    "error.compose.invalidWithReason" : {
+
+    },
+    "error.registry.httpStatus" : {
+
+    },
+    "error.registry.invalidResponse" : {
+
+    },
+    "error.registry.missingDigest" : {
+
+    },
+    "error.registry.notFound" : {
+
+    },
+    "error.registry.tokenUnavailable" : {
+
+    },
+    "error.registry.unauthorized" : {
+
+    },
+    "error.runtime.unsupportedCapability" : {
+
+    },
+    "Errored" : {
+
+    },
+    "Errors" : {
+
+    },
+    "Errors only" : {
+
+    },
+    "Essentials" : {
+
+    },
+    "Events" : {
+
+    },
+    "Events from container lifecycle, the watchdog, and healthchecks land here." : {
+
+    },
+    "Every 3 hours" : {
+
+    },
+    "Every 6 hours" : {
+
+    },
+    "Every 12 hours" : {
+
+    },
+    "Every day" : {
+
+    },
+    "Every hour" : {
+
+    },
+    "example.test" : {
+
+    },
+    "exec into %@" : {
+
+    },
+    "Experimental" : {
+
+    },
+    "Export Backup, Then Reset" : {
+
+    },
+    "Export Backup…" : {
+      "comment" : "A button that exports a backup of your configuration.",
+      "isCommentAutoGenerated" : true
+    },
+    "Exported backup" : {
+
+    },
+    "Exported backup and reset local state" : {
+
+    },
+    "Expose virtualization" : {
+
+    },
+    "Features Guide" : {
+
+    },
+    "file.loaded" : {
+
+    },
+    "file.saved" : {
+
+    },
+    "files.chooseHostFileOrFolder" : {
+
+    },
+    "files.copiedIntoContainer" : {
+
+    },
+    "files.copiedToHost" : {
+
+    },
+    "files.copyFromContainerPanel" : {
+
+    },
+    "files.copyIntoContainerPanel" : {
+
+    },
+    "files.copyIntoFolder" : {
+
+    },
+    "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config." : {
+
+    },
+    "Filter" : {
+
+    },
+    "Filter Activity" : {
+
+    },
+    "Filter local images" : {
+
+    },
+    "Filter local images..." : {
+
+    },
+    "Filter: %@" : {
+
+    },
+    "filter.allImages" : {
+
+    },
+    "filter.allNetworks" : {
+
+    },
+    "filter.builtInOnly" : {
+
+    },
+    "filter.customOnly" : {
+
+    },
+    "filter.errorsOnly" : {
+
+    },
+    "filter.flat" : {
+
+    },
+    "filter.image" : {
+
+    },
+    "filter.kind" : {
+
+    },
+    "filter.mode" : {
+
+    },
+    "filter.name" : {
+
+    },
+    "filter.network" : {
+
+    },
+    "filter.newest" : {
+
+    },
+    "filter.none" : {
+
+    },
+    "filter.plugin" : {
+
+    },
+    "filter.registry" : {
+
+    },
+    "filter.runningOnly" : {
+
+    },
+    "filter.status" : {
+
+    },
+    "filter.updatesOnly" : {
+
+    },
+    "filter.volume" : {
+
+    },
+    "Find an image on Docker Hub" : {
+
+    },
+    "Flat" : {
+
+    },
+    "Follow" : {
+      "comment" : "Text for a button that starts following a resource.",
+      "isCommentAutoGenerated" : true
+    },
+    "forest" : {
+
+    },
+    "Forward SSH agent" : {
+
+    },
+    "From a Dockerfile + build context" : {
+
+    },
+    "fuchsia" : {
+
+    },
+    "Full-screen UI (default)" : {
+
+    },
+    "General" : {
+
+    },
+    "Get the CLI" : {
+
+    },
+    "GID" : {
+
+    },
+    "Glass (Clear)" : {
+
+    },
+    "Glass (Regular)" : {
+
+    },
+    "Glass options use Liquid Glass. Other options use macOS vibrancy and follow the window background." : {
+
+    },
+    "gold" : {
+
+    },
+    "Gradient" : {
+
+    },
+    "Gradient fill" : {
+
+    },
+    "Graphite" : {
+
+    },
+    "graphMetric.cpu" : {
+
+    },
+    "graphMetric.diskRead" : {
+
+    },
+    "graphMetric.diskWrite" : {
+
+    },
+    "graphMetric.memory" : {
+
+    },
+    "graphMetric.netRx" : {
+
+    },
+    "graphMetric.netTx" : {
+
+    },
+    "graphStyle.area" : {
+
+    },
+    "graphStyle.bar" : {
+
+    },
+    "graphStyle.line" : {
+
+    },
+    "graphStyle.multiLine" : {
+
+    },
+    "graphStyle.points" : {
+
+    },
+    "graphStyle.range" : {
+
+    },
+    "graphStyle.scatter" : {
+
+    },
+    "gray" : {
+
+    },
+    "Green" : {
+
+    },
+    "grey" : {
+
+    },
+    "Group by" : {
+
+    },
+    "Header" : {
+
+    },
+    "Health" : {
+
+    },
+    "Health checks" : {
+
+    },
+    "Help" : {
+
+    },
+    "Hide CLI Previews" : {
+
+    },
+    "Hide Info Tips" : {
+
+    },
+    "Hide Menu Bar Item" : {
+
+    },
+    "Hide Sidebar" : {
+
+    },
+    "History" : {
+
+    },
+    "History cleared" : {
+
+    },
+    "history.cleared" : {
+
+    },
+    "honey" : {
+
+    },
+    "Host" : {
+
+    },
+    "Host socket path" : {
+
+    },
+    "hot pink" : {
+      "comment" : "Alias for the color pink.",
+      "isCommentAutoGenerated" : true
+    },
+    "HTTP" : {
+
+    },
+    "HTTPS" : {
+
+    },
+    "HUD" : {
+
+    },
+    "Icon" : {
+
+    },
+    "image" : {
+
+    },
+    "Image" : {
+
+    },
+    "Image archive" : {
+
+    },
+    "Image build workspace" : {
+
+    },
+    "Image cards" : {
+
+    },
+    "Image defaults" : {
+
+    },
+    "Image defaults are already represented" : {
+
+    },
+    "Image filters" : {
+
+    },
+    "image tag" : {
+
+    },
+    "Image update check" : {
+
+    },
+    "Image updates" : {
+
+    },
+    "image.addTag" : {
+
+    },
+    "image.chooseTarArchive" : {
+
+    },
+    "image.deleted" : {
+
+    },
+    "image.deleteTag" : {
+
+    },
+    "image.empty" : {
+
+    },
+    "image.empty.subtitle" : {
+
+    },
+    "image.history" : {
+
+    },
+    "image.history.empty" : {
+
+    },
+    "image.history.empty.description" : {
+
+    },
+    "image.loadImageTar" : {
+
+    },
+    "image.prune" : {
+
+    },
+    "image.pruneImages" : {
+
+    },
+    "image.pullUpdate" : {
+
+    },
+    "image.push" : {
+
+    },
+    "image.push.namespaceRequired" : {
+
+    },
+    "image.push.namespaceRequired.detail" : {
+
+    },
+    "image.push.namespaceRequired.message" : {
+
+    },
+    "image.push.ready" : {
+
+    },
+    "image.push.ready.detail" : {
+
+    },
+    "image.push.ready.message" : {
+
+    },
+    "image.push.runtimeUnavailable" : {
+
+    },
+    "image.push.runtimeUnavailable.message" : {
+
+    },
+    "image.push.signInRequired" : {
+
+    },
+    "image.push.signInRequired.detail" : {
+
+    },
+    "image.push.signInRequired.message" : {
+
+    },
+    "image.push.tagRequired" : {
+
+    },
+    "image.push.tagRequired.detail" : {
+
+    },
+    "image.push.tagRequired.message" : {
+
+    },
+    "image.pushImage" : {
+
+    },
+    "image.saveTarArchive" : {
+
+    },
+    "image.tag.newReference" : {
+
+    },
+    "image.tag.source" : {
+
+    },
+    "image.tags" : {
+
+    },
+    "image.updates.subtitle" : {
+
+    },
+    "imageDefaults.adopted" : {
+
+    },
+    "imageDefaults.alreadyRepresented" : {
+
+    },
+    "Images" : {
+
+    },
+    "Images can define default startup settings. Adopt copies those defaults into this form so you can see and edit them before running." : {
+      "comment" : "Tooltip for the \"Adopt\" button in the container schema form.",
+      "isCommentAutoGenerated" : true
+    },
+    "Import" : {
+
+    },
+    "Import Backup…" : {
+
+    },
+    "Import compose..." : {
+
+    },
+    "Import Compose…" : {
+
+    },
+    "Import Docker Compose YAML - paste, file pick, or drag-and-drop - mapping each service with an image into a prefilled run." : {
+
+    },
+    "Import mode" : {
+
+    },
+    "Important" : {
+
+    },
+    "Imported backup" : {
+
+    },
+    "Indigo" : {
+
+    },
+    "Infra" : {
+
+    },
+    "Inheritance" : {
+
+    },
+    "Inherited unless an image, group, tag, or container overrides it" : {
+
+    },
+    "Init image" : {
+
+    },
+    "Install the recommended kernel?" : {
+
+    },
+    "Install…" : {
+
+    },
+    "Installation & Updates" : {
+
+    },
+    "Interface" : {
+      "comment" : "Category of logs related to the user interface.",
+      "isCommentAutoGenerated" : true
+    },
+    "internal" : {
+
+    },
+    "Internal only" : {
+
+    },
+    "Interpolation" : {
+
+    },
+    "Interval: %llds" : {
+
+    },
+    "Invalid compose file: %@" : {
+
+    },
+    "Invalid compose file." : {
+
+    },
+    "Keep history for" : {
+
+    },
+    "Keep running in the menu bar" : {
+
+    },
+    "Keep stdin open" : {
+
+    },
+    "Keep the sidebar visible in either shell. Turn this off for a page-only layout." : {
+
+    },
+    "Kept readable local data" : {
+
+    },
+    "Kernel" : {
+
+    },
+    "KEY" : {
+
+    },
+    "Keyboard shortcuts" : {
+
+    },
+    "Keyboard Shortcuts" : {
+
+    },
+    "Kind" : {
+
+    },
+    "Known Docker CLI and Compose fields preserved for future cores. Apple container cannot execute these values." : {
+
+    },
+    "Large" : {
+
+    },
+    "Launch at login" : {
+
+    },
+    "Layout" : {
+
+    },
+    "Less-common run settings. Compose import and Edit reveal these automatically when advanced values are present." : {
+
+    },
+    "Level" : {
+
+    },
+    "Light" : {
+
+    },
+    "lime" : {
+      "comment" : "Alias for the color lime.",
+      "isCommentAutoGenerated" : true
+    },
+    "Limit memory" : {
+
+    },
+    "Limit parallel downloads" : {
+
+    },
+    "Line" : {
+
+    },
+    "Line width" : {
+
+    },
+    "Linear" : {
+
+    },
+    "linux" : {
+
+    },
+    "Linux amd64" : {
+
+    },
+    "Linux amd64/v2" : {
+
+    },
+    "Linux arm64" : {
+
+    },
+    "List refresh interval" : {
+
+    },
+    "Live metrics use one low-priority runtime stream. The list refresh interval only controls background service, container list, and resource-cache polling. %@" : {
+
+    },
+    "Load an image .tar" : {
+
+    },
+    "Load Image Tar" : {
+
+    },
+    "Load image tar..." : {
+
+    },
+    "Loaded %@" : {
+
+    },
+    "loading" : {
+
+    },
+    "Local digest unavailable" : {
+
+    },
+    "Local DNS domains" : {
+
+    },
+    "local image" : {
+
+    },
+    "Local image" : {
+
+    },
+    "Local images" : {
+
+    },
+    "Locate binary..." : {
+
+    },
+    "Log in" : {
+
+    },
+    "Log In to Registry…" : {
+
+    },
+    "Log out" : {
+
+    },
+    "Log Out" : {
+
+    },
+    "Log out of %@?" : {
+
+    },
+    "Logging" : {
+
+    },
+    "logging.category.compose" : {
+
+    },
+    "logging.category.health" : {
+
+    },
+    "logging.category.image" : {
+
+    },
+    "logging.category.lifecycle" : {
+
+    },
+    "logging.category.registry" : {
+
+    },
+    "logging.category.system" : {
+
+    },
+    "logging.category.ui" : {
+
+    },
+    "logging.destination.activity" : {
+
+    },
+    "logging.destination.console" : {
+
+    },
+    "logging.level.errors" : {
+
+    },
+    "logging.level.errors.footnote" : {
+
+    },
+    "logging.level.important" : {
+
+    },
+    "logging.level.important.footnote" : {
+
+    },
+    "logging.level.off" : {
+
+    },
+    "logging.level.off.footnote" : {
+
+    },
+    "logging.level.verbose" : {
+
+    },
+    "logging.level.verbose.footnote" : {
+
+    },
+    "Machine" : {
+
+    },
+    "Machine CPUs" : {
+      "comment" : "Name of the runtime property that shows the number of CPUs on the machine.",
+      "isCommentAutoGenerated" : true
+    },
+    "Machine memory" : {
+
+    },
+    "macOS Console" : {
+
+    },
+    "magenta" : {
+
+    },
+    "Main background material" : {
+
+    },
+    "Make this container style the default for future containers from the same image." : {
+
+    },
+    "Mark %@ as read" : {
+
+    },
+    "Mark all as read" : {
+
+    },
+    "Mark all read" : {
+
+    },
+    "Mark as Read" : {
+
+    },
+    "Mark as Unread" : {
+
+    },
+    "Materials" : {
+
+    },
+    "Max downloads: %lld" : {
+
+    },
+    "Medium" : {
+
+    },
+    "Memory" : {
+
+    },
+    "Memory %@ / %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Memory %1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "Memory must use a value like 512M or 2G." : {
+
+    },
+    "Menu" : {
+
+    },
+    "menu.networkActions" : {
+
+    },
+    "menu.volumeActions" : {
+
+    },
+    "Merge" : {
+
+    },
+    "Metric" : {
+
+    },
+    "mint" : {
+
+    },
+    "Mode" : {
+
+    },
+    "mono" : {
+
+    },
+    "Monotone" : {
+
+    },
+    "moss" : {
+
+    },
+    "Move down" : {
+
+    },
+    "Move or remove this widget." : {
+
+    },
+    "Move up" : {
+
+    },
+    "Move widget down" : {
+
+    },
+    "Move widget up" : {
+
+    },
+    "Multi-Line" : {
+
+    },
+    "Multiply" : {
+
+    },
+    "mustard" : {
+
+    },
+    "my-network" : {
+
+    },
+    "my-volume" : {
+
+    },
+    "Name" : {
+
+    },
+    "name | uid[:gid]" : {
+
+    },
+    "name for the built image, e.g. myapp:latest" : {
+
+    },
+    "Named, temp, and path mounts" : {
+
+    },
+    "Navigate" : {
+
+    },
+    "Net In" : {
+
+    },
+    "Net Out" : {
+
+    },
+    "network" : {
+
+    },
+    "Network" : {
+
+    },
+    "Network actions" : {
+
+    },
+    "Network filters" : {
+
+    },
+    "network.count" : {
+
+    },
+    "network.created" : {
+
+    },
+    "network.delete.confirmation" : {
+
+    },
+    "network.delete.message" : {
+
+    },
+    "network.empty" : {
+
+    },
+    "network.empty.description" : {
+
+    },
+    "network.newNetwork" : {
+
+    },
+    "network.newNetwork.lowercase" : {
+
+    },
+    "network.refreshNetworks" : {
+
+    },
+    "Networking" : {
+
+    },
+    "Networks" : {
+
+    },
+    "neutral" : {
+
+    },
+    "new" : {
+
+    },
+    "New" : {
+
+    },
+    "New local DNS domain" : {
+
+    },
+    "New network" : {
+
+    },
+    "New Network" : {
+
+    },
+    "New Network…" : {
+
+    },
+    "New reference" : {
+
+    },
+    "New volume" : {
+
+    },
+    "New Volume" : {
+
+    },
+    "New Volume…" : {
+
+    },
+    "Newest" : {
+
+    },
+    "Nickname" : {
+
+    },
+    "Nightly" : {
+
+    },
+    "No" : {
+
+    },
+    "No activity" : {
+
+    },
+    "No app events are recorded." : {
+
+    },
+    "No build-time variables added." : {
+
+    },
+    "No cache" : {
+
+    },
+    "No container image updates available" : {
+
+    },
+    "No container images to check" : {
+
+    },
+    "No containers" : {
+
+    },
+    "No history" : {
+
+    },
+    "No history yet" : {
+
+    },
+    "No image updates available" : {
+
+    },
+    "No images" : {
+
+    },
+    "No images found for \"%@\"" : {
+
+    },
+    "No images found for %@" : {
+
+    },
+    "No local DNS domains." : {
+
+    },
+    "No local images to check" : {
+
+    },
+    "No matches" : {
+
+    },
+    "No matching images" : {
+
+    },
+    "No named volumes or container mounts found." : {
+
+    },
+    "No networks" : {
+
+    },
+    "No output" : {
+
+    },
+    "No running containers." : {
+
+    },
+    "No saved override to remove." : {
+
+    },
+    "No services with an image to import." : {
+
+    },
+    "No templates" : {
+
+    },
+    "None" : {
+
+    },
+    "None saved yet" : {
+
+    },
+    "Normal" : {
+
+    },
+    "Normalize stats" : {
+
+    },
+    "Not running" : {
+
+    },
+    "Not set" : {
+
+    },
+    "Not signed in to any registries." : {
+
+    },
+    "notification.containerRestarted.body" : {
+
+    },
+    "notification.containerRestarted.bodyWithAttempt" : {
+
+    },
+    "notification.containerRestarted.title" : {
+
+    },
+    "notification.containerStopped.body" : {
+
+    },
+    "notification.containerStopped.title" : {
+
+    },
+    "notification.containerUnhealthy.body" : {
+
+    },
+    "notification.containerUnhealthy.title" : {
+
+    },
+    "ocean" : {
+
+    },
+    "Off" : {
+      "comment" : "A label for a checkbox that turns off a feature.",
+      "isCommentAutoGenerated" : true
+    },
+    "Official image" : {
+
+    },
+    "olive" : {
+
+    },
+    "On" : {
+
+    },
+    "On failure" : {
+      "comment" : "Display name for the restart policy \"On failure\".",
+      "isCommentAutoGenerated" : true
+    },
+    "Only failures are recorded." : {
+      "comment" : "Footnote for the \"Errors\" logging level.",
+      "isCommentAutoGenerated" : true
+    },
+    "Only finished releases." : {
+
+    },
+    "Opacity" : {
+
+    },
+    "Open Contained" : {
+
+    },
+    "Open create/edit flows and page utilities in toolbar morph panels. When off, access points use classic pages and sheets." : {
+
+    },
+    "Open details" : {
+
+    },
+    "Open Registries" : {
+
+    },
+    "optional" : {
+
+    },
+    "Optional CIDR range for the network, for example `10.0.0.0/24`." : {
+
+    },
+    "optional image" : {
+
+    },
+    "optional path" : {
+
+    },
+    "Optional runtime-specific size hint, such as `10G`. Leave blank for default." : {
+
+    },
+    "optional, defaults to <context>/Dockerfile" : {
+      "comment" : "A prompt for the user to enter a Dockerfile path.",
+      "isCommentAutoGenerated" : true
+    },
+    "optional, e.g. /app" : {
+
+    },
+    "optional, e.g. 10.0.0.0/24" : {
+
+    },
+    "optional, e.g. 10G" : {
+
+    },
+    "optional, e.g. linux/arm64" : {
+
+    },
+    "Options" : {
+
+    },
+    "orange" : {
+
+    },
+    "Order" : {
+
+    },
+    "os/arch[/variant]" : {
+
+    },
+    "Overlay" : {
+      "comment" : "Display name for the blend mode \"Overlay\".",
+      "isCommentAutoGenerated" : true
+    },
+    "Override default image card design" : {
+
+    },
+    "Override group style" : {
+
+    },
+    "Override image style" : {
+
+    },
+    "Override style" : {
+
+    },
+    "Override the auto-detected `container` binary location." : {
+      "comment" : "Tooltip for the container CLI path setting.",
+      "isCommentAutoGenerated" : true
+    },
+    "override the default command (optional)" : {
+
+    },
+    "palette.action.checkAllContainerImages" : {
+
+    },
+    "palette.action.checkAllImageUpdates" : {
+
+    },
+    "palette.action.checkAppUpdates" : {
+
+    },
+    "palette.action.checkImageUpdate" : {
+
+    },
+    "palette.action.editContainer" : {
+
+    },
+    "palette.action.hideCLIPreviews" : {
+
+    },
+    "palette.action.hideInfoTips" : {
+
+    },
+    "palette.action.hideMenuBarItem" : {
+
+    },
+    "palette.action.importCompose" : {
+
+    },
+    "palette.action.loadImageTar" : {
+
+    },
+    "palette.action.newNetwork" : {
+
+    },
+    "palette.action.newVolume" : {
+
+    },
+    "palette.action.pruneImages" : {
+
+    },
+    "palette.action.pullContainerImageUpdates" : {
+
+    },
+    "palette.action.pullImageUpdate" : {
+
+    },
+    "palette.action.refresh" : {
+
+    },
+    "palette.action.registryLogin" : {
+
+    },
+    "palette.action.restartContainer" : {
+
+    },
+    "palette.action.runContainer" : {
+
+    },
+    "palette.action.runImage" : {
+
+    },
+    "palette.action.runOnNetwork" : {
+
+    },
+    "palette.action.searchDockerHub" : {
+
+    },
+    "palette.action.searchLocalImages" : {
+
+    },
+    "palette.action.showAllContainers" : {
+
+    },
+    "palette.action.showCLIPreviews" : {
+
+    },
+    "palette.action.showInfoTips" : {
+
+    },
+    "palette.action.showMenuBarItem" : {
+
+    },
+    "palette.action.showRunningOnly" : {
+
+    },
+    "palette.action.startContainer" : {
+
+    },
+    "palette.action.stopContainer" : {
+
+    },
+    "palette.action.systemLogs" : {
+
+    },
+    "palette.action.updateAllImages" : {
+
+    },
+    "palette.action.updateContainerImage" : {
+
+    },
+    "palette.action.useVolume" : {
+
+    },
+    "palette.backToCommands" : {
+
+    },
+    "palette.commands" : {
+
+    },
+    "palette.couldNotSearchDockerHub" : {
+
+    },
+    "palette.dockerHub" : {
+
+    },
+    "palette.dockerHubUnreachable" : {
+
+    },
+    "palette.filterLocalImagesPlaceholder" : {
+
+    },
+    "palette.imagesCount" : {
+
+    },
+    "palette.keyboard.clearScope" : {
+
+    },
+    "palette.keyboard.run" : {
+
+    },
+    "palette.keyboard.select" : {
+
+    },
+    "palette.kind.action" : {
+
+    },
+    "palette.kind.container" : {
+
+    },
+    "palette.kind.create" : {
+
+    },
+    "palette.kind.image" : {
+
+    },
+    "palette.kind.navigate" : {
+
+    },
+    "palette.kind.resource" : {
+
+    },
+    "palette.kind.search" : {
+
+    },
+    "palette.kind.settings" : {
+
+    },
+    "palette.kind.toggle" : {
+
+    },
+    "palette.localImages" : {
+
+    },
+    "palette.localImagesCount" : {
+
+    },
+    "palette.matchesCount" : {
+
+    },
+    "palette.network" : {
+
+    },
+    "palette.network.builtIn" : {
+
+    },
+    "palette.network.footer" : {
+
+    },
+    "palette.noImagesFound" : {
+
+    },
+    "palette.noMatches" : {
+
+    },
+    "palette.noMatchesDescription" : {
+
+    },
+    "palette.officialImage" : {
+
+    },
+    "palette.popularImages" : {
+
+    },
+    "palette.removeScopeAccessibilityLabel" : {
+
+    },
+    "palette.resultsCount" : {
+
+    },
+    "palette.searchDockerHubFor" : {
+
+    },
+    "palette.searchDockerHubPlaceholder" : {
+
+    },
+    "palette.searching" : {
+
+    },
+    "palette.searchingDockerHub" : {
+
+    },
+    "palette.searchOrRunPlaceholder" : {
+
+    },
+    "palette.section.actions" : {
+
+    },
+    "palette.section.containers" : {
+
+    },
+    "palette.section.createSearch" : {
+
+    },
+    "palette.section.images" : {
+
+    },
+    "palette.section.volumesNetworks" : {
+
+    },
+    "palette.settingsTitle" : {
+
+    },
+    "palette.subtitle.action" : {
+
+    },
+    "palette.subtitle.appearance" : {
+
+    },
+    "palette.subtitle.builtInNetwork" : {
+
+    },
+    "palette.subtitle.container" : {
+
+    },
+    "palette.subtitle.containerCount" : {
+
+    },
+    "palette.subtitle.create" : {
+
+    },
+    "palette.subtitle.doesNotRecreateContainers" : {
+
+    },
+    "palette.subtitle.image" : {
+
+    },
+    "palette.subtitle.imageTag" : {
+
+    },
+    "palette.subtitle.localImage" : {
+
+    },
+    "palette.subtitle.network" : {
+
+    },
+    "palette.subtitle.pullNewerTags" : {
+
+    },
+    "palette.subtitle.scope" : {
+
+    },
+    "palette.subtitle.settings" : {
+
+    },
+    "palette.subtitle.tagCount" : {
+
+    },
+    "palette.subtitle.toggle" : {
+
+    },
+    "palette.subtitle.updates" : {
+
+    },
+    "palette.subtitle.volume" : {
+
+    },
+    "palette.typeToSearchDockerHub" : {
+
+    },
+    "palette.unavailable" : {
+
+    },
+    "palette.volume" : {
+
+    },
+    "palette.volume.footer" : {
+
+    },
+    "Panel & sheet material" : {
+
+    },
+    "Parent" : {
+
+    },
+    "Password" : {
+
+    },
+    "password or access token" : {
+
+    },
+    "Paste Compose" : {
+
+    },
+    "Paste compose content" : {
+
+    },
+    "Paste YAML" : {
+
+    },
+    "Paste YAML or choose a file" : {
+
+    },
+    "Path to the Dockerfile (-f). Relative to the context if not absolute." : {
+
+    },
+    "Paused" : {
+
+    },
+    "Personalization" : {
+
+    },
+    "Pink" : {
+
+    },
+    "Plain" : {
+
+    },
+    "Platform" : {
+
+    },
+    "Plugin" : {
+      "comment" : "Name of the network filter option to filter by plugin.",
+      "isCommentAutoGenerated" : true
+    },
+    "Point size" : {
+
+    },
+    "Points" : {
+
+    },
+    "Popover" : {
+
+    },
+    "Popular images" : {
+
+    },
+    "Pre-release builds, ahead of stable. May be rough." : {
+
+    },
+    "Probe command" : {
+
+    },
+    "Processes" : {
+
+    },
+    "Progress" : {
+
+    },
+    "Prune" : {
+
+    },
+    "Prune Images" : {
+
+    },
+    "Prune images?" : {
+
+    },
+    "Prune images..." : {
+
+    },
+    "Pull available container image updates" : {
+
+    },
+    "Pull Image…" : {
+
+    },
+    "pull newer tags" : {
+
+    },
+    "Pull or build an image first." : {
+
+    },
+    "Pull or build an image to see it here" : {
+
+    },
+    "Pull Update" : {
+
+    },
+    "Pull update for %@" : {
+
+    },
+    "Pulling %@..." : {
+
+    },
+    "purple" : {
+
+    },
+    "Push" : {
+
+    },
+    "Push %@?" : {
+      "comment" : "A confirmation dialog that lets the user confirm pushing an image to a registry. The argument is the name of the image.",
+      "isCommentAutoGenerated" : true
+    },
+    "Push image" : {
+
+    },
+    "Push…" : {
+
+    },
+    "Quit" : {
+
+    },
+    "Quit Contained" : {
+
+    },
+    "rainbow" : {
+
+    },
+    "Range" : {
+
+    },
+    "Read" : {
+
+    },
+    "Read-only - machine resources are the denominator for machine-normalized stats. Defaults apply when a container or build doesn't specify its own resources." : {
+
+    },
+    "Read-only filesystem" : {
+
+    },
+    "Ready to push" : {
+
+    },
+    "Reclaim all" : {
+      "comment" : "A button that deletes stopped containers, unused images, unused",
+      "isCommentAutoGenerated" : true
+    },
+    "Reclaim all unused space?" : {
+
+    },
+    "Recommended kernel" : {
+
+    },
+    "Recommended kernel installed" : {
+
+    },
+    "Reconnect" : {
+
+    },
+    "Reconnect terminal" : {
+
+    },
+    "Refresh" : {
+
+    },
+    "Refresh loop" : {
+
+    },
+    "Refresh Networks" : {
+
+    },
+    "Refresh Volumes" : {
+
+    },
+    "Registries" : {
+
+    },
+    "Registry" : {
+
+    },
+    "Registry login" : {
+
+    },
+    "Registry scheme" : {
+
+    },
+    "Registry sign-in required" : {
+
+    },
+    "registry username" : {
+
+    },
+    "registry.credentials" : {
+
+    },
+    "registry.login.title" : {
+
+    },
+    "registry.openRegistries" : {
+
+    },
+    "registry.password" : {
+
+    },
+    "registry.server" : {
+
+    },
+    "registry.username" : {
+
+    },
+    "Release Notes" : {
+
+    },
+    "releaseNotes.availableUpdate" : {
+
+    },
+    "releaseNotes.whatsNew" : {
+
+    },
+    "releaseNotes.whatsNewInAvailableUpdate" : {
+
+    },
+    "releaseNotes.whatsNewInVersion" : {
+
+    },
+    "Reload" : {
+
+    },
+    "Remove" : {
+
+    },
+    "Remove %@ scope" : {
+
+    },
+    "Remove all stopped containers?" : {
+
+    },
+    "Remove all unreferenced" : {
+
+    },
+    "Remove build argument" : {
+
+    },
+    "Remove the saved local override." : {
+
+    },
+    "Remove unused" : {
+
+    },
+    "Remove unused images?" : {
+
+    },
+    "Remove unused networks?" : {
+
+    },
+    "Remove unused volumes?" : {
+
+    },
+    "Remove when stopped" : {
+
+    },
+    "Remove widget" : {
+
+    },
+    "Removes stopped containers, unused images, unused volumes, and unused networks." : {
+
+    },
+    "Removes the stored credentials for this registry." : {
+
+    },
+    "Replace" : {
+
+    },
+    "Replace %@?" : {
+
+    },
+    "Report an Issue…" : {
+
+    },
+    "Reset" : {
+
+    },
+    "Reset image style" : {
+      "comment" : "Label for a button that resets the style of an image to the default.",
+      "isCommentAutoGenerated" : true
+    },
+    "Resource" : {
+
+    },
+    "Resource samples accumulate while the container runs." : {
+
+    },
+    "Resources" : {
+
+    },
+    "Restart" : {
+
+    },
+    "Restart %@" : {
+
+    },
+    "Restart policy" : {
+
+    },
+    "Restart service" : {
+
+    },
+    "Restart Service" : {
+
+    },
+    "Restarted %@ (attempt %lld)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Restarted %1$@ (attempt %2$lld)"
+          }
+        }
+      }
+    },
+    "restartPolicy.always" : {
+
+    },
+    "restartPolicy.no" : {
+
+    },
+    "restartPolicy.onFailure" : {
+
+    },
+    "Restarts containers that exit unexpectedly" : {
+
+    },
+    "Restrict containers on this network from external access." : {
+
+    },
+    "Retry" : {
+
+    },
+    "Reuse a saved recipe" : {
+
+    },
+    "Reveal CLI Binary in Finder" : {
+
+    },
+    "RO" : {
+
+    },
+    "rose" : {
+
+    },
+    "Rosetta (x86 apps)" : {
+
+    },
+    "royal" : {
+
+    },
+    "Run" : {
+
+    },
+    "Run %@" : {
+
+    },
+    "Run a container" : {
+
+    },
+    "Run a container on this network" : {
+
+    },
+    "Run a container to see it here." : {
+      "comment" : "Text displayed in a \"No containers\" state when there are no running containers.",
+      "isCommentAutoGenerated" : true
+    },
+    "Run Container" : {
+
+    },
+    "Run Container…" : {
+
+    },
+    "Run Image Check" : {
+
+    },
+    "Run Image Update Check" : {
+
+    },
+    "Run image update check now" : {
+
+    },
+    "Run in the background" : {
+
+    },
+    "Run inside the container via `sh -c`; a zero exit = healthy. Needs a shell in the image." : {
+
+    },
+    "Run now" : {
+
+    },
+    "Run on network %@" : {
+
+    },
+    "Run…" : {
+
+    },
+    "running" : {
+      "comment" : "A description of the state of a container.",
+      "isCommentAutoGenerated" : true
+    },
+    "Running" : {
+
+    },
+    "Running Containers" : {
+      "comment" : "A menu item that shows a list of running containers.",
+      "isCommentAutoGenerated" : true
+    },
+    "Running only" : {
+      "comment" : "Label for the running-only filter toggle.",
+      "isCommentAutoGenerated" : true
+    },
+    "runSpec.addCapability" : {
+
+    },
+    "runSpec.addDNSOption" : {
+
+    },
+    "runSpec.addEnvFile" : {
+
+    },
+    "runSpec.addLabel" : {
+
+    },
+    "runSpec.addMount" : {
+
+    },
+    "runSpec.addNameserver" : {
+
+    },
+    "runSpec.addPort" : {
+
+    },
+    "runSpec.addSearchDomain" : {
+
+    },
+    "runSpec.addSocket" : {
+
+    },
+    "runSpec.addTmpfsMount" : {
+
+    },
+    "runSpec.addUlimit" : {
+
+    },
+    "runSpec.addVariable" : {
+
+    },
+    "runSpec.addVolume" : {
+
+    },
+    "runSpec.adopt" : {
+
+    },
+    "runSpec.allocateTTY" : {
+
+    },
+    "runSpec.blendMode" : {
+
+    },
+    "runSpec.chooseFileOrFolder" : {
+
+    },
+    "runSpec.color" : {
+
+    },
+    "runSpec.colorCardBackground" : {
+
+    },
+    "runSpec.command" : {
+
+    },
+    "runSpec.containerIDFile" : {
+
+    },
+    "runSpec.cpus" : {
+
+    },
+    "runSpec.createNewVolume" : {
+
+    },
+    "runSpec.customPlatform" : {
+
+    },
+    "runSpec.default" : {
+
+    },
+    "runSpec.detach" : {
+
+    },
+    "runSpec.disableDNS" : {
+
+    },
+    "runSpec.dropCapability" : {
+
+    },
+    "runSpec.enableHealthcheck" : {
+
+    },
+    "runSpec.entrypoint" : {
+
+    },
+    "runSpec.exposeVirtualization" : {
+
+    },
+    "runSpec.forwardSSHAgent" : {
+
+    },
+    "runSpec.gradient" : {
+
+    },
+    "runSpec.icon" : {
+
+    },
+    "runSpec.image" : {
+
+    },
+    "runSpec.image.required" : {
+
+    },
+    "runSpec.imageDefaults" : {
+
+    },
+    "runSpec.imageDefaults.subtitle" : {
+
+    },
+    "runSpec.importedValuesHint" : {
+
+    },
+    "runSpec.initImage" : {
+
+    },
+    "runSpec.keepStdinOpen" : {
+
+    },
+    "runSpec.kernel" : {
+
+    },
+    "runSpec.limitMemory" : {
+
+    },
+    "runSpec.limitParallelDownloads" : {
+
+    },
+    "runSpec.memory" : {
+
+    },
+    "runSpec.name" : {
+
+    },
+    "runSpec.network" : {
+
+    },
+    "runSpec.nickname" : {
+
+    },
+    "runSpec.opacity" : {
+
+    },
+    "runSpec.platform" : {
+
+    },
+    "runSpec.probeCommand" : {
+
+    },
+    "runSpec.progress" : {
+
+    },
+    "runSpec.readOnlyFilesystem" : {
+
+    },
+    "runSpec.registryScheme" : {
+
+    },
+    "runSpec.removeWhenStopped" : {
+
+    },
+    "runSpec.restartPolicy" : {
+
+    },
+    "runSpec.rosetta" : {
+
+    },
+    "runSpec.runtime" : {
+
+    },
+    "runSpec.searchDomain" : {
+
+    },
+    "runSpec.section.advancedOptions" : {
+
+    },
+    "runSpec.section.advancedOptions.footer" : {
+
+    },
+    "runSpec.section.appManaged" : {
+
+    },
+    "runSpec.section.environment" : {
+
+    },
+    "runSpec.section.essentials" : {
+
+    },
+    "runSpec.section.networking" : {
+
+    },
+    "runSpec.section.resources" : {
+
+    },
+    "runSpec.section.storage" : {
+
+    },
+    "runSpec.setSharedMemorySize" : {
+
+    },
+    "runSpec.sharedMemory" : {
+
+    },
+    "runSpec.sourcePicker.help" : {
+
+    },
+    "runSpec.useInitProcess" : {
+
+    },
+    "runSpec.user" : {
+
+    },
+    "runSpec.userID" : {
+
+    },
+    "runSpec.validation.chooseImage" : {
+
+    },
+    "runSpec.validation.completePortMappings" : {
+
+    },
+    "runSpec.validation.completeVolumeMounts" : {
+
+    },
+    "runSpec.validation.environmentNeedsNames" : {
+
+    },
+    "runSpec.validation.memoryFormat" : {
+
+    },
+    "runSpec.workingDirectory" : {
+
+    },
+    "Runtime" : {
+
+    },
+    "Runtime adapter used for create, recreate, imports, images, logs, stats, and system actions." : {
+
+    },
+    "Runtime resources" : {
+      "comment" : "Title of a section that shows the runtime resources of the app.",
+      "isCommentAutoGenerated" : true
+    },
+    "Runtime unavailable" : {
+
+    },
+    "runtime.core" : {
+
+    },
+    "runtime.core.subtitle" : {
+
+    },
+    "runtime.coreSelector.disabledReason" : {
+
+    },
+    "runtime.notReady" : {
+
+    },
+    "runtime.recommendedKernelInstalled" : {
+
+    },
+    "rust" : {
+
+    },
+    "Rx" : {
+
+    },
+    "salmon" : {
+
+    },
+    "Save" : {
+
+    },
+    "Save %@ to a tar archive" : {
+
+    },
+    "Save a container's settings as a template from the create form." : {
+
+    },
+    "Save as template" : {
+
+    },
+    "Save these settings as a reusable template." : {
+
+    },
+    "Save to tar…" : {
+
+    },
+    "Saved %@" : {
+
+    },
+    "Saved template \"%@\"" : {
+
+    },
+    "Scatter" : {
+
+    },
+    "scope" : {
+
+    },
+    "Screen" : {
+
+    },
+    "seafoam" : {
+
+    },
+    "Search" : {
+
+    },
+    "Search Docker Hub" : {
+
+    },
+    "Search Docker Hub for %@" : {
+
+    },
+    "Search Docker Hub..." : {
+
+    },
+    "Search domain" : {
+
+    },
+    "Search local images" : {
+      "comment" : "Text for a palette action that searches for local images.",
+      "isCommentAutoGenerated" : true
+    },
+    "Search or run a command..." : {
+
+    },
+    "Search registry images inline (creation Search path and the palette's Hub scope). Requires network access to the registry." : {
+
+    },
+    "Search This Page" : {
+
+    },
+    "Searching Docker Hub..." : {
+
+    },
+    "Searching..." : {
+
+    },
+    "section.activity" : {
+
+    },
+    "section.build" : {
+
+    },
+    "section.containers" : {
+
+    },
+    "section.images" : {
+
+    },
+    "section.networks" : {
+
+    },
+    "section.registries" : {
+
+    },
+    "section.settings" : {
+
+    },
+    "section.system" : {
+
+    },
+    "section.templates" : {
+
+    },
+    "section.volumes" : {
+
+    },
+    "sectionGroup.infra" : {
+
+    },
+    "sectionGroup.system" : {
+
+    },
+    "sectionGroup.workloads" : {
+
+    },
+    "Select" : {
+
+    },
+    "Select file" : {
+
+    },
+    "Select Multiple" : {
+      "comment" : "A button that selects multiple containers.",
+      "isCommentAutoGenerated" : true
+    },
+    "Select the `container` binary" : {
+
+    },
+    "Selection" : {
+
+    },
+    "selection.count" : {
+
+    },
+    "Server" : {
+
+    },
+    "Service" : {
+
+    },
+    "service.restart" : {
+
+    },
+    "service.start" : {
+
+    },
+    "service.stop" : {
+
+    },
+    "Services with images become prefilled containers" : {
+
+    },
+    "Session ended" : {
+
+    },
+    "Session ended (exit %d)" : {
+
+    },
+    "Set app tint to %@" : {
+
+    },
+    "Set shared memory size" : {
+
+    },
+    "Sets the card icon color. If background color is enabled, it also tints the glass card." : {
+
+    },
+    "settings" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Settings…" : {
+
+    },
+    "settings.about.apiServer" : {
+
+    },
+    "settings.about.containerCLI" : {
+
+    },
+    "settings.about.copyright" : {
+
+    },
+    "settings.appearance.accentTint" : {
+
+    },
+    "settings.appearance.appearance" : {
+
+    },
+    "settings.appearance.blendMode" : {
+
+    },
+    "settings.appearance.buttonMaterial" : {
+
+    },
+    "settings.appearance.buttonMaterial.info" : {
+
+    },
+    "settings.appearance.buttonTint" : {
+
+    },
+    "settings.appearance.buttonTint.footer" : {
+
+    },
+    "settings.appearance.cardMaterial" : {
+
+    },
+    "settings.appearance.cardMaterial.info" : {
+
+    },
+    "settings.appearance.cardSize" : {
+
+    },
+    "settings.appearance.color" : {
+
+    },
+    "settings.appearance.colorCardBackground" : {
+
+    },
+    "settings.appearance.customIcon" : {
+
+    },
+    "settings.appearance.defaultImageCardStyle" : {
+
+    },
+    "settings.appearance.defaultImageCardStyle.footer" : {
+
+    },
+    "settings.appearance.gradient" : {
+
+    },
+    "settings.appearance.icon" : {
+
+    },
+    "settings.appearance.imageCards" : {
+
+    },
+    "settings.appearance.imageCards.inherited" : {
+
+    },
+    "settings.appearance.layout" : {
+
+    },
+    "settings.appearance.mainBackgroundMaterial" : {
+
+    },
+    "settings.appearance.mainBackgroundMaterial.info" : {
+
+    },
+    "settings.appearance.materials" : {
+
+    },
+    "settings.appearance.materials.footer" : {
+
+    },
+    "settings.appearance.opacity" : {
+
+    },
+    "settings.appearance.panelSheetMaterial" : {
+
+    },
+    "settings.appearance.panelSheetMaterial.info" : {
+
+    },
+    "settings.appearance.showInfoTips" : {
+
+    },
+    "settings.appearance.theme" : {
+
+    },
+    "settings.experimental.commandPalette" : {
+
+    },
+    "settings.experimental.commandPalette.info" : {
+
+    },
+    "settings.experimental.composeImport" : {
+
+    },
+    "settings.experimental.composeImport.info" : {
+
+    },
+    "settings.experimental.dockerHubSearch" : {
+
+    },
+    "settings.experimental.dockerHubSearch.info" : {
+
+    },
+    "settings.experimental.footer" : {
+
+    },
+    "settings.experimental.imageBuildWorkspace" : {
+
+    },
+    "settings.experimental.imageBuildWorkspace.info" : {
+
+    },
+    "settings.experimental.keyboardShortcuts" : {
+
+    },
+    "settings.experimental.keyboardShortcuts.info" : {
+
+    },
+    "settings.experimental.sidebarNavigation" : {
+
+    },
+    "settings.experimental.sidebarNavigation.info" : {
+
+    },
+    "settings.experimental.toolbarFirstUI" : {
+
+    },
+    "settings.experimental.toolbarFirstUI.info" : {
+
+    },
+    "settings.experimental.toolbarPanelNavigation" : {
+
+    },
+    "settings.experimental.toolbarPanelNavigation.info" : {
+
+    },
+    "settings.general.activityAlerts" : {
+
+    },
+    "settings.general.advanced" : {
+
+    },
+    "settings.general.containerCLIPath" : {
+
+    },
+    "settings.general.containerCLIPath.info" : {
+
+    },
+    "settings.general.data" : {
+
+    },
+    "settings.general.data.footer" : {
+
+    },
+    "settings.general.keepHistoryFor" : {
+
+    },
+    "settings.general.keepInMenuBar" : {
+
+    },
+    "settings.general.launchAtLogin" : {
+
+    },
+    "settings.general.listRefreshInterval" : {
+
+    },
+    "settings.general.logging" : {
+
+    },
+    "settings.general.loggingLevel" : {
+
+    },
+    "settings.general.normalizeStats" : {
+
+    },
+    "settings.general.notifyOnCrash" : {
+
+    },
+    "settings.general.showRevealCLI" : {
+
+    },
+    "settings.general.showRevealCLI.info" : {
+
+    },
+    "settings.general.startup" : {
+
+    },
+    "settings.registries.footer" : {
+
+    },
+    "settings.registries.signedIn" : {
+
+    },
+    "settings.runtime.builderImage" : {
+
+    },
+    "settings.runtime.builderRosetta" : {
+
+    },
+    "settings.runtime.defaultCPUs" : {
+
+    },
+    "settings.runtime.defaultMemory" : {
+
+    },
+    "settings.runtime.kernel" : {
+
+    },
+    "settings.runtime.kernel.footer" : {
+
+    },
+    "settings.runtime.localDNSDomains" : {
+
+    },
+    "settings.runtime.localDNSDomains.footer" : {
+
+    },
+    "settings.runtime.machineCPUs" : {
+
+    },
+    "settings.runtime.machineMemory" : {
+
+    },
+    "settings.runtime.recommendedKernel" : {
+
+    },
+    "settings.runtime.resources" : {
+
+    },
+    "settings.runtime.resources.footer" : {
+
+    },
+    "settings.updates.automaticallyCheck" : {
+
+    },
+    "settings.updates.channel" : {
+
+    },
+    "settings.updates.checkImages" : {
+
+    },
+    "settings.updates.footer" : {
+
+    },
+    "settings.updates.imageUpdates" : {
+
+    },
+    "settings.updates.imageUpdates.footer" : {
+
+    },
+    "SF Symbol, e.g. globe, bolt" : {
+
+    },
+    "SF Symbol, e.g. shippingbox.fill" : {
+
+    },
+    "Shared memory" : {
+
+    },
+    "Sheet" : {
+
+    },
+    "Shell" : {
+
+    },
+    "Shortcuts" : {
+
+    },
+    "Show All Containers" : {
+
+    },
+    "Show CLI Previews" : {
+
+    },
+    "Show Details…" : {
+
+    },
+    "Show icon" : {
+
+    },
+    "Show info tips" : {
+
+    },
+    "Show Info Tips" : {
+
+    },
+    "Show Menu Bar Item" : {
+
+    },
+    "Show Reveal CLI on actions" : {
+
+    },
+    "Show Running Containers Only" : {
+
+    },
+    "Show Running Only" : {
+
+    },
+    "Show Sidebar" : {
+
+    },
+    "Show status indicator" : {
+
+    },
+    "Show text" : {
+
+    },
+    "Show the floating app toolbar. Navigation and edit/create presentation are controlled separately below." : {
+
+    },
+    "Shows the exact `container ...` command for important actions. Useful when you are learning the CLI or want to verify what will run." : {
+
+    },
+    "Sidebar" : {
+
+    },
+    "Sidebar navigation" : {
+
+    },
+    "Sign in to %@ before pushing this image." : {
+
+    },
+    "Signed in to %@%@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Signed in to %1$@%2$@."
+          }
+        }
+      }
+    },
+    "Signed-in registries" : {
+
+    },
+    "silver" : {
+
+    },
+    "Size" : {
+
+    },
+    "sky" : {
+
+    },
+    "slate" : {
+
+    },
+    "Small" : {
+
+    },
+    "Smooth" : {
+
+    },
+    "Soft Light" : {
+
+    },
+    "Some compose keys were not translated; review each container before creating." : {
+
+    },
+    "Sort by" : {
+
+    },
+    "Source" : {
+
+    },
+    "Source (host path or volume)" : {
+
+    },
+    "Sparkle · %@ channel" : {
+
+    },
+    "Stable" : {
+
+    },
+    "Start" : {
+
+    },
+    "Start %@" : {
+
+    },
+    "Start container service" : {
+
+    },
+    "Start from scratch" : {
+
+    },
+    "Start service" : {
+
+    },
+    "Start Service" : {
+
+    },
+    "Start the container service before pushing images." : {
+
+    },
+    "Start the container to browse its files." : {
+
+    },
+    "Start the container to open a shell." : {
+
+    },
+    "Start the container to see live resource usage." : {
+      "comment" : "Description of the state when the container is not running.",
+      "isCommentAutoGenerated" : true
+    },
+    "Starting..." : {
+
+    },
+    "Startup" : {
+
+    },
+    "stats.collecting" : {
+
+    },
+    "stats.memory.detail" : {
+
+    },
+    "stats.notRunning" : {
+
+    },
+    "stats.notRunning.description" : {
+
+    },
+    "stats.processes" : {
+
+    },
+    "statsNormalization.container" : {
+
+    },
+    "statsNormalization.container.footnote" : {
+
+    },
+    "statsNormalization.machine" : {
+
+    },
+    "statsNormalization.machine.footnote" : {
+
+    },
+    "Status" : {
+
+    },
+    "status.errored" : {
+
+    },
+    "status.off" : {
+
+    },
+    "status.paused" : {
+
+    },
+    "status.running" : {
+
+    },
+    "status.running.lowercase" : {
+
+    },
+    "status.stopped" : {
+
+    },
+    "status.stopping" : {
+
+    },
+    "status.unavailableInBuild" : {
+
+    },
+    "status.unknown" : {
+
+    },
+    "Step Center" : {
+      "comment" : "Display name for the \"Step Center\" interpolation method.",
+      "isCommentAutoGenerated" : true
+    },
+    "Step End" : {
+
+    },
+    "Step Start" : {
+
+    },
+    "Stop" : {
+
+    },
+    "Stop %@" : {
+
+    },
+    "Stop service" : {
+
+    },
+    "Stop Service" : {
+
+    },
+    "Stopped" : {
+
+    },
+    "Stopped containers" : {
+
+    },
+    "Stopped Containers" : {
+
+    },
+    "Stopping" : {
+
+    },
+    "Storage" : {
+
+    },
+    "Storage cleanup" : {
+
+    },
+    "Stored schema %lld, this app supports %lld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Stored schema %1$lld, this app supports %2$lld."
+          }
+        }
+      }
+    },
+    "streamConsole.lineCount" : {
+
+    },
+    "streaming" : {
+
+    },
+    "Streaming - this container hasn't logged anything yet." : {
+
+    },
+    "Style" : {
+
+    },
+    "Style for %@" : {
+
+    },
+    "Style for this volume" : {
+
+    },
+    "Subnet" : {
+      "comment" : "Label for the network's subnet field.",
+      "isCommentAutoGenerated" : true
+    },
+    "Switch page" : {
+
+    },
+    "system" : {
+
+    },
+    "System" : {
+
+    },
+    "System alert on container crash / restart" : {
+
+    },
+    "System logs" : {
+
+    },
+    "System Logs" : {
+
+    },
+    "system.diskUsed" : {
+
+    },
+    "system.page.automation" : {
+
+    },
+    "system.page.automation.subtitle" : {
+
+    },
+    "system.page.volumes.subtitle" : {
+
+    },
+    "system.storageCleanup" : {
+
+    },
+    "system.systemLogs" : {
+
+    },
+    "Tag" : {
+
+    },
+    "Tag required" : {
+
+    },
+    "Tags" : {
+      "comment" : "Title of the tags page in the image detail view.",
+      "isCommentAutoGenerated" : true
+    },
+    "Target (container path)" : {
+
+    },
+    "tcp" : {
+
+    },
+    "Teal" : {
+
+    },
+    "Template grouping" : {
+
+    },
+    "Template name" : {
+
+    },
+    "template.empty" : {
+
+    },
+    "template.empty.subtitle" : {
+
+    },
+    "template.saveAsTemplate" : {
+
+    },
+    "template.saved" : {
+
+    },
+    "template.savedCount" : {
+
+    },
+    "Templates" : {
+
+    },
+    "Terminal unavailable" : {
+
+    },
+    "terminal.execInto" : {
+
+    },
+    "terminal.reconnectTerminal" : {
+
+    },
+    "terminal.sessionEnded" : {
+
+    },
+    "terminal.sessionEndedWithExit" : {
+
+    },
+    "terracotta" : {
+
+    },
+    "The build context: the folder sent to the builder, usually your project root." : {
+
+    },
+    "The Command-K command index: fuzzy search across every app, container, image, and resource action. Page search and menu commands work regardless of this setting." : {
+
+    },
+    "The container CLI path couldn't be resolved." : {
+
+    },
+    "The container command failed." : {
+
+    },
+    "The image or tag was not found." : {
+
+    },
+    "The latest build from every commit. Expect rough edges." : {
+
+    },
+    "The registry requires authentication." : {
+
+    },
+    "The registry response did not include a content digest." : {
+
+    },
+    "The registry returned an invalid response." : {
+
+    },
+    "The registry returned HTTP %lld." : {
+
+    },
+    "The registry will still enforce write permission for %@." : {
+
+    },
+    "The resulting image reference (-t)." : {
+
+    },
+    "The selected runtime does not support this operation." : {
+
+    },
+    "Theme" : {
+
+    },
+    "These features are still being refined. They're off by default; enable any you want to try. You can turn them back off at any time." : {
+
+    },
+    "This container hasn't produced any logs." : {
+
+    },
+    "This data was created by a newer version" : {
+      "comment" : "Title of a view that appears when the user has a backup of data created by a newer version of the app.",
+      "isCommentAutoGenerated" : true
+    },
+    "This graph needs a second metric." : {
+
+    },
+    "This image records no layer history." : {
+
+    },
+    "This may prompt for your administrator password (handled by the container CLI)." : {
+
+    },
+    "This permanently removes all recorded metrics and events. Saved templates are kept." : {
+
+    },
+    "This permanently removes the volume and its data." : {
+
+    },
+    "This permanently removes unused resources to reclaim disk space." : {
+
+    },
+    "This publishes %@ to its registry. The registry may still reject the push if your account cannot write to that repository." : {
+      "comment" : "A confirmation dialog message for pushing an image to a registry. The argument is the name of the image to be pushed.",
+      "isCommentAutoGenerated" : true
+    },
+    "This removes the container. This can't be undone." : {
+
+    },
+    "This removes the network. Containers must be detached first." : {
+
+    },
+    "This removes the selected local image reference." : {
+
+    },
+    "This tag points at Docker Hub's library namespace." : {
+
+    },
+    "Time" : {
+
+    },
+    "Tint" : {
+
+    },
+    "tint.amber" : {
+
+    },
+    "tint.amber.alias.gold" : {
+
+    },
+    "tint.amber.alias.honey" : {
+
+    },
+    "tint.amber.alias.mustard" : {
+
+    },
+    "tint.amber.alias.yellow" : {
+
+    },
+    "tint.azure" : {
+
+    },
+    "tint.azure.alias.blue" : {
+
+    },
+    "tint.azure.alias.cobalt" : {
+
+    },
+    "tint.azure.alias.ocean" : {
+
+    },
+    "tint.azure.alias.sky" : {
+
+    },
+    "tint.coral" : {
+
+    },
+    "tint.coral.alias.burnt" : {
+
+    },
+    "tint.coral.alias.orange" : {
+
+    },
+    "tint.coral.alias.rust" : {
+
+    },
+    "tint.coral.alias.salmon" : {
+
+    },
+    "tint.coral.alias.terracotta" : {
+
+    },
+    "tint.graphite" : {
+
+    },
+    "tint.graphite.alias.charcoal" : {
+
+    },
+    "tint.graphite.alias.gray" : {
+
+    },
+    "tint.graphite.alias.grey" : {
+
+    },
+    "tint.graphite.alias.mono" : {
+
+    },
+    "tint.graphite.alias.neutral" : {
+
+    },
+    "tint.graphite.alias.silver" : {
+
+    },
+    "tint.graphite.alias.slate" : {
+
+    },
+    "tint.green" : {
+
+    },
+    "tint.green.alias.emerald" : {
+
+    },
+    "tint.green.alias.forest" : {
+
+    },
+    "tint.green.alias.lime" : {
+
+    },
+    "tint.green.alias.moss" : {
+
+    },
+    "tint.green.alias.olive" : {
+
+    },
+    "tint.indigo" : {
+
+    },
+    "tint.indigo.alias.blurple" : {
+
+    },
+    "tint.indigo.alias.purple" : {
+
+    },
+    "tint.indigo.alias.royal" : {
+
+    },
+    "tint.indigo.alias.violet" : {
+
+    },
+    "tint.multicolor" : {
+
+    },
+    "tint.multicolor.alias.appAccent" : {
+
+    },
+    "tint.multicolor.alias.auto" : {
+
+    },
+    "tint.multicolor.alias.default" : {
+
+    },
+    "tint.multicolor.alias.rainbow" : {
+
+    },
+    "tint.multicolor.alias.system" : {
+
+    },
+    "tint.pink" : {
+
+    },
+    "tint.pink.alias.crimson" : {
+
+    },
+    "tint.pink.alias.fuchsia" : {
+
+    },
+    "tint.pink.alias.hotPink" : {
+
+    },
+    "tint.pink.alias.magenta" : {
+
+    },
+    "tint.pink.alias.rose" : {
+
+    },
+    "tint.teal" : {
+
+    },
+    "tint.teal.alias.aqua" : {
+
+    },
+    "tint.teal.alias.cyan" : {
+
+    },
+    "tint.teal.alias.mint" : {
+
+    },
+    "tint.teal.alias.seafoam" : {
+
+    },
+    "tint.teal.alias.turquoise" : {
+
+    },
+    "Titlebar" : {
+
+    },
+    "toggle" : {
+
+    },
+    "Toggle" : {
+
+    },
+    "Toolbar panel navigation" : {
+
+    },
+    "Toolbar-first UI" : {
+
+    },
+    "toolbar.containerFilters" : {
+
+    },
+    "toolbar.groupBy" : {
+
+    },
+    "toolbar.groupedBy" : {
+
+    },
+    "toolbar.groupSortSubtitle" : {
+
+    },
+    "toolbar.imageFilters" : {
+
+    },
+    "toolbar.networkFilters" : {
+
+    },
+    "toolbar.sortBy" : {
+
+    },
+    "toolbar.templateGrouping" : {
+
+    },
+    "Tooltip" : {
+
+    },
+    "Troubleshooting" : {
+
+    },
+    "Try a different filter." : {
+
+    },
+    "Try a setting, image, container, network, or action." : {
+
+    },
+    "Try again" : {
+
+    },
+    "Try to Keep Readable Data" : {
+
+    },
+    "Turn this on to customize only this container. Leave it off to inherit the image style." : {
+
+    },
+    "Turn this on to style containers from this exact image. Leave it off to inherit the Settings default." : {
+
+    },
+    "Turn this on to style only this tag. Leave it off to inherit the image group's style." : {
+
+    },
+    "Turn this on to style this image group. Leave it off to inherit the Settings default." : {
+
+    },
+    "turquoise" : {
+
+    },
+    "Tx" : {
+
+    },
+    "Type" : {
+
+    },
+    "Type to search Docker Hub" : {
+
+    },
+    "udp" : {
+
+    },
+    "UID" : {
+
+    },
+    "Unavailable" : {
+
+    },
+    "Unavailable in this build" : {
+
+    },
+    "Under Page" : {
+
+    },
+    "Under Window" : {
+
+    },
+    "Unhealthy after %lld failures" : {
+
+    },
+    "Unknown" : {
+
+    },
+    "Unread" : {
+
+    },
+    "Unused images" : {
+
+    },
+    "Unused images aren't referenced by any container. “All” also removes dangling layers." : {
+
+    },
+    "Unused networks" : {
+
+    },
+    "Unused volumes" : {
+
+    },
+    "Update all images with available updates" : {
+
+    },
+    "Update available for %@" : {
+
+    },
+    "Update channel" : {
+
+    },
+    "Update Container…" : {
+
+    },
+    "Update image for %@" : {
+
+    },
+    "updateChannel.beta" : {
+
+    },
+    "updateChannel.beta.footnote" : {
+
+    },
+    "updateChannel.nightly" : {
+
+    },
+    "updateChannel.nightly.footnote" : {
+
+    },
+    "updateChannel.stable" : {
+
+    },
+    "updateChannel.stable.footnote" : {
+
+    },
+    "Updated %@" : {
+
+    },
+    "Updated %lld %@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Updated %1$lld %2$@%3$@"
+          }
+        }
+      }
+    },
+    "updates" : {
+
+    },
+    "Updates" : {
+
+    },
+    "Updates only" : {
+
+    },
+    "updates.checkForUpdates" : {
+
+    },
+    "updates.checkForUpdatesNow" : {
+
+    },
+    "updates.containerImageNoun" : {
+
+    },
+    "updates.containerImagesTitle" : {
+
+    },
+    "updates.imageNoun" : {
+
+    },
+    "updates.imagesTitle" : {
+
+    },
+    "updates.imageUpdateAvailable" : {
+
+    },
+    "updates.imageUpToDate" : {
+
+    },
+    "updates.localDigestUnavailable" : {
+
+    },
+    "updates.localDigestUnavailable.short" : {
+
+    },
+    "updates.noContainerImagesToCheck" : {
+
+    },
+    "updates.noContainerImageUpdatesAvailable" : {
+
+    },
+    "updates.noImageUpdatesAvailable" : {
+
+    },
+    "updates.noLocalImagesToCheck" : {
+
+    },
+    "updates.runImageUpdateCheckNow" : {
+
+    },
+    "updates.sweepAvailable" : {
+
+    },
+    "updates.sweepUpToDate" : {
+
+    },
+    "updates.unavailable" : {
+
+    },
+    "updates.updatedImage" : {
+
+    },
+    "updates.updatedItems" : {
+
+    },
+    "Use" : {
+
+    },
+    "Use an image already pulled" : {
+
+    },
+    "Use an init process" : {
+
+    },
+    "Use in a new run" : {
+
+    },
+    "Use volume %@" : {
+
+    },
+    "User" : {
+
+    },
+    "User actions, failures, and state changes are recorded." : {
+
+    },
+    "User ID" : {
+
+    },
+    "Username" : {
+
+    },
+    "Using the default icon" : {
+
+    },
+    "value" : {
+
+    },
+    "Verbose" : {
+
+    },
+    "Version %@" : {
+
+    },
+    "View Source on GitHub" : {
+
+    },
+    "violet" : {
+      "comment" : "Alias for the tint.indigo color.",
+      "isCommentAutoGenerated" : true
+    },
+    "volume" : {
+
+    },
+    "Volume" : {
+
+    },
+    "Volume actions" : {
+
+    },
+    "volume.copyDestination" : {
+
+    },
+    "volume.copySource" : {
+
+    },
+    "volume.created" : {
+
+    },
+    "volume.inventory.empty" : {
+
+    },
+    "volume.newVolume" : {
+
+    },
+    "volume.refreshVolumes" : {
+
+    },
+    "Volumes" : {
+
+    },
+    "Volumes & Networks" : {
+
+    },
+    "Waiting for output" : {
+
+    },
+    "What's New" : {
+
+    },
+    "What's New in %@" : {
+
+    },
+    "What's New in Available Update" : {
+      "comment" : "Title of a release notes view when there is no available update.",
+      "isCommentAutoGenerated" : true
+    },
+    "What’s New in This Build" : {
+
+    },
+    "When on, image groups, image rows, and containers without their own style inherit this design. Specific image, image-group, tag, and container styles remain local overrides above this default." : {
+
+    },
+    "Widget %lld" : {
+
+    },
+    "widgetInterpolation.cardinal" : {
+
+    },
+    "widgetInterpolation.catmullRom" : {
+
+    },
+    "widgetInterpolation.linear" : {
+
+    },
+    "widgetInterpolation.monotone" : {
+
+    },
+    "widgetInterpolation.stepCenter" : {
+
+    },
+    "widgetInterpolation.stepEnd" : {
+
+    },
+    "widgetInterpolation.stepStart" : {
+
+    },
+    "Widgets" : {
+
+    },
+    "Window" : {
+
+    },
+    "windowMaterial.contentBackground" : {
+
+    },
+    "windowMaterial.fullScreenUI" : {
+
+    },
+    "windowMaterial.glassClear" : {
+
+    },
+    "windowMaterial.glassRegular" : {
+
+    },
+    "windowMaterial.headerView" : {
+
+    },
+    "windowMaterial.hudWindow" : {
+
+    },
+    "windowMaterial.menu" : {
+
+    },
+    "windowMaterial.popover" : {
+
+    },
+    "windowMaterial.selection" : {
+
+    },
+    "windowMaterial.sheet" : {
+
+    },
+    "windowMaterial.sidebar" : {
+
+    },
+    "windowMaterial.titlebar" : {
+
+    },
+    "windowMaterial.toolTip" : {
+
+    },
+    "windowMaterial.underPageBackground" : {
+
+    },
+    "windowMaterial.underWindowBackground" : {
+
+    },
+    "windowMaterial.windowBackground" : {
+
+    },
+    "Working directory" : {
+
+    },
+    "Working..." : {
+
+    },
+    "Workloads" : {
+
+    },
+    "Writable namespace required" : {
+
+    },
+    "Write" : {
+
+    },
+    "Write to" : {
+
+    },
+    "yellow" : {
+
+    },
+    "You can export a backup before resetting incompatible local data, try to keep what this build can still read, or quit and install the newer build again." : {
+
+    }
   },
-  "version": "1.0"
+  "version" : "1.1"
 }

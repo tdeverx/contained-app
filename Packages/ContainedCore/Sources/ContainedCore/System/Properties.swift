@@ -24,6 +24,16 @@ struct Properties: Codable, Sendable, Hashable {
         public let url: String?
     }
 
+    public init(build: Build? = nil,
+                container: Defaults? = nil,
+                machine: Defaults? = nil,
+                kernel: Kernel? = nil) {
+        self.build = build
+        self.container = container
+        self.machine = machine
+        self.kernel = kernel
+    }
+
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         build = try c.decodeIfPresent(Build.self, forKey: .build)

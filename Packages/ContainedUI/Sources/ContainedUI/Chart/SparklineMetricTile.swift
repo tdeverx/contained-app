@@ -51,3 +51,21 @@ struct MetricTile: View {
     }
 }
 }
+
+#Preview("Chart Metric Tile") {
+    HStack(spacing: UI.Tokens.Space.m) {
+        UI.Chart.MetricTile(label: "CPU",
+                            value: "62%",
+                            systemImage: "cpu",
+                            tint: .accentColor,
+                            samples: [0.2, 0.35, 0.32, 0.62, 0.58],
+                            sparklineScale: .fraction)
+        UI.Chart.MetricTile(label: "Network",
+                            value: "186 KB/s",
+                            systemImage: "network",
+                            tint: .teal,
+                            samples: [40, 82, 70, 126, 110])
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 520)
+}

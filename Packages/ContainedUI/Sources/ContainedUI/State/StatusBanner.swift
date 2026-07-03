@@ -18,3 +18,8 @@ struct Banner: View {
     }
 }
 }
+
+#Preview("Status Banner") {
+    UI.State.Banner("Image pull completed")
+        .padding(UI.Tokens.Space.xl)
+}

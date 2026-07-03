@@ -29,3 +29,13 @@ struct Content<ContentView: View>: View {
     }
 }
 }
+
+#Preview("Content Surface") {
+    UI.Surface.Content(elevated: true, minHeight: 140) {
+        UI.State.Empty("No results",
+                       systemImage: "magnifyingglass",
+                       description: "Try another search term.")
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 420)
+}

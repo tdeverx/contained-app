@@ -486,12 +486,13 @@ struct Text: View {
     }
 
     public var body: some View {
-        SwiftUI.Text(text)
-            .font(font)
-            .foregroundStyle(foreground)
-            .padding(.horizontal, UI.Tokens.Space.s)
-            .padding(.vertical, UI.Tokens.Badge.verticalPadding)
-            .background(.quaternary, in: Capsule())
+        SharedCapsuleLabel(horizontalPadding: UI.Tokens.Space.s,
+                           verticalPadding: UI.Tokens.Badge.verticalPadding,
+                           foreground: AnyShapeStyle(foreground),
+                           fill: AnyShapeStyle(.quaternary)) {
+            SwiftUI.Text(text)
+                .font(font)
+        }
     }
 }
 }
@@ -521,29 +522,20 @@ struct Row<Accessory: View>: View {
     }
 
     public var body: some View {
-        HStack(spacing: UI.Tokens.Space.s) {
-            Image(systemName: symbol)
-                .font(.callout)
-                .foregroundStyle(tint)
-                .frame(width: UI.Tokens.IconSize.rowMenu)
-            VStack(alignment: .leading, spacing: UI.Tokens.Card.compactTextSpacing) {
-                Text(title)
-                    .font(.callout.weight(.medium))
-                    .lineLimit(1)
-                if let subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(monospacedSubtitle ? .system(.caption, design: .monospaced) : .caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: UI.Tokens.Space.s)
+        SharedIconTextRow(systemImage: symbol,
+                          tint: tint,
+                          iconWidth: UI.Tokens.IconSize.rowMenu,
+                          rowSpacing: UI.Tokens.Space.s,
+                          subtitle: subtitle,
+                          subtitleMonospaced: monospacedSubtitle,
+                          horizontalPadding: UI.Tokens.Space.m,
+                          fillsWidth: true) {
+            Text(title)
+                .font(.callout.weight(.medium))
+                .lineLimit(1)
+        } accessory: {
             accessory()
         }
-        .padding(.horizontal, UI.Tokens.Space.m)
-        .padding(.vertical, UI.Tokens.Space.s)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
         .materialSurface(.ultraThin, cornerRadius: UI.Tokens.Radius.control)
     }
 }
@@ -614,4 +606,59 @@ public extension View {
             }
         }
     }
+}
+
+#Preview("Card Chrome") {
+    VStack(alignment: .leading, spacing: UI.Tokens.Space.l) {
+        CardHeader {
+            UI.Card.IconChip(symbol: "shippingbox.fill", tint: .accentColor)
+        } content: {
+            CardHeaderTextBlock {
+                UI.Card.TitleText(text: "preview-web")
+            } subtitle: {
+                UI.Card.MonospacedSubtitleText(text: "sha256:preview")
+            }
+        } trailing: {
+            UI.Card.CardPageControls(items: [
+                UI.Card.Page(id: "overview", title: "Overview", systemImage: "rectangle.grid.1x2"),
+                UI.Card.Page(id: "logs", title: "Logs", systemImage: "doc.text"),
+            ],
+            selection: "overview",
+            tint: .accentColor,
+            closeLabel: "Close",
+            onSelect: { _ in },
+            onClose: {})
+        }
+        .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card)
+
+        UI.Card.InsetSection(title: "Metadata") {
+            UI.List.Row(symbol: "network",
+                        tint: .teal,
+                        title: "bridge",
+                        subtitle: "10.42.0.0/24")
+        }
+
+        UI.Card.CardFooter {
+            UI.Card.FooterChip(isSelected: true, tint: .accentColor, help: "CPU", action: {}) {
+                Image(systemName: "cpu")
+            } text: {
+                UI.Card.MetricText(text: "42%")
+            }
+        } trailing: {
+            UI.Card.FooterButton(systemName: "stop.fill", help: "Stop", tint: .red) {}
+        } widget: {
+            UI.Card.WidgetGroup {
+                UI.Card.FooterMini {
+                    Image(systemName: "memorychip")
+                } text: {
+                    UI.Card.MetricText(text: "420 MB")
+                }
+            }
+            .padding(.horizontal, UI.Tokens.Card.padding)
+        }
+        .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card)
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 520)
+    .environment(\.buttonMaterial, .glassClear)
 }

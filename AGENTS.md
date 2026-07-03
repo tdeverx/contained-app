@@ -8,8 +8,8 @@ This file is the working contract for coding agents in this repository. Follow i
 - Local reusable packages live under `Packages/` and are consumed by the root SwiftPM package and the native Xcode app target.
 - `Contained.xcworkspace` is the Xcode entry point. `Contained.xcodeproj` contains a native macOS app target that links the `ContainedApp` package product and builds/runs `Contained.app` directly from Xcode.
 - SwiftPM remains the CI, release, packaging, signing, notarization, and appcast source of truth. Keep `Package.swift`, `swift build`, `swift test`, and `scripts/bundle.sh` working.
-- `Packages/ContainedCore/Sources/ContainedCore` is the single backend/orchestration package. It owns pure models, runtime descriptors/capabilities, command execution, Compose import/export semantics, Apple `container` adapter internals, metrics, import/export planning, and typed display-neutral package errors. Keep SwiftUI, app state, Sparkle, SwiftTerm, localization resources, and persistence out of it.
-- `ContainedCore` exposes app-facing backend APIs through `Core.*` namespaces. `Core.Orchestrator` is the only backend object the app should own. Runtime adapters live inside Core under adapter folders so future Docker-compatible, Podman, Lima-backed, remote, or other engines can plug in without becoming app switches.
+- `Packages/ContainedCore/Sources/ContainedCore` is the single backend/orchestration package. It owns pure models, runtime descriptors/capabilities, command execution, Compose import/export semantics, Apple `container` adapter internals, metrics, import/export planning, display-neutral semantic localization, and typed display-neutral package errors. Keep SwiftUI, app state, Sparkle, SwiftTerm, product UI localization, and persistence out of it.
+- `ContainedCore` exposes app-facing backend APIs through `Core.*` namespaces. `Core.Orchestrator` is the only backend object the app should own. Runtime adapters live inside Core under adapter folders so Docker, Podman, Lima-backed, remote, or other runtimes can plug in without becoming app switches.
 - `Sources/ContainedApp` is the app implementation: SwiftUI screens, app-specific presentation mappings, navigation, stores, history, settings, localization, and update support.
 - `Sources/Contained` is only the tiny SwiftPM executable launcher.
 - `Packages/ContainedUI` is the reusable SwiftUI/AppKit design-system package. Keep app state, stores, Sparkle, SwiftData, persistence, and feature routing out of it.
@@ -65,11 +65,14 @@ This file is the working contract for coding agents in this repository. Follow i
 
 - Keep Apple `container` CLI actions behind `ContainedCore` adapter internals and Core command-preview routes; do not assemble argv inline in SwiftUI. App stores should call `Core.Orchestrator`, not adapter clients or runtime protocols.
 - Put pure decision logic and backend orchestration in `ContainedCore` with focused tests.
-- Keep localization owned by `Sources/ContainedApp`. Packages should receive
-  app-supplied labels/help/accessibility strings and should not add English UI
-  defaults or localized resource bundles. Use `AppText` for reusable app copy
-  and dynamic templates; plain SwiftUI literals are acceptable when SwiftUI keeps
-  them localization-ready.
+- Keep product-facing localization owned by `Sources/ContainedApp`. `ContainedUI`
+  and `ContainedUX` should receive app-supplied labels/help/accessibility strings
+  and should not add English UI defaults or localized resource bundles. Use
+  `AppText` for reusable app copy and dynamic templates; plain SwiftUI literals
+  are acceptable when SwiftUI keeps them localization-ready. `ContainedCore` may
+  own display-neutral semantic localization for schema labels/help, validation
+  messages, runtime capability reasons, Compose/projection warnings, and typed
+  package-error fallback descriptions.
 - Keep package errors display-neutral. Reusable targets should throw typed errors
   with stable codes/context, preferably `Core.Error.PackageError`, while
   `Sources/ContainedApp` maps them through `AppErrorPresentation`/`AppText` before

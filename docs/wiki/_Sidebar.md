@@ -19,7 +19,7 @@
   - [Command Palette](Features/Command-Palette.md)
 - Architecture
   - [Overview](Architecture/Overview.md)
-  - [Runtime Adapters](Architecture/Runtime-Adapters.md)
+  - [Runtime Orchestration](Architecture/Runtime-Orchestration.md)
   - [UI And UX](Architecture/UI-UX.md)
 - Development
   - [Contributing](Development/Contributing.md)

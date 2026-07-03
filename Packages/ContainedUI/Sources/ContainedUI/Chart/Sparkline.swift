@@ -363,3 +363,22 @@ struct SampleBuffer: Sendable, Equatable {
     }
 }
 }
+
+#Preview("Sparkline Styles") {
+    VStack(spacing: UI.Tokens.Space.l) {
+        UI.Chart.Sparkline(samples: [0.1, 0.22, 0.18, 0.44, 0.36, 0.72],
+                           color: .accentColor,
+                           style: .area,
+                           scale: .fraction)
+        UI.Chart.Sparkline(samples: [4, 8, 6, 12, 10, 15],
+                           color: .teal,
+                           style: .line)
+        UI.Chart.Sparkline(samples: [0.2, 0.5, 0.35, 0.78, 0.58],
+                           comparisonSamples: [0.12, 0.25, 0.42, 0.4, 0.62],
+                           color: .orange,
+                           style: .multiLine,
+                           scale: .fraction)
+    }
+    .frame(width: 360, height: 180)
+    .padding(UI.Tokens.Space.xl)
+}

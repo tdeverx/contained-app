@@ -19,11 +19,21 @@ struct BootstrapView: View {
     private var actions: some View {
         switch app.bootstrap {
         case .serviceStopped:
-            UI.Action.TextButton(title: starting ? AppText.string("bootstrap.starting", defaultValue: "Starting...") : AppText.string("bootstrap.startService", defaultValue: "Start container service"),
-                                   systemName: "play.circle",
-                                   prominence: .prominent,
-                                   isEnabled: !starting) {
-                Task { starting = true; await app.startService(); starting = false }
+            if app.appleRuntimeAvailable {
+                UI.Action.TextButton(title: starting ? AppText.string("bootstrap.starting", defaultValue: "Starting...") : AppText.string("bootstrap.startService", defaultValue: "Start container service"),
+                                       systemName: "play.circle",
+                                       prominence: .prominent,
+                                       isEnabled: !starting) {
+                    Task { starting = true; await app.startService(); starting = false }
+                }
+            } else {
+                HStack(spacing: UI.Layout.Spacing.m) {
+                    UI.Action.TextButton(title: AppText.string("common.tryAgain", defaultValue: "Try again"),
+                                           systemName: "arrow.clockwise",
+                                           prominence: .prominent) {
+                        Task { await app.retryBootstrap() }
+                    }
+                }
             }
         case .cliMissing:
             HStack(spacing: UI.Layout.Spacing.m) {
@@ -86,7 +96,10 @@ struct BootstrapView: View {
         switch app.bootstrap {
         case .cliMissing: return "Container CLI not found"
         case .unsupported(let v): return "Unsupported version (\(v))"
-        case .serviceStopped: return "Container service is stopped"
+        case .serviceStopped:
+            return app.appleRuntimeAvailable
+                ? "Container service is stopped"
+                : "Docker endpoint is unavailable"
         case .checking: return "Connecting…"
         case .ready: return "Ready"
         }
@@ -98,7 +111,9 @@ struct BootstrapView: View {
         case .unsupported:
             return "Contained targets container 1.0.x. Some features may not work with this version."
         case .serviceStopped:
-            return "Start the service to manage containers, images, and more."
+            return app.appleRuntimeAvailable
+                ? "Start the service to manage containers, images, and more."
+                : "Start Docker externally, then retry the connection."
         case .checking:
             return "Talking to the container service."
         case .ready:

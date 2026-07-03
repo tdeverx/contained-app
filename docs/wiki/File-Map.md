@@ -21,7 +21,7 @@ the separate GitHub wiki repository.
 | `docs/features/Compose-Import.md` | `Features/Compose-Import.md` | Compose Import |
 | `docs/features/Command-Palette.md` | `Features/Command-Palette.md` | Command Palette |
 | `docs/architecture/Architecture.md` | `Architecture/Overview.md` | Architecture |
-| `docs/architecture/Runtime-Adapters.md` | `Architecture/Runtime-Adapters.md` | Runtime Adapters |
+| `docs/architecture/Runtime-Adapters.md` | `Architecture/Runtime-Orchestration.md` | Runtime Orchestration |
 | `docs/architecture/Design-System.md` | `Architecture/UI-UX.md` | UI And UX |
 | `docs/development/Contributing.md` | `Development/Contributing.md` | Contributing |
 | `docs/development/Issues-and-Discussions.md` | `Development/Issues-and-Discussions.md` | Issues And Discussions |

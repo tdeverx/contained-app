@@ -47,34 +47,31 @@ public extension UI.Control {
         }
 
         private var automaticSwatch: some View {
-            ZStack {
-                Circle().fill(Color.secondary.opacity(0.18)).frame(width: 22, height: 22)
-                Image(systemName: "rectangle.on.rectangle")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Circle()
-                    .strokeBorder(selection.wrappedValue == nil ? Color.primary : Color.secondary.opacity(0.35),
-                                  lineWidth: selection.wrappedValue == nil ? 2 : 1)
-                    .frame(width: 24, height: 24)
-            }
-            .frame(width: 26, height: 26)
+            SharedTintSwatchMark(color: Color.secondary.opacity(0.18),
+                                 markerSystemName: "rectangle.on.rectangle",
+                                 markerForeground: .secondary,
+                                 selected: selection.wrappedValue == nil)
         }
 
         private func swatch(_ tint: UI.Theme.Tint) -> some View {
-            ZStack {
-                Circle().fill(tint.color).frame(width: 22, height: 22)
-                // Mark the "follow the host accent" option so it reads as automatic, not a fixed color.
-                if tint.followsAccent {
-                    Image(systemName: "link")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white)
-                }
-                Circle()
-                    .strokeBorder(selection.wrappedValue == tint ? Color.primary : Color.secondary.opacity(0.35),
-                                  lineWidth: selection.wrappedValue == tint ? 2 : 1)
-                    .frame(width: 24, height: 24)
-            }
-            .frame(width: 26, height: 26)
+            SharedTintSwatchMark(color: tint.color,
+                                 markerSystemName: tint.followsAccent ? "link" : nil,
+                                 selected: selection.wrappedValue == tint)
         }
+    }
+}
+
+#Preview("Tint Selector") {
+    TintSelectorPreview()
+        .padding(UI.Tokens.Space.xl)
+}
+
+private struct TintSelectorPreview: View {
+    @State private var tint: UI.Theme.Tint? = .azure
+
+    var body: some View {
+        UI.Control.TintSelector(optionalSelection: $tint,
+                                automaticLabel: "Automatic",
+                                labelForTint: { $0.rawValue.capitalized })
     }
 }

@@ -85,11 +85,14 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Directory names are intentional.** SwiftPM folders stay `Sources` and `Tests`, Swift source domains use PascalCase, and repository infrastructure uses lowercase names such as `docs` and `scripts`. Put helper scripts in `scripts/` and use hyphenated names for multi-word shell scripts.
 - **Reusable packages live under `Packages/`.** Keep app-agnostic design primitives, tokens, spacing, material, opacity, and micro-chrome in `ContainedUI`; keep app state, stores, Sparkle, SwiftData, persistence, and feature routing in `Sources/ContainedApp`.
 - **Fixtures are Core-owned and non-shipping.** `ContainedCoreFixtures` exposes deterministic semantic samples under `Core.Fixtures.*` for tests, previews, and sandbox-only targets. Normal app targets and distributable bundles must not depend on it.
-- **The app owns localization.** Reusable packages should not introduce
-  user-facing English defaults or localized resource bundles. If a package
-  component needs text, add an explicit parameter and pass app-owned strings
-  from `Sources/ContainedApp`; reusable enum labels and dynamic templates should
-  flow through `AppText` with English fallbacks.
+- **The app owns product localization.** `ContainedUI` and `ContainedUX` should
+  not introduce user-facing English defaults or localized resource bundles. If a
+  visual component needs text, add an explicit parameter and pass app-owned
+  strings from `Sources/ContainedApp`; reusable enum labels and dynamic
+  templates should flow through `AppText` with English fallbacks. `ContainedCore`
+  may own display-neutral semantic localization for schema labels/help,
+  validation messages, runtime capability reasons, projection warnings, and
+  typed package-error fallback descriptions.
 - **The app owns package error presentation.** Reusable targets should throw
   typed errors with stable codes/context, preferably `Core.Error.PackageError`.
   Map those failures through `AppErrorPresentation`/`AppText` in
@@ -99,10 +102,10 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Package docs live with the package.** Keep package-local import/setup/examples in each `Packages/<PackageName>/README.md`, with DocC landing pages under each target's `.docc` catalog. Keep app-level architecture and workflow guidance under `docs/`.
 - **The wiki map lives in the repo.** GitHub's wiki is a separate repository. Keep maintained docs in `docs/` and package directories, then update `docs/wiki/File-Map.md` and `docs/wiki/_Sidebar.md` when a doc should appear in the wiki.
 - **Xcode opens the workspace.** `Contained.xcworkspace` points at the native `Contained.xcodeproj` and local package manifests. The Xcode target links the root package's `ContainedApp` product and builds/runs a real `Contained.app`; SwiftPM remains the release, CI, bundle, signing, notarization, and appcast source of truth.
-- **Use Xcode for functional SwiftUI loops.** The shared `Contained` scheme builds/runs the app and runs `ContainedAppTests`; `ContainedAppTests` is the focused app-test scheme; package schemes come from the package manifests; `ContainedPreviews` is reserved for preview-oriented development.
+- **Use Xcode for functional SwiftUI loops.** The shared `Contained` scheme builds/runs the app and runs `ContainedAppTests`; `ContainedAppTests` is the focused app-test scheme; package schemes come from the package manifests. Package previews are colocated with the design-system element or UX primitive they exercise; do not add separate preview-only source folders.
 - **Navigation infrastructure belongs in `ContainedUX` only when it is generic.** App sections, pending actions, concrete toolbar panels, and `UIState` stay in `Sources/ContainedApp` until they can cross the boundary without app policy.
 - **Every backend action goes through `ContainedCore`.** Apple `container` argv builders and adapter clients are Core internals with golden tests. The UI never assembles argv inline; app stores call `Core.Orchestrator`.
-- **Runtime-facing code should use `Core.*` namespaces.** The Apple `container` implementation is the only enabled adapter today. Future Docker-compatible, Podman, Lima-backed, remote, or other runtimes should be sibling adapter folders inside Core and advertise capability differences through `Core.Runtime.Descriptor`. Run/edit/import flows should translate through `Core.Schema.Document` and carry `Core.Runtime.Kind` per container, not as a global app setting.
+- **Runtime-facing code should use `Core.*` namespaces.** Apple `container` and Docker are sibling adapter folders inside Core; future Podman, Lima-backed, remote, or other runtimes should follow the same shape and advertise capability differences through `Core.Runtime.Descriptor`. Run/edit/import flows should translate through `Core.Schema.Document` and carry `Core.Runtime.Kind` per resource/action, not as a global app setting.
 - **Pure decision logic is factored into `ContainedCore`** (`Core.Container.RestartDecision`, `Core.Container.HealthDecision`, compose ordering, runtime translation) and unit-tested without spawning processes.
 - **No `contained.*` personalization labels.** Card styles and healthchecks live in local stores. Only `contained.restart` and `contained.stack` are written (they must round-trip through the container).
 - **Never put secrets or personal data in test fixtures.** Fixtures are captured CLI output — scrub tokens, domains, and paths before committing. (`.gitignore` blocks signing material; push protection is on.)

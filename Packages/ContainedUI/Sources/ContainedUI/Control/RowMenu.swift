@@ -35,3 +35,11 @@ struct RowMenu<Content: View>: View {
     }
 }
 }
+
+#Preview("Row Menu") {
+    UI.Control.RowMenu(accessibilityLabel: "More actions") {
+        Button("Inspect") {}
+        Button("Remove", role: .destructive) {}
+    }
+    .padding(UI.Tokens.Space.xl)
+}

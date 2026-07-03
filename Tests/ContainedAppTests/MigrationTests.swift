@@ -26,9 +26,6 @@ struct MigrationTests {
     }
 
     @Test func newerSchemaRequiresDowngradeChoice() {
-        let defaults = UserDefaults(suiteName: "ContainedMigrationTests-\(UUID().uuidString)")!
-        defaults.set(StateMigrator.currentSchemaVersion + 1, forKey: StateMigrator.schemaVersionKey)
-
-        #expect(StateMigrator().reconcile(defaults: defaults) == .newerOnDisk(StateMigrator.currentSchemaVersion + 1))
+        #expect(StateMigrator().reconcile(storedVersion: StateMigrator.currentSchemaVersion + 1) == .newerOnDisk(StateMigrator.currentSchemaVersion + 1))
     }
 }

@@ -10,25 +10,44 @@ public extension Core.Command {
                              dockerfile: String? = nil,
                              buildArgs: [String: String] = [:],
                              noCache: Bool = false,
-                             platform: String? = nil) -> [String] {
-        ContainerCommands.build(context: context,
-                                tag: tag,
-                                dockerfile: dockerfile,
-                                buildArgs: buildArgs,
-                                noCache: noCache,
-                                platform: platform)
+                             platform: String? = nil,
+                             runtimeKind: Core.Runtime.Kind = .appleContainer) -> [String] {
+        if runtimeKind == .docker {
+            return DockerCommands.build(context: context,
+                                        tag: tag,
+                                        dockerfile: dockerfile,
+                                        buildArgs: buildArgs,
+                                        noCache: noCache,
+                                        platform: platform)
+        }
+        return ContainerCommands.build(context: context,
+                                       tag: tag,
+                                       dockerfile: dockerfile,
+                                       buildArgs: buildArgs,
+                                       noCache: noCache,
+                                       platform: platform)
     }
 
     static func networkCreatePreview(name: String,
                                      subnet: String? = nil,
-                                     internalOnly: Bool = false) -> [String] {
-        ContainerCommands.networkCreate(name: name,
-                                        subnet: subnet,
-                                        internalOnly: internalOnly)
+                                     internalOnly: Bool = false,
+                                     runtimeKind: Core.Runtime.Kind = .appleContainer) -> [String] {
+        if runtimeKind == .docker {
+            return DockerCommands.networkCreate(name: name,
+                                                subnet: subnet,
+                                                internalOnly: internalOnly)
+        }
+        return ContainerCommands.networkCreate(name: name,
+                                               subnet: subnet,
+                                               internalOnly: internalOnly)
     }
 
     static func volumeCreatePreview(name: String,
-                                    size: String? = nil) -> [String] {
-        ContainerCommands.volumeCreate(name: name, size: size)
+                                    size: String? = nil,
+                                    runtimeKind: Core.Runtime.Kind = .appleContainer) -> [String] {
+        if runtimeKind == .docker {
+            return DockerCommands.volumeCreate(name: name, size: size)
+        }
+        return ContainerCommands.volumeCreate(name: name, size: size)
     }
 }

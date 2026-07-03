@@ -36,3 +36,12 @@ struct MetricTile: View {
     }
 }
 }
+
+#Preview("Control Metric Tile") {
+    HStack(spacing: UI.Tokens.Space.m) {
+        UI.Control.MetricTile(label: "CPU", value: "42", caption: "%")
+        UI.Control.MetricTile(label: "Memory", value: "420", caption: "MB")
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 420)
+}

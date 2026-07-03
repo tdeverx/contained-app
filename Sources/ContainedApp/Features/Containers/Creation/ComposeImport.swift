@@ -19,12 +19,18 @@ enum ComposeImport {
     }
 
     /// Parse a compose file and feed its services into the prefill queue (also used by drag-and-drop).
-    static func importFile(at url: URL, app: AppModel, ui: UIState) {
+    static func importFile(at url: URL,
+                           runtimeKind: Core.Runtime.Kind? = nil,
+                           app: AppModel,
+                           ui: UIState) {
         do {
             let text = try String(contentsOf: url, encoding: .utf8)
             let projectName = url.deletingLastPathComponent().lastPathComponent
             importText(text, projectName: projectName.isEmpty ? "stack" : projectName,
-                       baseDirectory: url.deletingLastPathComponent(), app: app, ui: ui)
+                       baseDirectory: url.deletingLastPathComponent(),
+                       runtimeKind: runtimeKind,
+                       app: app,
+                       ui: ui)
         } catch {
             app.flash(error.appDisplayMessage)
         }
@@ -32,7 +38,10 @@ enum ComposeImport {
 
     /// Parse pasted compose text and feed its services into the prefill queue.
     static func importText(_ text: String, projectName: String = "pasted",
-                           baseDirectory: URL? = nil, app: AppModel, ui: UIState) {
+                           baseDirectory: URL? = nil,
+                           runtimeKind: Core.Runtime.Kind? = nil,
+                           app: AppModel,
+                           ui: UIState) {
         do {
             let parsed = try Core.Compose.parse(text, projectName: projectName)
             guard let client = app.client else {
@@ -42,7 +51,31 @@ enum ComposeImport {
                                   severity: .warning)
                 return
             }
-            let plan = try client.translateCompose(parsed, baseDirectory: baseDirectory)
+            let selectedRuntime: Core.Runtime.Kind
+            if let runtimeKind {
+                selectedRuntime = runtimeKind
+            } else {
+                let runtimes = app.availableRuntimeDescriptors.filter { $0.supports(.composeImport) }
+                guard let first = runtimes.first else {
+                    app.flash(AppText.containerRuntimeNotReady)
+                    return
+                }
+                guard runtimes.count > 1 else {
+                    return importText(text,
+                                      projectName: projectName,
+                                      baseDirectory: baseDirectory,
+                                      runtimeKind: first.kind,
+                                      app: app,
+                                      ui: ui)
+                }
+                ui.runtimeSelectionRequest = .composeText(text: text,
+                                                          projectName: projectName,
+                                                          baseDirectory: baseDirectory)
+                return
+            }
+            let plan = try client.translateCompose(parsed,
+                                                   baseDirectory: baseDirectory,
+                                                   runtimeKind: selectedRuntime)
             let specs = plan.items.map { ContainerFormState(document: $0.document, healthCheck: $0.healthCheck) }
             guard !specs.isEmpty else {
                 app.flash(AppText.composeNoServicesWithImages)
@@ -68,4 +101,5 @@ enum ComposeImport {
                                      severity: .error)
         }
     }
+
 }

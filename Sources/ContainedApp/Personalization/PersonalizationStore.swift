@@ -11,7 +11,7 @@ final class PersonalizationStore {
     private var imageDefaults: [String: Personalization]   // keyed by image reference
     private var volumeStyles: [String: Personalization]    // keyed by volume name
     private(set) var defaultImageStyle: Personalization
-    private let defaults: UserDefaults
+    private let database: AppDatabase
     private enum Keys {
         static let overrides = "personalizationOverrides"
         static let imageDefaults = "personalizationImageDefaults"
@@ -19,12 +19,12 @@ final class PersonalizationStore {
         static let defaultImageStyle = "personalizationDefaultImageStyle"
     }
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        overrides = Self.load(defaults, Keys.overrides)
-        imageDefaults = Self.load(defaults, Keys.imageDefaults)
-        volumeStyles = Self.load(defaults, Keys.volumeStyles)
-        defaultImageStyle = Self.loadStyle(defaults, Keys.defaultImageStyle) ?? Personalization()
+    init(database: AppDatabase = AppDatabase()) {
+        self.database = database
+        overrides = Self.load(database, Keys.overrides)
+        imageDefaults = Self.load(database, Keys.imageDefaults)
+        volumeStyles = Self.load(database, Keys.volumeStyles)
+        defaultImageStyle = Self.loadStyle(database, Keys.defaultImageStyle) ?? Personalization()
     }
 
     func backupSnapshot() -> PersonalizationBackup {
@@ -48,7 +48,7 @@ final class PersonalizationStore {
         persist(Keys.overrides, overrides)
         persist(Keys.imageDefaults, imageDefaults)
         persist(Keys.volumeStyles, volumeStyles)
-        Self.persist(defaults, Keys.defaultImageStyle, defaultImageStyle)
+        Self.persist(database, Keys.defaultImageStyle, defaultImageStyle)
     }
 
     func purgeOrphans(liveContainerIDs: Set<String>, liveImageRefs: Set<String>) -> Int {
@@ -63,9 +63,16 @@ final class PersonalizationStore {
         return before - (overrides.count + imageDefaults.count + volumeStyles.count)
     }
 
-    private static func load(_ defaults: UserDefaults, _ key: String) -> [String: Personalization] {
-        guard let data = defaults.data(forKey: key),
-              let decoded = try? JSONDecoder().decode([String: Personalization].self, from: data) else { return [:] }
+    private static func load(_ database: AppDatabase, _ scope: String) -> [String: Personalization] {
+        let decoded = Dictionary(uniqueKeysWithValues: database.fetch(PersonalizationRecord.self)
+            .filter { $0.scopeRaw == scope }
+            .compactMap { record -> (String, Personalization)? in
+                do {
+                    return (record.key, try JSONDecoder().decode(Personalization.self, from: record.valueData))
+                } catch {
+                    fatalError("Unable to decode personalization \(scope)/\(record.key): \(error)")
+                }
+            })
         var migrated: [String: Personalization] = [:]
         var changed = false
         for (entryKey, entryValue) in decoded {
@@ -78,7 +85,7 @@ final class PersonalizationStore {
             }
         }
         if changed {
-            persist(defaults, key, migrated)
+            persist(database, scope, migrated)
         }
         return migrated
     }
@@ -160,7 +167,7 @@ final class PersonalizationStore {
 
     func setDefaultImageStyle(_ personalization: Personalization) {
         defaultImageStyle = personalization.normalizedForPersistence()
-        Self.persist(defaults, Keys.defaultImageStyle, defaultImageStyle)
+        Self.persist(database, Keys.defaultImageStyle, defaultImageStyle)
     }
 
     // MARK: Volume styles
@@ -181,24 +188,59 @@ final class PersonalizationStore {
         persist(Keys.volumeStyles, volumeStyles)
     }
 
-    private static func persist(_ defaults: UserDefaults, _ key: String, _ value: [String: Personalization]) {
-        if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
+    private static func persist(_ database: AppDatabase, _ scope: String, _ values: [String: Personalization]) {
+        let wanted = Set(values.keys)
+        for record in database.fetch(PersonalizationRecord.self) where record.scopeRaw == scope && !wanted.contains(record.key) {
+            database.context.delete(record)
+        }
+        for (key, value) in values {
+            let data: Data
+            do {
+                data = try JSONEncoder().encode(value.normalizedForPersistence())
+            } catch {
+                fatalError("Unable to encode personalization \(scope)/\(key): \(error)")
+            }
+            if let record = database.fetch(PersonalizationRecord.self).first(where: { $0.scopeRaw == scope && $0.key == key }) {
+                record.valueData = data
+                record.updatedAt = Date()
+            } else {
+                database.context.insert(PersonalizationRecord(key: key, scopeRaw: scope, valueData: data))
+            }
+        }
+        database.save()
     }
 
-    private static func loadStyle(_ defaults: UserDefaults, _ key: String) -> Personalization? {
-        guard let data = defaults.data(forKey: key),
-              let decoded = try? JSONDecoder().decode(Personalization.self, from: data) else { return nil }
+    private static func loadStyle(_ database: AppDatabase, _ key: String) -> Personalization? {
+        guard let record = database.fetch(PersonalizationRecord.self).first(where: { $0.scopeRaw == key && $0.key == "default" }) else { return nil }
+        let decoded: Personalization
+        do {
+            decoded = try JSONDecoder().decode(Personalization.self, from: record.valueData)
+        } catch {
+            fatalError("Unable to decode personalization \(key)/default: \(error)")
+        }
         let normalized = decoded.normalizedForPersistence()
-        if normalized != decoded { persist(defaults, key, normalized) }
+        if normalized != decoded { persist(database, key, normalized) }
         return normalized
     }
 
-    private static func persist(_ defaults: UserDefaults, _ key: String, _ value: Personalization) {
-        if let data = try? JSONEncoder().encode(value.normalizedForPersistence()) { defaults.set(data, forKey: key) }
+    private static func persist(_ database: AppDatabase, _ scope: String, _ value: Personalization) {
+        let data: Data
+        do {
+            data = try JSONEncoder().encode(value.normalizedForPersistence())
+        } catch {
+            fatalError("Unable to encode personalization \(scope)/default: \(error)")
+        }
+        if let record = database.fetch(PersonalizationRecord.self).first(where: { $0.scopeRaw == scope && $0.key == "default" }) {
+            record.valueData = data
+            record.updatedAt = Date()
+        } else {
+            database.context.insert(PersonalizationRecord(key: "default", scopeRaw: scope, valueData: data))
+        }
+        database.save()
     }
 
     private func persist(_ key: String, _ value: [String: Personalization]) {
-        if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
+        Self.persist(database, key, value)
     }
 }
 

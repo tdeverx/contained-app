@@ -39,3 +39,12 @@ struct KeyboardHint: View {
     }
 }
 }
+
+#Preview("Keyboard Hints") {
+    HStack(spacing: UI.Tokens.Space.l) {
+        UI.Control.KeyCap("⌘K")
+        UI.Control.KeyboardHint("↩", "Open")
+        UI.Control.KeyboardHint("esc", "Close")
+    }
+    .padding(UI.Tokens.Space.xl)
+}

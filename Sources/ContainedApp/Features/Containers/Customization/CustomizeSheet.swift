@@ -19,7 +19,7 @@ struct CustomizeSheet: View {
 
         var id: String {
             switch self {
-            case .container(let snapshot): return "container:\(snapshot.id)"
+            case .container(let snapshot): return "container:\(snapshot.scopedID)"
             case .image(let reference): return "image:\(reference)"
             case .imageGroup(let id, _): return "image-group:\(id)"
             case .imageTag(let reference, let groupID): return "image-tag:\(groupID ?? "none"):\(reference)"
@@ -331,7 +331,7 @@ struct CustomizeSheet: View {
         case .imageGroup(let id, _):
             return app.personalization.imageGroupDefault(for: id) != nil
         case .container(let snapshot):
-            return app.personalization.hasOverride(id: snapshot.id)
+            return app.personalization.hasOverride(id: snapshot.scopedID)
         case .volume(let name):
             return app.personalization.volumeStyle(for: name) != nil
         }
@@ -356,7 +356,7 @@ struct CustomizeSheet: View {
         switch target {
         case .container(let snapshot):
             style = app.containerStyle(for: snapshot)
-            overridesInheritedStyle = app.personalization.hasOverride(id: snapshot.id)
+            overridesInheritedStyle = app.personalization.hasOverride(id: snapshot.scopedID)
         case .image(let reference):
             let own = app.personalization.imageDefault(for: reference)
             overridesInheritedStyle = own != nil
@@ -399,9 +399,9 @@ struct CustomizeSheet: View {
             }
         case .container(let snapshot):
             if overridesInheritedStyle {
-                app.personalization.setOverride(style, for: snapshot.id)
+                app.personalization.setOverride(style, for: snapshot.scopedID)
             } else {
-                app.personalization.clearOverride(id: snapshot.id)
+                app.personalization.clearOverride(id: snapshot.scopedID)
             }
         case .volume(let name):
             app.personalization.setVolumeStyle(style, for: name)
@@ -416,7 +416,7 @@ struct CustomizeSheet: View {
         case .imageGroup(let id, _):
             app.personalization.clearImageGroupDefault(for: id)
         case .container(let snapshot):
-            app.personalization.clearOverride(id: snapshot.id)
+            app.personalization.clearOverride(id: snapshot.scopedID)
         case .volume(let name):
             app.personalization.clearVolumeStyle(for: name)
         }
@@ -426,7 +426,7 @@ struct CustomizeSheet: View {
     private func applyToImage() {
         guard case .container(let snapshot) = target else { return }
         app.personalization.setImageDefault(style, for: snapshot.image)
-        app.personalization.clearOverride(id: snapshot.id)
+        app.personalization.clearOverride(id: snapshot.scopedID)
         overridesInheritedStyle = false
         dismiss()
     }
@@ -447,7 +447,7 @@ struct CustomizeSheet: View {
     private func ownStyle() -> Personalization {
         switch target {
         case .container(let snapshot):
-            return app.personalization.hasOverride(id: snapshot.id) ? app.containerStyle(for: snapshot) : inheritedStyle()
+            return app.personalization.hasOverride(id: snapshot.scopedID) ? app.containerStyle(for: snapshot) : inheritedStyle()
         case .image(let reference), .imageTag(let reference, _):
             return app.personalization.imageDefault(for: reference) ?? inheritedStyle()
         case .imageGroup(let id, _):

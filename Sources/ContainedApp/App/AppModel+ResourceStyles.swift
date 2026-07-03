@@ -37,7 +37,7 @@ extension AppModel {
 
     func containerStyle(for snapshot: Core.Container.Snapshot) -> Personalization {
         let groupID = imageGroupID(containing: snapshot.image)
-        return personalization.resolved(id: snapshot.id,
+        return personalization.resolved(id: snapshot.scopedID,
                                         image: snapshot.image,
                                         groupID: groupID,
                                         fallback: defaultImageStyle)
@@ -53,7 +53,7 @@ extension AppModel {
     /// Current block read/write rate for a volume, summed across every container mounting it.
     func volumeIORate(for name: String, metric: Core.Metrics.GraphMetric) -> Double {
         containersMounting(volume: name).reduce(0) { total, snapshot in
-            total + (containers.metricsState(for: snapshot.id).stats.map {
+            total + (containers.metricsState(for: snapshot.scopedID).stats.map {
                 metric.value(from: $0, snapshot: snapshot, normalization: statsNormalizationContext)
             } ?? 0)
         }
@@ -62,7 +62,7 @@ extension AppModel {
     /// Read/write sparkline series for a volume. Series are right-aligned so recent samples line up.
     func volumeIOHistory(for name: String, metric: Core.Metrics.GraphMetric) -> [Double] {
         let series = containersMounting(volume: name).compactMap { snapshot in
-            containers.metricsState(for: snapshot.id).historyByMetric[metric]?.values
+            containers.metricsState(for: snapshot.scopedID).historyByMetric[metric]?.values
         }
         return Self.sumRightAligned(series)
     }

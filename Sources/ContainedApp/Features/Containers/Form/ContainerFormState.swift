@@ -19,6 +19,12 @@ struct ContainerFormState: Codable {
         if let healthCheck { self.healthCheck = healthCheck }
     }
 
+    init(runtimeKind: Core.Runtime.Kind,
+         healthCheck: Core.Container.HealthCheck? = nil) {
+        self.init(document: .containerCreate(runtimeKind: runtimeKind),
+                  healthCheck: healthCheck)
+    }
+
     init(from config: Core.Container.Configuration) {
         self.document = Core.Schema.Document.containerEdit(from: config)
     }

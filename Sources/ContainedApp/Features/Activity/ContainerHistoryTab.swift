@@ -269,7 +269,13 @@ struct EventRow: View {
         }
     }
 
-    private func save() { try? modelContext.save() }
+    private func save() {
+        do {
+            try modelContext.save()
+        } catch {
+            fatalError("Failed to save activity event: \(error)")
+        }
+    }
 }
 
 extension EventKind {

@@ -8,9 +8,27 @@ import Foundation
 public extension Core.Volume {
 struct Resource: Codable, Sendable, Identifiable, Hashable {
     public let configuration: Core.Volume.Configuration
+    public let runtimeKind: Core.Runtime.Kind
     public var id: String { configuration.name }
     public var name: String { configuration.name }
     public var labels: [String: String] { configuration.labels }
+    public var scopedID: String { runtimeKind.scopedID(for: id) }
+
+    public init(configuration: Core.Volume.Configuration,
+                runtimeKind: Core.Runtime.Kind = .appleContainer) {
+        self.configuration = configuration
+        self.runtimeKind = runtimeKind
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        configuration = try c.decode(Core.Volume.Configuration.self, forKey: .configuration)
+        runtimeKind = try c.decodeIfPresent(Core.Runtime.Kind.self, forKey: .runtimeKind) ?? .appleContainer
+    }
+
+    public func scoped(to runtimeKind: Core.Runtime.Kind) -> Core.Volume.Resource {
+        Core.Volume.Resource(configuration: configuration, runtimeKind: runtimeKind)
+    }
 }
 
 struct Configuration: Codable, Sendable, Hashable {
@@ -20,6 +38,20 @@ struct Configuration: Codable, Sendable, Hashable {
     public let sizeInBytes: UInt64?
     public let creationDate: Date?
     public let labels: [String: String]
+
+    public init(name: String,
+                source: String? = nil,
+                format: String? = nil,
+                sizeInBytes: UInt64? = nil,
+                creationDate: Date? = nil,
+                labels: [String: String] = [:]) {
+        self.name = name
+        self.source = source
+        self.format = format
+        self.sizeInBytes = sizeInBytes
+        self.creationDate = creationDate
+        self.labels = labels
+    }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)

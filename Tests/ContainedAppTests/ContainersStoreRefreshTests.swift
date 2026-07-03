@@ -17,6 +17,27 @@ struct ContainersStoreRefreshTests {
         #expect(store.statsRevision == 0)
     }
 
+    @Test func dockerRefreshScopesSnapshotsAndRoutesLifecycle() async throws {
+        let runner = DockerRecordingRunner()
+        let store = ContainersStore()
+        store.client = Core.Orchestrator.testing(runner: runner,
+                                                 cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                                 runtimeKind: .docker)
+
+        await store.refresh()
+        let snapshot = try #require(store.snapshots.first)
+
+        #expect(snapshot.runtimeKind == .docker)
+        #expect(snapshot.id == "web")
+        #expect(snapshot.scopedID == "docker::web")
+
+        await store.stop("docker::web")
+        await store.start("docker::web")
+
+        #expect(await runner.contains(["container", "stop", "web"]))
+        #expect(await runner.contains(["container", "start", "web"]))
+    }
+
     @Test func streamedStatsUpdateEveryFrameWithoutAppThrottle() async {
         let runner = RecordingRunner()
         let store = ContainersStore()
@@ -397,4 +418,61 @@ private actor RecordingRunner: Core.Command.Running {
         }]
         """.utf8)
     }
+}
+
+actor DockerRecordingRunner: Core.Command.Running {
+    private var calls: [[String]] = []
+
+    func run(_ arguments: [String],
+             stdin: Data?,
+             priority: Core.Command.ExecutionPriority) async throws -> Data {
+        calls.append(arguments)
+        if arguments == ["container", "ls", "--all", "--no-trunc", "--quiet"] {
+            return Data("0123456789abcdef\n".utf8)
+        }
+        if arguments == ["container", "inspect", "0123456789abcdef"] {
+            return Self.inspectJSON
+        }
+        return Data()
+    }
+
+    nonisolated func stream(_ arguments: [String],
+                            priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in continuation.finish() }
+    }
+
+    func contains(_ arguments: [String]) -> Bool {
+        calls.contains(arguments)
+    }
+
+    private static let inspectJSON = Data("""
+    [
+      {
+        "Id": "0123456789abcdef",
+        "Name": "/web",
+        "Platform": "linux/arm64",
+        "Config": {
+          "Image": "nginx:latest",
+          "Cmd": ["nginx", "-g", "daemon off;"],
+          "Env": [],
+          "Labels": {},
+          "Tty": false
+        },
+        "State": {
+          "Status": "running",
+          "Running": true,
+          "StartedAt": "2026-07-03T09:31:00Z"
+        },
+        "HostConfig": {
+          "PortBindings": {},
+          "ReadonlyRootfs": false,
+          "Init": false
+        },
+        "NetworkSettings": {
+          "Networks": {}
+        },
+        "Mounts": []
+      }
+    ]
+    """.utf8)
 }

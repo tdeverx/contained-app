@@ -43,7 +43,7 @@ struct ToolbarSettingsPanel: View {
 struct ToolbarTemplatesPanel: View {
     @Environment(UIState.self) private var ui
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Template.createdAt, order: .reverse) private var saved: [Template]
+    @Query(sort: \RecipeRecord.createdAt, order: .reverse) private var saved: [RecipeRecord]
     var showClose = true
     var onClose: () -> Void
 
@@ -51,7 +51,7 @@ struct ToolbarTemplatesPanel: View {
         showClose || !ui.toolbarUIEnabled
     }
 
-    private var sortedTemplates: [Template] {
+    private var sortedTemplates: [RecipeRecord] {
         saved.sorted { lhs, rhs in
             switch ui.templateSort {
             case .newest:
@@ -71,7 +71,7 @@ struct ToolbarTemplatesPanel: View {
         }
     }
 
-    private var templateSections: [(title: String, templates: [Template])] {
+    private var templateSections: [(title: String, templates: [RecipeRecord])] {
         switch ui.templateGrouping {
         case .none:
             return [("", sortedTemplates)]
@@ -146,7 +146,7 @@ struct ToolbarTemplatesPanel: View {
         }
     }
 
-    private func templateCard(_ template: Template) -> some View {
+    private func templateCard(_ template: RecipeRecord) -> some View {
         UI.Card.Scaffold(size: .medium,
                      elevated: false,
                      onTap: { use(template) },
@@ -197,18 +197,22 @@ struct ToolbarTemplatesPanel: View {
         }
     }
 
-    private func use(_ template: Template) {
+    private func use(_ template: RecipeRecord) {
         guard let spec = template.spec else { return }
         onClose()
         ui.useTemplate(spec)
     }
 
-    private func delete(_ template: Template) {
+    private func delete(_ template: RecipeRecord) {
         modelContext.delete(template)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Unable to delete recipe: \(error)")
+        }
     }
 
-    private func templateImageTitle(_ template: Template) -> String {
+    private func templateImageTitle(_ template: RecipeRecord) -> String {
         let image = template.spec?.image.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return image.isEmpty ? "No image" : Format.shortImage(image)
     }

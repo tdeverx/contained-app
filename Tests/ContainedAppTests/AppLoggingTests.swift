@@ -6,8 +6,7 @@ import Testing
 @MainActor
 struct AppLoggingTests {
     @Test func defaultLoggingSettingsAreUsefulButNotNoisy() {
-        let defaults = suiteDefaults()
-        let settings = SettingsStore(defaults: defaults)
+        let settings = SettingsStore(database: AppDatabase(isStoredInMemoryOnly: true))
 
         #expect(settings.loggingLevel == .important)
         #expect(settings.enabledLogDestinations == [.activity])
@@ -19,14 +18,14 @@ struct AppLoggingTests {
     }
 
     @Test func loggingSettingsPersistRoundTrip() {
-        let defaults = suiteDefaults()
-        var settings: SettingsStore? = SettingsStore(defaults: defaults)
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        var settings: SettingsStore? = SettingsStore(database: database)
         settings?.loggingLevel = .verbose
         settings?.enabledLogDestinations = [.activity, .console]
         settings?.enabledLogCategories = [.compose, .image]
         settings = nil
 
-        let reloaded = SettingsStore(defaults: defaults)
+        let reloaded = SettingsStore(database: database)
         #expect(reloaded.loggingLevel == .verbose)
         #expect(reloaded.enabledLogDestinations == [.activity, .console])
         #expect(reloaded.enabledLogCategories == [.compose, .image])
@@ -34,14 +33,14 @@ struct AppLoggingTests {
     }
 
     @Test func statsNormalizationSettingPersistsRoundTrip() {
-        let defaults = suiteDefaults()
-        var settings: SettingsStore? = SettingsStore(defaults: defaults)
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        var settings: SettingsStore? = SettingsStore(database: database)
         #expect(settings?.statsNormalizationMode == .container)
 
         settings?.statsNormalizationMode = .machine
         settings = nil
 
-        let reloaded = SettingsStore(defaults: defaults)
+        let reloaded = SettingsStore(database: database)
         #expect(reloaded.statsNormalizationMode == .machine)
     }
 
@@ -50,12 +49,5 @@ struct AppLoggingTests {
         #expect(!AppLogLevel.errors.includes(.warning))
         #expect(!AppLogLevel.errors.includes(.info))
         #expect(!AppLogLevel.errors.includes(.debug))
-    }
-
-    private func suiteDefaults() -> UserDefaults {
-        let name = "ContainedTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: name)!
-        defaults.removePersistentDomain(forName: name)
-        return defaults
     }
 }

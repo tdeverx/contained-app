@@ -1,33 +1,33 @@
 import Foundation
 import ContainedCore
-import SwiftData
 
 /// A saved container recipe — a named `ContainerFormState`, persisted (encoded) so it can prefill the edit form
-/// later. Stored in the same SwiftData container as the history models.
-@Model
-final class Template {
-    var name: String
-    var createdAt: Date
-    var specData: Data
-
-    init(name: String, spec: ContainerFormState, createdAt: Date = Date()) {
-        self.name = name
-        self.createdAt = createdAt
-        self.specData = (try? JSONEncoder().encode(spec)) ?? Data()
+/// later. Stored as a `RecipeRecord` in the app database.
+extension RecipeRecord {
+    convenience init(name: String, spec: ContainerFormState, createdAt: Date = Date()) {
+        let data: Data
+        do {
+            data = try JSONEncoder().encode(spec)
+        } catch {
+            fatalError("Unable to encode recipe \(name): \(error)")
+        }
+        self.init(name: name,
+                  createdAt: createdAt,
+                  updatedAt: createdAt,
+                  documentData: data,
+                  sourceRaw: "template")
     }
 
-    init(snapshot: TemplateSnapshot) {
-        self.name = snapshot.name
-        self.createdAt = snapshot.createdAt
-        self.specData = (try? JSONEncoder().encode(snapshot.spec)) ?? Data()
+    convenience init(snapshot: RecipeSnapshot) {
+        self.init(name: snapshot.name, spec: snapshot.spec, createdAt: snapshot.createdAt)
     }
 
     var spec: ContainerFormState? {
         let decoder = JSONDecoder()
-        if let state = try? decoder.decode(ContainerFormState.self, from: specData) {
+        if let state = try? decoder.decode(ContainerFormState.self, from: documentData) {
             return state
         }
-        return (try? decoder.decode(LegacyContainerTemplateSpec.self, from: specData))?.formState
+        return (try? decoder.decode(LegacyContainerTemplateSpec.self, from: documentData))?.formState
     }
 }
 
@@ -243,15 +243,15 @@ private struct LegacyContainerTemplateSpec: Decodable {
     }
 }
 
-struct TemplateSnapshot: Codable {
+struct RecipeSnapshot: Codable {
     var name: String
     var createdAt: Date
     var spec: ContainerFormState
 
-    init?(_ template: Template) {
-        guard let spec = template.spec else { return nil }
-        self.name = template.name
-        self.createdAt = template.createdAt
+    init?(_ recipe: RecipeRecord) {
+        guard let spec = recipe.spec else { return nil }
+        self.name = recipe.name
+        self.createdAt = recipe.createdAt
         self.spec = spec
     }
 }

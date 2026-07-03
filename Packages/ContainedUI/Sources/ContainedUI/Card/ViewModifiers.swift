@@ -12,3 +12,21 @@ public extension View {
         }
     }
 }
+
+#Preview("Card Selection Overlay") {
+    VStack(spacing: UI.Tokens.Space.m) {
+        Text("Unselected")
+            .frame(maxWidth: .infinity)
+            .padding(UI.Tokens.Space.l)
+            .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card)
+            .designCardSelectionOverlay(when: false)
+
+        Text("Selected")
+            .frame(maxWidth: .infinity)
+            .padding(UI.Tokens.Space.l)
+            .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card)
+            .designCardSelectionOverlay(when: true)
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 320)
+}

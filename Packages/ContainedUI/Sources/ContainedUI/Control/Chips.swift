@@ -11,19 +11,19 @@ struct ScopeLabel: View {
     }
 
     public var body: some View {
-        HStack(spacing: UI.Tokens.Space.xs) {
+        SharedCapsuleLabel(horizontalPadding: UI.Tokens.Space.s,
+                           verticalPadding: UI.Tokens.Badge.scopeVerticalPadding,
+                           foreground: AnyShapeStyle(Color.accentColor),
+                           fill: AnyShapeStyle(Color.accentColor.opacity(UI.Tokens.Badge.accentOpacity))) {
+            HStack(spacing: UI.Tokens.Space.xs) {
             Image(systemName: symbol)
                 .font(.caption2)
             SwiftUI.Text(title)
                 .font(.caption.weight(.semibold))
             Image(systemName: "xmark")
                 .font(.caption2.weight(.bold))
+            }
         }
-        .padding(.horizontal, UI.Tokens.Space.s)
-        .padding(.vertical, UI.Tokens.Badge.scopeVerticalPadding)
-        .background(Color.accentColor.opacity(UI.Tokens.Badge.accentOpacity),
-                    in: Capsule(style: .continuous))
-        .foregroundStyle(Color.accentColor)
     }
 }
 }
@@ -39,15 +39,20 @@ struct TintSwatch: View {
     }
 
     public var body: some View {
-        ZStack {
-            Circle().fill(color)
-            if followsAccent {
-                Image(systemName: "link")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.white)
-            }
-        }
-        .frame(width: UI.Tokens.IconSize.chip, height: UI.Tokens.IconSize.chip)
+        SharedTintSwatchMark(color: color,
+                             markerSystemName: followsAccent ? "link" : nil,
+                             size: UI.Tokens.IconSize.chip,
+                             fillSize: UI.Tokens.IconSize.chip,
+                             ringSize: UI.Tokens.IconSize.chip)
     }
 }
+}
+
+#Preview("Chips") {
+    HStack(spacing: UI.Tokens.Space.m) {
+        UI.Badge.ScopeLabel(symbol: "shippingbox", title: "Containers")
+        UI.Control.TintSwatch(color: .accentColor, followsAccent: true)
+        UI.Control.TintSwatch(color: .teal)
+    }
+    .padding(UI.Tokens.Space.xl)
 }

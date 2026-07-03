@@ -9,3 +9,12 @@ public extension View {
             .padding(UI.Tokens.Space.s)
     }
 }
+
+#Preview("Terminal Surface Chrome") {
+    Text("preview-web$ nginx -g 'daemon off;'")
+        .font(.system(.caption, design: .monospaced))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .terminalSurfaceChrome()
+        .padding(UI.Tokens.Space.xl)
+        .frame(width: 420)
+}

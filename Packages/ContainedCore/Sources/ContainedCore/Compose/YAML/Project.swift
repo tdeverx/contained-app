@@ -31,6 +31,7 @@ struct Service: Sendable, Hashable, Identifiable {
     public let labels: [String]       // "KEY=value"
     public let restart: String?
     public let network: String?
+    public let networkMode: String?
     public let readOnly: Bool
     public let initProcess: Bool
     public let interactive: Bool
@@ -52,7 +53,7 @@ struct Service: Sendable, Hashable, Identifiable {
                 entrypoint: String? = nil, workingDir: String? = nil, user: String? = nil,
                 cpus: String? = nil, memory: String? = nil, ports: [String], volumes: [String],
                 environment: [String], envFiles: [String] = [], labels: [String] = [], restart: String?,
-                network: String? = nil, readOnly: Bool = false, initProcess: Bool = false,
+                network: String? = nil, networkMode: String? = nil, readOnly: Bool = false, initProcess: Bool = false,
                 interactive: Bool = false, tty: Bool = false, capAdd: [String] = [],
                 capDrop: [String] = [], dns: [String] = [], dnsSearch: [String] = [],
                 dnsOptions: [String] = [], tmpfs: [String] = [], ulimits: [String] = [],
@@ -62,7 +63,7 @@ struct Service: Sendable, Hashable, Identifiable {
         self.entrypoint = entrypoint; self.workingDir = workingDir; self.user = user; self.cpus = cpus
         self.memory = memory; self.ports = ports; self.volumes = volumes; self.environment = environment
         self.envFiles = envFiles
-        self.labels = labels; self.restart = restart; self.network = network; self.readOnly = readOnly
+        self.labels = labels; self.restart = restart; self.network = network; self.networkMode = networkMode; self.readOnly = readOnly
         self.initProcess = initProcess; self.interactive = interactive; self.tty = tty
         self.capAdd = capAdd; self.capDrop = capDrop; self.dns = dns; self.dnsSearch = dnsSearch
         self.dnsOptions = dnsOptions; self.tmpfs = tmpfs; self.ulimits = ulimits
@@ -205,6 +206,7 @@ enum Parser {
             labels: keyValues(body["labels"]),
             restart: restart(body["restart"]),
             network: network(mode: body["network_mode"], networks: body["networks"]),
+            networkMode: stringValue(body["network_mode"]),
             readOnly: body["read_only"] as? Bool ?? false,
             initProcess: body["init"] as? Bool ?? false,
             interactive: body["stdin_open"] as? Bool ?? false,

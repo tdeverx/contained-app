@@ -28,3 +28,16 @@ struct ExteriorShadow: View {
         .allowsHitTesting(false)
     }
 }
+
+#Preview("Exterior Shadow") {
+    ZStack {
+        ExteriorShadow(cornerRadius: UI.Tokens.Radius.card,
+                       color: .black.opacity(0.24),
+                       radius: 16,
+                       y: 8)
+        RoundedRectangle(cornerRadius: UI.Tokens.Radius.card, style: .continuous)
+            .fill(.thinMaterial)
+    }
+    .frame(width: 220, height: 120)
+    .padding(UI.Tokens.Space.xl)
+}

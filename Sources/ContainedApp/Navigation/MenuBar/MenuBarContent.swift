@@ -16,7 +16,7 @@ struct MenuBarContent: View {
     private var cliLabel: String {
         switch app.bootstrap {
         case .ready:
-            return app.cliVersion.map { "CLI v\($0)" } ?? "CLI ready"
+            return app.runtimeVersion(for: .appleContainer).map { "CLI v\($0)" } ?? "CLI ready"
         case .checking:
             return "Checking CLI"
         case .cliMissing:
@@ -45,12 +45,16 @@ struct MenuBarContent: View {
             Menu("Service") {
                 statusItem
                 Divider()
-                if app.serviceHealthy {
-                    Button("Stop Service") { Task { await app.stopService() } }
+                if app.appleRuntimeAvailable {
+                    if app.serviceHealthy {
+                        Button("Stop Service") { Task { await app.stopService() } }
+                    } else {
+                        Button("Start Service") { Task { await app.startService() } }
+                    }
+                    Button("Restart Service") { Task { await app.restartService() } }
                 } else {
-                    Button("Start Service") { Task { await app.startService() } }
+                    Button("Retry Docker Connection") { Task { await app.retryBootstrap() } }
                 }
-                Button("Restart Service") { Task { await app.restartService() } }
             }
 
             Menu("Containers") {
@@ -60,7 +64,7 @@ struct MenuBarContent: View {
                     } else {
                         ForEach(store.running) { snapshot in
                             Button(containerName(for: snapshot)) {
-                                Task { await store.stop(snapshot.id) }
+                                Task { await store.stop(snapshot.scopedID) }
                             }
                         }
                     }
@@ -72,7 +76,7 @@ struct MenuBarContent: View {
                     } else {
                         ForEach(stopped) { snapshot in
                             Button(containerName(for: snapshot)) {
-                                Task { await store.start(snapshot.id) }
+                                Task { await store.start(snapshot.scopedID) }
                             }
                         }
                     }
@@ -269,7 +273,7 @@ struct MenuBarContent: View {
 
     /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).
     private func revealCLIBinary() {
-        guard let url = app.client?.cliURL else { return }
+        guard let url = app.runtimeCLIURL(for: .appleContainer) else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 }

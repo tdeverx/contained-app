@@ -1,22 +1,23 @@
 import SwiftUI
 import ContainedCore
 
-/// Local store of per-container healthchecks (keyed by container id), persisted to UserDefaults.
+/// Local store of per-container healthchecks (keyed by scoped container id), persisted in the app database.
 @MainActor
 @Observable
 final class HealthCheckStore {
     private var checks: [String: Core.Container.HealthCheck]
-    private let defaults: UserDefaults
-    private let key = "healthChecks"
+    private let database: AppDatabase
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        if let data = defaults.data(forKey: key),
-           let decoded = try? JSONDecoder().decode([String: Core.Container.HealthCheck].self, from: data) {
-            checks = decoded
-        } else {
-            checks = [:]
-        }
+    init(database: AppDatabase = AppDatabase()) {
+        self.database = database
+        checks = Dictionary(uniqueKeysWithValues: database.fetch(HealthCheckRecord.self).compactMap { record in
+            do {
+                return (record.containerScopedID,
+                        try JSONDecoder().decode(Core.Container.HealthCheck.self, from: record.valueData))
+            } catch {
+                fatalError("Unable to decode health check for \(record.containerScopedID): \(error)")
+            }
+        })
     }
 
     func check(for id: String) -> Core.Container.HealthCheck? { checks[id] }
@@ -47,7 +48,25 @@ final class HealthCheckStore {
     }
 
     private func persist() {
-        if let data = try? JSONEncoder().encode(checks) { defaults.set(data, forKey: key) }
+        let wanted = Set(checks.keys)
+        for record in database.fetch(HealthCheckRecord.self) where !wanted.contains(record.containerScopedID) {
+            database.context.delete(record)
+        }
+        for (id, check) in checks {
+            let data: Data
+            do {
+                data = try JSONEncoder().encode(check)
+            } catch {
+                fatalError("Unable to encode health check for \(id): \(error)")
+            }
+            if let record = database.fetch(HealthCheckRecord.self).first(where: { $0.containerScopedID == id }) {
+                record.valueData = data
+                record.updatedAt = Date()
+            } else {
+                database.context.insert(HealthCheckRecord(containerScopedID: id, valueData: data))
+            }
+        }
+        database.save()
     }
 }
 
@@ -69,7 +88,7 @@ final class HealthMonitor {
                   store: HealthCheckStore,
                   client: Core.Orchestrator,
                   now: Date = Date()) async {
-        let running = Dictionary(snapshots.filter { $0.state == .running }.map { ($0.id, $0) },
+        let running = Dictionary(snapshots.filter { $0.state == .running }.map { ($0.scopedID, $0) },
                                  uniquingKeysWith: { a, _ in a })
 
         // Drop tracking for containers that stopped or whose check was removed/disabled.
@@ -83,7 +102,7 @@ final class HealthMonitor {
             lastProbe[id] = now
 
             let passed: Bool
-            do { _ = try await client.execCapture(id, check.command); passed = true }
+            do { _ = try await client.execCapture(snapshot.id, check.command, runtimeKind: snapshot.runtimeKind); passed = true }
             catch { passed = false }
 
             let failures = passed ? 0 : (consecutiveFailures[id] ?? 0) + 1

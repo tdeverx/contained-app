@@ -117,6 +117,92 @@ struct DecodingTests {
         #expect(arm64.config?.rootfs?.diffIDs?.isEmpty == false)
     }
 
+    @Test func decodesDockerContainerInspectToCoreSnapshot() throws {
+        let data = Data("""
+        [
+          {
+            "Id": "0123456789abcdef",
+            "Name": "/web",
+            "Created": "2026-07-03T09:30:00Z",
+            "Platform": "linux/arm64/v8",
+            "Config": {
+              "Image": "nginx:latest",
+              "Cmd": ["nginx", "-g", "daemon off;"],
+              "Entrypoint": null,
+              "Env": ["FOO=bar"],
+              "WorkingDir": "/app",
+              "User": "1000",
+              "Labels": {"contained.restart": "always"},
+              "Tty": true
+            },
+            "State": {
+              "Status": "running",
+              "Running": true,
+              "StartedAt": "2026-07-03T09:31:00Z"
+            },
+            "HostConfig": {
+              "NetworkMode": "host",
+              "PortBindings": {"80/tcp": [{"HostIp": "127.0.0.1", "HostPort": "8080"}]},
+              "ReadonlyRootfs": true,
+              "Init": true,
+              "ShmSize": 67108864,
+              "CapAdd": ["NET_ADMIN"],
+              "CapDrop": ["MKNOD"],
+              "Runtime": "runc"
+            },
+            "NetworkSettings": {
+              "Networks": {
+                "bridge": {
+                  "IPAddress": "172.17.0.2",
+                  "Gateway": "172.17.0.1",
+                  "GlobalIPv6Address": "",
+                  "MacAddress": "02:42:ac:11:00:02"
+                }
+              }
+            },
+            "Mounts": [
+              {"Type": "bind", "Source": "/tmp/site", "Destination": "/usr/share/nginx/html", "RW": false}
+            ]
+          }
+        ]
+        """.utf8)
+
+        let rows = try DockerJSON.decode([DockerContainerInspect].self, from: data)
+        let row = try #require(rows.first)
+        let snapshot = try row.coreSnapshot()
+
+        #expect(snapshot.runtimeKind == .docker)
+        #expect(snapshot.id == "web")
+        #expect(snapshot.scopedID == "docker::web")
+        #expect(snapshot.state == .running)
+        #expect(snapshot.image == "nginx:latest")
+        #expect(snapshot.configuration.runtimeKind == .docker)
+        #expect(snapshot.configuration.initProcess.arguments == ["nginx", "-g", "daemon off;"])
+        #expect(snapshot.configuration.initProcess.environment == ["FOO=bar"])
+        #expect(snapshot.configuration.platform.architecture == "arm64")
+        #expect(snapshot.configuration.platform.variant == "v8")
+        #expect(snapshot.configuration.publishedPorts.first?.hostPort == 8080)
+        #expect(snapshot.configuration.mounts.first?.readonly == true)
+        #expect(snapshot.configuration.capAdd == ["NET_ADMIN"])
+        #expect(snapshot.configuration.capDrop == ["MKNOD"])
+        #expect(snapshot.status.networks.first?.ipv4Address == "172.17.0.2")
+    }
+
+    @Test func decodesDockerImageListRows() throws {
+        let data = Data("""
+        {"Repository":"nginx","Tag":"latest","Digest":"sha256:abc","ID":"sha256:image"}
+        {"Repository":"<none>","Tag":"<none>","Digest":"<none>","ID":"sha256:dangling"}
+        """.utf8)
+
+        let rows = try DockerJSON.decodeJSONLines(DockerImageListRow.self, from: data)
+        let images = rows.compactMap { $0.coreImage() }
+
+        #expect(images.count == 1)
+        #expect(images.first?.reference == "nginx:latest")
+        #expect(images.first?.digest == "sha256:abc")
+        #expect(images.first?.runtimeKind == .docker)
+    }
+
     @Test func handlesDatesWithAndWithoutFractionalSeconds() throws {
         #expect(Core.Container.JSON.parseDate("2026-06-24T10:16:58Z") != nil)
         #expect(Core.Container.JSON.parseDate("2026-06-16T00:01:29.967161902Z") != nil)

@@ -11,3 +11,17 @@ public extension View {
         contentShape(Capsule(style: .continuous))
     }
 }
+
+#Preview("Control Modifiers") {
+    HStack(spacing: UI.Tokens.Space.m) {
+        Text("Subtle tile")
+            .padding(UI.Tokens.Space.m)
+            .subtleTileBackground()
+
+        Image(systemName: "slider.horizontal.3")
+            .padding(UI.Tokens.Space.m)
+            .materialCapsuleSurface(shadow: false)
+            .toolbarControlContentShape()
+    }
+    .padding(UI.Tokens.Space.xl)
+}

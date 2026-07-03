@@ -310,12 +310,14 @@ struct ToolbarCommandPalette: View {
     }
 
     private func hubItems() -> [PaletteItem] {
+        guard app.availableRuntimeDescriptors.count == 1,
+              let runtimeKind = app.availableRuntimeDescriptors.first?.kind else { return [] }
         if trimmedQuery.isEmpty {
             return RecommendedImage.all.map { rec in
                 PaletteItem(title: AppText.paletteRunImage(rec.name), subtitle: rec.reference,
                             keywords: [rec.reference], kind: .image,
                             icon: rec.symbol, tint: .accentColor) {
-                    ui.runImage(rec.reference, returningTo: .search)
+                    ui.runImage(rec.reference, runtimeKind: runtimeKind, returningTo: .search)
                 }
             }
         }
@@ -330,7 +332,10 @@ struct ToolbarCommandPalette: View {
                                kind: .image,
                                icon: result.isOfficial ? "checkmark.seal.fill" : "shippingbox",
                                tint: .accentColor) {
-                ui.runImage(result.pullReference, returningTo: .search, searchQuery: query)
+                ui.runImage(result.pullReference,
+                            runtimeKind: runtimeKind,
+                            returningTo: .search,
+                            searchQuery: query)
             }
         }
     }
@@ -340,14 +345,18 @@ struct ToolbarCommandPalette: View {
         let matched = trimmedQuery.isEmpty ? groups : groups.filter {
             PaletteSearch.score(query: trimmedQuery, in: $0.references + [Format.shortImage($0.primaryReference)]) != nil
         }
-        return matched.map { group in
-            PaletteItem(title: AppText.paletteRunImage(Format.shortImage(group.primaryReference)),
-                        subtitle: AppText.paletteTagCountSubtitle(group.references.count),
-                        keywords: group.references,
-                        kind: .image,
-                        visual: .imageGroup(group),
-                        icon: "play.fill", tint: .green) {
-                ui.runImage(group.primaryReference, returningTo: .chooser)
+        return matched.compactMap { group in
+            guard let runtimeKind = group.images.first(where: { $0.reference == group.primaryReference })?.runtimeKind
+                ?? group.tags.first?.runtimeKind else { return nil }
+            return PaletteItem(title: AppText.paletteRunImage(Format.shortImage(group.primaryReference)),
+                               subtitle: AppText.paletteTagCountSubtitle(group.tags.count),
+                               keywords: group.references,
+                               kind: .image,
+                               visual: .imageGroup(group),
+                               icon: "play.fill", tint: .green) {
+                ui.runImage(group.primaryReference,
+                            runtimeKind: runtimeKind,
+                            returningTo: .chooser)
             }
         }
     }

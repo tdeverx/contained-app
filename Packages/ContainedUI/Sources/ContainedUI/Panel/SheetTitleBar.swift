@@ -54,3 +54,16 @@ public extension UI.Panel.SheetTitleBar where Trailing == EmptyView {
                   onCancel: onCancel) { EmptyView() }
     }
 }
+
+#Preview("Sheet Title Bar") {
+    UI.Panel.SheetTitleBar(title: "Pull image",
+                           subtitle: "docker.io/library/nginx:latest",
+                           cancelHelp: "Cancel",
+                           onCancel: {}) {
+        UI.Action.TextButton(title: "Pull",
+                             systemName: "arrow.down.circle",
+                             prominence: .prominent) {}
+    }
+    .frame(width: 520)
+    .environment(\.buttonMaterial, .glassClear)
+}

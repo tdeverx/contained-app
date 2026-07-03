@@ -61,6 +61,25 @@ struct ImageWorkflowTests {
         #expect(groups.first?.references == ["docker.io/library/alpine:latest", "localhost/alpine:test"])
     }
 
+    @Test func localTagGroupingKeepsRuntimeSpecificAvailability() {
+        let apple = Self.image(reference: "docker.io/library/nginx:latest",
+                               digest: "sha256:same",
+                               runtimeKind: .appleContainer)
+        let docker = Self.image(reference: "nginx:latest",
+                                digest: "sha256:same",
+                                runtimeKind: .docker)
+
+        let group = Core.Image.LocalTagGroup.groups(for: [apple, docker]).first
+
+        #expect(group?.images.count == 2)
+        #expect(group?.references == ["docker.io/library/nginx:latest", "nginx:latest"])
+        #expect(group?.tags.count == 2)
+        let runtimeKinds = Set(group?.tags.map(\.runtimeKind) ?? [])
+        let tagIDs = group?.tags.map(\.id) ?? []
+        #expect(runtimeKinds == Set([Core.Runtime.Kind.appleContainer, .docker]))
+        #expect(tagIDs.allSatisfy { $0.contains("::") })
+    }
+
     @Test func hubSearchFetchesThroughSharedHelper() async throws {
         let session = Self.session { request in
             #expect(request.url?.path == "/v2/search/repositories")
@@ -143,6 +162,21 @@ struct ImageWorkflowTests {
                                  body: String = "") -> (HTTPURLResponse, Data) {
         let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: headers)!
         return (response, Data(body.utf8))
+    }
+
+    private static func image(reference: String,
+                              digest: String,
+                              runtimeKind: Core.Runtime.Kind) -> Core.Image.Resource {
+        Core.Image.Resource(configuration: Core.Image.Configuration(
+            name: reference,
+            descriptor: Core.Container.Descriptor(digest: digest,
+                                                  mediaType: "application/vnd.oci.image.index.v1+json",
+                                                  size: 12),
+            creationDate: nil
+        ),
+        id: digest,
+        variants: [],
+        runtimeKind: runtimeKind)
     }
 }
 

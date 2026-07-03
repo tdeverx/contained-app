@@ -106,10 +106,32 @@ public extension Core.Schema.Definition {
                                  operation: Core.Schema.Operation = .containerCreate) -> Core.Schema.Definition {
         Core.Schema.Definition(operation: operation,
                                runtimeKind: runtimeKind,
-                               fields: Self.appleContainerRunFields)
+                               fields: Self.runtimeAwareRunFields(initialRuntime: runtimeKind))
     }
 
     static var appleContainerRunFields: [Core.Schema.FieldDescriptor] {
+        runtimeAwareRunFields(initialRuntime: .appleContainer)
+    }
+
+    private static func runtimeAwareRunFields(initialRuntime: Core.Runtime.Kind) -> [Core.Schema.FieldDescriptor] {
+        appleContainerRunFieldsBase.map { descriptor in
+            var field = descriptor
+            if field.path == .runtimeKind {
+                field.defaultValue = .string(initialRuntime.rawValue)
+                field.support[.docker] = .supported
+                field.tipRefs[.docker] = field.tipRefs[.appleContainer]
+                return field
+            }
+
+            field.support[.docker] = dockerSupport(for: field)
+            if field.support[.docker]?.state == .supported, field.tipRefs[.docker] == nil {
+                field.tipRefs[.docker] = field.tipRefs[.appleContainer]
+            }
+            return field
+        }
+    }
+
+    private static var appleContainerRunFieldsBase: [Core.Schema.FieldDescriptor] {
         let supported = Core.Schema.FieldSupport.supported
         let unsupported = Core.Schema.FieldSupport(
             state: .disabled,
@@ -202,8 +224,8 @@ public extension Core.Schema.Definition {
         ]
 
         return [
-            apple(.runtimeKind, .string, .runtime, "Core", defaultValue: .string(Core.Runtime.Kind.appleContainer.rawValue),
-                  tip: "Selects the container runtime Core should use for previewing and running this container."),
+            apple(.runtimeKind, .string, .runtime, "Runtime", defaultValue: .string(Core.Runtime.Kind.appleContainer.rawValue),
+                  tip: "Selects the container runtime used for previewing and running this container."),
             apple(.imageReference, .string, .essentials, "Image", defaultValue: .string(""), required: true,
                   flag: "<image>", example: "nginx:latest", docker: ("IMAGE", "docker run nginx:latest"), compose: ("image", "image: nginx:latest"),
                   tip: "The container image to run. If it is not local, Contained pulls it before running."),
@@ -337,19 +359,19 @@ public extension Core.Schema.Definition {
             apple(.imageMaxConcurrentDownloads, .string, .imageFetch, "Max parallel downloads", defaultValue: .string(""),
                   flag: "--max-concurrent-downloads", example: "--max-concurrent-downloads 2", tip: "Limits concurrent image downloads."),
 
-            disabled(.networkExtraHosts, .stringList, "Extra hosts", defaultValue: .stringList([]), docker: ("--add-host", "--add-host host.docker.internal=host-gateway"), compose: ("extra_hosts", "extra_hosts: [\"host.docker.internal:host-gateway\"]"), tip: "Adds entries to /etc/hosts in Docker-compatible runtimes."),
-            disabled(.networkHostname, .string, "Hostname", defaultValue: .string(""), docker: ("--hostname", "--hostname app"), compose: ("hostname", "hostname: app"), tip: "Sets the container hostname in Docker-compatible runtimes."),
+            disabled(.networkExtraHosts, .stringList, "Extra hosts", defaultValue: .stringList([]), docker: ("--add-host", "--add-host host.docker.internal=host-gateway"), compose: ("extra_hosts", "extra_hosts: [\"host.docker.internal:host-gateway\"]"), tip: "Adds entries to /etc/hosts in Docker runtimes."),
+            disabled(.networkHostname, .string, "Hostname", defaultValue: .string(""), docker: ("--hostname", "--hostname app"), compose: ("hostname", "hostname: app"), tip: "Sets the container hostname in Docker runtimes."),
             disabled(.networkDomainName, .string, "Domain name", defaultValue: .string(""), docker: ("--domainname", "--domainname example.test"), compose: ("domainname", "domainname: example.test"), tip: "Sets the container NIS/domain name."),
             disabled(.networkMacAddress, .string, "MAC address", defaultValue: .string(""), docker: ("--mac-address", "--mac-address 02:42:ac:11:00:02"), compose: ("mac_address", "mac_address: 02:42:ac:11:00:02"), tip: "Requests a fixed MAC address."),
             disabled(.networkExpose, .stringList, "Expose ports", defaultValue: .stringList([]), docker: ("--expose", "--expose 80"), compose: ("expose", "expose: [80]"), tip: "Exposes container ports without publishing them to the host."),
             disabled(.networkPublishAll, .bool, "Publish all exposed ports", defaultValue: .bool(false), docker: ("--publish-all", "--publish-all"), tip: "Publishes every exposed port to random host ports."),
-            disabled(.imagePullPolicy, .string, "Pull policy", defaultValue: .string(""), docker: ("--pull", "--pull=always"), compose: ("pull_policy", "pull_policy: always"), tip: "Controls when Docker-compatible runtimes pull the image."),
+            disabled(.imagePullPolicy, .string, "Pull policy", defaultValue: .string(""), docker: ("--pull", "--pull=always"), compose: ("pull_policy", "pull_policy: always"), tip: "Controls when Docker runtimes pull the image."),
             disabled(.processAttachStreams, .stringList, "Attach streams", defaultValue: .stringList([]), docker: ("--attach", "--attach stdout"), compose: ("attach", "attach: false"), tip: "Controls attached STDIN/STDOUT/STDERR streams."),
             disabled(.loggingDriver, .string, "Logging driver", defaultValue: .string(""), docker: ("--log-driver", "--log-driver syslog"), compose: ("logging.driver", "logging: { driver: syslog }"), tip: "Selects a Docker logging driver."),
             disabled(.loggingOptions, .keyValueList, "Logging options", defaultValue: .keyValueList([]), docker: ("--log-opt", "--log-opt max-size=10m"), compose: ("logging.options", "logging: { options: { max-size: 10m } }"), tip: "Configures logging driver options."),
             disabled(.metadataLabelFiles, .stringList, "Label files", defaultValue: .stringList([]), docker: ("--label-file", "--label-file ./labels"), tip: "Loads labels from a file."),
             disabled(.lifecycleStopSignal, .string, "Stop signal", defaultValue: .string(""), docker: ("--stop-signal", "--stop-signal SIGTERM"), compose: ("stop_signal", "stop_signal: SIGTERM"), tip: "Signal used to stop the container."),
-            disabled(.lifecycleStopGracePeriod, .string, "Stop grace period", defaultValue: .string(""), compose: ("stop_grace_period", "stop_grace_period: 30s"), tip: "How long Compose waits before force-stopping."),
+            disabled(.lifecycleStopGracePeriod, .string, "Stop grace period", defaultValue: .string(""), docker: ("--stop-timeout", "--stop-timeout 30"), compose: ("stop_grace_period", "stop_grace_period: 30s"), tip: "How long Compose waits before force-stopping."),
             disabled(.devices, .stringList, "Devices", defaultValue: .stringList([]), docker: ("--device", "--device /dev/sda:/dev/xvdc"), compose: ("devices", "devices: [/dev/sda:/dev/xvdc]"), tip: "Passes host devices into the container."),
             disabled(.gpus, .string, "GPUs", defaultValue: .string(""), docker: ("--gpus", "--gpus all"), compose: ("gpus", "gpus: all"), tip: "Requests GPU devices."),
             disabled(.processSupplementalGroups, .stringList, "Supplemental groups", defaultValue: .stringList([]), docker: ("--group-add", "--group-add audio"), compose: ("group_add", "group_add: [audio]"), tip: "Adds supplemental groups."),
@@ -375,8 +397,8 @@ public extension Core.Schema.Definition {
             disabled(.resourcesBlockIO, .string, "Block I/O", defaultValue: .string(""), docker: ("--blkio-weight", "--blkio-weight 300"), compose: ("blkio_config", "blkio_config: { weight: 300 }"), tip: "Controls block I/O weighting and throttling."),
             disabled(.storageOptions, .keyValueList, "Storage options", defaultValue: .keyValueList([]), docker: ("--storage-opt", "--storage-opt size=120G"), compose: ("storage_opt", "storage_opt: { size: 120G }"), tip: "Passes storage driver options."),
             disabled(.storageVolumesFrom, .stringList, "Volumes from", defaultValue: .stringList([]), docker: ("--volumes-from", "--volumes-from db"), compose: ("volumes_from", "volumes_from: [db]"), tip: "Mounts volumes from another container."),
-            disabled(.composeSecrets, .stringList, "Secrets", defaultValue: .stringList([]), compose: ("secrets", "secrets: [db_password]"), tip: "Compose secrets are preserved for future Docker-compatible runtimes."),
-            disabled(.composeConfigs, .stringList, "Configs", defaultValue: .stringList([]), compose: ("configs", "configs: [app_config]"), tip: "Compose configs are preserved for future Docker-compatible runtimes."),
+            disabled(.composeSecrets, .stringList, "Secrets", defaultValue: .stringList([]), compose: ("secrets", "secrets: [db_password]"), tip: "Compose secrets are preserved for future Docker runtimes."),
+            disabled(.composeConfigs, .stringList, "Configs", defaultValue: .stringList([]), compose: ("configs", "configs: [app_config]"), tip: "Compose configs are preserved for future Docker runtimes."),
             disabled(.composeProfiles, .stringList, "Profiles", defaultValue: .stringList([]), compose: ("profiles", "profiles: [dev]"), tip: "Compose profiles select which services participate in a run."),
             disabled(.composeDeploy, .string, "Deploy metadata", defaultValue: .string(""), compose: ("deploy", "deploy: { replicas: 2 }"), tip: "Compose deploy metadata is preserved but not applied by Apple container."),
             disabled(.composeScale, .string, "Scale", defaultValue: .string(""), compose: ("scale", "scale: 2"), tip: "Compose service scale is preserved for future stack-oriented runtimes."),
@@ -386,5 +408,46 @@ public extension Core.Schema.Definition {
             disabled(.composeModels, .stringList, "Models", defaultValue: .stringList([]), compose: ("models", "models: [ai_model]"), tip: "Compose model metadata is preserved for future runtimes."),
             disabled(.composeUseAPISocket, .bool, "Use API socket", defaultValue: .bool(false), compose: ("use_api_socket", "use_api_socket: true"), tip: "Compose API socket access is preserved for future runtimes."),
         ]
+    }
+
+    private static func dockerSupport(for descriptor: Core.Schema.FieldDescriptor) -> Core.Schema.FieldSupport {
+        let unsupported = Core.Schema.FieldSupport(
+            state: .disabled,
+            disabledReasonKey: "schema.disabled.docker.unsupportedAppleContainer",
+            defaultDisabledReason: "Known from Apple container or Compose, not executable by Docker."
+        )
+        let composeOnlyUnsupported = Core.Schema.FieldSupport(
+            state: .disabled,
+            disabledReasonKey: "schema.disabled.docker.composeOnly",
+            defaultDisabledReason: "Compose stack metadata is preserved, but V1 Docker support runs single containers only."
+        )
+
+        let sharedDockerPaths: Set<Core.Field.Path> = [
+            .imageReference, .imagePlatform, .containerName, .processCommand, .processEntrypoint,
+            .processDetach, .processRemoveOnExit, .processInteractive, .processTTY,
+            .processWorkingDirectory, .processUser, .processUlimits, .resourcesCPULimit,
+            .resourcesMemoryLimit, .resourcesSharedMemorySize, .environmentVariables,
+            .environmentFiles, .networkName, .networkPorts, .storageVolumes, .storageMounts,
+            .storageTmpfs, .metadataLabels, .lifecycleRestartPolicy, .securityReadOnlyRootFS,
+            .securityUseInit, .securityCapabilitiesAdd, .securityCapabilitiesDrop,
+            .outputContainerIDFile, .runtimeHandler, .networkDNSServers, .networkDNSSearchDomains,
+            .networkDNSOptions,
+        ]
+        let appleOnlyPaths: Set<Core.Field.Path> = [
+            .imageOS, .imageArchitecture, .networkSockets, .networkDNSDisabled,
+            .networkDNSDomain, .processUserID, .processGroupID, .securityRosetta,
+            .securitySSHAgent, .securityVirtualization, .imageInitReference, .kernelPath,
+            .registryScheme, .progressMode, .imageMaxConcurrentDownloads,
+        ]
+        let composeOnlyPaths: Set<Core.Field.Path> = [
+            .composeSecrets, .composeConfigs, .composeProfiles, .composeDeploy, .composeScale,
+            .composeLinks, .composeDependsOn, .composeProvider, .composeModels, .composeUseAPISocket,
+        ]
+
+        if sharedDockerPaths.contains(descriptor.path) { return .supported }
+        if appleOnlyPaths.contains(descriptor.path) { return unsupported }
+        if composeOnlyPaths.contains(descriptor.path) { return composeOnlyUnsupported }
+        if descriptor.sourceAliases.contains(where: { $0.source == .dockerCLI }) { return .supported }
+        return descriptor.support[.appleContainer] ?? unsupported
     }
 }

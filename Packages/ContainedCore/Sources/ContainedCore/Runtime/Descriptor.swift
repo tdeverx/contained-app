@@ -46,6 +46,23 @@ struct Capability: OptionSet, Equatable, Sendable {
         .containerExport,
         .composeImport,
     ]
+
+    public static let docker: Core.Runtime.Capability = [
+        .containers,
+        .images,
+        .imageBuild,
+        .imagePush,
+        .imageArchive,
+        .registries,
+        .networks,
+        .volumes,
+        .systemStatus,
+        .systemProperties,
+        .exec,
+        .copy,
+        .containerExport,
+        .composeImport,
+    ]
 }
 
 struct Descriptor: Equatable, Sendable {
@@ -79,6 +96,13 @@ struct Descriptor: Equatable, Sendable {
         displayName: "Apple container",
         executableName: "container",
         capabilities: .appleContainer
+    )
+
+    public static let docker = Core.Runtime.Descriptor(
+        kind: .docker,
+        displayName: "Docker",
+        executableName: "docker",
+        capabilities: .docker
     )
 }
 

@@ -291,26 +291,16 @@ private struct CardMaterialSurface: ViewModifier {
     @ViewBuilder
     private func fillLayer(_ shape: RoundedRectangle) -> some View {
         if let fill {
-            shape.fill(fillStyle(fill))
+            shape.fill(SharedSurfaceRendering.fillStyle(color: fill,
+                                                        opacity: fillOpacity,
+                                                        gradient: gradient,
+                                                        gradientAngle: gradientAngle))
                 .blendMode(blendMode.blendMode)
                 .clipShape(shape)
         }
     }
 
-    private func fillStyle(_ color: Color) -> AnyShapeStyle {
-        if gradient {
-            let radians = gradientAngle * .pi / 180
-            let dx = cos(radians) / 2
-            let dy = sin(radians) / 2
-            return AnyShapeStyle(LinearGradient(
-                colors: [color.opacity(fillOpacity * 1.35), color.opacity(fillOpacity * 0.4)],
-                startPoint: UnitPoint(x: 0.5 - dx, y: 0.5 - dy),
-                endPoint: UnitPoint(x: 0.5 + dx, y: 0.5 + dy)))
-        }
-        return AnyShapeStyle(color.opacity(fillOpacity))
-    }
-
-    private var shadowColor: Color { .black.opacity((colorScheme == .dark ? 0.55 : 0.18)) }
+    private var shadowColor: Color { SharedSurfaceRendering.shadowColor(for: colorScheme) }
     private var shadowRadius: CGFloat { 10 }
     private var shadowY: CGFloat { 4 }
 }
@@ -431,4 +421,55 @@ extension CardSurface where Widget == EmptyView {
                   footerActions: footerActions,
                   widget: { EmptyView() })
     }
+}
+
+#Preview("Card Surface") {
+    VStack(spacing: UI.Tokens.Space.l) {
+        CardSurface(size: .small,
+                    isSelected: true,
+                    fill: .accentColor,
+                    fillOpacity: 0.12,
+                    gradient: true) {
+            CardHeader {
+                UI.Card.IconChip(symbol: "shippingbox.fill", tint: .accentColor)
+            } content: {
+                CardHeaderTextBlock {
+                    UI.Card.TitleText(text: "Small card")
+                } subtitle: {
+                    UI.Card.SubtitleText(text: "Selected")
+                }
+            } trailing: {
+                EmptyView()
+            }
+        }
+
+        CardSurface(size: .medium,
+                    isExpanded: true,
+                    controlsVisible: true,
+                    fill: .teal,
+                    fillOpacity: 0.10) {
+            CardHeader {
+                UI.Card.IconChip(symbol: "chart.xyaxis.line", tint: .teal)
+            } content: {
+                CardHeaderTextBlock {
+                    UI.Card.TitleText(text: "Expanded surface")
+                } subtitle: {
+                    UI.Card.SubtitleText(text: "Sticky footer")
+                }
+            } trailing: {
+                EmptyView()
+            }
+        } bodyContent: {
+            UI.Card.InsetSection {
+                UI.Chart.Sparkline(samples: [0.2, 0.35, 0.18, 0.6, 0.5])
+                    .frame(height: 52)
+            }
+        } footerLeading: {
+            UI.Card.MetricText(text: "62%")
+        } footerActions: {
+            UI.Card.FooterButton(systemName: "arrow.clockwise", help: "Refresh") {}
+        }
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 420)
 }

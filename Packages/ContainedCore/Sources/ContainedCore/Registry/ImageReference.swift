@@ -28,7 +28,7 @@ struct ImageReference: Sendable, Hashable {
 
         let parts = namePart.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
         let first = parts.first ?? ""
-        let hasRegistry = first.contains(".") || first.contains(":") || first == "localhost"
+        let hasRegistry = parts.count > 1 && (first.contains(".") || first.contains(":") || first == "localhost")
         let rawRegistry = hasRegistry ? first : "docker.io"
         var repositoryParts = hasRegistry ? Array(parts.dropFirst()) : parts
         if repositoryParts.count == 1, rawRegistry == "docker.io" || rawRegistry == "index.docker.io" {

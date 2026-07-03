@@ -17,6 +17,7 @@ struct BuildWorkspaceView: View {
     @State private var platform = ""
     @State private var noCache = false
     @State private var buildArgs: [KeyValue] = []
+    @State private var runtimeKind = Core.Runtime.Kind.appleContainer
     @State private var building = false
     @State private var run = 0          // bump to restart the console
     private var canBuild: Bool { contextDir != nil && !tag.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -31,7 +32,8 @@ struct BuildWorkspaceView: View {
                                        tag: tag.trimmingCharacters(in: .whitespaces),
                                        dockerfile: dockerfile.isEmpty ? nil : dockerfile,
                                        buildArgs: argsDict, noCache: noCache,
-                                       platform: platform.isEmpty ? nil : platform)
+                                       platform: platform.isEmpty ? nil : platform,
+                                       runtimeKind: runtimeKind)
                 },
                 workingLabel: AppText.working,
                 completedLabel: AppText.completed,
@@ -47,6 +49,7 @@ struct BuildWorkspaceView: View {
                                  description: AppText.string("build.empty.description", defaultValue: "Choose a context folder and a tag, then Build. Output streams here."))
             }
         }
+        .onAppear(perform: normalizeRuntimeSelection)
     }
 
     private var form: some View {
@@ -64,6 +67,9 @@ struct BuildWorkspaceView: View {
 
     private var sourceSection: some View {
         UI.Panel.Section(header: AppText.string("build.source", defaultValue: "Source")) {
+            CreationRuntimePickerRow(runtimeKind: $runtimeKind,
+                                     runtimes: buildRuntimes,
+                                     disabledReason: app.runtimePickerDisabledReason)
             UI.Panel.Field(label: AppText.string("build.context", defaultValue: "Context"),
                        info: AppText.string("build.context.info", defaultValue: "The build context: the folder sent to the builder, usually your project root.")) {
                 HStack {
@@ -162,7 +168,8 @@ struct BuildWorkspaceView: View {
                                 tag: tag.isEmpty ? nil : tag,
                                 dockerfile: dockerfile.isEmpty ? nil : dockerfile,
                                 buildArgs: argsDict, noCache: noCache,
-                                platform: platform.isEmpty ? nil : platform)
+                                platform: platform.isEmpty ? nil : platform,
+                                runtimeKind: runtimeKind)
     }
 
     private func startBuild() {
@@ -178,5 +185,17 @@ struct BuildWorkspaceView: View {
         panel.prompt = AppText.choose
         panel.message = AppText.chooseBuildContextFolder
         if panel.runModal() == .OK { contextDir = panel.url }
+    }
+
+    private var buildRuntimes: [Core.Runtime.Descriptor] {
+        let runtimes = app.availableRuntimeDescriptors.filter { $0.supports(.imageBuild) }
+        return runtimes.isEmpty ? app.availableRuntimeDescriptors : runtimes
+    }
+
+    private func normalizeRuntimeSelection() {
+        guard let first = buildRuntimes.first else { return }
+        if !buildRuntimes.contains(where: { $0.kind == runtimeKind }) {
+            runtimeKind = first.kind
+        }
     }
 }

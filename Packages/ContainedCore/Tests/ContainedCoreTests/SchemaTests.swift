@@ -152,9 +152,9 @@ struct SchemaTests {
     }
 
     @Test func documentRuntimeFieldTracksRuntimeKind() {
-        let document = Core.Schema.Document.containerCreate(runtimeKind: .dockerCompatible)
-        #expect(document.runtimeKind == .dockerCompatible)
-        #expect(document.string(.runtimeKind) == Core.Runtime.Kind.dockerCompatible.rawValue)
+        let document = Core.Schema.Document.containerCreate(runtimeKind: .docker)
+        #expect(document.runtimeKind == .docker)
+        #expect(document.string(.runtimeKind) == Core.Runtime.Kind.docker.rawValue)
     }
 
     @Test func schemaConformanceMigratorDoesNotNeedVersionGate() throws {
@@ -273,6 +273,37 @@ struct SchemaTests {
         let request = try item.document.validatedRequest(definition: definition)
         #expect(request.image == "example/app:1")
         #expect(request.image != item.document.string(.imagePullPolicy, in: definition))
+    }
+
+    @Test func dockerDefinitionSupportsDockerCLIFieldsButDisablesComposeStackFields() throws {
+        var document = Core.Schema.Document.containerCreate(runtimeKind: .docker)
+        document.set(.imageReference, .string("example/app:1"))
+        document.set(.imagePullPolicy, .enumeration("always"))
+        document.set(.networkExtraHosts, .stringList(["host.docker.internal:host-gateway"]))
+        document.set(.securityPrivileged, .bool(true))
+        document.set(.securityOptions, .stringList(["no-new-privileges"]))
+        document.set(.composeSecrets, .stringList(["app_secret"]))
+
+        let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .docker,
+                                                                 operation: .containerCreate)
+        let pullPolicy = try #require(definition.descriptor(for: .imagePullPolicy))
+        let secrets = try #require(definition.descriptor(for: .composeSecrets))
+
+        #expect(pullPolicy.support(for: .docker).state == .supported)
+        #expect(secrets.support(for: .docker).state == .disabled)
+
+        let warnings = document.validationIssues(in: definition).filter { $0.severity == .warning }
+        #expect(!warnings.contains { $0.field == .imagePullPolicy })
+        #expect(warnings.contains { $0.field == .composeSecrets })
+
+        let request = try document.validatedRequest(definition: definition)
+        #expect(request.runtimeKind == .docker)
+        #expect(request.pullPolicy == "always")
+        #expect(request.extraHosts == ["host.docker.internal:host-gateway"])
+        #expect(request.privileged)
+        #expect(request.securityOptions == ["no-new-privileges"])
+        #expect(DockerCommands.run(request).contains("--privileged"))
+        #expect(subsequence(["--pull", "always"], in: DockerCommands.run(request)))
     }
 
     private func subsequence(_ needle: [String], in haystack: [String]) -> Bool {

@@ -29,7 +29,7 @@ final class RestartWatchdog {
         var restarts: [(Core.Container.Snapshot, Int)] = []
 
         for snapshot in snapshots {
-            let id = snapshot.id
+            let id = snapshot.scopedID
             let current = snapshot.state
             defer { lastState[id] = current }
 
@@ -60,7 +60,7 @@ final class RestartWatchdog {
 
         for (snapshot, attempt) in restarts {
             onRestart?(snapshot, attempt)
-            _ = try? await client.start([snapshot.id])
+            _ = try? await client.start([snapshot.id], runtimeKind: snapshot.runtimeKind)
         }
     }
 

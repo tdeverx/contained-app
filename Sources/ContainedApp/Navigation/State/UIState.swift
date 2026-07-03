@@ -39,10 +39,28 @@ final class UIState {
         var queue: [ContainerFormState] = []
     }
 
+    enum RuntimeSelectionRequest: Identifiable, Hashable {
+        case composeFile(URL)
+        case composeText(text: String, projectName: String, baseDirectory: URL?)
+        case imageArchive(URL)
+
+        var id: String {
+            switch self {
+            case .composeFile(let url):
+                return "compose-file-\(url.absoluteString)"
+            case .composeText(let text, let projectName, let baseDirectory):
+                return "compose-text-\(projectName)-\(baseDirectory?.absoluteString ?? "none")-\(text.hashValue)"
+            case .imageArchive(let url):
+                return "image-archive-\(url.absoluteString)"
+            }
+        }
+    }
+
     var creation = CreationPresentation()
     var toolbar = ToolbarPresentation()
     var search = SearchPresentation()
     var prefill = PrefillPresentation()
+    var runtimeSelectionRequest: RuntimeSelectionRequest?
     var runningOnly = false
     var selectedSection: AppSection = .containers
     var sidebarVisible = true
@@ -60,7 +78,7 @@ final class UIState {
     var networkSort: NetworkSort = .name
     var networkFilter: NetworkFilter = .all
     var activityFilter: EventKind? = nil
-    var systemPage: SystemContent.SystemPage = .engine
+    var systemPage: SystemContent.SystemPage = .runtime
 
     /// When set, `SettingsContent` will switch to this page as soon as it appears / becomes active.
     /// Cleared by `SettingsContent` after it consumes the value.
@@ -244,10 +262,12 @@ final class UIState {
     }
 
     func runImage(_ reference: String,
+                  runtimeKind: Core.Runtime.Kind? = nil,
                   returningTo returnEntry: CreationEntry? = nil,
                   searchQuery: String = "") {
         var spec = ContainerFormState()
         spec.image = reference
+        if let runtimeKind { spec.runtimeKind = runtimeKind }
         guard panelNavigationEnabled else {
             presentCreate(spec)
             return
@@ -278,7 +298,7 @@ final class UIState {
         guard let first = specs.first else { return }
         prefill.queue = Array(specs.dropFirst())
         Task {
-            for spec in specs { _ = await app.ensureImage(spec.image) }
+            for spec in specs { _ = await app.ensureImage(spec.image, runtimeKind: spec.effectiveRuntimeKind) }
             presentNextPrefill(first)
         }
     }

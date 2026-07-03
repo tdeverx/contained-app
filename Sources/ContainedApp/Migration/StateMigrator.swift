@@ -2,7 +2,7 @@ import Foundation
 
 struct StateMigrator {
     static let currentSchemaVersion = 1
-    static let schemaVersionKey = "contained.state.schemaVersion"
+    static let schemaVersionSettingKey = "app.schemaVersion"
 
     private var steps: [any MigrationStep] = []
 
@@ -15,12 +15,11 @@ struct StateMigrator {
         case newerOnDisk(Int)
     }
 
-    func reconcile(defaults: UserDefaults = .standard) -> ReconcileResult {
-        let stored = defaults.object(forKey: Self.schemaVersionKey) as? Int ?? Self.currentSchemaVersion
+    func reconcile(storedVersion: Int?) -> ReconcileResult {
+        let stored = storedVersion ?? Self.currentSchemaVersion
         if stored > Self.currentSchemaVersion {
             return .newerOnDisk(stored)
         }
-        defaults.set(Self.currentSchemaVersion, forKey: Self.schemaVersionKey)
         return .ready
     }
 

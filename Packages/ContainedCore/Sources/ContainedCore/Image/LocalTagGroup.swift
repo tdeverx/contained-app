@@ -5,22 +5,70 @@ struct LocalTagGroup: Identifiable, Sendable, Hashable {
     public let id: String
     public let digest: String?
     public let references: [String]
+    public let tags: [Core.Image.LocalTag]
     public let images: [Core.Image.Resource]
 
     public var primaryReference: String { references.first ?? id }
 
     public static func groups(for images: [Core.Image.Resource]) -> [Core.Image.LocalTagGroup] {
-        let buckets = Dictionary(grouping: images) { image in
-            image.digest ?? image.id
+        var parent = Array(images.indices)
+
+        func find(_ index: Int) -> Int {
+            var index = index
+            while parent[index] != index { index = parent[index] }
+            return index
         }
-        return buckets.map { key, images in
-            let references = images.map(\.reference)
+
+        func union(_ lhs: Int, _ rhs: Int) {
+            let left = find(lhs)
+            let right = find(rhs)
+            if left != right { parent[right] = left }
+        }
+
+        var indexByKey: [String: Int] = [:]
+        for (index, image) in images.enumerated() {
+            let keys = groupKeys(for: image)
+            for key in keys {
+                if let existing = indexByKey[key] {
+                    union(existing, index)
+                } else {
+                    indexByKey[key] = index
+                }
+            }
+        }
+
+        let buckets = Dictionary(grouping: images.indices, by: find)
+        return buckets.values.map { indices in
+            let images = indices.map { images[$0] }
+            let references = Array(Set(images.map(\.reference)))
                 .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+            let sortedImages = images.sorted { lhs, rhs in
+                if lhs.reference == rhs.reference {
+                    return lhs.runtimeKind.rawValue < rhs.runtimeKind.rawValue
+                }
+                return lhs.reference.localizedCaseInsensitiveCompare(rhs.reference) == .orderedAscending
+            }
+            let tags = Dictionary(grouping: sortedImages) { image in
+                "\(image.runtimeKind.rawValue)|\(Core.Registry.ImageReference.normalizedKey(image.reference))"
+            }
+            .map { _, images in
+                Core.Image.LocalTag(reference: images.first?.reference ?? "",
+                                    runtimeKind: images.first?.runtimeKind ?? .appleContainer,
+                                    images: images)
+            }
+            .sorted { lhs, rhs in
+                if lhs.reference == rhs.reference {
+                    return lhs.runtimeKind.rawValue < rhs.runtimeKind.rawValue
+                }
+                return lhs.reference.localizedCaseInsensitiveCompare(rhs.reference) == .orderedAscending
+            }
+            let digest = sortedImages.compactMap(\.digest).first
             return Core.Image.LocalTagGroup(
-                id: key,
-                digest: images.compactMap(\.digest).first,
+                id: digest ?? references.first.map(Core.Registry.ImageReference.normalizedKey) ?? UUID().uuidString,
+                digest: digest,
                 references: references,
-                images: images.sorted { $0.reference.localizedCaseInsensitiveCompare($1.reference) == .orderedAscending }
+                tags: tags,
+                images: sortedImages
             )
         }
         .sorted { $0.primaryReference.localizedCaseInsensitiveCompare($1.primaryReference) == .orderedAscending }
@@ -28,8 +76,33 @@ struct LocalTagGroup: Identifiable, Sendable, Hashable {
 
     public static func group(containing image: Core.Image.Resource, in images: [Core.Image.Resource]) -> Core.Image.LocalTagGroup {
         groups(for: images).first { $0.images.contains(image) }
-            ?? Core.Image.LocalTagGroup(id: image.digest ?? image.id, digest: image.digest,
-                                  references: [image.reference], images: [image])
+            ?? Core.Image.LocalTagGroup(id: image.digest ?? Core.Registry.ImageReference.normalizedKey(image.reference),
+                                        digest: image.digest,
+                                        references: [image.reference],
+                                        tags: [Core.Image.LocalTag(reference: image.reference,
+                                                                   runtimeKind: image.runtimeKind,
+                                                                   images: [image])],
+                                        images: [image])
+    }
+
+    private static func groupKeys(for image: Core.Image.Resource) -> [String] {
+        var keys = ["ref:\(Core.Registry.ImageReference.normalizedKey(image.reference))"]
+        if let digest = image.digest, !digest.isEmpty { keys.append("digest:\(digest)") }
+        return keys
+    }
+}
+
+struct LocalTag: Identifiable, Sendable, Hashable {
+    public let reference: String
+    public let runtimeKind: Core.Runtime.Kind
+    public let images: [Core.Image.Resource]
+
+    public var id: String {
+        runtimeKind.scopedID(for: Core.Registry.ImageReference.normalizedKey(reference))
+    }
+
+    public var digest: String? {
+        images.compactMap(\.digest).first
     }
 }
 
