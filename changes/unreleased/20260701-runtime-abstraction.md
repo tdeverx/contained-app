@@ -1,1 +1,0 @@
-- Consolidate runtime contracts, the Core orchestrator, and the current Apple `container` adapter into `ContainedCore`, with open-ended runtime identifiers, typed stats streams, runtime-neutral create/import models, Core-owned Compose/image-default translation, and disabled per-container core selection so future Docker-compatible or other engine adapters can be added inside Core.

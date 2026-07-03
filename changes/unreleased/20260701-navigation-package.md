@@ -1,1 +1,0 @@
-- Started the reusable navigation package by moving toolbar safe-area policy, morph target geometry, morph expander, and morph panel scaffolding into `ContainedUX`, with package-local README and DocC entry-point documentation.

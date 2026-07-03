@@ -1,6 +1,0 @@
-- Consolidated backend orchestration into `ContainedCore`, moved visuals into `ContainedUI`, moved interaction infrastructure into `ContainedUX`, and kept preview fixture data as non-shipping Core fixture surfaces with package-local docs, DocC landing pages, and tests.
-- Split the SwiftUI app implementation into `ContainedApp` with a tiny SwiftPM launcher, while keeping app-owned localization, stores, Sparkle, SwiftData, settings, and feature routing out of reusable packages.
-- Added a checked-in native macOS app target that links `ContainedApp`, builds/runs `Contained.app` directly, and includes an app test bundle for SwiftUI-focused functional checks.
-- Reorganized docs into app, feature, architecture, development, and release sections with current package boundary guidance.
-- Tightened final boundary leaks by routing terminal `exec` through Core command surfaces, making service lifecycle actions typed runtime values, and keeping app-specific wording out of reusable package comments/previews.
-- Updated ownership and release-note enforcement so `Packages/**` changes are covered by repository housekeeping after the package split.
