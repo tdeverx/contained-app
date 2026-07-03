@@ -66,6 +66,7 @@ jobs:
         if: steps.guard.outputs.build == 'true'
         run: |
           set -euo pipefail
+          brew list ripgrep >/dev/null 2>&1 || brew install ripgrep
           ./scripts/ci-validate.sh
           ./scripts/test-release-scripts.sh
           swift build -c release

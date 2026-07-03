@@ -47,6 +47,7 @@ jobs:
           NO_RELEASE_NOTE: ${{ (contains(github.event.pull_request.labels.*.name, 'no-release-note') || github.actor == 'dependabot[bot]') && '1' || '' }}
         run: |
           set -euo pipefail
+          brew list ripgrep >/dev/null 2>&1 || brew install ripgrep
           git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
           ./scripts/ci-validate.sh --base-ref "origin/${{ github.base_ref }}" --require-release-note
 
