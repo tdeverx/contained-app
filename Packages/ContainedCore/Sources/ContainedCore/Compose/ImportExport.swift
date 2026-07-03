@@ -1,51 +1,54 @@
 import Foundation
 
-public enum ComposeDialect: String, Codable, Equatable, Hashable, Sendable {
+public extension Core.Compose {
+enum Dialect: String, Codable, Equatable, Hashable, Sendable {
     case generic
     case dockerCompose
     case podmanCompose
     case nerdctlCompose
 }
 
-public struct RuntimeComposeImportPlan: Equatable, Sendable {
-    public var items: [RuntimeComposeImportItem]
+struct ImportPlan: Equatable, Sendable {
+    public var items: [Core.Compose.ImportItem]
     public var warnings: [String]
 
-    public init(requests: [ContainerCreateRequest], warnings: [String] = []) {
-        self.items = requests.map { RuntimeComposeImportItem(request: $0) }
+    public init(requests: [Core.Container.CreateRequest], warnings: [String] = []) {
+        self.items = requests.map { Core.Compose.ImportItem(request: $0) }
         self.warnings = warnings
     }
 
-    public init(items: [RuntimeComposeImportItem], warnings: [String] = []) {
+    public init(items: [Core.Compose.ImportItem], warnings: [String] = []) {
         self.items = items
         self.warnings = warnings
     }
 
-    public var requests: [ContainerCreateRequest] {
+    public var requests: [Core.Container.CreateRequest] {
         items.map(\.request)
     }
 }
 
-public struct RuntimeComposeImportItem: Equatable, Sendable {
-    public var request: ContainerCreateRequest
-    public var healthCheck: HealthCheck?
+struct ImportItem: Equatable, Sendable {
+    public var request: Core.Container.CreateRequest
+    public var healthCheck: Core.Container.HealthCheck?
 
-    public init(request: ContainerCreateRequest, healthCheck: HealthCheck? = nil) {
+    public init(request: Core.Container.CreateRequest, healthCheck: Core.Container.HealthCheck? = nil) {
         self.request = request
         self.healthCheck = healthCheck
     }
 }
 
-public struct ComposeExportPlan: Equatable, Sendable {
-    public var dialect: ComposeDialect
+struct ExportPlan: Equatable, Sendable {
+    public var dialect: Core.Compose.Dialect
     public var warnings: [String]
     public var isAvailable: Bool
 
-    public init(dialect: ComposeDialect = .generic,
+    public init(dialect: Core.Compose.Dialect = .generic,
                 warnings: [String] = [],
                 isAvailable: Bool = false) {
         self.dialect = dialect
         self.warnings = warnings
         self.isAvailable = isAvailable
     }
+}
+
 }

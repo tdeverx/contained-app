@@ -1,9 +1,10 @@
 import SwiftUI
 import AppKit
 
+public extension UI.Theme {
 /// Material/elevation constants for reusable design surfaces. Keep glass, shadow, and stroke choices
 /// here so collapsed controls and expanded panels do not drift into near-duplicates.
-public enum ThemeMaterial {
+enum Material {
     public static let toolbarHoverFill = Color.white.opacity(0.1)
     public static func toolbarInteractiveHoverFill(for colorScheme: ColorScheme) -> Color {
         Color.white.opacity(colorScheme == .light ? 0.2 : 0.1)
@@ -17,7 +18,7 @@ public enum ThemeMaterial {
 /// A curated color, used consistently for host accent choices and per-surface personalization.
 /// `.multicolor` follows `Color.accentColor`, so package callers can decide whether that means a
 /// global accent, a scoped accent, or the platform default.
-public enum ThemeTint: String, CaseIterable, Identifiable, Codable, Sendable {
+enum Tint: String, CaseIterable, Identifiable, Codable, Sendable {
     case multicolor, graphite, azure, teal, coral, indigo, green, amber, pink
 
     public var id: String { rawValue }
@@ -41,7 +42,7 @@ public enum ThemeTint: String, CaseIterable, Identifiable, Codable, Sendable {
 
 }
 
-public enum ThemeColorBlendMode: String, CaseIterable, Identifiable, Codable, Sendable {
+enum ColorBlendMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case normal, softLight, overlay, multiply, screen
 
     public var id: String { rawValue }
@@ -57,7 +58,7 @@ public enum ThemeColorBlendMode: String, CaseIterable, Identifiable, Codable, Se
     }
 }
 
-public enum ThemeAppearanceMode: String, CaseIterable, Identifiable, Codable, Sendable {
+enum Appearance: String, CaseIterable, Identifiable, Codable, Sendable {
     case system, light, dark
     public var id: String { rawValue }
     public var colorScheme: ColorScheme? {
@@ -80,10 +81,13 @@ public enum ThemeAppearanceMode: String, CaseIterable, Identifiable, Codable, Se
     }
 }
 
-public enum CardDensity: String, CaseIterable, Identifiable, Codable, Sendable {
+}
+
+public extension UI.Card {
+enum Density: String, CaseIterable, Identifiable, Codable, Sendable {
     case small, medium, large
     public var id: String { rawValue }
-    public var resourceSize: CardSize {
+    public var resourceSize: UI.Card.Size {
         switch self {
         case .small: return .small
         case .medium: return .medium
@@ -95,14 +99,16 @@ public enum CardDensity: String, CaseIterable, Identifiable, Codable, Sendable {
         if raw == "compact" {
             self = .medium
         } else {
-            self = CardDensity(rawValue: raw ?? "") ?? .medium
+            self = UI.Card.Density(rawValue: raw ?? "") ?? .medium
         }
     }
 }
+}
 
+public extension UI.Theme {
 /// The behind-window vibrancy material used for the main content area. A curated, ordered subset of
 /// `NSVisualEffectView.Material` (lightest → most opaque) so the picker reads sensibly.
-public enum ThemeWindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
+enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
     // Liquid Glass options (rendered with `.glassEffect`, not an `NSVisualEffectView`).
     case glassClear, glassRegular
     // System vibrancy materials.
@@ -146,16 +152,17 @@ public enum ThemeWindowMaterial: String, CaseIterable, Identifiable, Codable, Se
         }
     }
 }
+}
 
 public extension EnvironmentValues {
     /// The user-chosen modal material, seeded at the app root and inherited by presented sheets.
-    @Entry var modalMaterial: ThemeWindowMaterial = .sheet
+    @Entry var modalMaterial: UI.Theme.WindowMaterial = .sheet
     /// The user-chosen toolbar-control (button) material, seeded at the app root.
-    @Entry var buttonMaterial: ThemeWindowMaterial = .glassClear
+    @Entry var buttonMaterial: UI.Theme.WindowMaterial = .glassClear
     /// The user-chosen design-card material, seeded at the app root.
-    @Entry var cardMaterial: ThemeWindowMaterial = .glassRegular
+    @Entry var cardMaterial: UI.Theme.WindowMaterial = .glassRegular
     /// Optional color/gradient wash layered into toolbar button groups.
-    @Entry var buttonTintStyle: ButtonTintStyle = .disabled
+    @Entry var buttonTintStyle: UI.Theme.ButtonTintStyle = .disabled
 }
 
 private struct SheetMaterial: ViewModifier {
@@ -204,9 +211,9 @@ private struct FloatingPanelMaterial: AnimatableModifier {
             .background {
                 if showsShadow {
                     ExteriorShadow(cornerRadius: cornerRadius,
-                                   color: ThemeMaterial.floatingPanelShadow,
-                                   radius: ThemeMaterial.floatingPanelShadowRadius,
-                                   y: ThemeMaterial.floatingPanelShadowY)
+                                   color: UI.Theme.Material.floatingPanelShadow,
+                                   radius: UI.Theme.Material.floatingPanelShadowRadius,
+                                   y: UI.Theme.Material.floatingPanelShadowY)
                 }
             }
             .background {
@@ -219,7 +226,7 @@ private struct FloatingPanelMaterial: AnimatableModifier {
             }
             .clipShape(shape)
             .overlay {
-                shape.strokeBorder(ThemeMaterial.floatingPanelStroke, lineWidth: 1)
+                shape.strokeBorder(UI.Theme.Material.floatingPanelStroke, lineWidth: 1)
             }
     }
 }

@@ -1,9 +1,6 @@
 import Foundation
 import ContainedCore
 
-// `RestartPolicy` now lives in ContainedCore (Models/RestartPolicy.swift) so the watchdog's
-// decision logic can be unit-tested without the app target.
-
 /// An editable key/value row (env vars, labels).
 struct KeyValue: Identifiable, Hashable, Codable {
     let id = UUID()
@@ -52,7 +49,7 @@ struct SocketMap: Identifiable, Hashable, Codable {
 }
 
 /// The complete app-owned state of the Create/Run form. Runtime adapters translate the derived
-/// `ContainerCreateRequest` into backend-specific commands.
+/// `Core.Container.CreateRequest` into backend-specific commands.
 struct RunSpec: Codable {
     var runtimeKind: Core.Runtime.Kind? = .appleContainer
     var image = ""
@@ -78,7 +75,7 @@ struct RunSpec: Codable {
     var rosetta = false
     var ssh = false
     var virtualization = false
-    var restart: RestartPolicy = .no
+    var restart: Core.Container.RestartPolicy = .no
 
     // Advanced (all optional; empty entries are skipped when building argv).
     var workingDir = ""        // -w
@@ -108,7 +105,7 @@ struct RunSpec: Codable {
     // just the form's working copy, persisted by the sheet after a successful create/save.
     var personalization = Personalization()
     // App-managed healthcheck — also stored locally (HealthCheckStore), not as labels.
-    var healthCheck = HealthCheck()
+    var healthCheck = Core.Container.HealthCheck()
 
     var validationMessages: [String] {
         var messages: [String] = []
@@ -170,7 +167,7 @@ struct RunSpec: Codable {
     /// (container config is immutable, so "editing" means delete + re-run from this spec).
     /// Best-effort: reproduces the reversible run flags; the image's baked-in command is kept by
     /// re-passing the recorded arguments.
-    init(from config: ContainerConfiguration) {
+    init(from config: Core.Container.Configuration) {
         image = config.image.reference
         platform = config.platform.display
         name = config.id
@@ -216,7 +213,7 @@ struct RunSpec: Codable {
             .filter { !$0.key.hasPrefix("contained.") }
             .sorted { $0.key < $1.key }
             .map { KeyValue(key: $0.key, value: $0.value) }
-        restart = RestartPolicy(label: config.labels["contained.restart"])
+        restart = Core.Container.RestartPolicy(label: config.labels["contained.restart"])
         // Personalization is resolved from the local store by the edit sheet, not from labels.
     }
 
@@ -225,8 +222,8 @@ struct RunSpec: Codable {
         Core.Command.runPreview(for: createRequest)
     }
 
-    var createRequest: ContainerCreateRequest {
-        var request = ContainerCreateRequest()
+    var createRequest: Core.Container.CreateRequest {
+        var request = Core.Container.CreateRequest()
         request.runtimeKind = effectiveRuntimeKind
         request.image = image
         request.platform = platform
@@ -239,13 +236,13 @@ struct RunSpec: Codable {
         request.tty = tty
         request.cpus = cpus
         request.memory = memory
-        request.env = env.map { ContainerCreateKeyValue(key: $0.key, value: $0.value) }
+        request.env = env.map { Core.Container.KeyValue(key: $0.key, value: $0.value) }
         request.envFiles = envFiles
-        request.ports = ports.map { ContainerCreatePort(hostPort: $0.hostPort, containerPort: $0.containerPort, proto: $0.proto) }
-        request.volumes = volumes.map { ContainerCreateVolume(source: $0.source, target: $0.target, readOnly: $0.readOnly) }
+        request.ports = ports.map { Core.Container.Port(hostPort: $0.hostPort, containerPort: $0.containerPort, proto: $0.proto) }
+        request.volumes = volumes.map { Core.Container.VolumeMount(source: $0.source, target: $0.target, readOnly: $0.readOnly) }
         request.mounts = mounts
-        request.sockets = sockets.map { ContainerCreateSocket(hostPath: $0.hostPath, containerPath: $0.containerPath) }
-        request.labels = labels.map { ContainerCreateKeyValue(key: $0.key, value: $0.value) }
+        request.sockets = sockets.map { Core.Container.Socket(hostPath: $0.hostPath, containerPath: $0.containerPath) }
+        request.labels = labels.map { Core.Container.KeyValue(key: $0.key, value: $0.value) }
         request.restart = restart
         request.readOnly = readOnly
         request.useInit = useInit
@@ -277,7 +274,7 @@ struct RunSpec: Codable {
         return request
     }
 
-    init(request: ContainerCreateRequest, healthCheck: HealthCheck? = nil) {
+    init(request: Core.Container.CreateRequest, healthCheck: Core.Container.HealthCheck? = nil) {
         runtimeKind = request.runtimeKind
         image = request.image
         platform = request.platform

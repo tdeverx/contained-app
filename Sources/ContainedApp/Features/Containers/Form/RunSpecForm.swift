@@ -164,7 +164,7 @@ struct RunSpecForm: View {
                        set: { if $0 != "custom" { spec.platform = $0 } })
     }
 
-    private var imageDefaults: ContainerImageDefaults? {
+    private var imageDefaults: Core.Container.ImageDefaults? {
         app.imageDefaults(for: spec)
     }
 
@@ -302,7 +302,7 @@ struct RunSpecForm: View {
                                info: AppText.string("runSpec.gradient.info", defaultValue: "Blends the color across the card instead of using one flat wash."),
                                isOn: $spec.personalization.gradient)
                 if spec.personalization.gradient {
-                    GradientAngleControl(angle: $spec.personalization.gradientAngle, title: AppText.direction)
+                    UI.Control.GradientAngle(angle: $spec.personalization.gradientAngle, title: AppText.direction)
                 }
                 UI.Panel.Row(title: AppText.string("runSpec.blendMode", defaultValue: "Blend mode"),
                          info: AppText.string("runSpec.blendMode.info", defaultValue: "Controls how the card color wash blends with the glass behind it.")) {
@@ -322,7 +322,7 @@ struct RunSpecForm: View {
         UI.Panel.Row(title: AppText.string("runSpec.restartPolicy", defaultValue: "Restart policy"),
                  info: AppText.string("runSpec.restartPolicy.info", defaultValue: "Contained restarts the container automatically based on this setting.")) {
             Picker("", selection: $spec.restart) {
-                ForEach(RestartPolicy.allCases) { Text($0.localizedDisplayName).tag($0) }
+                ForEach(Core.Container.RestartPolicy.allCases) { Text($0.localizedDisplayName).tag($0) }
             }
             .labelsHidden().fixedSize()
         }

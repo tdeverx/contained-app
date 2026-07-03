@@ -21,13 +21,13 @@ enum SystemVolumeInventory {
         let kind: Kind
         let title: String
         let subtitle: String?
-        let containers: [ContainerSnapshot]
-        let resource: VolumeResource?
+        let containers: [Core.Container.Snapshot]
+        let resource: Core.Volume.Resource?
         let source: String?
         let destination: String?
     }
 
-    static func build(volumes: [VolumeResource], containers: [ContainerSnapshot]) -> [Entry] {
+    static func build(volumes: [Core.Volume.Resource], containers: [Core.Container.Snapshot]) -> [Entry] {
         let sortedVolumes = volumes.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
@@ -91,15 +91,15 @@ enum SystemVolumeInventory {
                      destination: existing.destination ?? incoming.destination)
     }
 
-    private static func volumeSubtitle(_ volume: VolumeResource) -> String? {
+    private static func volumeSubtitle(_ volume: Core.Volume.Resource) -> String? {
         let config = volume.configuration
         let parts = [config.sizeInBytes.map { Format.bytes($0) }, config.format].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    private static func mountInventoryEntry(_ mount: Mount,
-                                            snapshot: ContainerSnapshot,
-                                            namedResources: [String: VolumeResource]) -> Entry? {
+    private static func mountInventoryEntry(_ mount: Core.Container.Mount,
+                                            snapshot: Core.Container.Snapshot,
+                                            namedResources: [String: Core.Volume.Resource]) -> Entry? {
         let source = mount.source?.trimmingCharacters(in: .whitespacesAndNewlines)
         let destination = mount.effectiveDestination
         let type = mount.type?.lowercased()
@@ -153,13 +153,13 @@ enum SystemVolumeInventory {
         return type.uppercased()
     }
 
-    private static func containersMounting(source: String, in containers: [ContainerSnapshot]) -> [ContainerSnapshot] {
+    private static func containersMounting(source: String, in containers: [Core.Container.Snapshot]) -> [Core.Container.Snapshot] {
         sortedContainers(containers.filter { snapshot in
             snapshot.configuration.mounts.contains { $0.source == source }
         })
     }
 
-    private static func sortedContainers(_ containers: [ContainerSnapshot]) -> [ContainerSnapshot] {
+    private static func sortedContainers(_ containers: [Core.Container.Snapshot]) -> [Core.Container.Snapshot] {
         containers.sorted {
             $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
         }

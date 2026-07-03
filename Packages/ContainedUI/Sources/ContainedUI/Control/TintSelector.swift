@@ -1,16 +1,16 @@
 import SwiftUI
 
-/// A row of colored swatches for picking a `ThemeTint` — each shows its actual color, the selected
+/// A row of colored swatches for picking a `UI.Theme.Tint` — each shows its actual color, the selected
 /// one gets a ring.
 public extension UI.Control {
     struct TintSelector: View {
-        private let selection: Binding<ThemeTint?>
+        private let selection: Binding<UI.Theme.Tint?>
         private let automaticLabel: String?
-        private let labelForTint: (ThemeTint) -> String
+        private let labelForTint: (UI.Theme.Tint) -> String
 
-        public init(selection: Binding<ThemeTint>,
-                    labelForTint: @escaping (ThemeTint) -> String) {
-            self.selection = Binding<ThemeTint?>(
+        public init(selection: Binding<UI.Theme.Tint>,
+                    labelForTint: @escaping (UI.Theme.Tint) -> String) {
+            self.selection = Binding<UI.Theme.Tint?>(
                 get: { selection.wrappedValue },
                 set: { if let newValue = $0 { selection.wrappedValue = newValue } }
             )
@@ -18,9 +18,9 @@ public extension UI.Control {
             self.labelForTint = labelForTint
         }
 
-        public init(optionalSelection: Binding<ThemeTint?>,
+        public init(optionalSelection: Binding<UI.Theme.Tint?>,
                     automaticLabel: String,
-                    labelForTint: @escaping (ThemeTint) -> String) {
+                    labelForTint: @escaping (UI.Theme.Tint) -> String) {
             self.selection = optionalSelection
             self.automaticLabel = automaticLabel
             self.labelForTint = labelForTint
@@ -35,7 +35,7 @@ public extension UI.Control {
                         .accessibilityLabel(automaticLabel)
                         .accessibilityAddTraits(selection.wrappedValue == nil ? .isSelected : [])
                 }
-                ForEach(ThemeTint.allCases) { tint in
+                ForEach(UI.Theme.Tint.allCases) { tint in
                     let label = labelForTint(tint)
                     Button { selection.wrappedValue = tint } label: { swatch(tint) }
                         .buttonStyle(.plain)
@@ -60,7 +60,7 @@ public extension UI.Control {
             .frame(width: 26, height: 26)
         }
 
-        private func swatch(_ tint: ThemeTint) -> some View {
+        private func swatch(_ tint: UI.Theme.Tint) -> some View {
             ZStack {
                 Circle().fill(tint.color).frame(width: 22, height: 22)
                 // Mark the "follow the host accent" option so it reads as automatic, not a fixed color.

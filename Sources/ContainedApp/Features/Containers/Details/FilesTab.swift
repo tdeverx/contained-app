@@ -7,7 +7,7 @@ import ContainedCore
 /// `container cp`. AppKit bridge (flagged): `NSOpenPanel`/`NSSavePanel` for host file selection.
 struct FilesTab: View {
     @Environment(AppModel.self) private var app
-    let snapshot: ContainerSnapshot
+    let snapshot: Core.Container.Snapshot
 
     @State private var path = "/"
     @State private var entries: [String] = []
@@ -96,7 +96,7 @@ struct FilesTab: View {
             entries = out.split(separator: "\n").map(String.init)
                 .filter { $0 != "./" && $0 != "../" && !$0.isEmpty }
                 .sorted { ($0.hasSuffix("/") ? 0 : 1, $0.lowercased()) < ($1.hasSuffix("/") ? 0 : 1, $1.lowercased()) }
-        } catch let e as CommandError { error = e.appDisplayMessage }
+        } catch let e as Core.Command.Error { error = e.appDisplayMessage }
         catch { self.error = error.appDisplayMessage }
     }
 
@@ -120,7 +120,7 @@ struct FilesTab: View {
             do {
                 _ = try await app.client?.copy(source: "\(snapshot.id):\(joined(name))", destination: dest.path)
                 app.flash(AppText.copiedFileToHost(name))
-            } catch let e as CommandError { app.flash(e.appDisplayMessage) }
+            } catch let e as Core.Command.Error { app.flash(e.appDisplayMessage) }
             catch { app.flash(error.appDisplayMessage) }
         }
     }
@@ -138,7 +138,7 @@ struct FilesTab: View {
                                                destination: "\(snapshot.id):\(joined(src.lastPathComponent))")
                 app.flash(AppText.copiedFileIntoContainer(src.lastPathComponent))
                 await load()
-            } catch let e as CommandError { app.flash(e.appDisplayMessage) }
+            } catch let e as Core.Command.Error { app.flash(e.appDisplayMessage) }
             catch { app.flash(error.appDisplayMessage) }
         }
     }

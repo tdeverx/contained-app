@@ -83,7 +83,7 @@ struct RuntimeWorkflowTests {
         networks:
           default: {}
         """
-        let project = try ComposeParser.parse(yaml, projectName: "demo")
+        let project = try Core.Compose.Parser.parse(yaml, projectName: "demo")
         #expect(project.services.count == 2)
         let web = project.services.first { $0.name == "web" }
         #expect(web?.image == "nginx:latest")
@@ -101,31 +101,31 @@ struct RuntimeWorkflowTests {
     // MARK: Restart watchdog decision logic
 
     @Test func restartPolicyParsing() {
-        #expect(RestartPolicy(label: "always") == .always)
-        #expect(RestartPolicy(label: "on-failure") == .onFailure)
-        #expect(RestartPolicy(label: nil) == .no)
-        #expect(RestartPolicy(label: "unless-stopped") == .no)
-        #expect(RestartPolicy(label: "garbage") == .no)
+        #expect(Core.Container.RestartPolicy(label: "always") == .always)
+        #expect(Core.Container.RestartPolicy(label: "on-failure") == .onFailure)
+        #expect(Core.Container.RestartPolicy(label: nil) == .no)
+        #expect(Core.Container.RestartPolicy(label: "unless-stopped") == .no)
+        #expect(Core.Container.RestartPolicy(label: "garbage") == .no)
     }
 
     @Test func watchdogDecision() {
         // User-initiated stops are never auto-restarted.
-        #expect(!RestartDecision.shouldRestart(policy: .always, userInitiated: true))
+        #expect(!Core.Container.RestartDecision.shouldRestart(policy: .always, userInitiated: true))
         // .no never restarts.
-        #expect(!RestartDecision.shouldRestart(policy: .no, userInitiated: false))
+        #expect(!Core.Container.RestartDecision.shouldRestart(policy: .no, userInitiated: false))
         // .always restarts any crash.
-        #expect(RestartDecision.shouldRestart(policy: .always, userInitiated: false))
+        #expect(Core.Container.RestartDecision.shouldRestart(policy: .always, userInitiated: false))
         // .onFailure: unknown exit treated as failure; known 0 suppressed; nonzero restarts.
-        #expect(RestartDecision.shouldRestart(policy: .onFailure, userInitiated: false, exitCode: nil))
-        #expect(!RestartDecision.shouldRestart(policy: .onFailure, userInitiated: false, exitCode: 0))
-        #expect(RestartDecision.shouldRestart(policy: .onFailure, userInitiated: false, exitCode: 137))
+        #expect(Core.Container.RestartDecision.shouldRestart(policy: .onFailure, userInitiated: false, exitCode: nil))
+        #expect(!Core.Container.RestartDecision.shouldRestart(policy: .onFailure, userInitiated: false, exitCode: 0))
+        #expect(Core.Container.RestartDecision.shouldRestart(policy: .onFailure, userInitiated: false, exitCode: 137))
     }
 
     @Test func watchdogBackoffGrowsAndCaps() {
-        #expect(RestartDecision.backoff(attempt: 0) == 0)
-        #expect(RestartDecision.backoff(attempt: 1) == 2)
-        #expect(RestartDecision.backoff(attempt: 2) == 4)
-        #expect(RestartDecision.backoff(attempt: 3) == 8)
-        #expect(RestartDecision.backoff(attempt: 10) == 60)   // capped
+        #expect(Core.Container.RestartDecision.backoff(attempt: 0) == 0)
+        #expect(Core.Container.RestartDecision.backoff(attempt: 1) == 2)
+        #expect(Core.Container.RestartDecision.backoff(attempt: 2) == 4)
+        #expect(Core.Container.RestartDecision.backoff(attempt: 3) == 8)
+        #expect(Core.Container.RestartDecision.backoff(attempt: 10) == 60)   // capped
     }
 }

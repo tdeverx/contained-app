@@ -3,15 +3,16 @@ import Yams
 
 /// A parsed `compose.yaml`, reduced to the subset Contained can prefill into Run specs. Anything not
 /// translated is recorded in `warnings` so the user knows exactly what to wire up by hand.
-public struct ComposeProject: Sendable, Hashable, Identifiable {
+public extension Core.Compose {
+struct Project: Sendable, Hashable, Identifiable {
     public let name: String
-    public let services: [ComposeService]
+    public let services: [Core.Compose.Service]
     public let warnings: [String]
     public var id: String { name }
 }
 
 /// One compose service, normalized to the fields that map onto `container run`.
-public struct ComposeService: Sendable, Hashable, Identifiable {
+struct Service: Sendable, Hashable, Identifiable {
     /// The services-map key — what `depends_on` references (distinct from `name`/`container_name`).
     public let key: String
     public let name: String
@@ -41,8 +42,8 @@ public struct ComposeService: Sendable, Hashable, Identifiable {
     public let dnsOptions: [String]
     public let tmpfs: [String]
     public let ulimits: [String]
-    public let dependsOn: [ComposeDependency]
-    public let healthcheck: ComposeHealthcheck?
+    public let dependsOn: [Core.Compose.Dependency]
+    public let healthcheck: Core.Compose.Healthcheck?
 
     public var id: String { key }
 
@@ -54,7 +55,7 @@ public struct ComposeService: Sendable, Hashable, Identifiable {
                 interactive: Bool = false, tty: Bool = false, capAdd: [String] = [],
                 capDrop: [String] = [], dns: [String] = [], dnsSearch: [String] = [],
                 dnsOptions: [String] = [], tmpfs: [String] = [], ulimits: [String] = [],
-                dependsOn: [ComposeDependency], healthcheck: ComposeHealthcheck?) {
+                dependsOn: [Core.Compose.Dependency], healthcheck: Core.Compose.Healthcheck?) {
         self.key = key; self.name = name; self.image = image; self.platform = platform; self.command = command
         self.entrypoint = entrypoint; self.workingDir = workingDir; self.user = user; self.cpus = cpus
         self.memory = memory; self.ports = ports; self.volumes = volumes; self.environment = environment
@@ -68,22 +69,22 @@ public struct ComposeService: Sendable, Hashable, Identifiable {
 }
 
 /// A `depends_on` edge with its start condition.
-public struct ComposeDependency: Sendable, Hashable {
+struct Dependency: Sendable, Hashable {
     public let service: String        // the depended-on service key
-    public let condition: ComposeCondition
-    public init(service: String, condition: ComposeCondition) {
+    public let condition: Core.Compose.Condition
+    public init(service: String, condition: Core.Compose.Condition) {
         self.service = service; self.condition = condition
     }
 }
 
-public enum ComposeCondition: String, Sendable, Hashable {
+enum Condition: String, Sendable, Hashable {
     case started = "service_started"
     case healthy = "service_healthy"
     case completed = "service_completed_successfully"
 }
 
 /// A parsed compose `healthcheck:` block (the subset Contained can run as an `exec` probe).
-public struct ComposeHealthcheck: Sendable, Hashable {
+struct Healthcheck: Sendable, Hashable {
     public let test: [String]         // the probe argv (CMD-SHELL flattened to sh -c form)
     public let intervalSeconds: Int
     public let retries: Int
@@ -92,7 +93,7 @@ public struct ComposeHealthcheck: Sendable, Hashable {
     }
 }
 
-public enum ComposeError: ContainedPackageError, Equatable {
+enum Error: Core.Error.PackageError, Equatable {
     case invalid(String)
 
     public var packageName: String { "ContainedCore" }
@@ -104,11 +105,11 @@ public enum ComposeError: ContainedPackageError, Equatable {
     }
 }
 
-/// Dependency ordering for a stack launch. Pure + testable (factored like `RestartDecision`).
-public enum ComposeOrder {
+/// Dependency ordering for a stack launch. Pure + testable (factored like `Core.Container.RestartDecision`).
+enum Order {
     /// Topologically sort services by `depends_on` (dependencies first). On a cycle, returns the
     /// declared order with `cycle == true` so the caller can warn and fall back gracefully.
-    public static func sorted(_ services: [ComposeService]) -> (order: [String], cycle: Bool) {
+    public static func sorted(_ services: [Core.Compose.Service]) -> (order: [String], cycle: Bool) {
         let keys = services.map(\.key)
         let known = Set(keys)
         var edges: [String: [String]] = [:]
@@ -134,12 +135,12 @@ public enum ComposeOrder {
     }
 }
 
-public enum ComposeParser {
+enum Parser {
     /// Parse compose YAML text. `projectName` defaults from the file's parent folder.
-    public static func parse(_ yaml: String, projectName: String) throws -> ComposeProject {
+    public static func parse(_ yaml: String, projectName: String) throws -> Core.Compose.Project {
         let loaded: Any?
-        do { loaded = try Yams.load(yaml: yaml) } catch { throw ComposeError.invalid(String(describing: error)) }
-        guard let root = loaded as? [String: Any] else { throw ComposeError.invalid("Top level is not a mapping.") }
+        do { loaded = try Yams.load(yaml: yaml) } catch { throw Core.Compose.Error.invalid(String(describing: error)) }
+        guard let root = loaded as? [String: Any] else { throw Core.Compose.Error.invalid("Top level is not a mapping.") }
 
         var warnings: [String] = []
         // Top-level keys we don't translate.
@@ -148,16 +149,16 @@ public enum ComposeParser {
         }
 
         guard let servicesMap = root["services"] as? [String: Any] else {
-            throw ComposeError.invalid("No `services` section found.")
+            throw Core.Compose.Error.invalid("No `services` section found.")
         }
 
-        var services: [ComposeService] = []
+        var services: [Core.Compose.Service] = []
         for name in servicesMap.keys.sorted() {
             guard let body = servicesMap[name] as? [String: Any] else { continue }
             services.append(service(name: name, body: body, warnings: &warnings))
         }
         let resolvedName = (root["name"] as? String) ?? projectName
-        return ComposeProject(name: resolvedName, services: services, warnings: warnings)
+        return Core.Compose.Project(name: resolvedName, services: services, warnings: warnings)
     }
 
     private static let supportedKeys: Set<String> =
@@ -167,7 +168,7 @@ public enum ComposeParser {
          "tty", "cap_add", "cap_drop", "dns", "dns_search", "dns_opt", "tmpfs", "ulimits",
          "network_mode", "networks"]
 
-    private static func service(name: String, body: [String: Any], warnings: inout [String]) -> ComposeService {
+    private static func service(name: String, body: [String: Any], warnings: inout [String]) -> Core.Compose.Service {
         for key in body.keys where !supportedKeys.contains(key) {
             warnings.append("`\(name).\(key)` isn't translated.")
         }
@@ -175,7 +176,7 @@ public enum ComposeParser {
         if image == nil, body["build"] != nil {
             warnings.append("`\(name)` uses `build:` — build the image first, then set its tag here.")
         }
-        return ComposeService(
+        return Core.Compose.Service(
             key: name,
             name: (body["container_name"] as? String) ?? name,
             image: image,
@@ -211,15 +212,15 @@ public enum ComposeParser {
 
     /// Parse `depends_on` in both the short list form (`[a, b]` → start order) and the long mapping
     /// form (`{a: {condition: service_healthy}}`).
-    private static func dependencies(_ value: Any?) -> [ComposeDependency] {
+    private static func dependencies(_ value: Any?) -> [Core.Compose.Dependency] {
         if let list = value as? [Any] {
-            return list.compactMap { $0 as? String }.map { ComposeDependency(service: $0, condition: .started) }
+            return list.compactMap { $0 as? String }.map { Core.Compose.Dependency(service: $0, condition: .started) }
         }
         if let map = value as? [String: Any] {
             return map.keys.sorted().map { service in
                 let condition = (map[service] as? [String: Any])?["condition"] as? String
-                return ComposeDependency(service: service,
-                                         condition: condition.flatMap(ComposeCondition.init) ?? .started)
+                return Core.Compose.Dependency(service: service,
+                                         condition: condition.flatMap(Core.Compose.Condition.init) ?? .started)
             }
         }
         return []
@@ -227,7 +228,7 @@ public enum ComposeParser {
 
     /// Parse a `healthcheck:` block. `test` accepts `["CMD-SHELL", "<cmd>"]`, `["CMD", a, b]`, or a
     /// bare string; we normalize to an `exec` argv.
-    private static func healthcheck(_ value: Any?) -> ComposeHealthcheck? {
+    private static func healthcheck(_ value: Any?) -> Core.Compose.Healthcheck? {
         guard let map = value as? [String: Any] else { return nil }
         if (map["disable"] as? Bool) == true { return nil }
         let test: [String]
@@ -243,7 +244,7 @@ public enum ComposeParser {
         guard !test.isEmpty else { return nil }
         let interval = duration(map["interval"]) ?? 30
         let retries = (map["retries"] as? Int) ?? 3
-        return ComposeHealthcheck(test: test, intervalSeconds: interval, retries: retries)
+        return Core.Compose.Healthcheck(test: test, intervalSeconds: interval, retries: retries)
     }
 
     /// Parse a compose duration like "30s", "1m30s", or a bare number of seconds.
@@ -415,4 +416,6 @@ public enum ComposeParser {
         default: return ""
         }
     }
+}
+
 }

@@ -1,6 +1,7 @@
 import Foundation
 
-public struct RuntimeCommandPreview: Equatable, Sendable {
+public extension Core.Command {
+struct Preview: Equatable, Sendable {
     public var command: [String]
     public var warnings: [String]
 
@@ -10,7 +11,7 @@ public struct RuntimeCommandPreview: Equatable, Sendable {
     }
 }
 
-public struct CommandInvocation: Equatable, Sendable {
+struct Invocation: Equatable, Sendable {
     public var executableURL: URL
     public var arguments: [String]
 
@@ -18,4 +19,6 @@ public struct CommandInvocation: Equatable, Sendable {
         self.executableURL = executableURL
         self.arguments = arguments
     }
+}
+
 }

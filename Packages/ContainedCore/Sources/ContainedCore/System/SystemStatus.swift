@@ -1,7 +1,8 @@
 import Foundation
 
 /// `container system df --format json`.
-public struct DiskUsage: Codable, Sendable, Hashable {
+public extension Core.System {
+struct DiskUsage: Codable, Sendable, Hashable {
     public let containers: Category
     public let images: Category
     public let volumes: Category
@@ -18,7 +19,7 @@ public struct DiskUsage: Codable, Sendable, Hashable {
 }
 
 /// `container system status --format json`.
-public struct SystemStatus: Codable, Sendable, Hashable {
+struct Status: Codable, Sendable, Hashable {
     public let status: String
     public let appRoot: String?
     public let installRoot: String?
@@ -28,4 +29,6 @@ public struct SystemStatus: Codable, Sendable, Hashable {
     public let apiServerAppName: String?
 
     public var isRunning: Bool { status.lowercased() == "running" }
+}
+
 }

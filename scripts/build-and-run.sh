@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Build a debug app bundle and optionally relaunch it.
+# Usage: ./scripts/build-and-run.sh [run|build]
 set -euo pipefail
 
 MODE="${1:-run}"

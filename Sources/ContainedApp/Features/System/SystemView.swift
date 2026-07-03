@@ -18,7 +18,7 @@ struct SystemContent: View {
     @State private var working = false
     @State private var pruneTarget: PruneTarget?
     @State private var reclaimingAll = false
-    @State private var deletingVolume: VolumeResource?
+    @State private var deletingVolume: Core.Volume.Resource?
     @State private var page: SystemPage
 
     enum SystemPage: String, CaseIterable, Identifiable {
@@ -288,7 +288,7 @@ struct SystemContent: View {
         Binding(get: { deletingVolume != nil }, set: { if !$0 { deletingVolume = nil } })
     }
 
-    private func deleteVolume(_ volume: VolumeResource) async {
+    private func deleteVolume(_ volume: Core.Volume.Resource) async {
         guard let client = app.client else { return }
         if let error = await app.captured({ _ = try await client.deleteVolumes([volume.name]) }) { app.flash(error) }
         await app.refreshVolumes()
@@ -403,7 +403,7 @@ struct SystemContent: View {
             }
             await app.refreshSystemResources()
             await app.refreshSystem()
-        } catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        } catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
     }
 

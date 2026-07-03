@@ -2,7 +2,7 @@ import Foundation
 import ContainedCore
 
 public extension Core.Fixtures.Generic {
-    struct MetricHistory: Equatable, Sendable, ContainedCore.MetricHistorySample {
+    struct MetricHistory: Equatable, Sendable, Core.Metrics.HistorySample {
         public var timestamp: Date
         public var cpuFraction: Double
         public var memoryBytes: Double

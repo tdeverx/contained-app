@@ -23,7 +23,7 @@ enum HistoryRange: String, CaseIterable, Identifiable {
 /// log — the long-term counterpart to the live sparklines. Backed by SwiftData via `@Query`.
 struct ContainerHistoryTab: View {
     @Environment(AppModel.self) private var app
-    let snapshot: ContainerSnapshot
+    let snapshot: Core.Container.Snapshot
     @State private var range: HistoryRange = .day
     /// Window start, recomputed only when the range changes (not per render) so the windowed `@Query`
     /// inside `ContainerHistoryWindow` isn't rebuilt on every layout pass.
@@ -51,12 +51,12 @@ struct ContainerHistoryTab: View {
 /// into the SwiftData `@Query` predicates, so only the visible range is fetched — not the container's
 /// entire retained history (which an unbounded query then re-filtered on every render).
 private struct ContainerHistoryWindow: View {
-    private let snapshot: ContainerSnapshot
-    private let normalization: StatsNormalizationContext
+    private let snapshot: Core.Container.Snapshot
+    private let normalization: Core.Metrics.NormalizationContext
     @Query private var samples: [MetricSample]
     @Query private var events: [EventRecord]
 
-    init(snapshot: ContainerSnapshot, cutoff: Date, normalization: StatsNormalizationContext) {
+    init(snapshot: Core.Container.Snapshot, cutoff: Date, normalization: Core.Metrics.NormalizationContext) {
         self.snapshot = snapshot
         self.normalization = normalization
         let containerID = snapshot.id
@@ -154,8 +154,8 @@ struct HistoryChartPoint: Identifiable, Equatable {
     let netTxKBPerSec: Double
 
     static func points(from samples: [MetricSampleSnapshot],
-                       snapshot: ContainerSnapshot,
-                       normalization: StatsNormalizationContext) -> [HistoryChartPoint] {
+                       snapshot: Core.Container.Snapshot,
+                       normalization: Core.Metrics.NormalizationContext) -> [HistoryChartPoint] {
         guard !samples.isEmpty else { return [] }
 
         let memoryFallbackBytes = samples.reduce(UInt64(0)) { current, sample in

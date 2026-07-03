@@ -42,6 +42,6 @@ CLI preview stays visible, and unsupported values are reported rather than
 silently guessed.
 
 Runtime-specific import rules belong in the adapter. Apple container currently
-owns the Compose-to-`ContainerCreateRequest` translation; future Docker-compatible
+owns the Compose-to-`Core.Container.CreateRequest` translation; future Docker-compatible
 or other adapters should return the same standardized fields with their own
 warnings and unsupported-operation plans.

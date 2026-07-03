@@ -1,7 +1,8 @@
 import Foundation
 
 /// One Docker Hub repository search result.
-public struct HubSearchResult: Decodable, Sendable, Identifiable, Hashable {
+public extension Core.Registry {
+struct HubSearchResult: Decodable, Sendable, Identifiable, Hashable {
     public let repoName: String
     public let shortDescription: String?
     public let starCount: Int
@@ -25,13 +26,13 @@ public struct HubSearchResult: Decodable, Sendable, Identifiable, Hashable {
 }
 
 /// The top-level shape of the Docker Hub search response.
-public struct HubSearchResponse: Decodable, Sendable {
-    public let results: [HubSearchResult]
+struct HubSearchResponse: Decodable, Sendable {
+    public let results: [Core.Registry.HubSearchResult]
 }
 
 /// Docker Hub search endpoint helpers. Centralizes URL construction, response validation, and
 /// decoding so toolbar search and the full image picker cannot drift.
-public enum HubSearch {
+enum HubSearch {
     public static func url(query: String, pageSize: Int = 25) -> URL? {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty,
@@ -45,12 +46,14 @@ public enum HubSearch {
 
     public static func results(query: String,
                                pageSize: Int = 25,
-                               session: URLSession = .shared) async throws -> [HubSearchResult] {
+                               session: URLSession = .shared) async throws -> [Core.Registry.HubSearchResult] {
         guard let url = url(query: query, pageSize: pageSize) else { return [] }
         let (data, response) = try await session.data(from: url)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw URLError(.badServerResponse)
         }
-        return try JSONDecoder().decode(HubSearchResponse.self, from: data).results
+        return try JSONDecoder().decode(Core.Registry.HubSearchResponse.self, from: data).results
     }
+}
+
 }

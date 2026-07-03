@@ -39,8 +39,8 @@ public struct ContainedApplication: App {
                 Button("Check for Updates…") { app.updater.checkForUpdates() }
                     .disabled(!app.updater.canCheckForUpdates)
             }
-            // Settings now lives in the toolbar morph panel (no separate Settings window), so ⌘,
-            // opens that instead of the standard Settings scene.
+            // Route Settings through the app shell so the keyboard shortcut and toolbar panel
+            // open the same surface.
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") { openSettings() }
                     .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,

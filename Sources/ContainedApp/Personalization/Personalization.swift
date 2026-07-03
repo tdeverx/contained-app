@@ -34,7 +34,7 @@ struct Personalization: Codable, Hashable, Sendable {
 
     var color: Color { tint.color }
 
-    var graphMetric: GraphMetric {
+    var graphMetric: Core.Metrics.GraphMetric {
         get { widgets.first(where: { $0.enabled })?.metric ?? widgets.first?.metric ?? .cpu }
         set {
             if widgets.indices.contains(0) {
@@ -99,7 +99,7 @@ struct Personalization: Codable, Hashable, Sendable {
            !decodedWidgets.isEmpty {
             widgets = Self.normalizedWidgets(decodedWidgets)
         } else {
-            let metric = try container.decodeIfPresent(GraphMetric.self, forKey: .graphMetric) ?? .cpu
+            let metric = try container.decodeIfPresent(Core.Metrics.GraphMetric.self, forKey: .graphMetric) ?? .cpu
             let style = try container.decodeIfPresent(UI.Chart.GraphStyle.self, forKey: .graphStyle) ?? .area
             widgets = Self.normalizedWidgets([
                 WidgetConfiguration(enabled: true, metric: metric, style: style),

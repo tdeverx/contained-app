@@ -6,7 +6,7 @@ import ContainedCore
 /// (`.task(id:)`), so leaving the tab cancels it and terminates the child process (SIGTERM).
 struct LogsTab: View {
     @Environment(AppModel.self) private var app
-    let snapshot: ContainerSnapshot
+    let snapshot: Core.Container.Snapshot
 
     @State private var lines: [String] = []
     @State private var carry = ""
@@ -101,7 +101,7 @@ struct LogsTab: View {
         } catch is CancellationError {
             // Expected on tab/container switch — the child process is terminated for us.
         } catch {
-            failed = (error as? CommandError)?.appDisplayMessage ?? error.appDisplayMessage
+            failed = (error as? Core.Command.Error)?.appDisplayMessage ?? error.appDisplayMessage
         }
     }
 

@@ -4,7 +4,8 @@ import SwiftUI
 /// button, and a trailing slot for confirm/primary actions or a progress spinner. Replaces the
 /// hand-rolled header `HStack` + `GlassCircleButton` chain repeated across every sheet, so spacing,
 /// padding, and the cancel affordance stay consistent.
-public struct PanelSheetTitleBar<Trailing: View>: View {
+public extension UI.Panel {
+struct SheetTitleBar<Trailing: View>: View {
     public let title: String
     public var subtitle: String? = nil
     public var cancelIcon: String = "xmark"
@@ -43,8 +44,9 @@ public struct PanelSheetTitleBar<Trailing: View>: View {
         .padding(UI.Tokens.Space.l)
     }
 }
+}
 
-public extension PanelSheetTitleBar where Trailing == EmptyView {
+public extension UI.Panel.SheetTitleBar where Trailing == EmptyView {
     /// Header with only a cancel/close button (no primary action).
     init(title: String, subtitle: String? = nil, cancelIcon: String = "xmark",
          cancelHelp: String, onCancel: @escaping () -> Void) {

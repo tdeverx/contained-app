@@ -9,6 +9,8 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'README.md'
+      - 'Packages/*/README.md'
+      - 'Packages/*/Sources/*/*.docc/**'
       - 'CHANGELOG.md'
       - 'CODE_OF_CONDUCT.md'
       - '.github/**/*.md'
@@ -25,6 +27,8 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'README.md'
+      - 'Packages/*/README.md'
+      - 'Packages/*/Sources/*/*.docc/**'
       - 'CHANGELOG.md'
       - 'CODE_OF_CONDUCT.md'
       - '.github/**/*.md'

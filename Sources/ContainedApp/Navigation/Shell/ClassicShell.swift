@@ -165,7 +165,7 @@ private struct ClassicSectionPage: View {
 
 private struct BuildPage: View {
     var body: some View {
-        PageScaffold(symbol: "hammer",
+        UI.Panel.PageScaffold(symbol: "hammer",
                      title: AppText.sectionBuild,
                      subtitle: AppText.string("build.subtitle.context", defaultValue: "From a Dockerfile + build context")) {
             EmptyView()
@@ -179,9 +179,9 @@ private struct BuildPage: View {
 private struct NetworksPage: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @State private var deletingNetwork: NetworkResource?
+    @State private var deletingNetwork: Core.Network.Resource?
 
-    private var sortedNetworks: [NetworkResource] {
+    private var sortedNetworks: [Core.Network.Resource] {
         app.networks.filter(matchesFilter).sorted { lhs, rhs in
             switch ui.networkSort {
             case .name:
@@ -203,7 +203,7 @@ private struct NetworksPage: View {
         }
     }
 
-    private var networkSections: [(title: String, networks: [NetworkResource])] {
+    private var networkSections: [(title: String, networks: [Core.Network.Resource])] {
         switch ui.networkGrouping {
         case .none:
             return [("", sortedNetworks)]
@@ -219,7 +219,7 @@ private struct NetworksPage: View {
     }
 
     var body: some View {
-        PageScaffold(symbol: "network",
+        UI.Panel.PageScaffold(symbol: "network",
                      title: AppText.sectionNetworks,
                      subtitle: AppText.string("network.count", defaultValue: "\(sortedNetworks.count) network\(sortedNetworks.count == 1 ? "" : "s")")) {
             UI.Action.Group(UI.Action.Item(systemName: "plus",
@@ -259,7 +259,7 @@ private struct NetworksPage: View {
         }
     }
 
-    private func networkRow(_ network: NetworkResource) -> some View {
+    private func networkRow(_ network: Core.Network.Resource) -> some View {
         UI.Card.Scaffold(size: .medium,
                      elevated: false,
                      title: network.name,
@@ -294,7 +294,7 @@ private struct NetworksPage: View {
     }
 
     @ViewBuilder
-    private func networkMenu(_ network: NetworkResource) -> some View {
+    private func networkMenu(_ network: Core.Network.Resource) -> some View {
         Button { copyToPasteboard(network.name) } label: {
             Label("Copy Name", systemImage: "doc.on.doc")
         }
@@ -311,7 +311,7 @@ private struct NetworksPage: View {
         }
     }
 
-    private func networkSubtitle(_ network: NetworkResource) -> String {
+    private func networkSubtitle(_ network: Core.Network.Resource) -> String {
         [
             network.configuration.mode,
             network.configuration.plugin,
@@ -323,7 +323,7 @@ private struct NetworksPage: View {
         .joined(separator: " · ")
     }
 
-    private func matchesFilter(_ network: NetworkResource) -> Bool {
+    private func matchesFilter(_ network: Core.Network.Resource) -> Bool {
         switch ui.networkFilter {
         case .all: return true
         case .custom: return !network.isBuiltin
@@ -335,12 +335,12 @@ private struct NetworksPage: View {
         Binding(get: { deletingNetwork != nil }, set: { if !$0 { deletingNetwork = nil } })
     }
 
-    private func deleteNetwork(_ network: NetworkResource) async {
+    private func deleteNetwork(_ network: Core.Network.Resource) async {
         guard let client = app.client else { return }
         do {
             _ = try await client.deleteNetworks([network.name])
             await app.refreshNetworks()
-        } catch let error as CommandError {
+        } catch let error as Core.Command.Error {
             app.flash(error.appDisplayMessage)
         } catch {
             app.flash(error.appDisplayMessage)
@@ -351,7 +351,7 @@ private struct NetworksPage: View {
 private struct ImagesPage: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @State private var detail: LocalImageTagGroup?
+    @State private var detail: Core.Image.LocalTagGroup?
     @State private var sourceFrame: CGRect?
     @State private var presented = false
     @State private var closeRequestToken = 0
@@ -426,7 +426,7 @@ private struct ImagesPage: View {
         CGRect(x: size.width / 2 - 1, y: size.height / 2 - 1, width: 2, height: 2)
     }
 
-    private func openImageDetail(_ group: LocalImageTagGroup, _ frame: CGRect) {
+    private func openImageDetail(_ group: Core.Image.LocalTagGroup, _ frame: CGRect) {
         detail = group
         sourceFrame = frame
         presented = true
@@ -436,7 +436,7 @@ private struct ImagesPage: View {
         closeRequestToken &+= 1
     }
 
-    private func currentGroup(_ group: LocalImageTagGroup) -> LocalImageTagGroup {
+    private func currentGroup(_ group: Core.Image.LocalTagGroup) -> Core.Image.LocalTagGroup {
         app.localImageGroups().first { $0.id == group.id } ?? group
     }
 }

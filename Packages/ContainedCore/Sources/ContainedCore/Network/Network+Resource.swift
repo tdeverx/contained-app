@@ -1,10 +1,11 @@
 import Foundation
 
 /// One element of `container network list --format json` (and `network inspect`).
-public struct NetworkResource: Codable, Sendable, Identifiable, Hashable {
-    public let configuration: NetworkConfiguration
+public extension Core.Network {
+struct Resource: Codable, Sendable, Identifiable, Hashable {
+    public let configuration: Core.Network.Configuration
     public let id: String
-    public let status: NetworkStatus?
+    public let status: Core.Network.Status?
 
     public var name: String { configuration.name }
     public var labels: [String: String] { configuration.labels }
@@ -12,7 +13,7 @@ public struct NetworkResource: Codable, Sendable, Identifiable, Hashable {
     public var isBuiltin: Bool { labels["com.apple.container.resource.role"] == "builtin" }
 }
 
-public struct NetworkConfiguration: Codable, Sendable, Hashable {
+struct Configuration: Codable, Sendable, Hashable {
     public let name: String
     public let mode: String?
     public let plugin: String?
@@ -35,8 +36,10 @@ public struct NetworkConfiguration: Codable, Sendable, Hashable {
     }
 }
 
-public struct NetworkStatus: Codable, Sendable, Hashable {
+struct Status: Codable, Sendable, Hashable {
     public let ipv4Gateway: String?
     public let ipv4Subnet: String?
     public let ipv6Subnet: String?
+}
+
 }

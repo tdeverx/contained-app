@@ -2,20 +2,21 @@ import Foundation
 
 /// App-managed restart policy (the CLI has no native `--restart`); persisted as the
 /// `contained.restart` label so it round-trips through the runtime.
-public enum RestartPolicy: String, CaseIterable, Identifiable, Codable, Sendable {
+public extension Core.Container {
+enum RestartPolicy: String, CaseIterable, Identifiable, Codable, Sendable {
     case no, onFailure = "on-failure", always
     public var id: String { rawValue }
 
     /// Parse a label value into a policy (`nil`/unknown → `.no`).
     public init(label: String?) {
-        self = label.flatMap(RestartPolicy.init(rawValue:)) ?? .no
+        self = label.flatMap(Core.Container.RestartPolicy.init(rawValue:)) ?? .no
     }
 }
 
 /// Pure decision logic for the app-managed `RestartWatchdog`, factored out so it is unit-testable
 /// without a live daemon. The watchdog calls this for every container that transitions
 /// `running → stopped` on a refresh tick.
-public enum RestartDecision {
+enum RestartDecision {
     /// Should the watchdog restart a container that just stopped?
     ///
     /// - Parameters:
@@ -25,7 +26,7 @@ public enum RestartDecision {
     ///   - exitCode: the process exit code if known. The `list --format json` snapshot does **not**
     ///     carry an exit code, so this is usually `nil`; an unknown exit is treated as a failure
     ///     (only a *known* clean `0` exit suppresses an `on-failure` restart).
-    public static func shouldRestart(policy: RestartPolicy, userInitiated: Bool, exitCode: Int32? = nil) -> Bool {
+    public static func shouldRestart(policy: Core.Container.RestartPolicy, userInitiated: Bool, exitCode: Int32? = nil) -> Bool {
         guard !userInitiated else { return false }
         switch policy {
         case .no: return false
@@ -43,4 +44,6 @@ public enum RestartDecision {
         let raw = base * pow(2, Double(attempt - 1))
         return min(raw, cap)
     }
+}
+
 }

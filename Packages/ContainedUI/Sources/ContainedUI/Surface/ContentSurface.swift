@@ -1,18 +1,19 @@
 import SwiftUI
 
 /// A package-owned content surface for empty states and grouped panel content.
-public struct ContentSurface<Content: View>: View {
+public extension UI.Surface {
+struct Content<ContentView: View>: View {
     public var elevated: Bool
     public var minHeight: CGFloat?
     public var alignment: Alignment
     public var padding: CGFloat
-    @ViewBuilder public var content: () -> Content
+    @ViewBuilder public var content: () -> ContentView
 
     public init(elevated: Bool = false,
                 minHeight: CGFloat? = nil,
                 alignment: Alignment = .center,
                 padding: CGFloat = UI.Tokens.Space.s,
-                @ViewBuilder content: @escaping () -> Content) {
+                @ViewBuilder content: @escaping () -> ContentView) {
         self.elevated = elevated
         self.minHeight = minHeight
         self.alignment = alignment
@@ -26,4 +27,5 @@ public struct ContentSurface<Content: View>: View {
             .frame(maxWidth: .infinity, minHeight: minHeight, alignment: alignment)
             .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card, shadow: elevated)
     }
+}
 }

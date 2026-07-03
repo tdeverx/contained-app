@@ -137,5 +137,5 @@ struct MetricSampleSnapshot: Codable, Equatable {
     }
 }
 
-extension MetricSample: MetricHistorySample {}
-extension MetricSampleSnapshot: MetricHistorySample {}
+extension MetricSample: Core.Metrics.HistorySample {}
+extension MetricSampleSnapshot: Core.Metrics.HistorySample {}

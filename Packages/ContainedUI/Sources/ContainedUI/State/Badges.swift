@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct StatusDot: View {
+public extension UI.Badge {
+struct Dot: View {
     public var color: Color
     public var size: CGFloat
 
@@ -16,7 +17,7 @@ public struct StatusDot: View {
     }
 }
 
-public struct StatusBadge: View {
+struct Status: View {
     public var text: String
     public var tint: Color
     public var font: Font
@@ -30,11 +31,12 @@ public struct StatusBadge: View {
     }
 
     public var body: some View {
-        Text(text)
+        SwiftUI.Text(text)
             .font(font)
             .foregroundStyle(tint)
             .padding(.horizontal, UI.Tokens.Badge.horizontalPadding)
             .padding(.vertical, UI.Tokens.Badge.verticalPadding)
             .background(tint.opacity(UI.Tokens.Badge.statusOpacity), in: Capsule())
     }
+}
 }

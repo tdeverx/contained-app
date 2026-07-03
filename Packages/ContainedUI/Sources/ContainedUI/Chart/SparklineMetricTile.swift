@@ -1,20 +1,21 @@
 import SwiftUI
 
 /// A dashboard summary tile: muted label, large value, optional symbol and sparkline.
-public struct SparklineMetricTile: View {
+public extension UI.Chart {
+struct MetricTile: View {
     public let label: String
     public let value: String
     public var systemImage: String? = nil
     public var tint: Color = .accentColor
     public var samples: [Double]? = nil
-    public var sparklineScale: SparklineScale = .normalized
+    public var sparklineScale: UI.Chart.Scale = .normalized
 
     public init(label: String,
                 value: String,
                 systemImage: String? = nil,
                 tint: Color = .accentColor,
                 samples: [Double]? = nil,
-                sparklineScale: SparklineScale = .normalized) {
+                sparklineScale: UI.Chart.Scale = .normalized) {
         self.label = label
         self.value = value
         self.systemImage = systemImage
@@ -40,7 +41,7 @@ public struct SparklineMetricTile: View {
                 .font(.title.weight(.semibold))
                 .contentTransition(.numericText())
             if let samples {
-                SparklineView(samples: samples, color: tint, scale: sparklineScale)
+                UI.Chart.Sparkline(samples: samples, color: tint, scale: sparklineScale)
                     .frame(height: 22)
             }
         }
@@ -48,4 +49,5 @@ public struct SparklineMetricTile: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card, fill: tint, fillOpacity: 0.10)
     }
+}
 }

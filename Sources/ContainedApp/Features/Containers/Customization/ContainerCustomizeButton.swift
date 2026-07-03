@@ -6,7 +6,7 @@ import ContainedCore
 /// popover is owned by `ContainerCard` and anchored to the whole card (not this chip), so the live
 /// card itself serves as the preview — this button just triggers it.
 struct ContainerCustomizeButton: View {
-    let snapshot: ContainerSnapshot
+    let snapshot: Core.Container.Snapshot
     let style: Personalization
     var onTap: () -> Void
 

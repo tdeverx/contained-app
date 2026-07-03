@@ -18,7 +18,8 @@ private extension EnvironmentValues {
 /// Supports two header affordances: `collapsible` (a chevron that folds the card away) and an `enabled`
 /// binding (a switch in the header that disables/hides the body — used for opt-in sections like the
 /// per-card customization blocks).
-public struct PanelSectionView<Content: View>: View {
+public extension UI.Panel {
+struct Section<Content: View>: View {
     public var header: String? = nil
     public var footer: String? = nil
     public var rowSpacing: CGFloat = UI.Tokens.Space.m
@@ -119,7 +120,7 @@ public struct PanelSectionView<Content: View>: View {
 
 /// A single settings row: a leading title (+ optional subtitle), optional info next to that title,
 /// and a trailing control. Set `error` to tint the title red and show a red caption beneath.
-public struct PanelRowView<Trailing: View>: View {
+struct Row<Trailing: View>: View {
     public var title: String
     public var subtitle: String? = nil
     public var info: String? = nil
@@ -171,15 +172,17 @@ public struct PanelRowView<Trailing: View>: View {
         .frame(maxWidth: .infinity)
     }
 }
+}
 
-public extension PanelRowView where Trailing == EmptyView {
+public extension UI.Panel.Row where Trailing == EmptyView {
     init(title: String, subtitle: String? = nil, info: String? = nil, error: String? = nil) {
         self.init(title: title, subtitle: subtitle, info: info, error: error) { EmptyView() }
     }
 }
 
 /// A switch row — the common Toggle case, rendered label-left / switch-right like a grouped Form.
-public struct PanelToggleRowView: View {
+public extension UI.Panel {
+struct ToggleRow: View {
     public var title: String
     public var subtitle: String? = nil
     public var info: String? = nil
@@ -199,17 +202,17 @@ public struct PanelToggleRowView: View {
     }
 
     public var body: some View {
-        PanelRowView(title: title, subtitle: subtitle, info: info, error: error) {
+        UI.Panel.Row(title: title, subtitle: subtitle, info: info, error: error) {
             Toggle("", isOn: $isOn).labelsHidden().toggleStyle(.switch)
         }
     }
 }
 
 /// A labeled form field: a leading label, optional info next to that label, and an expanding control.
-/// The form-row counterpart to `PanelRowView` (which hugs its trailing
+/// The form-row counterpart to `UI.Panel.Row` (which hugs its trailing
 /// control); here the control fills the remaining width like a grouped Form field. `error` tints the
 /// label red and shows a red caption beneath.
-public struct PanelFieldView<Control: View>: View {
+struct Field<Control: View>: View {
     public var label: String
     public var info: String? = nil
     public var error: String? = nil
@@ -255,4 +258,5 @@ public struct PanelFieldView<Control: View>: View {
             }
         }
     }
+}
 }

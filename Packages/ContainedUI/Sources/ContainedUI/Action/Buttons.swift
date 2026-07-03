@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Package-owned progress capsule for action slots that are temporarily busy.
-public struct ActionProgressCapsule: View {
+public extension UI.Action {
+struct ProgressCapsule: View {
     public var controlSize: ControlSize
 
     public init(controlSize: ControlSize = .small) {
@@ -19,18 +20,18 @@ public struct ActionProgressCapsule: View {
 }
 
 /// Prominence levels for package-owned text action buttons.
-public enum ActionTextProminence {
+enum TextProminence {
     case standard
     case prominent
 }
 
 /// Package-owned text action button for command rows and form footers.
-public struct ActionTextButton: View {
+struct TextButton: View {
     public var title: String
     public var systemName: String
     public var help: String
     public var role: ButtonRole?
-    public var prominence: ActionTextProminence
+    public var prominence: UI.Action.TextProminence
     public var controlSize: ControlSize
     public var isEnabled: Bool
     public var action: () -> Void
@@ -39,7 +40,7 @@ public struct ActionTextButton: View {
                 systemName: String,
                 help: String? = nil,
                 role: ButtonRole? = nil,
-                prominence: ActionTextProminence = .standard,
+                prominence: UI.Action.TextProminence = .standard,
                 controlSize: ControlSize = .regular,
                 isEnabled: Bool = true,
                 action: @escaping () -> Void) {
@@ -76,7 +77,7 @@ public struct ActionTextButton: View {
 }
 
 /// Package-owned toggle button used when a binary command belongs in toolbar or panel chrome.
-public struct ActionToggleButton: View {
+struct ToggleButton: View {
     @Binding public var isOn: Bool
     public var title: String
     public var systemName: String
@@ -97,4 +98,5 @@ public struct ActionToggleButton: View {
         .buttonStyle(.glass)
         .buttonBorderShape(.capsule)
     }
+}
 }

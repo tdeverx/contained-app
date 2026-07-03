@@ -150,7 +150,7 @@ struct CreationLocalImagesContent: View {
         .task { await app.refreshImagesIfNeeded() }
     }
 
-    private var filteredLocalImages: [ContainedCore.ImageResource] {
+    private var filteredLocalImages: [Core.Image.Resource] {
         let images = app.images
             .filter { $0.variants.contains(where: \.isRunnable) || $0.variants.isEmpty }
             .sorted { $0.reference.localizedCaseInsensitiveCompare($1.reference) == .orderedAscending }
@@ -274,7 +274,7 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
 }
 
 private struct CreationLocalImageRow: View {
-    let image: ContainedCore.ImageResource
+    let image: Core.Image.Resource
     var onSelect: () -> Void
 
     var body: some View {

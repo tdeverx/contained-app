@@ -1,6 +1,7 @@
-# Contained Docs
+# Contained Documentation
 
-Contained documentation is organized by audience and ownership.
+Contained docs are maintained beside the code so architecture, workflow, and
+release changes can be reviewed with implementation changes.
 
 ## App
 
@@ -33,9 +34,22 @@ Contained documentation is organized by audience and ownership.
 
 - [Contributing](development/Contributing.md)
 - [Issues and Discussions](development/Issues-and-Discussions.md)
+- [Documentation Map](development/Documentation-Map.md)
 
 ## Release
 
 - [Release Runbook](release/Release.md)
 
-Package-specific docs live beside each package under `Packages/<PackageName>/`.
+## Packages
+
+- [ContainedCore](../Packages/ContainedCore/README.md)
+- [ContainedCore DocC](../Packages/ContainedCore/Sources/ContainedCore/ContainedCore.docc/ContainedCore.md)
+- [ContainedUI](../Packages/ContainedUI/README.md)
+- [ContainedUI DocC](../Packages/ContainedUI/Sources/ContainedUI/ContainedUI.docc/ContainedUI.md)
+- [ContainedUX](../Packages/ContainedUX/README.md)
+- [ContainedUX DocC](../Packages/ContainedUX/Sources/ContainedUX/ContainedUX.docc/ContainedUX.md)
+
+## Wiki
+
+The checked-in [wiki map](wiki/README.md) describes how these maintained docs
+map to the separate GitHub wiki repository.

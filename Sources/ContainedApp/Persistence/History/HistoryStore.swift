@@ -52,7 +52,7 @@ final class HistoryStore {
     }
 
     /// Persist a metric sample for each running container, throttled to `metricInterval`.
-    func recordMetrics(_ deltas: [String: StatsDelta], at date: Date = Date()) {
+    func recordMetrics(_ deltas: [String: Core.Metrics.StatsDelta], at date: Date = Date()) {
         if let last = lastMetricSample, date.timeIntervalSince(last) < metricInterval { return }
         lastMetricSample = date
         for (id, d) in deltas {

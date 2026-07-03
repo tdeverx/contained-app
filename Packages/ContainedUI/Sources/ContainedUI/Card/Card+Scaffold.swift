@@ -1,19 +1,20 @@
 import SwiftUI
 
-/// Text rendering style for the built-in `CardScaffold` title and subtitle lanes.
-public enum CardTextStyle {
+public extension UI.Card {
+/// Text rendering style for the built-in `UI.Card.Scaffold` title and subtitle lanes.
+enum TextStyle {
     case standard
     case monospaced
 }
 
-/// Sentinel page type used by `CardScaffold` when a card has no page controls.
-public enum CardNoPage: Hashable {
+/// Sentinel page type used by `UI.Card.Scaffold` when a card has no page controls.
+enum NoPage: Hashable {
     case none
 }
 
-/// Typed page-control configuration for `CardScaffold`.
-public struct CardPages<ID: Hashable> {
-    public var items: [CardPage<ID>]
+/// Typed page-control configuration for `UI.Card.Scaffold`.
+struct Pages<ID: Hashable> {
+    public var items: [UI.Card.Page<ID>]
     public var selection: ID
     public var tint: Color
     public var controlsReveal: Double
@@ -21,7 +22,7 @@ public struct CardPages<ID: Hashable> {
     public var onSelect: (ID) -> Void
     public var onClose: () -> Void
 
-    public init(items: [CardPage<ID>],
+    public init(items: [UI.Card.Page<ID>],
                 selection: ID,
                 tint: Color,
                 controlsReveal: Double = 1,
@@ -42,10 +43,10 @@ public struct CardPages<ID: Hashable> {
 ///
 /// Feature code supplies semantic title/subtitle data plus optional slots; this view owns how those
 /// inputs become sticky header chrome, expanded body content, widgets, and footer controls.
-public struct CardScaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
-                           HeaderAccessory: View, BodyContent: View, FooterLeading: View,
-                           FooterActions: View, Widget: View, PageID: Hashable>: View {
-    public var size: CardSize
+struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
+                HeaderAccessory: View, BodyContent: View, FooterLeading: View,
+                FooterActions: View, Widget: View, PageID: Hashable>: View {
+    public var size: UI.Card.Size
     public var isExpanded: Bool
     public var cornerRadiusOverride: CGFloat?
     public var controlsVisible: Bool
@@ -56,14 +57,14 @@ public struct CardScaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: 
     public var fillOpacity: Double
     public var gradient: Bool
     public var gradientAngle: Double
-    public var blendMode: ThemeColorBlendMode
+    public var blendMode: UI.Theme.ColorBlendMode
     public var elevated: Bool
     public var onTap: () -> Void
     public var title: String
     public var subtitle: String?
-    public var titleStyle: CardTextStyle
-    public var subtitleStyle: CardTextStyle
-    public var pages: CardPages<PageID>?
+    public var titleStyle: UI.Card.TextStyle
+    public var subtitleStyle: UI.Card.TextStyle
+    public var pages: UI.Card.Pages<PageID>?
     @ViewBuilder public var icon: () -> Icon
     @ViewBuilder public var titleAccessory: () -> TitleAccessory
     @ViewBuilder public var subtitleAccessory: () -> SubtitleAccessory
@@ -75,7 +76,7 @@ public struct CardScaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: 
 
     private var usesSelectionFill = false
 
-    public init(size: CardSize = .small,
+    public init(size: UI.Card.Size = .small,
                 isExpanded: Bool = false,
                 cornerRadiusOverride: CGFloat? = nil,
                 controlsVisible: Bool = true,
@@ -86,14 +87,14 @@ public struct CardScaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: 
                 fillOpacity: Double = 0.18,
                 gradient: Bool = false,
                 gradientAngle: Double = 135,
-                blendMode: ThemeColorBlendMode = .softLight,
+                blendMode: UI.Theme.ColorBlendMode = .softLight,
                 elevated: Bool = true,
                 onTap: @escaping () -> Void = {},
                 title: String,
                 subtitle: String? = nil,
-                titleStyle: CardTextStyle = .standard,
-                subtitleStyle: CardTextStyle = .standard,
-                pages: CardPages<PageID>?,
+                titleStyle: UI.Card.TextStyle = .standard,
+                subtitleStyle: UI.Card.TextStyle = .standard,
+                pages: UI.Card.Pages<PageID>?,
                 @ViewBuilder icon: @escaping () -> Icon,
                 @ViewBuilder titleAccessory: @escaping () -> TitleAccessory,
                 @ViewBuilder subtitleAccessory: @escaping () -> SubtitleAccessory,
@@ -204,9 +205,9 @@ public struct CardScaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: 
     private var titleText: some View {
         switch titleStyle {
         case .standard:
-            CardTitleText(text: title)
+            UI.Card.TitleText(text: title)
         case .monospaced:
-            CardMonospacedTitleText(text: title)
+            UI.Card.MonospacedTitleText(text: title)
         }
     }
 
@@ -214,9 +215,9 @@ public struct CardScaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: 
     private func subtitleText(_ text: String) -> some View {
         switch subtitleStyle {
         case .standard:
-            CardSubtitleText(text: text)
+            UI.Card.SubtitleText(text: text)
         case .monospaced:
-            CardMonospacedSubtitleText(text: text)
+            UI.Card.MonospacedSubtitleText(text: text)
         }
     }
 
@@ -224,9 +225,10 @@ public struct CardScaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: 
         (subtitle?.isEmpty == false) || SubtitleAccessory.self != EmptyView.self
     }
 }
+}
 
-public extension CardScaffold where PageID == CardNoPage {
-    init(size: CardSize = .small,
+public extension UI.Card.Scaffold where PageID == UI.Card.NoPage {
+    init(size: UI.Card.Size = .small,
          isExpanded: Bool = false,
          cornerRadiusOverride: CGFloat? = nil,
          controlsVisible: Bool = true,
@@ -237,13 +239,13 @@ public extension CardScaffold where PageID == CardNoPage {
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
-         blendMode: ThemeColorBlendMode = .softLight,
+         blendMode: UI.Theme.ColorBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          title: String,
          subtitle: String? = nil,
-         titleStyle: CardTextStyle = .standard,
-         subtitleStyle: CardTextStyle = .standard,
+         titleStyle: UI.Card.TextStyle = .standard,
+         subtitleStyle: UI.Card.TextStyle = .standard,
          @ViewBuilder icon: @escaping () -> Icon,
          @ViewBuilder titleAccessory: @escaping () -> TitleAccessory,
          @ViewBuilder subtitleAccessory: @escaping () -> SubtitleAccessory,

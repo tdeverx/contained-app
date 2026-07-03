@@ -188,7 +188,7 @@ struct ContainerConfigureView: View {
         case .edit(let snapshot, _):
             // Pull the current style + healthcheck from the local stores so edits start from what's set.
             spec.personalization = app.containerStyle(for: snapshot)
-            spec.healthCheck = app.healthChecks.check(for: snapshot.id) ?? HealthCheck()
+            spec.healthCheck = app.healthChecks.check(for: snapshot.id) ?? Core.Container.HealthCheck()
         }
     }
 

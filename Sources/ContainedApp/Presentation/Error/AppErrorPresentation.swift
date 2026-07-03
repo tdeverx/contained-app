@@ -4,13 +4,13 @@ import ContainedCore
 enum AppErrorPresentation {
     static func message(for error: Error) -> String {
         switch error {
-        case let error as CommandError:
+        case let error as Core.Command.Error:
             return message(for: error)
         case let error as Core.Runtime.UnsupportedCapability:
             return message(for: error)
-        case let error as RegistryManifestError:
+        case let error as Core.Registry.ManifestError:
             return message(for: error)
-        case let error as ComposeError:
+        case let error as Core.Compose.Error:
             return message(for: error)
         case let error as LocalizedError:
             return error.errorDescription ?? (error as NSError).localizedDescription
@@ -20,7 +20,7 @@ enum AppErrorPresentation {
     }
 
     static func packageSummary(for error: Error) -> String? {
-        guard let packageError = error as? ContainedPackageError else { return nil }
+        guard let packageError = error as? Core.Error.PackageError else { return nil }
         let context = packageError.packageErrorContext
             .sorted { $0.key < $1.key }
             .map { "\($0.key)=\(compactContextValue($0.value))" }
@@ -46,7 +46,7 @@ enum AppErrorPresentation {
         return "\(collapsed.prefix(157))..."
     }
 
-    private static func message(for error: CommandError) -> String {
+    private static func message(for error: Core.Command.Error) -> String {
         switch error {
         case .cliNotFound(let searched):
             return AppText.string(
@@ -76,7 +76,7 @@ enum AppErrorPresentation {
         )
     }
 
-    private static func message(for error: RegistryManifestError) -> String {
+    private static func message(for error: Core.Registry.ManifestError) -> String {
         switch error {
         case .invalidResponse:
             return AppText.string(
@@ -105,7 +105,7 @@ enum AppErrorPresentation {
         }
     }
 
-    private static func message(for error: ComposeError) -> String {
+    private static func message(for error: Core.Compose.Error) -> String {
         switch error {
         case .invalid(let reason):
             let reason = reason.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -70,7 +70,7 @@ struct AppearanceTab: View {
                 UI.Panel.ToggleRow(title: AppText.string("settings.appearance.gradient", defaultValue: "Gradient"),
                                isOn: $settings.buttonTintGradient)
                 if settings.buttonTintGradient {
-                    GradientAngleControl(angle: $settings.buttonTintGradientAngle, title: AppText.direction)
+                    UI.Control.GradientAngle(angle: $settings.buttonTintGradientAngle, title: AppText.direction)
                 }
                 UI.Panel.Row(title: AppText.string("settings.appearance.blendMode", defaultValue: "Blend mode")) {
                     Picker("", selection: $settings.buttonTintBlendMode) {
@@ -141,7 +141,7 @@ private struct ImageDefaultStyleSection: View {
                 UI.Panel.ToggleRow(title: AppText.string("settings.appearance.gradient", defaultValue: "Gradient"),
                                isOn: styleBinding(\.gradient))
                 if style.gradient {
-                    GradientAngleControl(angle: styleBinding(\.gradientAngle), title: AppText.direction)
+                    UI.Control.GradientAngle(angle: styleBinding(\.gradientAngle), title: AppText.direction)
                 }
                 UI.Panel.Row(title: AppText.string("settings.appearance.blendMode", defaultValue: "Blend mode")) {
                     Picker("", selection: styleBinding(\.backgroundBlendMode)) {

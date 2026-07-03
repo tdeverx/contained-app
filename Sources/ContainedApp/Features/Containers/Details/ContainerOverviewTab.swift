@@ -5,8 +5,8 @@ import ContainedCore
 /// The Overview tab of the container detail: grouped, read-only configuration (general, resources,
 /// ports, mounts, environment, labels).
 struct ContainerOverviewTab: View {
-    let snapshot: ContainerSnapshot
-    private var config: ContainerConfiguration { snapshot.configuration }
+    let snapshot: Core.Container.Snapshot
+    private var config: Core.Container.Configuration { snapshot.configuration }
 
     var body: some View {
         ContainerTabScaffold {

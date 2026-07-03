@@ -1,7 +1,7 @@
 import Foundation
 
 public extension Core.Command {
-    static func runPreview(for request: ContainerCreateRequest) -> [String] {
+    static func runPreview(for request: Core.Container.CreateRequest) -> [String] {
         ContainerCommands.run(request)
     }
 

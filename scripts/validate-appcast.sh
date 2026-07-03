@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Validate Sparkle appcast structure and channel/build invariants.
+# Usage: CHANNEL=nightly ./scripts/validate-appcast.sh [appcast.xml]
 set -euo pipefail
 
 appcast="${1:-appcast.xml}"

@@ -18,7 +18,7 @@ color/tint display names.
 
 Package failures follow the same ownership rule. Reusable targets should throw
 typed errors with stable codes/context, usually by conforming to
-`ContainedPackageError`. The app maps those errors through
+`Core.Error.PackageError`. The app maps those errors through
 `AppErrorPresentation` and `AppText`, then decides whether to show a toast,
 inline error, alert, or Activity entry. Do not attempt to localize arbitrary
 backend stderr; preserve it as runtime-provided detail unless an adapter can map

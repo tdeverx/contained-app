@@ -10,7 +10,8 @@ import SwiftUI
 /// Pass `scrolls: false` for content that brings **its own** scroll view (search results, build
 /// workspace, the paged run form). In that mode the scaffold doesn't wrap the content in a `ScrollView`,
 /// so scroll views are not double-nested.
-public struct PanelScaffold<Chrome: View, Content: View, Footer: View>: View {
+public extension UI.Panel {
+struct Scaffold<Chrome: View, Content: View, Footer: View>: View {
     /// The expected host width. The scaffold still expands to the width assigned by its presentation host.
     public var width: CGFloat
     public var scrollEdgeStyle: ScrollEdgeEffectStyle = .soft
@@ -57,8 +58,9 @@ public struct PanelScaffold<Chrome: View, Content: View, Footer: View>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
+}
 
-public extension PanelScaffold where Footer == EmptyView {
+public extension UI.Panel.Scaffold where Footer == EmptyView {
     init(width: CGFloat,
          scrollEdgeStyle: ScrollEdgeEffectStyle = .soft,
          scrolls: Bool = true,

@@ -13,7 +13,7 @@ import Darwin
 /// in the plan. Only the terminal surface touches AppKit; everything around it stays SwiftUI.
 struct TerminalTab: View {
     @Environment(AppModel.self) private var app
-    let snapshot: ContainerSnapshot
+    let snapshot: Core.Container.Snapshot
 
     /// A finished session's exit code (boxed so `nil`-the-state differs from a `nil` exit code).
     private struct Ended: Equatable { let code: Int32? }

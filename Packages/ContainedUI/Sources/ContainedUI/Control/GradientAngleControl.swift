@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// A 360° gradient-direction control: a draggable dial plus a degree readout.
-public struct GradientAngleControl: View {
+public extension UI.Control {
+struct GradientAngle: View {
     @Binding var angle: Double
     public var title: String
 
@@ -23,6 +24,7 @@ public struct GradientAngleControl: View {
             }
         }
     }
+}
 }
 
 /// A small dial knob whose pointer reflects the gradient angle; drag to set.

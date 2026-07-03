@@ -23,20 +23,21 @@ private struct OptionalAccessibilityLabel: ViewModifier {
     }
 }
 
-public struct ButtonTintStyle: Equatable, Sendable {
+public extension UI.Theme {
+struct ButtonTintStyle: Equatable, Sendable {
     public var enabled = false
-    public var tint: ThemeTint = .multicolor
+    public var tint: UI.Theme.Tint = .multicolor
     public var opacity = 0.18
     public var gradient = true
     public var gradientAngle = 135.0
-    public var blendMode: ThemeColorBlendMode = .softLight
+    public var blendMode: UI.Theme.ColorBlendMode = .softLight
 
     public init(enabled: Bool = false,
-                tint: ThemeTint = .multicolor,
+                tint: UI.Theme.Tint = .multicolor,
                 opacity: Double = 0.18,
                 gradient: Bool = true,
                 gradientAngle: Double = 135.0,
-                blendMode: ThemeColorBlendMode = .softLight) {
+                blendMode: UI.Theme.ColorBlendMode = .softLight) {
         self.enabled = enabled
         self.tint = tint
         self.opacity = opacity
@@ -45,7 +46,8 @@ public struct ButtonTintStyle: Equatable, Sendable {
         self.blendMode = blendMode
     }
 
-    public static let disabled = ButtonTintStyle()
+    public static let disabled = UI.Theme.ButtonTintStyle()
+}
 }
 
 /// A reusable material button item: an icon or text button with the shared 28pt inner height and
@@ -95,7 +97,7 @@ struct MaterialButtonItem<Label: View>: View {
                 Capsule(style: .continuous)
                     .fill(
                         hoverEnabled && hovering && !isLabel
-                            ? ThemeMaterial.toolbarInteractiveHoverFill(for: colorScheme)
+                            ? UI.Theme.Material.toolbarInteractiveHoverFill(for: colorScheme)
                             : .clear
                     )
             }
@@ -197,7 +199,7 @@ struct MaterialButton<Content: View>: View {
                     Capsule(style: .continuous)
                         .fill(
                             hovering
-                                ? ThemeMaterial.toolbarInteractiveHoverFill(for: colorScheme)
+                                ? UI.Theme.Material.toolbarInteractiveHoverFill(for: colorScheme)
                                 : .clear
                         )
                 }

@@ -16,7 +16,7 @@ struct RegistryImageSearch: View {
 
     @State private var query = ""
     @State private var appliedInitialQuery = false
-    @State private var results: [HubSearchResult] = []
+    @State private var results: [Core.Registry.HubSearchResult] = []
     @State private var searching = false
     @State private var errorMessage: String?
     @State private var searchTask: Task<Void, Never>?
@@ -122,7 +122,7 @@ struct RegistryImageSearch: View {
         }
     }
 
-    private func resultRow(_ result: HubSearchResult) -> some View {
+    private func resultRow(_ result: Core.Registry.HubSearchResult) -> some View {
         choiceCard(symbol: "shippingbox",
                    title: result.repoName,
                    subtitle: result.shortDescription?.isEmpty == false ? result.shortDescription : nil,
@@ -198,7 +198,7 @@ struct RegistryImageSearch: View {
 
     @MainActor
     private func runSearch(_ searchQuery: String) async {
-        guard HubSearch.url(query: searchQuery) != nil else {
+        guard Core.Registry.HubSearch.url(query: searchQuery) != nil else {
             results = []
             searching = false
             errorMessage = nil
@@ -208,7 +208,7 @@ struct RegistryImageSearch: View {
         errorMessage = nil
         defer { searching = false }
         do {
-            let searchResults = try await HubSearch.results(query: searchQuery)
+            let searchResults = try await Core.Registry.HubSearch.results(query: searchQuery)
             guard !Task.isCancelled, searchQuery == query else { return }
             results = searchResults
         } catch {

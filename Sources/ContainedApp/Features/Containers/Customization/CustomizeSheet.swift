@@ -11,7 +11,7 @@ struct CustomizeSheet: View {
     }
 
     enum Target: Identifiable, Hashable {
-        case container(ContainerSnapshot)
+        case container(Core.Container.Snapshot)
         case image(reference: String)
         case imageGroup(id: String, reference: String)
         case imageTag(reference: String, groupID: String?)
@@ -51,7 +51,7 @@ struct CustomizeSheet: View {
             }
         }
 
-        var previewSnapshot: ContainerSnapshot {
+        var previewSnapshot: Core.Container.Snapshot {
             switch self {
             case .container(let snapshot): return snapshot
             case .image(let reference), .imageGroup(_, let reference), .imageTag(let reference, _):
@@ -73,7 +73,7 @@ struct CustomizeSheet: View {
     @State private var overridesInheritedStyle: Bool
     @State private var loaded: Bool
 
-    init(snapshot: ContainerSnapshot, presentation: Presentation = .popover) {
+    init(snapshot: Core.Container.Snapshot, presentation: Presentation = .popover) {
         self.init(snapshot: snapshot,
                   presentation: presentation,
                   initialStyle: nil,
@@ -81,7 +81,7 @@ struct CustomizeSheet: View {
                   onDraftChange: nil)
     }
 
-    init(snapshot: ContainerSnapshot,
+    init(snapshot: Core.Container.Snapshot,
          presentation: Presentation = .popover,
          initialStyle: Personalization? = nil,
          initiallyOverridesInheritedStyle: Bool? = nil,
@@ -207,7 +207,7 @@ struct CustomizeSheet: View {
                 }
                 UI.Panel.ToggleRow(title: AppText.string("customize.gradient", defaultValue: "Gradient"), isOn: $style.gradient)
                 if style.gradient {
-                    GradientAngleControl(angle: $style.gradientAngle, title: AppText.direction)
+                    UI.Control.GradientAngle(angle: $style.gradientAngle, title: AppText.direction)
                 }
                 UI.Panel.Row(title: AppText.string("customize.blendMode", defaultValue: "Blend mode")) {
                     Picker("", selection: $style.backgroundBlendMode) {
@@ -247,10 +247,10 @@ struct CustomizeSheet: View {
         }
     }
 
-    private static let volumeMetrics: [GraphMetric] = [.diskRead, .diskWrite]
-    private var graphOptions: [GraphMetric] {
+    private static let volumeMetrics: [Core.Metrics.GraphMetric] = [.diskRead, .diskWrite]
+    private var graphOptions: [Core.Metrics.GraphMetric] {
         if case .volume = target { return Self.volumeMetrics }
-        return GraphMetric.allCases
+        return Core.Metrics.GraphMetric.allCases
     }
 
     private var headerTitle: String {

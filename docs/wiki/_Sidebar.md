@@ -1,28 +1,36 @@
 # Contained
 
-This sidebar points to the maintained structured docs.
-
-- [Home](/docs/app/Home.md)
-- [Features](/docs/features/Features.md)
-  - [Containers](/docs/features/Containers.md)
-  - [Images](/docs/features/Images.md)
-  - [Resources](/docs/features/Resources.md)
-  - [System & Settings](/docs/app/System-Settings.md)
-- Workflows
-  - [Creation Workflow](/docs/features/Creation-Workflow.md)
-  - [Run / Edit Form](/docs/features/Run-Edit-Form.md)
-  - [Compose Import](/docs/features/Compose-Import.md)
-  - [Command Palette](/docs/features/Command-Palette.md)
-  - [Updates](/docs/app/Updates.md)
-- Start
-  - [Installation](/docs/app/Installation.md)
-  - [Keyboard Shortcuts](/docs/app/Keyboard-Shortcuts.md)
-  - [Troubleshooting](/docs/app/Troubleshooting.md)
-- Maintainers
-  - [Architecture](/docs/architecture/Architecture.md)
-  - [Runtime Adapters](/docs/architecture/Runtime-Adapters.md)
-  - [Design System](/docs/architecture/Design-System.md)
-  - [Localization](/docs/app/Localization.md)
-  - [Release](/docs/release/Release.md)
-- [Contributing](/docs/development/Contributing.md)
-- [Issues and Discussions](/docs/development/Issues-and-Discussions.md)
+- [Home](App/Home.md)
+- App
+  - [Installation](App/Installation.md)
+  - [Keyboard Shortcuts](App/Keyboard-Shortcuts.md)
+  - [Localization](App/Localization.md)
+  - [System Settings](App/System-Settings.md)
+  - [Troubleshooting](App/Troubleshooting.md)
+  - [Updates](App/Updates.md)
+- Features
+  - [Overview](Features/Overview.md)
+  - [Containers](Features/Containers.md)
+  - [Images](Features/Images.md)
+  - [Resources](Features/Resources.md)
+  - [Creation Workflow](Features/Creation-Workflow.md)
+  - [Run / Edit Form](Features/Run-Edit-Form.md)
+  - [Compose Import](Features/Compose-Import.md)
+  - [Command Palette](Features/Command-Palette.md)
+- Architecture
+  - [Overview](Architecture/Overview.md)
+  - [Runtime Adapters](Architecture/Runtime-Adapters.md)
+  - [UI And UX](Architecture/UI-UX.md)
+- Development
+  - [Contributing](Development/Contributing.md)
+  - [Issues And Discussions](Development/Issues-and-Discussions.md)
+  - [Documentation Map](Development/Documentation-Map.md)
+- Release
+  - [Release Runbook](Release/Release.md)
+- Packages
+  - [ContainedCore](Packages/ContainedCore.md)
+  - [ContainedCore DocC](Packages/ContainedCore-DocC.md)
+  - [ContainedUI](Packages/ContainedUI.md)
+  - [ContainedUI DocC](Packages/ContainedUI-DocC.md)
+  - [ContainedUX](Packages/ContainedUX.md)
+  - [ContainedUX DocC](Packages/ContainedUX-DocC.md)

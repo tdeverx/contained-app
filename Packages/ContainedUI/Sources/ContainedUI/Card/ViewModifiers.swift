@@ -6,7 +6,7 @@ public extension View {
         overlay {
             if isSelected {
                 RoundedRectangle(cornerRadius: UI.Tokens.Radius.card, style: .continuous)
-                    .fill(ThemeMaterial.toolbarHoverFill)
+                    .fill(UI.Theme.Material.toolbarHoverFill)
                     .allowsHitTesting(false)
             }
         }

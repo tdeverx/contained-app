@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct ScopeChipLabel: View {
+public extension UI.Badge {
+struct ScopeLabel: View {
     public var symbol: String
     public var title: String
 
@@ -13,7 +14,7 @@ public struct ScopeChipLabel: View {
         HStack(spacing: UI.Tokens.Space.xs) {
             Image(systemName: symbol)
                 .font(.caption2)
-            Text(title)
+            SwiftUI.Text(title)
                 .font(.caption.weight(.semibold))
             Image(systemName: "xmark")
                 .font(.caption2.weight(.bold))
@@ -25,8 +26,10 @@ public struct ScopeChipLabel: View {
         .foregroundStyle(Color.accentColor)
     }
 }
+}
 
-public struct TintSwatch: View {
+public extension UI.Control {
+struct TintSwatch: View {
     public var color: Color
     public var followsAccent: Bool
 
@@ -46,4 +49,5 @@ public struct TintSwatch: View {
         }
         .frame(width: UI.Tokens.IconSize.chip, height: UI.Tokens.IconSize.chip)
     }
+}
 }

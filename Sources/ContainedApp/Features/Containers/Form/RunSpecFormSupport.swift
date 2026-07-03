@@ -45,7 +45,7 @@ extension RunSpec {
     }
 
     @discardableResult
-    mutating func adoptImageDefaults(from defaults: ContainerImageDefaults) -> Int {
+    mutating func adoptImageDefaults(from defaults: Core.Container.ImageDefaults) -> Int {
         var applied = 0
         if command.trimmingCharacters(in: .whitespaces).isEmpty, !defaults.command.isEmpty {
             let cmd = defaults.command

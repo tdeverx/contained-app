@@ -32,7 +32,7 @@ final class SettingsStore {
     var keepInMenuBar: Bool { didSet { defaults.set(keepInMenuBar, forKey: Keys.keepInMenuBar) } }
     var cliPathOverride: String { didSet { defaults.set(cliPathOverride, forKey: Keys.cliPath) } }
     var refreshInterval: Double { didSet { defaults.set(refreshInterval, forKey: Keys.refresh) } }
-    var statsNormalizationMode: StatsNormalizationMode {
+    var statsNormalizationMode: Core.Metrics.NormalizationMode {
         didSet { defaults.set(statsNormalizationMode.rawValue, forKey: Keys.statsNormalizationMode) }
     }
     var imageUpdateIntervalHours: Int { didSet { defaults.set(imageUpdateIntervalHours, forKey: Keys.imageUpdateIntervalHours) } }
@@ -120,7 +120,7 @@ final class SettingsStore {
         keepInMenuBar = defaults.object(forKey: Keys.keepInMenuBar) as? Bool ?? true
         cliPathOverride = defaults.string(forKey: Keys.cliPath) ?? ""
         refreshInterval = defaults.object(forKey: Keys.refresh) as? Double ?? 2.0
-        statsNormalizationMode = StatsNormalizationMode(rawValue: defaults.string(forKey: Keys.statsNormalizationMode) ?? "") ?? .container
+        statsNormalizationMode = Core.Metrics.NormalizationMode(rawValue: defaults.string(forKey: Keys.statsNormalizationMode) ?? "") ?? .container
         imageUpdateIntervalHours = defaults.object(forKey: Keys.imageUpdateIntervalHours) as? Int ?? 6
         imageUpdateChecksEnabled = defaults.object(forKey: Keys.imageUpdateChecksEnabled) as? Bool ?? true
         appUpdateChecksEnabled = defaults.object(forKey: Keys.appUpdateChecksEnabled) as? Bool ?? true

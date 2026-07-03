@@ -73,7 +73,7 @@ struct PaletteResultCard: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private func containerCard(_ snapshot: ContainerSnapshot) -> some View {
+    private func containerCard(_ snapshot: Core.Container.Snapshot) -> some View {
         let style = app.containerStyle(for: snapshot)
         let name = style.displayName(fallback: snapshot.id)
         let cardSize: UI.Card.Size = snapshot.state == .running ? .large : .medium
@@ -117,7 +117,7 @@ struct PaletteResultCard: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private func imageGroupCard(_ group: LocalImageTagGroup) -> some View {
+    private func imageGroupCard(_ group: Core.Image.LocalTagGroup) -> some View {
         ToolbarImageGroupCard(group: group, isExpanded: false, onTap: action, onClose: {})
             .designCardSelectionOverlay(when: selected)
             .accessibilityAddTraits(selected ? .isSelected : [])
@@ -232,7 +232,7 @@ struct PaletteResultCard: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private func containerPaletteWidget(_ snapshot: ContainerSnapshot) -> some View {
+    private func containerPaletteWidget(_ snapshot: Core.Container.Snapshot) -> some View {
         UI.Card.WidgetGroup {
             UI.Card.FooterMini {
                 UI.Symbol.Image(systemName: "clock", size: .caption2)
@@ -280,11 +280,11 @@ struct PaletteResultCard: View {
     }
 
     private func repositoryTitle(_ reference: String) -> String {
-        let parsed = RegistryImageReference.parse(reference)
+        let parsed = Core.Registry.ImageReference.parse(reference)
         return parsed.repository.split(separator: "/").map(String.init).last ?? parsed.repository
     }
 
-    private func imageUpdateText(_ status: ImageUpdateStatus) -> String {
+    private func imageUpdateText(_ status: Core.Image.UpdateStatus) -> String {
         switch status.state {
         case .unknown: return "Not checked"
         case .checking: return "Checking for updates"
@@ -294,7 +294,7 @@ struct PaletteResultCard: View {
         }
     }
 
-    private func containerStatus(_ snapshot: ContainerSnapshot) -> some View {
+    private func containerStatus(_ snapshot: Core.Container.Snapshot) -> some View {
         UI.Card.FooterMini {
             UI.Symbol.Image(systemName: snapshot.state == .running ? "circle.fill" : "circle",
                          tone: snapshot.state == .running ? .success : .neutral,

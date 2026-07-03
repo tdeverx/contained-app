@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct SourceFrameReader<ID: Hashable>: View {
+public extension UX.Measurement {
+struct SourceFrameReader<ID: Hashable>: View {
     public var ids: [ID]
     public var coordinateSpaceName: String
 
@@ -18,20 +19,21 @@ public struct SourceFrameReader<ID: Hashable>: View {
         GeometryReader { proxy in
             let frame = proxy.frame(in: .named(coordinateSpaceName))
             Color.clear.preference(
-                key: SourceFramesKey<ID>.self,
+                key: UX.Measurement.SourceFramesKey<ID>.self,
                 value: Dictionary(uniqueKeysWithValues: ids.map { ($0, frame) })
             )
         }
     }
 }
 
-public struct SourceFramesKey<ID: Hashable>: PreferenceKey {
+struct SourceFramesKey<ID: Hashable>: PreferenceKey {
     public static var defaultValue: [ID: CGRect] { [:] }
 
     public static func reduce(value: inout [ID: CGRect],
                               nextValue: () -> [ID: CGRect]) {
         value.merge(nextValue()) { _, new in new }
     }
+}
 }
 
 public extension Dictionary where Value == CGRect {
@@ -46,7 +48,7 @@ public extension Dictionary where Value == CGRect {
 
 public extension CGRect {
     var isUsableForMorph: Bool {
-        MorphGeometryEngine.isUsableFrame(self)
+        UX.Morph.Geometry.isUsableFrame(self)
     }
 
     func isClose(to other: CGRect, tolerance: CGFloat = 0.5) -> Bool {

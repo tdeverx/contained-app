@@ -4,12 +4,13 @@ import Foundation
 ///
 /// Shape verified against captured fixtures: a top-level object with `configuration`, a duplicated
 /// `id`, and a `status` object that nests `state`, `networks`, and `startedDate`.
-public struct ContainerSnapshot: Codable, Sendable, Identifiable, Hashable {
-    public let configuration: ContainerConfiguration
+public extension Core.Container {
+struct Snapshot: Codable, Sendable, Identifiable, Hashable {
+    public let configuration: Core.Container.Configuration
     public let id: String
-    public let status: ContainerRuntimeState
+    public let status: Core.Container.RuntimeState
 
-    public var state: RuntimeStatus { status.state }
+    public var state: Core.Runtime.Status { status.state }
     public var image: String { configuration.image.reference }
     public var startedDate: Date? { status.startedDate }
 
@@ -22,7 +23,7 @@ public struct ContainerSnapshot: Codable, Sendable, Identifiable, Hashable {
     /// before any container from it exists). Encodes a minimal payload first so unusual image or
     /// volume names are escaped safely before decoding through the same defaults as real snapshots.
     public static func placeholder(id: String, image: String,
-                                   state: RuntimeStatus = .running) -> ContainerSnapshot {
+                                   state: Core.Runtime.Status = .running) -> Core.Container.Snapshot {
         let payload = PlaceholderSnapshotPayload(
             id: id,
             status: .init(state: state.rawValue),
@@ -30,7 +31,7 @@ public struct ContainerSnapshot: Codable, Sendable, Identifiable, Hashable {
         )
         do {
             let data = try JSONEncoder().encode(payload)
-            return try JSONDecoder().decode(ContainerSnapshot.self, from: data)
+            return try JSONDecoder().decode(Core.Container.Snapshot.self, from: data)
         } catch {
             preconditionFailure("Invalid placeholder snapshot: \(error)")
         }
@@ -60,21 +61,21 @@ private struct PlaceholderSnapshotPayload: Encodable {
 }
 
 /// The `status` object inside a snapshot.
-public struct ContainerRuntimeState: Codable, Sendable, Hashable {
-    public let state: RuntimeStatus
+struct RuntimeState: Codable, Sendable, Hashable {
+    public let state: Core.Runtime.Status
     public let networks: [NetworkInterfaceStatus]
     public let startedDate: Date?
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.state = try c.decodeIfPresent(RuntimeStatus.self, forKey: .state) ?? .unknown
+        self.state = try c.decodeIfPresent(Core.Runtime.Status.self, forKey: .state) ?? .unknown
         self.networks = try c.decodeIfPresent([NetworkInterfaceStatus].self, forKey: .networks) ?? []
         self.startedDate = try c.decodeIfPresent(Date.self, forKey: .startedDate)
     }
 }
 
 /// Runtime networking info (`status.networks[]`).
-public struct NetworkInterfaceStatus: Codable, Sendable, Hashable {
+struct NetworkInterfaceStatus: Codable, Sendable, Hashable {
     public let network: String
     public let hostname: String?
     public let ipv4Address: String?
@@ -85,7 +86,7 @@ public struct NetworkInterfaceStatus: Codable, Sendable, Hashable {
 }
 
 /// The persistent `configuration` of a container.
-public struct ContainerConfiguration: Codable, Sendable, Hashable {
+struct Configuration: Codable, Sendable, Hashable {
     public let id: String
     public let image: ImageReference
     public let initProcess: ProcessConfiguration
@@ -138,18 +139,18 @@ public struct ContainerConfiguration: Codable, Sendable, Hashable {
     }
 }
 
-public struct ImageReference: Codable, Sendable, Hashable {
+struct ImageReference: Codable, Sendable, Hashable {
     public let reference: String
     public let descriptor: Descriptor?
 }
 
-public struct Descriptor: Codable, Sendable, Hashable {
+struct Descriptor: Codable, Sendable, Hashable {
     public let digest: String
     public let mediaType: String?
     public let size: Int?
 }
 
-public struct ProcessConfiguration: Codable, Sendable, Hashable {
+struct ProcessConfiguration: Codable, Sendable, Hashable {
     public let executable: String?
     public let arguments: [String]
     public let environment: [String]
@@ -166,7 +167,7 @@ public struct ProcessConfiguration: Codable, Sendable, Hashable {
     }
 }
 
-public struct ResourceConfiguration: Codable, Sendable, Hashable {
+struct ResourceConfiguration: Codable, Sendable, Hashable {
     public let cpus: Int
     public let memoryInBytes: UInt64
     public let cpuOverhead: Int?
@@ -175,7 +176,7 @@ public struct ResourceConfiguration: Codable, Sendable, Hashable {
     public static let `default` = ResourceConfiguration(cpus: 4, memoryInBytes: 1_073_741_824, cpuOverhead: 1, storage: nil)
 }
 
-public struct Platform: Codable, Sendable, Hashable {
+struct Platform: Codable, Sendable, Hashable {
     public let architecture: String
     public let os: String
     public let variant: String?
@@ -187,7 +188,7 @@ public struct Platform: Codable, Sendable, Hashable {
     }
 }
 
-public struct PublishedPort: Codable, Sendable, Hashable {
+struct PublishedPort: Codable, Sendable, Hashable {
     public let containerPort: Int
     public let hostPort: Int
     public let hostAddress: String?
@@ -197,13 +198,13 @@ public struct PublishedPort: Codable, Sendable, Hashable {
     public var display: String { "\(hostPort)→\(containerPort)" }
 }
 
-public struct PublishedSocket: Codable, Sendable, Hashable {
+struct PublishedSocket: Codable, Sendable, Hashable {
     public let hostPath: String?
     public let containerPath: String?
 }
 
 /// `configuration.networks[]` — the requested attachment (distinct from the runtime status network).
-public struct NetworkAttachment: Codable, Sendable, Hashable {
+struct NetworkAttachment: Codable, Sendable, Hashable {
     public let network: String
     public let options: Options?
 
@@ -213,7 +214,7 @@ public struct NetworkAttachment: Codable, Sendable, Hashable {
     }
 }
 
-public struct DNSConfiguration: Codable, Sendable, Hashable {
+struct DNSConfiguration: Codable, Sendable, Hashable {
     public let nameservers: [String]
     public let searchDomains: [String]
     public let options: [String]
@@ -228,7 +229,7 @@ public struct DNSConfiguration: Codable, Sendable, Hashable {
     }
 }
 
-public struct Mount: Codable, Sendable, Hashable {
+struct Mount: Codable, Sendable, Hashable {
     public let type: String?
     public let source: String?
     public let destination: String?
@@ -258,6 +259,8 @@ public struct Mount: Codable, Sendable, Hashable {
 }
 
 /// A CodingKey usable for arbitrary/dynamic JSON object keys.
+}
+
 struct DynamicCodingKey: CodingKey {
     var stringValue: String
     var intValue: Int?

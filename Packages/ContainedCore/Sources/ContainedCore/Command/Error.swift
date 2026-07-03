@@ -1,7 +1,8 @@
 import Foundation
 
 /// A typed error for everything that can go wrong invoking the `container` CLI.
-public enum CommandError: ContainedPackageError, Equatable {
+public extension Core.Command {
+enum Error: Core.Error.PackageError, Equatable {
     /// The `container` binary could not be located on disk.
     case cliNotFound(searched: [String])
     /// The process launched but exited non-zero. `stderr` is the trimmed error text.
@@ -34,4 +35,6 @@ public enum CommandError: ContainedPackageError, Equatable {
             return ["underlying": underlying]
         }
     }
+}
+
 }

@@ -1,7 +1,8 @@
 import SwiftUI
 import Charts
 
-public enum ChartStyle {
+public extension UI.Chart {
+enum Style {
     public static func primaryLine(_ mark: LineMark) -> some ChartContent {
         mark.foregroundStyle(Color.accentColor)
             .interpolationMethod(.monotone)
@@ -20,7 +21,7 @@ public enum ChartStyle {
     }
 }
 
-public enum GraphStyle: String, CaseIterable, Identifiable, Codable, Sendable {
+enum GraphStyle: String, CaseIterable, Identifiable, Codable, Sendable {
     case area
     case line
     case bar
@@ -70,14 +71,14 @@ public enum GraphStyle: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
-public enum WidgetInterpolation: String, CaseIterable, Identifiable, Codable, Sendable {
+enum Interpolation: String, CaseIterable, Identifiable, Codable, Sendable {
     case linear, catmullRom, cardinal, monotone, stepStart, stepCenter, stepEnd
 
     public var id: String { rawValue }
 
 }
 
-public enum SparklineScale: String, CaseIterable, Identifiable, Codable, Sendable {
+enum Scale: String, CaseIterable, Identifiable, Codable, Sendable {
     case normalized
     case fraction
 
@@ -86,32 +87,32 @@ public enum SparklineScale: String, CaseIterable, Identifiable, Codable, Sendabl
 
 /// A compact Swift Charts renderer for card widgets. Byte/rate metrics can be normalized
 /// independently, while pre-normalized fraction metrics can stay anchored to the 0...100% domain.
-public struct SparklineView: View {
+struct Sparkline: View {
     private static let maximumPlottedSamples = 24
 
     public var samples: [Double]
     public var comparisonSamples: [Double] = []
     public var color: Color = .accentColor
     public var lineWidth: CGFloat = 1.5
-    public var style: GraphStyle = .area
+    public var style: UI.Chart.GraphStyle = .area
     public var areaUsesGradient = true
-    public var interpolation: WidgetInterpolation = .linear
+    public var interpolation: UI.Chart.Interpolation = .linear
     public var pointSize: CGFloat = 18
     public var barWidth: CGFloat = 4
-    public var scale: SparklineScale = .normalized
-    public var comparisonScale: SparklineScale = .normalized
+    public var scale: UI.Chart.Scale = .normalized
+    public var comparisonScale: UI.Chart.Scale = .normalized
 
     public init(samples: [Double],
                 comparisonSamples: [Double] = [],
                 color: Color = .accentColor,
                 lineWidth: CGFloat = 1.5,
-                style: GraphStyle = .area,
+                style: UI.Chart.GraphStyle = .area,
                 areaUsesGradient: Bool = true,
-                interpolation: WidgetInterpolation = .linear,
+                interpolation: UI.Chart.Interpolation = .linear,
                 pointSize: CGFloat = 18,
                 barWidth: CGFloat = 4,
-                scale: SparklineScale = .normalized,
-                comparisonScale: SparklineScale? = nil) {
+                scale: UI.Chart.Scale = .normalized,
+                comparisonScale: UI.Chart.Scale? = nil) {
         self.samples = samples
         self.comparisonSamples = comparisonSamples
         self.color = color
@@ -264,7 +265,7 @@ public struct SparklineView: View {
         }
     }
 
-    private func chartPoints(for values: [Double], scale: SparklineScale) -> [ChartPoint] {
+    private func chartPoints(for values: [Double], scale: UI.Chart.Scale) -> [ChartPoint] {
         let plotted = plottedSamples(values)
         let startIndex = Self.maximumPlottedSamples - plotted.count
         let scaled = SparklineSeriesScaling.scaled(plotted, mode: scale)
@@ -276,6 +277,7 @@ public struct SparklineView: View {
     private func plottedSamples(_ values: [Double]) -> [Double] {
         SparklineSeriesScaling.paddedWindow(values, capacity: Self.maximumPlottedSamples)
     }
+}
 }
 
 enum SparklineSeriesScaling {
@@ -296,7 +298,7 @@ enum SparklineSeriesScaling {
         values.map { min(max(sanitizedSample($0), 0), 1) }
     }
 
-    static func scaled(_ values: [Double], mode: SparklineScale) -> [Double] {
+    static func scaled(_ values: [Double], mode: UI.Chart.Scale) -> [Double] {
         switch mode {
         case .normalized: return normalized(values)
         case .fraction: return fractions(values)
@@ -333,7 +335,7 @@ private struct ChartRangePoint: Identifiable {
     var id: Int { index }
 }
 
-private extension WidgetInterpolation {
+private extension UI.Chart.Interpolation {
     var method: InterpolationMethod {
         switch self {
         case .linear: return .linear
@@ -348,7 +350,8 @@ private extension WidgetInterpolation {
 }
 
 /// A fixed-size ring buffer for sparkline history.
-public struct SampleBuffer: Sendable, Equatable {
+public extension UI.Chart {
+struct SampleBuffer: Sendable, Equatable {
     public private(set) var values: [Double] = []
     public let capacity: Int
 
@@ -358,4 +361,5 @@ public struct SampleBuffer: Sendable, Equatable {
         values.append(value)
         if values.count > capacity { values.removeFirst(values.count - capacity) }
     }
+}
 }

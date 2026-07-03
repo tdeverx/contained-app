@@ -1,6 +1,6 @@
 import ContainedCore
 
-extension GraphMetric {
+extension Core.Metrics.GraphMetric {
     var displayName: String {
         switch self {
         case .cpu: return AppText.string("graphMetric.cpu", defaultValue: "CPU")
@@ -23,9 +23,9 @@ extension GraphMetric {
         }
     }
 
-    func chipCaption(from delta: StatsDelta,
-                     snapshot: ContainerSnapshot? = nil,
-                     normalization: StatsNormalizationContext = .containerSpecific) -> String {
+    func chipCaption(from delta: Core.Metrics.StatsDelta,
+                     snapshot: Core.Container.Snapshot? = nil,
+                     normalization: Core.Metrics.NormalizationContext = .containerSpecific) -> String {
         switch self {
         case .cpu, .memory:
             return Format.compactPercent(value(from: delta, snapshot: snapshot, normalization: normalization))
@@ -36,9 +36,9 @@ extension GraphMetric {
         }
     }
 
-    func caption(from delta: StatsDelta,
-                 snapshot: ContainerSnapshot? = nil,
-                 normalization: StatsNormalizationContext = .containerSpecific) -> String {
+    func caption(from delta: Core.Metrics.StatsDelta,
+                 snapshot: Core.Container.Snapshot? = nil,
+                 normalization: Core.Metrics.NormalizationContext = .containerSpecific) -> String {
         switch self {
         case .cpu, .memory:
             return Format.compactPercent(value(from: delta, snapshot: snapshot, normalization: normalization))
@@ -50,7 +50,7 @@ extension GraphMetric {
     }
 }
 
-extension StatsNormalizationMode {
+extension Core.Metrics.NormalizationMode {
     var displayName: String {
         switch self {
         case .container: return AppText.string("statsNormalization.container", defaultValue: "Container")

@@ -12,21 +12,21 @@ import ContainedCore
 @MainActor
 final class RestartWatchdog {
     /// Called when the watchdog issues a restart (snapshot, attempt number).
-    var onRestart: ((ContainerSnapshot, Int) -> Void)?
+    var onRestart: ((Core.Container.Snapshot, Int) -> Void)?
     /// Called when a container exits unexpectedly with no restart policy (for an informational note).
-    var onUnexpectedExit: ((ContainerSnapshot) -> Void)?
+    var onUnexpectedExit: ((Core.Container.Snapshot) -> Void)?
 
     private let maxRetries = 5
-    private var lastState: [String: RuntimeStatus] = [:]
+    private var lastState: [String: Core.Runtime.Status] = [:]
     private var attempts: [String: Int] = [:]
     private var nextEligible: [String: Date] = [:]
 
     /// Evaluate the latest snapshots against the previous tick and act on crashes.
-    func evaluate(snapshots: [ContainerSnapshot],
+    func evaluate(snapshots: [Core.Container.Snapshot],
                   store: ContainersStore,
                   client: Core.Orchestrator,
                   now: Date = Date()) async {
-        var restarts: [(ContainerSnapshot, Int)] = []
+        var restarts: [(Core.Container.Snapshot, Int)] = []
 
         for snapshot in snapshots {
             let id = snapshot.id
@@ -41,9 +41,9 @@ final class RestartWatchdog {
             guard crashedNow else { continue }
 
             let userInitiated = store.consumeIntentionalStop(id)
-            let policy = RestartPolicy(label: snapshot.configuration.labels["contained.restart"])
+            let policy = Core.Container.RestartPolicy(label: snapshot.configuration.labels["contained.restart"])
 
-            guard RestartDecision.shouldRestart(policy: policy, userInitiated: userInitiated) else {
+            guard Core.Container.RestartDecision.shouldRestart(policy: policy, userInitiated: userInitiated) else {
                 // An unexpected exit we won't act on — surface it once (informational).
                 if !userInitiated && policy == .no { onUnexpectedExit?(snapshot) }
                 continue
@@ -54,7 +54,7 @@ final class RestartWatchdog {
             if let eligible = nextEligible[id], eligible > now { continue }   // backing off
 
             attempts[id] = attempt + 1
-            nextEligible[id] = now.addingTimeInterval(RestartDecision.backoff(attempt: attempt + 1))
+            nextEligible[id] = now.addingTimeInterval(Core.Container.RestartDecision.backoff(attempt: attempt + 1))
             restarts.append((snapshot, attempt + 1))
         }
 

@@ -6,7 +6,8 @@ import Foundation
 /// `2026-06-24T10:16:58Z` (no fractional seconds) while embedded OCI image-config dates look like
 /// `2026-06-16T00:01:29.967161902Z` (nanosecond precision). We accept both, plus a couple of
 /// other lenient fallbacks, so decoding never fails on a date.
-public enum ContainerJSON {
+public extension Core.Container {
+enum JSON {
 
     public static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
@@ -45,4 +46,6 @@ public enum ContainerJSON {
     public static func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
         try decoder.decode(type, from: data)
     }
+}
+
 }

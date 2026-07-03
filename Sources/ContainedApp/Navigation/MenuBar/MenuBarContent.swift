@@ -10,7 +10,7 @@ struct MenuBarContent: View {
     @Environment(UIState.self) private var ui
 
     private var store: ContainersStore { app.containers }
-    private var stopped: [ContainerSnapshot] { store.snapshots.filter { $0.state != .running } }
+    private var stopped: [Core.Container.Snapshot] { store.snapshots.filter { $0.state != .running } }
     private var unreadActivityCount: Int { app.historyStore.unreadEventCount() }
 
     private var cliLabel: String {
@@ -238,7 +238,7 @@ struct MenuBarContent: View {
         }
     }
 
-    private func containerName(for snapshot: ContainerSnapshot) -> String {
+    private func containerName(for snapshot: Core.Container.Snapshot) -> String {
         app.containerStyle(for: snapshot).displayName(fallback: snapshot.id)
     }
 

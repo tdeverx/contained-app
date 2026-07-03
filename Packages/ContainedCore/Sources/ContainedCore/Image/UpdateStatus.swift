@@ -1,6 +1,7 @@
 import Foundation
 
-public enum ImageUpdateState: String, Sendable, Codable, Equatable {
+public extension Core.Image {
+enum UpdateState: String, Sendable, Codable, Equatable {
     case unknown
     case checking
     case current
@@ -8,14 +9,14 @@ public enum ImageUpdateState: String, Sendable, Codable, Equatable {
     case error
 }
 
-public struct ImageUpdateStatus: Sendable, Codable, Equatable {
-    public var state: ImageUpdateState
+struct UpdateStatus: Sendable, Codable, Equatable {
+    public var state: Core.Image.UpdateState
     public var localDigest: String?
     public var remoteDigest: String?
     public var checkedAt: Date?
     public var message: String?
 
-    public init(state: ImageUpdateState = .unknown, localDigest: String? = nil,
+    public init(state: Core.Image.UpdateState = .unknown, localDigest: String? = nil,
                 remoteDigest: String? = nil, checkedAt: Date? = nil, message: String? = nil) {
         self.state = state
         self.localDigest = localDigest
@@ -24,12 +25,12 @@ public struct ImageUpdateStatus: Sendable, Codable, Equatable {
         self.message = message
     }
 
-    public static func checking(localDigest: String?) -> ImageUpdateStatus {
-        ImageUpdateStatus(state: .checking, localDigest: localDigest)
+    public static func checking(localDigest: String?) -> Core.Image.UpdateStatus {
+        Core.Image.UpdateStatus(state: .checking, localDigest: localDigest)
     }
 
-    public static func resolved(localDigest: String?, remoteDigest: String, checkedAt: Date = Date()) -> ImageUpdateStatus {
-        ImageUpdateStatus(
+    public static func resolved(localDigest: String?, remoteDigest: String, checkedAt: Date = Date()) -> Core.Image.UpdateStatus {
+        Core.Image.UpdateStatus(
             state: localDigest == remoteDigest ? .current : .updateAvailable,
             localDigest: localDigest,
             remoteDigest: remoteDigest,
@@ -37,7 +38,9 @@ public struct ImageUpdateStatus: Sendable, Codable, Equatable {
         )
     }
 
-    public static func failed(localDigest: String?, message: String, checkedAt: Date = Date()) -> ImageUpdateStatus {
-        ImageUpdateStatus(state: .error, localDigest: localDigest, checkedAt: checkedAt, message: message)
+    public static func failed(localDigest: String?, message: String, checkedAt: Date = Date()) -> Core.Image.UpdateStatus {
+        Core.Image.UpdateStatus(state: .error, localDigest: localDigest, checkedAt: checkedAt, message: message)
     }
+}
+
 }

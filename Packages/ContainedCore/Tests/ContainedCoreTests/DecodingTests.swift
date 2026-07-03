@@ -6,19 +6,19 @@ import Testing
 struct DecodingTests {
 
     @Test func placeholderSnapshotDecodes() {
-        let s = ContainerSnapshot.placeholder(id: "nginx", image: "nginx:latest")
+        let s = Core.Container.Snapshot.placeholder(id: "nginx", image: "nginx:latest")
         #expect(s.id == "nginx")
         #expect(s.image == "nginx:latest")
         #expect(s.state == .running)
-        let stopped = ContainerSnapshot.placeholder(id: "x", image: "redis:7", state: .stopped)
+        let stopped = Core.Container.Snapshot.placeholder(id: "x", image: "redis:7", state: .stopped)
         #expect(stopped.state == .stopped)
-        let quoted = ContainerSnapshot.placeholder(id: #"weird "id""#, image: #"repo/"quoted":tag"#)
+        let quoted = Core.Container.Snapshot.placeholder(id: #"weird "id""#, image: #"repo/"quoted":tag"#)
         #expect(quoted.id == #"weird "id""#)
         #expect(quoted.image == #"repo/"quoted":tag"#)
     }
 
     @Test func decodesContainerList() throws {
-        let snapshots = try ContainerJSON.decode([ContainerSnapshot].self, from: try Fixture.data("list"))
+        let snapshots = try Core.Container.JSON.decode([Core.Container.Snapshot].self, from: try Fixture.data("list"))
         try #require(snapshots.count == 1)
         let c = snapshots[0]
         #expect(c.id == "fixture-web")
@@ -36,7 +36,7 @@ struct DecodingTests {
 
     @Test func decodesMultiContainerListWithVirtiofsMounts() throws {
         // Live output can represent mount `type` as an enum-like object such as {"virtiofs":{}}.
-        let snapshots = try ContainerJSON.decode([ContainerSnapshot].self, from: try Fixture.data("list-current"))
+        let snapshots = try Core.Container.JSON.decode([Core.Container.Snapshot].self, from: try Fixture.data("list-current"))
         #expect(snapshots.count == 4)
         let npm = try #require(snapshots.first { $0.id == "nginx-proxy-manager-latest" })
         #expect(npm.configuration.mounts.count == 2)
@@ -45,13 +45,13 @@ struct DecodingTests {
     }
 
     @Test func decodesInspectMatchesList() throws {
-        let inspected = try ContainerJSON.decode([ContainerSnapshot].self, from: try Fixture.data("inspect"))
+        let inspected = try Core.Container.JSON.decode([Core.Container.Snapshot].self, from: try Fixture.data("inspect"))
         #expect(inspected.first?.id == "fixture-web")
         #expect(inspected.first?.configuration.platform.architecture == "arm64")
     }
 
     @Test func decodesStats() throws {
-        let stats = try ContainerJSON.decode([ContainerStats].self, from: try Fixture.data("stats"))
+        let stats = try Core.Container.JSON.decode([Core.Metrics.ContainerStats].self, from: try Fixture.data("stats"))
         let s = try #require(stats.first)
         #expect(s.id == "fixture-web")
         #expect(s.memoryLimitBytes == 1_073_741_824)
@@ -60,7 +60,7 @@ struct DecodingTests {
     }
 
     @Test func decodesDiskUsage() throws {
-        let df = try ContainerJSON.decode(DiskUsage.self, from: try Fixture.data("df"))
+        let df = try Core.Container.JSON.decode(Core.System.DiskUsage.self, from: try Fixture.data("df"))
         #expect(df.images.total == 11)
         #expect(df.containers.total == 3)
         #expect(df.volumes.sizeInBytes == 0)
@@ -68,7 +68,7 @@ struct DecodingTests {
     }
 
     @Test func decodesSystemStatus() throws {
-        let status = try ContainerJSON.decode(SystemStatus.self, from: try Fixture.data("status"))
+        let status = try Core.Container.JSON.decode(Core.System.Status.self, from: try Fixture.data("status"))
         #expect(status.isRunning)
         #expect(status.apiServerVersion?.contains("1.0.0") == true)
     }
@@ -81,7 +81,7 @@ struct DecodingTests {
           "build": { "cpus": 2, "memory": "2048mb" }
         }
         """.utf8)
-        let properties = try ContainerJSON.decode(SystemProperties.self, from: data)
+        let properties = try Core.Container.JSON.decode(Core.System.Properties.self, from: data)
 
         #expect(properties.container?.cpus == 4)
         #expect(properties.container?.memory == "1gb")
@@ -90,7 +90,7 @@ struct DecodingTests {
     }
 
     @Test func decodesNetworks() throws {
-        let nets = try ContainerJSON.decode([NetworkResource].self, from: try Fixture.data("networks"))
+        let nets = try Core.Container.JSON.decode([Core.Network.Resource].self, from: try Fixture.data("networks"))
         let def = try #require(nets.first)
         #expect(def.name == "default")
         #expect(def.isBuiltin)
@@ -98,12 +98,12 @@ struct DecodingTests {
     }
 
     @Test func decodesEmptyVolumes() throws {
-        let vols = try ContainerJSON.decode([VolumeResource].self, from: try Fixture.data("volumes"))
+        let vols = try Core.Container.JSON.decode([Core.Volume.Resource].self, from: try Fixture.data("volumes"))
         #expect(vols.isEmpty)
     }
 
     @Test func decodesMultiArchImage() throws {
-        let images = try ContainerJSON.decode([ImageResource].self, from: try Fixture.data("image-inspect"))
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: try Fixture.data("image-inspect"))
         let img = try #require(images.first)
         #expect(img.reference == "docker.io/library/alpine:latest")
         #expect(img.variants.count > 1)
@@ -118,14 +118,14 @@ struct DecodingTests {
     }
 
     @Test func handlesDatesWithAndWithoutFractionalSeconds() throws {
-        #expect(ContainerJSON.parseDate("2026-06-24T10:16:58Z") != nil)
-        #expect(ContainerJSON.parseDate("2026-06-16T00:01:29.967161902Z") != nil)
-        #expect(ContainerJSON.parseDate("not-a-date") == nil)
+        #expect(Core.Container.JSON.parseDate("2026-06-24T10:16:58Z") != nil)
+        #expect(Core.Container.JSON.parseDate("2026-06-16T00:01:29.967161902Z") != nil)
+        #expect(Core.Container.JSON.parseDate("not-a-date") == nil)
     }
 
     @Test func unknownRuntimeStatusFallsBack() throws {
         let data = Data(#"{"state":"frobnicating","networks":[]}"#.utf8)
-        let s = try ContainerJSON.decode(ContainerRuntimeState.self, from: data)
+        let s = try Core.Container.JSON.decode(Core.Container.RuntimeState.self, from: data)
         #expect(s.state == .unknown)
     }
 }

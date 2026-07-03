@@ -34,7 +34,7 @@ struct ToolbarCommandPalette: View {
     @FocusState private var focused: Bool
     var onClose: () -> Void
 
-    @State private var hubResults: [HubSearchResult] = []
+    @State private var hubResults: [Core.Registry.HubSearchResult] = []
     @State private var hubSearching = false
     @State private var hubError: String?
 
@@ -409,7 +409,7 @@ struct ToolbarCommandPalette: View {
         hubError = nil
         defer { hubSearching = false }
         do {
-            let results = try await HubSearch.results(query: trimmedQuery)
+            let results = try await Core.Registry.HubSearch.results(query: trimmedQuery)
             guard !Task.isCancelled else { return }
             hubResults = results
         } catch {

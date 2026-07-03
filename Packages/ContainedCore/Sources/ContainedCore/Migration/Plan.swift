@@ -1,25 +1,28 @@
 import Foundation
 
-public enum RuntimeCoreSwitchUnavailableReason: String, Equatable, Sendable {
+public extension Core.Migration {
+enum UnavailableReason: String, Equatable, Sendable {
     case exportImportUnsupported
 }
 
-public struct RuntimeCoreSwitchPlan: Equatable, Sendable {
+struct Plan: Equatable, Sendable {
     public var isAvailable: Bool
-    public var unavailableReason: RuntimeCoreSwitchUnavailableReason?
+    public var unavailableReason: Core.Migration.UnavailableReason?
     public var context: [String: String]
-    public var source: RuntimeKind
-    public var target: RuntimeKind?
+    public var source: Core.Runtime.Kind
+    public var target: Core.Runtime.Kind?
 
     public init(isAvailable: Bool,
-                unavailableReason: RuntimeCoreSwitchUnavailableReason?,
+                unavailableReason: Core.Migration.UnavailableReason?,
                 context: [String: String] = [:],
-                source: RuntimeKind,
-                target: RuntimeKind?) {
+                source: Core.Runtime.Kind,
+                target: Core.Runtime.Kind?) {
         self.isAvailable = isAvailable
         self.unavailableReason = unavailableReason
         self.context = context
         self.source = source
         self.target = target
     }
+}
+
 }

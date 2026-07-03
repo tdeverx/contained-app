@@ -7,8 +7,8 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
 
     var schemaVersion: Int = Self.schemaVersion
     var enabled: Bool = true
-    var metric: GraphMetric = .cpu
-    var secondaryMetric: GraphMetric?
+    var metric: Core.Metrics.GraphMetric = .cpu
+    var secondaryMetric: Core.Metrics.GraphMetric?
     var tint: UI.Theme.Tint?
     var icon: String = ""
     var style: UI.Chart.GraphStyle = .area
@@ -28,8 +28,8 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
     init() {}
 
     init(enabled: Bool = true,
-         metric: GraphMetric = .cpu,
-         secondaryMetric: GraphMetric? = nil,
+         metric: Core.Metrics.GraphMetric = .cpu,
+         secondaryMetric: Core.Metrics.GraphMetric? = nil,
          tint: UI.Theme.Tint? = nil,
          icon: String = "",
          style: UI.Chart.GraphStyle = .area,
@@ -61,8 +61,8 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
         let decodedSchemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 0
         schemaVersion = decodedSchemaVersion
         enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
-        metric = try container.decodeIfPresent(GraphMetric.self, forKey: .metric) ?? .cpu
-        secondaryMetric = try container.decodeIfPresent(GraphMetric.self, forKey: .secondaryMetric)
+        metric = try container.decodeIfPresent(Core.Metrics.GraphMetric.self, forKey: .metric) ?? .cpu
+        secondaryMetric = try container.decodeIfPresent(Core.Metrics.GraphMetric.self, forKey: .secondaryMetric)
         tint = try container.decodeIfPresent(UI.Theme.Tint.self, forKey: .tint)
         icon = try container.decodeIfPresent(String.self, forKey: .icon) ?? ""
         style = try container.decodeIfPresent(UI.Chart.GraphStyle.self, forKey: .style) ?? .area

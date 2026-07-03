@@ -5,7 +5,7 @@ import ContainedCore
 enum StatusPresentation: Sendable, Equatable {
     case running, stopped, stopping, unknown, errored
 
-    init(_ status: RuntimeStatus, errored: Bool = false) {
+    init(_ status: Core.Runtime.Status, errored: Bool = false) {
         if errored { self = .errored; return }
         switch status {
         case .running: self = .running

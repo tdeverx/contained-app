@@ -32,6 +32,7 @@
 
 - [ ] Added or updated a release/change note, or applied the `no-release-note` label for docs/meta/dependency-only maintenance
 - [ ] Updated `docs` for user-facing behavior or workflow changes, or this PR does not need docs
+- [ ] Updated `docs/wiki/File-Map.md` and `docs/wiki/_Sidebar.md` when docs/package docs should appear in the wiki
 - [ ] Synced `Sources/ContainedApp/Resources/CHANGELOG.md` when `CHANGELOG.md` changed (`./scripts/sync-changelog-resource.sh --check` passes)
 
 ## Update Safety

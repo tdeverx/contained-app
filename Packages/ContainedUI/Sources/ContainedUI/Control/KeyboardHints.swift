@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct KeyCap: View {
+public extension UI.Control {
+struct KeyCap: View {
     public var text: String
 
     public init(_ text: String) {
@@ -19,7 +20,7 @@ public struct KeyCap: View {
     }
 }
 
-public struct KeyboardHint: View {
+struct KeyboardHint: View {
     public var key: String
     public var label: String
 
@@ -30,10 +31,11 @@ public struct KeyboardHint: View {
 
     public var body: some View {
         HStack(spacing: UI.Tokens.Space.xs) {
-            KeyCap(key)
+            UI.Control.KeyCap(key)
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
+}
 }

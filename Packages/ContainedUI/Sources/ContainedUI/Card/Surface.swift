@@ -1,6 +1,7 @@
 import SwiftUI
 
-public enum CardSize {
+public extension UI.Card {
+enum Size {
     case small, medium, large
 
     /// Footer actions stay visible in compact/expanded chrome for medium and large cards.
@@ -16,18 +17,18 @@ public enum CardSize {
     public var showsWidget: Bool { keepsWidgetSticky }
 }
 
-public enum CardExpandedMetrics {
+enum ExpandedMetrics {
     public static let maxWidth: CGFloat = 760
 }
 
-public struct CardSizePicker: View {
-    @Binding var selection: CardDensity
+struct SizePicker: View {
+    @Binding var selection: UI.Card.Density
     public var title: String
-    public var labelForDensity: (CardDensity) -> String
+    public var labelForDensity: (UI.Card.Density) -> String
 
-    public init(selection: Binding<CardDensity>,
+    public init(selection: Binding<UI.Card.Density>,
                 title: String,
-                labelForDensity: @escaping (CardDensity) -> String) {
+                labelForDensity: @escaping (UI.Card.Density) -> String) {
         self._selection = selection
         self.title = title
         self.labelForDensity = labelForDensity
@@ -35,7 +36,7 @@ public struct CardSizePicker: View {
 
     public var body: some View {
         Picker(title, selection: $selection) {
-            ForEach(CardDensity.allCases) { density in
+            ForEach(UI.Card.Density.allCases) { density in
                 Text(labelForDensity(density)).tag(density)
             }
         }
@@ -43,10 +44,11 @@ public struct CardSizePicker: View {
         .frame(width: 230)
     }
 }
+}
 
 struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
                          FooterActions: View, Widget: View>: View {
-    var size: CardSize
+    var size: UI.Card.Size
     var isExpanded = false
     var cornerRadiusOverride: CGFloat?
     var controlsVisible = true
@@ -60,7 +62,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
     var fillOpacity: Double = 0.18
     var gradient: Bool = false
     var gradientAngle: Double = 135
-    var blendMode: ThemeColorBlendMode = .softLight
+    var blendMode: UI.Theme.ColorBlendMode = .softLight
     /// Lift the card with a shadow. Pass `false` for flat tiles inside an already-elevated panel.
     var elevated: Bool = true
     var onTap: () -> Void = {}
@@ -80,7 +82,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
         return copy
     }
 
-    init(size: CardSize,
+    init(size: UI.Card.Size,
          isExpanded: Bool = false,
          cornerRadiusOverride: CGFloat? = nil,
          controlsVisible: Bool = true,
@@ -91,7 +93,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
-         blendMode: ThemeColorBlendMode = .softLight,
+         blendMode: UI.Theme.ColorBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header,
@@ -131,7 +133,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
         let cornerRadius = cornerRadiusOverride ?? (isExpanded ? UI.Tokens.Radius.sheet : UI.Tokens.Radius.card)
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         return cardContent
-            .frame(maxWidth: isExpanded ? CardExpandedMetrics.maxWidth : .infinity,
+            .frame(maxWidth: isExpanded ? UI.Card.ExpandedMetrics.maxWidth : .infinity,
                    alignment: .leading)
             .clipShape(shape)
             .designCardMaterial(cardMaterial,
@@ -146,7 +148,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
                 if isSelected {
                     if usesSelectionFill {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(ThemeMaterial.toolbarHoverFill)
+                            .fill(UI.Theme.Material.toolbarHoverFill)
                     } else {
                         RoundedRectangle(cornerRadius: UI.Tokens.Radius.inset(from: cornerRadius, by: 1),
                                          style: .continuous)
@@ -207,7 +209,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
     }
 
     private func stickyFooter(showActions: Bool) -> some View {
-        CardFooter(actionsVisible: showActions) {
+        UI.Card.CardFooter(actionsVisible: showActions) {
             footerLeading()
         } trailing: {
             footerActions()
@@ -249,14 +251,14 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
 }
 
 private struct CardMaterialSurface: ViewModifier {
-    var material: ThemeWindowMaterial
+    var material: UI.Theme.WindowMaterial
     var cornerRadius: CGFloat
     var shadow: Bool
     var fill: Color?
     var fillOpacity: Double
     var gradient: Bool
     var gradientAngle: Double
-    var blendMode: ThemeColorBlendMode
+    var blendMode: UI.Theme.ColorBlendMode
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
@@ -314,14 +316,14 @@ private struct CardMaterialSurface: ViewModifier {
 }
 
 private extension View {
-    func designCardMaterial(_ material: ThemeWindowMaterial,
+    func designCardMaterial(_ material: UI.Theme.WindowMaterial,
                               cornerRadius: CGFloat,
                               shadow: Bool,
                               fill: Color?,
                               fillOpacity: Double,
                               gradient: Bool,
                               gradientAngle: Double,
-                              blendMode: ThemeColorBlendMode) -> some View {
+                              blendMode: UI.Theme.ColorBlendMode) -> some View {
         modifier(CardMaterialSurface(material: material,
                                              cornerRadius: cornerRadius,
                                              shadow: shadow,
@@ -335,13 +337,13 @@ private extension View {
 
 extension CardSurface where BodyContent == EmptyView, FooterLeading == EmptyView,
                                 FooterActions == EmptyView, Widget == EmptyView {
-    init(size: CardSize = .small,
+    init(size: UI.Card.Size = .small,
          isSelected: Bool = false,
          fill: Color? = nil,
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
-         blendMode: ThemeColorBlendMode = .softLight,
+         blendMode: UI.Theme.ColorBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header) {
@@ -363,7 +365,7 @@ extension CardSurface where BodyContent == EmptyView, FooterLeading == EmptyView
 }
 
 extension CardSurface where BodyContent == EmptyView, Widget == EmptyView {
-    init(size: CardSize,
+    init(size: UI.Card.Size,
          isExpanded: Bool = false,
          controlsVisible: Bool = true,
          isSelected: Bool = false,
@@ -371,7 +373,7 @@ extension CardSurface where BodyContent == EmptyView, Widget == EmptyView {
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
-         blendMode: ThemeColorBlendMode = .softLight,
+         blendMode: UI.Theme.ColorBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header,
@@ -397,7 +399,7 @@ extension CardSurface where BodyContent == EmptyView, Widget == EmptyView {
 }
 
 extension CardSurface where Widget == EmptyView {
-    init(size: CardSize,
+    init(size: UI.Card.Size,
          isExpanded: Bool = false,
          controlsVisible: Bool = true,
          isSelected: Bool = false,
@@ -405,7 +407,7 @@ extension CardSurface where Widget == EmptyView {
          fillOpacity: Double = 0.18,
          gradient: Bool = false,
          gradientAngle: Double = 135,
-         blendMode: ThemeColorBlendMode = .softLight,
+         blendMode: UI.Theme.ColorBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
          @ViewBuilder header: @escaping () -> Header,

@@ -5,8 +5,8 @@ import Testing
 @Suite("Runtime descriptor contracts")
 struct RuntimeDescriptorTests {
     @Test func openRuntimeKindsCanAdvertiseCapabilities() throws {
-        let descriptor = RuntimeDescriptor(
-            kind: RuntimeKind(rawValue: "future-runtime"),
+        let descriptor = Core.Runtime.Descriptor(
+            kind: Core.Runtime.Kind(rawValue: "future-runtime"),
             displayName: "Future runtime",
             executableName: "future",
             capabilities: [.containers, .composeImport]
@@ -19,21 +19,21 @@ struct RuntimeDescriptorTests {
     }
 
     @Test func unsupportedCapabilityIsDisplayNeutralPackageError() {
-        let error = UnsupportedRuntimeCapability(
+        let error = Core.Runtime.UnsupportedCapability(
             kind: .dockerCompatible,
             capability: .imageBuild
         )
 
         #expect(error.packageName == "ContainedCore")
         #expect(error.packageErrorCode == "unsupportedRuntimeCapability")
-        #expect(error.packageErrorContext["kind"] == RuntimeKind.dockerCompatible.rawValue)
-        #expect(error.packageErrorContext["capability"] == String(RuntimeCapability.imageBuild.rawValue))
+        #expect(error.packageErrorContext["kind"] == Core.Runtime.Kind.dockerCompatible.rawValue)
+        #expect(error.packageErrorContext["capability"] == String(Core.Runtime.Capability.imageBuild.rawValue))
     }
 
     @Test func defaultCoreSwitchPlanIsDisplayNeutral() throws {
         let runtime = UnavailableRuntime(
-            descriptor: RuntimeDescriptor(
-                kind: RuntimeKind(rawValue: "future-runtime"),
+            descriptor: Core.Runtime.Descriptor(
+                kind: Core.Runtime.Kind(rawValue: "future-runtime"),
                 displayName: "Future runtime",
                 executableName: "future",
                 capabilities: [.containers]
@@ -45,20 +45,20 @@ struct RuntimeDescriptorTests {
         #expect(!plan.isAvailable)
         #expect(plan.unavailableReason == .exportImportUnsupported)
         #expect(plan.context["source"] == "future-runtime")
-        #expect(plan.context["target"] == RuntimeKind.appleContainer.rawValue)
+        #expect(plan.context["target"] == Core.Runtime.Kind.appleContainer.rawValue)
     }
 }
 
 private struct UnavailableRuntime: ContainerRuntimeClient {
-    let descriptor: RuntimeDescriptor
+    let descriptor: Core.Runtime.Descriptor
 
-    func listContainers(all: Bool) async throws -> [ContainerSnapshot] { [] }
-    func stats(ids: [String]) async throws -> [ContainerStats] { [] }
-    func streamStats(ids: [String]) -> AsyncThrowingStream<[RuntimeStatsSnapshot], Error> {
+    func listContainers(all: Bool) async throws -> [Core.Container.Snapshot] { [] }
+    func stats(ids: [String]) async throws -> [Core.Metrics.ContainerStats] { [] }
+    func streamStats(ids: [String]) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Error> {
         AsyncThrowingStream { $0.finish() }
     }
-    func diskUsage() async throws -> DiskUsage { throw TestStubError.unused }
-    func systemProperties() async throws -> SystemProperties { throw TestStubError.unused }
+    func diskUsage() async throws -> Core.System.DiskUsage { throw TestStubError.unused }
+    func systemProperties() async throws -> Core.System.Properties { throw TestStubError.unused }
     func dnsDomains() async throws -> [String] { [] }
     func createDNSDomain(_ domain: String) async throws -> Data { throw TestStubError.unused }
     func deleteDNSDomain(_ domain: String) async throws -> Data { throw TestStubError.unused }
@@ -68,11 +68,11 @@ private struct UnavailableRuntime: ContainerRuntimeClient {
     func streamSystemLogs(follow: Bool, last: Int?) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { $0.finish() }
     }
-    func systemStatus() async throws -> SystemStatus { throw TestStubError.unused }
-    func networks() async throws -> [NetworkResource] { [] }
-    func volumes() async throws -> [VolumeResource] { [] }
-    func images() async throws -> [ImageResource] { [] }
-    func inspectImage(_ ref: String) async throws -> [ImageResource] { [] }
+    func systemStatus() async throws -> Core.System.Status { throw TestStubError.unused }
+    func networks() async throws -> [Core.Network.Resource] { [] }
+    func volumes() async throws -> [Core.Volume.Resource] { [] }
+    func images() async throws -> [Core.Image.Resource] { [] }
+    func inspectImage(_ ref: String) async throws -> [Core.Image.Resource] { [] }
     func streamLogs(id: String, follow: Bool, tail: Int?, boot: Bool) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { $0.finish() }
     }
@@ -88,8 +88,8 @@ private struct UnavailableRuntime: ContainerRuntimeClient {
         AsyncThrowingStream { $0.finish() }
     }
     func runContainer(arguments: [String]) async throws -> Data { throw TestStubError.unused }
-    func performSystemAction(_ action: RuntimeSystemAction) async throws -> Data { throw TestStubError.unused }
-    func registries() async throws -> [RegistryLogin] { [] }
+    func performSystemAction(_ action: Core.Runtime.SystemAction) async throws -> Data { throw TestStubError.unused }
+    func registries() async throws -> [Core.Registry.Login] { [] }
     func registryLogin(server: String, username: String, password: String) async throws -> Data { throw TestStubError.unused }
     func registryLogout(server: String) async throws -> Data { throw TestStubError.unused }
     func deleteImages(_ refs: [String]) async throws -> Data { throw TestStubError.unused }

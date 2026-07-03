@@ -1,33 +1,33 @@
 import Foundation
 
 enum AppleContainerCreateTranslator {
-    static func preview(for request: ContainerCreateRequest) -> RuntimeCommandPreview {
-        RuntimeCommandPreview(command: ContainerCommands.run(request))
+    static func preview(for request: Core.Container.CreateRequest) -> Core.Command.Preview {
+        Core.Command.Preview(command: ContainerCommands.run(request))
     }
 
-    static func result(from data: Data, request: ContainerCreateRequest) -> ContainerCreateResult {
+    static func result(from data: Data, request: Core.Container.CreateRequest) -> Core.Container.CreateResult {
         let output = String(decoding: data, as: UTF8.self)
         let printedID = output
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .last(where: { !$0.isEmpty })
-        return ContainerCreateResult(id: request.effectiveName ?? printedID, output: output)
+        return Core.Container.CreateResult(id: request.effectiveName ?? printedID, output: output)
     }
 
-    static func composePlan(for project: ComposeProject,
-                                   baseDirectory: URL?) -> RuntimeComposeImportPlan {
-        let items = project.services.compactMap { service -> RuntimeComposeImportItem? in
+    static func composePlan(for project: Core.Compose.Project,
+                                   baseDirectory: URL?) -> Core.Compose.ImportPlan {
+        let items = project.services.compactMap { service -> Core.Compose.ImportItem? in
             guard service.image != nil else { return nil }
-            return RuntimeComposeImportItem(
+            return Core.Compose.ImportItem(
                 request: createRequest(for: service, projectName: project.name, baseDirectory: baseDirectory),
                 healthCheck: healthCheck(for: service)
             )
         }
-        return RuntimeComposeImportPlan(items: items, warnings: project.warnings)
+        return Core.Compose.ImportPlan(items: items, warnings: project.warnings)
     }
 
-    static func imageDefaults(for request: ContainerCreateRequest,
-                                     in images: [ImageResource]) -> ContainerImageDefaults? {
+    static func imageDefaults(for request: Core.Container.CreateRequest,
+                                     in images: [Core.Image.Resource]) -> Core.Container.ImageDefaults? {
         guard let image = matchingImage(for: request.image, in: images) else { return nil }
         let runnable = image.variants.filter(\.isRunnable)
         let platformMatch = runnable.first { variant in
@@ -39,7 +39,7 @@ enum AppleContainerCreateTranslator {
         let hostMatch = runnable.first { $0.platform.os == "linux" && $0.platform.architecture == "amd64" }
         #endif
         guard let config = (platformMatch ?? hostMatch ?? runnable.first)?.config?.config else { return nil }
-        return ContainerImageDefaults(
+        return Core.Container.ImageDefaults(
             command: config.cmd ?? [],
             entrypoint: config.entrypoint ?? [],
             workingDirectory: config.workingDir,
@@ -48,10 +48,10 @@ enum AppleContainerCreateTranslator {
         )
     }
 
-    private static func createRequest(for service: ComposeService,
+    private static func createRequest(for service: Core.Compose.Service,
                                       projectName: String,
-                                      baseDirectory: URL?) -> ContainerCreateRequest {
-        var request = ContainerCreateRequest()
+                                      baseDirectory: URL?) -> Core.Container.CreateRequest {
+        var request = Core.Container.CreateRequest()
         request.runtimeKind = .appleContainer
         request.image = service.image ?? ""
         request.platform = service.platform ?? ""
@@ -61,7 +61,7 @@ enum AppleContainerCreateTranslator {
         request.detach = true
         request.interactive = service.interactive
         request.tty = service.tty
-        request.restart = RestartPolicy(label: service.restart)
+        request.restart = Core.Container.RestartPolicy(label: service.restart)
         request.cpus = service.cpus ?? ""
         request.memory = service.memory ?? ""
         request.readOnly = service.readOnly
@@ -81,13 +81,13 @@ enum AppleContainerCreateTranslator {
         request.env = service.environment.compactMap(keyValue)
         request.envFiles = service.envFiles
         request.labels = service.labels.compactMap(keyValue)
-        request.labels.append(ContainerCreateKeyValue(key: "contained.stack", value: projectName))
+        request.labels.append(Core.Container.KeyValue(key: "contained.stack", value: projectName))
         return request
     }
 
-    private static func healthCheck(for service: ComposeService) -> HealthCheck? {
+    private static func healthCheck(for service: Core.Compose.Service) -> Core.Container.HealthCheck? {
         guard let healthcheck = service.healthcheck else { return nil }
-        return HealthCheck(command: healthcheck.test,
+        return Core.Container.HealthCheck(command: healthcheck.test,
                            intervalSeconds: healthcheck.intervalSeconds,
                            retries: healthcheck.retries,
                            enabled: true)
@@ -98,7 +98,7 @@ enum AppleContainerCreateTranslator {
         return command.split(separator: " ").map(String.init)
     }
 
-    private static func portMap(_ spec: String) -> ContainerCreatePort? {
+    private static func portMap(_ spec: String) -> Core.Container.Port? {
         var raw = spec
         let proto: String
         if let slash = raw.lastIndex(of: "/") {
@@ -112,28 +112,28 @@ enum AppleContainerCreateTranslator {
         let host = parts.dropLast().joined(separator: ":")
         let container = parts[parts.count - 1]
         guard !host.isEmpty, !container.isEmpty else { return nil }
-        return ContainerCreatePort(hostPort: host, containerPort: container, proto: proto)
+        return Core.Container.Port(hostPort: host, containerPort: container, proto: proto)
     }
 
-    private static func volumeMap(_ spec: String, baseDirectory: URL?) -> ContainerCreateVolume? {
+    private static func volumeMap(_ spec: String, baseDirectory: URL?) -> Core.Container.VolumeMount? {
         let parts = spec.split(separator: ":", maxSplits: 2).map(String.init)
         guard parts.count > 1 else { return nil }
         var source = parts.first ?? ""
         if let baseDirectory, source.hasPrefix("./") || source.hasPrefix("../") {
             source = baseDirectory.appending(path: source).standardizedFileURL.path
         }
-        return ContainerCreateVolume(source: source,
+        return Core.Container.VolumeMount(source: source,
                                      target: parts.count > 1 ? parts[1] : "",
                                      readOnly: parts.count > 2 && parts[2] == "ro")
     }
 
-    private static func keyValue(_ entry: String) -> ContainerCreateKeyValue? {
+    private static func keyValue(_ entry: String) -> Core.Container.KeyValue? {
         guard let eq = entry.firstIndex(of: "=") else { return nil }
-        return ContainerCreateKeyValue(key: String(entry[..<eq]),
+        return Core.Container.KeyValue(key: String(entry[..<eq]),
                                        value: String(entry[entry.index(after: eq)...]))
     }
 
-    private static func matchingImage(for reference: String, in images: [ImageResource]) -> ImageResource? {
+    private static func matchingImage(for reference: String, in images: [Core.Image.Resource]) -> Core.Image.Resource? {
         let target = normalizedImageReference(reference)
         return images.first { normalizedImageReference($0.reference) == target }
     }

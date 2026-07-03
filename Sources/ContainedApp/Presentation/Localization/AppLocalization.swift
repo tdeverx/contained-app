@@ -732,7 +732,7 @@ extension UI.Chart.Interpolation {
     }
 }
 
-extension RestartPolicy {
+extension Core.Container.RestartPolicy {
     var localizedDisplayName: String {
         switch self {
         case .no: return AppText.string("restartPolicy.no", defaultValue: "No")

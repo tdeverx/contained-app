@@ -1,42 +1,43 @@
 import Foundation
 
 /// One element of `container image inspect` (and the intended shape of `image list`, which can
-/// currently fail wholesale when a single content blob is missing — see `CommandError`).
-public struct ImageResource: Codable, Sendable, Identifiable, Hashable {
-    public let configuration: ImageConfiguration
+/// currently fail wholesale when a single content blob is missing — see `Core.Command.Error`).
+public extension Core.Image {
+struct Resource: Codable, Sendable, Identifiable, Hashable {
+    public let configuration: Core.Image.Configuration
     public let id: String
-    public let variants: [ImageVariant]
+    public let variants: [Core.Image.Variant]
 
     public var reference: String { configuration.name }
     public var digest: String? { configuration.descriptor?.digest }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        configuration = try c.decode(ImageConfiguration.self, forKey: .configuration)
+        configuration = try c.decode(Core.Image.Configuration.self, forKey: .configuration)
         id = try c.decode(String.self, forKey: .id)
-        variants = try c.decodeIfPresent([ImageVariant].self, forKey: .variants) ?? []
+        variants = try c.decodeIfPresent([Core.Image.Variant].self, forKey: .variants) ?? []
     }
 }
 
-public struct ImageConfiguration: Codable, Sendable, Hashable {
+struct Configuration: Codable, Sendable, Hashable {
     public let name: String
-    public let descriptor: Descriptor?
+    public let descriptor: Core.Container.Descriptor?
     public let creationDate: Date?
 }
 
 /// A per-platform variant within a (usually multi-arch) image index.
-public struct ImageVariant: Codable, Sendable, Hashable, Identifiable {
+struct Variant: Codable, Sendable, Hashable, Identifiable {
     public let digest: String
     public let size: Int?
-    public let platform: Platform
-    public let config: VariantConfig?
+    public let platform: Core.Container.Platform
+    public let config: Core.Image.VariantConfig?
 
     public var id: String { digest }
     /// "unknown/unknown" variants are attestation/SBOM blobs, not runnable images.
     public var isRunnable: Bool { platform.os != "unknown" && platform.architecture != "unknown" }
 }
 
-public struct VariantConfig: Codable, Sendable, Hashable {
+struct VariantConfig: Codable, Sendable, Hashable {
     public let architecture: String?
     public let os: String?
     public let created: Date?
@@ -83,4 +84,6 @@ public struct VariantConfig: Codable, Sendable, Hashable {
             case diffIDs = "diff_ids"
         }
     }
+}
+
 }

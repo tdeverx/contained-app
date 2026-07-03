@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Package-owned transient banner chrome.
-public struct StatusBanner: View {
+public extension UI.State {
+struct Banner: View {
     public var text: String
 
     public init(_ text: String) {
@@ -15,4 +16,5 @@ public struct StatusBanner: View {
             .padding(.vertical, UI.Tokens.Space.s)
             .materialCapsuleSurface(shadow: false)
     }
+}
 }

@@ -28,14 +28,14 @@ final class AppModel {
     let migrator = StateMigrator()
     let logger: AppLogger
     /// Shared with `AppModel+ImageUpdates.swift` (Swift extensions in other files need ≥ internal).
-    let manifestClient = RegistryManifestClient()
+    let manifestClient = Core.Registry.ManifestClient()
 
     private(set) var bootstrap: Bootstrap = .checking
     private(set) var client: Core.Orchestrator?
     /// Resolved path to the `container` binary — needed to spawn the terminal's `exec` process.
     private(set) var cliURL: URL?
-    private(set) var systemStatus: SystemStatus?
-    private(set) var diskUsage: DiskUsage?
+    private(set) var systemStatus: Core.System.Status?
+    private(set) var diskUsage: Core.System.DiskUsage?
     private(set) var cliVersion: String?
     @ObservationIgnored private var containerStatsVisible = true
     @ObservationIgnored private var containerStatsStreamTask: Task<Void, Never>?
@@ -45,22 +45,22 @@ final class AppModel {
     @ObservationIgnored let diagnosticLogger = Logger(subsystem: "app.contained.Contained", category: "diagnostic")
 
     // Resource caches shared by toolbar panels, creation pages, and the container grid.
-    private(set) var volumes: [VolumeResource] = []
-    private(set) var networks: [NetworkResource] = []
-    private(set) var registries: [RegistryLogin] = []
-    private(set) var properties: SystemProperties?
+    private(set) var volumes: [Core.Volume.Resource] = []
+    private(set) var networks: [Core.Network.Resource] = []
+    private(set) var registries: [Core.Registry.Login] = []
+    private(set) var properties: Core.System.Properties?
     // `images`/`imagesError`/`imageUpdates` are written by both this file and the image-update sweep
     // in `AppModel+ImageUpdates.swift`, so their setters can't be `private(set)`.
-    var images: [ContainedCore.ImageResource] = [] {
+    var images: [Core.Image.Resource] = [] {
         didSet {
             imageGroupsCache = nil
             imageGroupIDByReferenceCache.removeAll(keepingCapacity: true)
         }
     }
-    @ObservationIgnored var imageGroupsCache: [LocalImageTagGroup]?
+    @ObservationIgnored var imageGroupsCache: [Core.Image.LocalTagGroup]?
     @ObservationIgnored var imageGroupIDByReferenceCache: [String: String] = [:]
     var imagesError: String?
-    var imageUpdates: [String: ImageUpdateStatus] = [:] {
+    var imageUpdates: [String: Core.Image.UpdateStatus] = [:] {
         didSet { Self.saveImageUpdates(imageUpdates) }
     }
     /// Transient watchdog/crash banner text (auto-cleared).
@@ -86,8 +86,8 @@ final class AppModel {
     var imageUpdateIntervalDescription: String {
         "Every \(settings.imageUpdateIntervalHours) hour\(settings.imageUpdateIntervalHours == 1 ? "" : "s")"
     }
-    var statsNormalizationContext: StatsNormalizationContext {
-        StatsNormalizationContext(
+    var statsNormalizationContext: Core.Metrics.NormalizationContext {
+        Core.Metrics.NormalizationContext(
             mode: settings.statsNormalizationMode,
             machineCPUs: properties?.machine?.cpus ?? ProcessInfo.processInfo.activeProcessorCount,
             machineMemoryBytes: Format.memoryBytes(fromSpec: properties?.machine?.memory)
@@ -159,7 +159,7 @@ final class AppModel {
                                containerID: snapshot.id)
             self.notifier.containerUnhealthy(name: name, enabled: settings.notifyOnCrash)
             // Hand off to the restart policy (once per unhealthy transition, so it can't spin).
-            let policy = RestartPolicy(label: snapshot.configuration.labels["contained.restart"])
+            let policy = Core.Container.RestartPolicy(label: snapshot.configuration.labels["contained.restart"])
             if policy != .no { Task { await self.containers.restart(snapshot.id) } }
         }
     }
@@ -221,7 +221,7 @@ final class AppModel {
         if visible { coordinator.wake() }
     }
 
-    func setStatsNormalizationMode(_ mode: StatsNormalizationMode) {
+    func setStatsNormalizationMode(_ mode: Core.Metrics.NormalizationMode) {
         guard settings.statsNormalizationMode != mode else { return }
         settings.statsNormalizationMode = mode
         applyStatsNormalizationContext()
@@ -312,7 +312,7 @@ final class AppModel {
     }
 
     /// Run a throwing CLI action, returning a user-facing error string on failure (nil on success).
-    /// Collapses the repeated `do / catch CommandError / catch` blocks across the stores and sheets.
+    /// Collapses the repeated `do / catch Core.Command.Error / catch` blocks across the stores and sheets.
     func captured(_ work: () async throws -> Void) async -> String? {
         await capturedError(work)?.appDisplayMessage
     }
@@ -322,7 +322,7 @@ final class AppModel {
             ?? spec.arguments()
     }
 
-    func imageDefaults(for spec: RunSpec) -> ContainerImageDefaults? {
+    func imageDefaults(for spec: RunSpec) -> Core.Container.ImageDefaults? {
         guard let client = core(for: spec.effectiveRuntimeKind) else { return nil }
         return try? client.imageDefaults(for: spec.createRequest, in: images)
     }

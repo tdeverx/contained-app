@@ -21,7 +21,7 @@ struct CardHeader<Leading: View, Content: View, Trailing: View>: View {
         self.trailing = trailing
     }
 
-    var body: some View {
+    public var body: some View {
         HStack(alignment: .top, spacing: spacing) {
             leading()
                 .fixedSize(horizontal: true, vertical: false)
@@ -57,7 +57,7 @@ struct CardHeaderTextBlock<Title: View, Subtitle: View>: View {
         self.subtitle = subtitle
     }
 
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: spacing) {
             title()
             subtitle()
@@ -80,8 +80,9 @@ extension CardHeaderTextBlock where Subtitle == EmptyView {
     }
 }
 
+public extension UI.Card {
 /// A small reusable footer mini: optional icon + optional text, aligned on one baseline.
-public struct CardFooterMini<Icon: View, TextContent: View>: View {
+struct FooterMini<Icon: View, TextContent: View>: View {
     public var spacing: CGFloat
     @ViewBuilder public var icon: () -> Icon
     @ViewBuilder public var text: () -> TextContent
@@ -104,11 +105,11 @@ public struct CardFooterMini<Icon: View, TextContent: View>: View {
     }
 }
 
-/// A flat inset section for content that lives inside an expanded `CardScaffold`.
+/// A flat inset section for content that lives inside an expanded `UI.Card.Scaffold`.
 ///
 /// Use this for charts, process lists, read-only fields, and terminal overlays inside a card body.
 /// It intentionally avoids creating a second card-shaped glass surface inside the parent card.
-public struct CardInsetSection<Content: View>: View {
+struct InsetSection<Content: View>: View {
     public var title: String?
     public var alignment: HorizontalAlignment
     public var spacing: CGFloat
@@ -139,7 +140,7 @@ public struct CardInsetSection<Content: View>: View {
             }
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: Alignment(horizontal: alignment, vertical: .center))
-            .background(ThemeMaterial.toolbarHoverFill,
+            .background(UI.Theme.Material.toolbarHoverFill,
                         in: RoundedRectangle(cornerRadius: UI.Tokens.Radius.control,
                                              style: .continuous))
         }
@@ -148,7 +149,7 @@ public struct CardInsetSection<Content: View>: View {
 }
 
 /// A selectable footer chip for card widgets, filters, and compact tab-like metadata.
-public struct CardFooterChip<Icon: View, TextContent: View>: View {
+struct FooterChip<Icon: View, TextContent: View>: View {
     public var isSelected: Bool
     public var tint: Color
     public var help: String
@@ -172,7 +173,7 @@ public struct CardFooterChip<Icon: View, TextContent: View>: View {
 
     public var body: some View {
         Button(action: action) {
-            CardFooterMini {
+            FooterMini {
                 icon()
             } text: {
                 text()
@@ -186,7 +187,7 @@ public struct CardFooterChip<Icon: View, TextContent: View>: View {
 }
 
 /// Shared icon-only action used by design-card footers.
-public struct CardFooterButton: View {
+struct FooterButton: View {
     public var systemName: String
     public var help: String
     public var tint: Color?
@@ -207,7 +208,7 @@ public struct CardFooterButton: View {
 
     public var body: some View {
         Button(role: role, action: action) {
-            CardFooterMini {
+            FooterMini {
                 Image(systemName: systemName).font(.body)
             } text: {
                 EmptyView()
@@ -226,7 +227,7 @@ public struct CardFooterButton: View {
     }
 }
 
-public struct CardPage<ID: Hashable>: Identifiable, Hashable {
+struct Page<ID: Hashable>: Identifiable, Hashable {
     public var id: ID
     public var title: String
     public var systemImage: String
@@ -240,7 +241,7 @@ public struct CardPage<ID: Hashable>: Identifiable, Hashable {
 
 /// Shared expanded-card page rail with page icons plus a close affordance.
 struct CardPageControls<ID: Hashable>: View {
-    var items: [CardPage<ID>]
+    var items: [Page<ID>]
     var selection: ID
     var tint: Color
     var controlsReveal: Double
@@ -248,7 +249,7 @@ struct CardPageControls<ID: Hashable>: View {
     var onSelect: (ID) -> Void
     var onClose: () -> Void
 
-    init(items: [CardPage<ID>],
+    init(items: [Page<ID>],
          selection: ID,
          tint: Color,
          controlsReveal: Double = 1,
@@ -264,7 +265,7 @@ struct CardPageControls<ID: Hashable>: View {
         self.onClose = onClose
     }
 
-    var body: some View {
+    public var body: some View {
         MaterialButton(singleItem: false) {
             ForEach(items) { item in
                 MaterialButtonItem(tint: selection == item.id ? tint : nil,
@@ -284,7 +285,7 @@ struct CardPageControls<ID: Hashable>: View {
 }
 
 /// A reusable footer item band that hugs its content and anchors either left or right.
-public struct CardFooterGroup<Content: View>: View {
+struct FooterGroup<Content: View>: View {
     public enum Alignment {
         case leading, trailing
     }
@@ -309,7 +310,7 @@ public struct CardFooterGroup<Content: View>: View {
 }
 
 /// A horizontal group for content in a card widget band.
-public struct CardWidgetGroup<Content: View>: View {
+struct WidgetGroup<Content: View>: View {
     public var spacing: CGFloat
     @ViewBuilder public var content: () -> Content
 
@@ -360,16 +361,16 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
         self.widget = widget
     }
 
-    var body: some View {
+    public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if showWidget {
                 widget()
             }
             HStack(spacing: spacing) {
-                CardFooterGroup(alignment: .leading, spacing: spacing) {
+                FooterGroup(alignment: .leading, spacing: spacing) {
                     leading()
                 }
-                CardFooterGroup(alignment: .trailing, spacing: spacing) {
+                FooterGroup(alignment: .trailing, spacing: spacing) {
                     trailing()
                 }
                 .opacity(actionsVisible ? 1 : 0)
@@ -384,7 +385,7 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
     }
 }
 
-public struct CardTitleText: View {
+struct TitleText: View {
     public let text: String
 
     public init(text: String) {
@@ -398,7 +399,7 @@ public struct CardTitleText: View {
     }
 }
 
-public struct CardSubtitleText: View {
+struct SubtitleText: View {
     public let text: String
 
     public init(text: String) {
@@ -413,7 +414,7 @@ public struct CardSubtitleText: View {
     }
 }
 
-public struct CardMonospacedSubtitleText: View {
+struct MonospacedSubtitleText: View {
     public let text: String
 
     public init(text: String) {
@@ -428,7 +429,7 @@ public struct CardMonospacedSubtitleText: View {
     }
 }
 
-public struct CardMonospacedTitleText: View {
+struct MonospacedTitleText: View {
     public let text: String
 
     public init(text: String) {
@@ -442,7 +443,7 @@ public struct CardMonospacedTitleText: View {
     }
 }
 
-public struct CardIconChip: View {
+struct IconChip: View {
     public var symbol: String
     public var tint: Color
     public var symbolFont: Font
@@ -467,9 +468,11 @@ public struct CardIconChip: View {
                         in: RoundedRectangle(cornerRadius: UI.Tokens.Radius.iconChip, style: .continuous))
     }
 }
+}
 
 /// Small capsule count/state badge used in section headers and compact metadata rows.
-public struct BadgeText: View {
+public extension UI.Badge {
+struct Text: View {
     public let text: String
     public var font: Font
     public var foreground: Color
@@ -483,7 +486,7 @@ public struct BadgeText: View {
     }
 
     public var body: some View {
-        Text(text)
+        SwiftUI.Text(text)
             .font(font)
             .foregroundStyle(foreground)
             .padding(.horizontal, UI.Tokens.Space.s)
@@ -491,9 +494,11 @@ public struct BadgeText: View {
             .background(.quaternary, in: Capsule())
     }
 }
+}
 
 /// Flat selectable row for lists inside panels and sheets.
-public struct ListRow<Accessory: View>: View {
+public extension UI.List {
+struct Row<Accessory: View>: View {
     public var symbol: String
     public var tint: Color
     public var title: String
@@ -543,7 +548,7 @@ public struct ListRow<Accessory: View>: View {
     }
 }
 
-public struct ListRowChevron: View {
+struct RowChevron: View {
     public init() {}
 
     public var body: some View {
@@ -552,8 +557,9 @@ public struct ListRowChevron: View {
             .foregroundStyle(.tertiary)
     }
 }
+}
 
-public extension ListRow where Accessory == ListRowChevron {
+public extension UI.List.Row where Accessory == UI.List.RowChevron {
     init(symbol: String, tint: Color = .accentColor, title: String, subtitle: String?,
          monospacedSubtitle: Bool = true) {
         self.init(symbol: symbol,
@@ -561,12 +567,13 @@ public extension ListRow where Accessory == ListRowChevron {
                   title: title,
                   subtitle: subtitle,
                   monospacedSubtitle: monospacedSubtitle) {
-            ListRowChevron()
+            UI.List.RowChevron()
         }
     }
 }
 
-public struct CardMetricText: View {
+public extension UI.Card {
+struct MetricText: View {
     public let text: String
 
     public init(text: String) {
@@ -579,6 +586,7 @@ public struct CardMetricText: View {
             .monospacedDigit()
             .contentTransition(.numericText())
     }
+}
 }
 
 public extension View {

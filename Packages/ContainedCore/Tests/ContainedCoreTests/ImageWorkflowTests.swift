@@ -5,19 +5,19 @@ import Testing
 @Suite("Image workflow helpers", .serialized)
 struct ImageWorkflowTests {
     @Test func registryReferenceNormalization() {
-        let official = RegistryImageReference.parse("nginx")
+        let official = Core.Registry.ImageReference.parse("nginx")
         #expect(official.registry == "registry-1.docker.io")
         #expect(official.repository == "library/nginx")
         #expect(official.reference == "latest")
         #expect(official.normalizedKey == "docker.io/library/nginx:latest")
 
-        let namespaced = RegistryImageReference.parse("docker.io/tdeverx/app:nightly")
+        let namespaced = Core.Registry.ImageReference.parse("docker.io/tdeverx/app:nightly")
         #expect(namespaced.registry == "registry-1.docker.io")
         #expect(namespaced.repository == "tdeverx/app")
         #expect(namespaced.reference == "nightly")
         #expect(namespaced.normalizedKey == "docker.io/tdeverx/app:nightly")
 
-        let custom = RegistryImageReference.parse("ghcr.io/acme/app@sha256:abc")
+        let custom = Core.Registry.ImageReference.parse("ghcr.io/acme/app@sha256:abc")
         #expect(custom.registry == "ghcr.io")
         #expect(custom.repository == "acme/app")
         #expect(custom.reference == "sha256:abc")
@@ -26,10 +26,10 @@ struct ImageWorkflowTests {
     }
 
     @Test func imageUpdateStatusTransitions() {
-        #expect(ImageUpdateStatus.checking(localDigest: "sha256:a").state == .checking)
-        #expect(ImageUpdateStatus.resolved(localDigest: "sha256:a", remoteDigest: "sha256:a").state == .current)
-        #expect(ImageUpdateStatus.resolved(localDigest: "sha256:a", remoteDigest: "sha256:b").state == .updateAvailable)
-        let failed = ImageUpdateStatus.failed(localDigest: "sha256:a", message: "boom")
+        #expect(Core.Image.UpdateStatus.checking(localDigest: "sha256:a").state == .checking)
+        #expect(Core.Image.UpdateStatus.resolved(localDigest: "sha256:a", remoteDigest: "sha256:a").state == .current)
+        #expect(Core.Image.UpdateStatus.resolved(localDigest: "sha256:a", remoteDigest: "sha256:b").state == .updateAvailable)
+        let failed = Core.Image.UpdateStatus.failed(localDigest: "sha256:a", message: "boom")
         #expect(failed.state == .error)
         #expect(failed.message == "boom")
     }
@@ -55,8 +55,8 @@ struct ImageWorkflowTests {
           }
         ]
         """
-        let images = try JSONDecoder().decode([ImageResource].self, from: Data(json.utf8))
-        let groups = LocalImageTagGroup.groups(for: images)
+        let images = try JSONDecoder().decode([Core.Image.Resource].self, from: Data(json.utf8))
+        let groups = Core.Image.LocalTagGroup.groups(for: images)
         #expect(groups.count == 1)
         #expect(groups.first?.references == ["docker.io/library/alpine:latest", "localhost/alpine:test"])
     }
@@ -70,7 +70,7 @@ struct ImageWorkflowTests {
             {"results":[{"repo_name":"library/nginx","short_description":"web server","star_count":18000,"is_official":true,"is_automated":false}]}
             """)
         }
-        let results = try await HubSearch.results(query: "nginx", session: session)
+        let results = try await Core.Registry.HubSearch.results(query: "nginx", session: session)
         #expect(results.map(\.pullReference) == ["nginx"])
     }
 
@@ -82,7 +82,7 @@ struct ImageWorkflowTests {
                 "Docker-Content-Digest": "sha256:remote",
             ])
         }
-        let digest = try await RegistryManifestClient(session: session).remoteDigest(for: "nginx")
+        let digest = try await Core.Registry.ManifestClient(session: session).remoteDigest(for: "nginx")
         #expect(digest == "sha256:remote")
     }
 
@@ -106,7 +106,7 @@ struct ImageWorkflowTests {
                 "Docker-Content-Digest": "sha256:after-auth",
             ])
         }
-        let digest = try await RegistryManifestClient(session: session).remoteDigest(for: "registry.example.test/team/app:1")
+        let digest = try await Core.Registry.ManifestClient(session: session).remoteDigest(for: "registry.example.test/team/app:1")
         #expect(digest == "sha256:after-auth")
         #expect(state.manifestHits == 2)
     }
@@ -115,18 +115,18 @@ struct ImageWorkflowTests {
         let missingDigest = Self.session { request in
             Self.response(url: request.url!, status: 200)
         }
-        await #expect(throws: RegistryManifestError.missingDigest) {
-            _ = try await RegistryManifestClient(session: missingDigest).remoteDigest(for: "nginx")
+        await #expect(throws: Core.Registry.ManifestError.missingDigest) {
+            _ = try await Core.Registry.ManifestClient(session: missingDigest).remoteDigest(for: "nginx")
         }
 
         let notFound = Self.session { request in
             Self.response(url: request.url!, status: 404)
         }
-        await #expect(throws: RegistryManifestError.notFound) {
-            _ = try await RegistryManifestClient(session: notFound).remoteDigest(for: "nginx")
+        await #expect(throws: Core.Registry.ManifestError.notFound) {
+            _ = try await Core.Registry.ManifestClient(session: notFound).remoteDigest(for: "nginx")
         }
 
-        let status = RegistryManifestError.httpStatus(500)
+        let status = Core.Registry.ManifestError.httpStatus(500)
         #expect(status.packageName == "ContainedCore")
         #expect(status.packageErrorCode == "registryHTTPStatus")
         #expect(status.packageErrorContext["status"] == "500")

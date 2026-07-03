@@ -81,7 +81,7 @@ extension AppModel {
             personalization.applyBackup(try value.decode(PersonalizationBackup.self), replace: replace)
         }
         if selected.contains(.healthChecks), let value = envelope.sections[.healthChecks] {
-            healthChecks.applyBackup(try value.decode([String: HealthCheck].self), replace: replace)
+            healthChecks.applyBackup(try value.decode([String: Core.Container.HealthCheck].self), replace: replace)
         }
         if selected.contains(.templates), let value = envelope.sections[.templates] {
             historyStore.applyTemplates(try value.decode([TemplateSnapshot].self), replace: replace)

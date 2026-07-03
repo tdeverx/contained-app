@@ -72,7 +72,7 @@ struct RegistryLoginSheet: View {
                                                    password: password)
                 await app.refreshRegistries()
                 dismiss()
-            } catch let e as CommandError { error = e.appDisplayMessage; busy = false }
+            } catch let e as Core.Command.Error { error = e.appDisplayMessage; busy = false }
             catch { self.error = error.appDisplayMessage; busy = false }
         }
     }

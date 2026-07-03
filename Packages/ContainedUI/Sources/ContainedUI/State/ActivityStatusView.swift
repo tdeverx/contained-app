@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct ActivityStatus: Equatable, Sendable {
+public extension UI.State {
+struct ActivityStatus: Equatable, Sendable {
     public var title: String
     public var detail: String
     public var fraction: Double?
@@ -19,13 +20,13 @@ public struct ActivityStatus: Equatable, Sendable {
 ///
 /// `.inline` is the compact one-line form sized for a toolbar capsule; `.expanded` is the taller card
 /// with a linear progress bar and the streaming detail line.
-public struct ActivityStatusIndicator: View {
+struct ActivityStatusIndicator: View {
     public enum Style { case inline, expanded }
 
-    public let activity: ActivityStatus
+    public let activity: UI.State.ActivityStatus
     public var style: Style = .inline
 
-    public init(activity: ActivityStatus, style: Style = .inline) {
+    public init(activity: UI.State.ActivityStatus, style: Style = .inline) {
         self.activity = activity
         self.style = style
     }
@@ -86,4 +87,5 @@ public struct ActivityStatusIndicator: View {
         guard let fraction = activity.fraction else { return nil }
         return "\(Int((fraction * 100).rounded()))%"
     }
+}
 }

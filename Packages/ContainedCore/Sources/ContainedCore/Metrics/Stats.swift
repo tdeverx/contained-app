@@ -3,8 +3,9 @@ import Foundation
 /// One element of `container stats --format json`.
 ///
 /// IMPORTANT: every byte/usec field is a **cumulative** counter since container start. CPU percent
-/// and per-interval throughput must be computed as deltas between two samples — see `StatsDelta`.
-public struct ContainerStats: Codable, Sendable, Identifiable, Hashable {
+/// and per-interval throughput must be computed as deltas between two samples — see `Core.Metrics.StatsDelta`.
+public extension Core.Metrics {
+struct ContainerStats: Codable, Sendable, Identifiable, Hashable {
     public let id: String
     public let cpuUsageUsec: UInt64?
     public let memoryUsageBytes: UInt64?
@@ -25,9 +26,9 @@ public struct ContainerStats: Codable, Sendable, Identifiable, Hashable {
 ///
 /// Apple container's live table stream reports CPU as an already-computed percent and reports
 /// memory/network/block values as current cumulative counters. Keeping this separate from
-/// `ContainerStats` lets future runtime adapters, including Docker Engine API streams, publish the
+/// `Core.Metrics.ContainerStats` lets future runtime adapters, including Docker Engine API streams, publish the
 /// same shape without pretending they came from Apple container's JSON schema.
-public struct RuntimeStatsSnapshot: Sendable, Identifiable, Hashable {
+struct RuntimeStatsSnapshot: Sendable, Identifiable, Hashable {
     public let id: String
     public let cpuCoreFraction: Double?
     public let memoryUsageBytes: UInt64?
@@ -59,8 +60,8 @@ public struct RuntimeStatsSnapshot: Sendable, Identifiable, Hashable {
     }
 }
 
-/// A computed delta between two `ContainerStats` samples, the form the UI actually graphs.
-public struct StatsDelta: Sendable, Hashable {
+/// A computed delta between two `Core.Metrics.ContainerStats` samples, the form the UI actually graphs.
+struct StatsDelta: Sendable, Hashable {
     public let id: String
     /// CPU usage as a fraction of one core over the interval (can exceed 1.0 on multi-core load).
     public let cpuCoreFraction: Double
@@ -91,8 +92,8 @@ public struct StatsDelta: Sendable, Hashable {
     }
 
     /// Deterministic sample values for previews and package examples.
-    public static func sample(id: String = "preview") -> StatsDelta {
-        StatsDelta(id: id, cpuCoreFraction: 0.42, memoryUsageBytes: 384_000_000, memoryLimitBytes: 1_073_741_824,
+    public static func sample(id: String = "preview") -> Core.Metrics.StatsDelta {
+        Core.Metrics.StatsDelta(id: id, cpuCoreFraction: 0.42, memoryUsageBytes: 384_000_000, memoryLimitBytes: 1_073_741_824,
                    netRxBytesPerSec: 124_000, netTxBytesPerSec: 48_000, blockReadBytesPerSec: 0,
                    blockWriteBytesPerSec: 12_000, numProcesses: 7)
     }
@@ -108,7 +109,7 @@ public struct StatsDelta: Sendable, Hashable {
     }
 
     /// Compute a delta from a previous sample taken `interval` seconds earlier.
-    public static func between(previous: ContainerStats, current: ContainerStats, interval: TimeInterval) -> StatsDelta {
+    public static func between(previous: Core.Metrics.ContainerStats, current: Core.Metrics.ContainerStats, interval: TimeInterval) -> Core.Metrics.StatsDelta {
         let dt = max(interval, 0.001)
         func rate(_ a: UInt64?, _ b: UInt64?) -> Double {
             guard let a, let b, b >= a else { return 0 }
@@ -119,7 +120,7 @@ public struct StatsDelta: Sendable, Hashable {
             guard let a = previous.cpuUsageUsec, let b = current.cpuUsageUsec, b >= a else { return 0 }
             return Double(b - a) / (dt * 1_000_000)
         }()
-        return StatsDelta(
+        return Core.Metrics.StatsDelta(
             id: current.id,
             cpuCoreFraction: cpu,
             memoryUsageBytes: current.memoryUsageBytes ?? 0,
@@ -136,16 +137,16 @@ public struct StatsDelta: Sendable, Hashable {
     ///
     /// CPU is already a point-in-time fraction in streaming table/API sources. Throughput metrics
     /// are still cumulative counters, so they need the previous streamed snapshot and interval.
-    public static func from(snapshot: RuntimeStatsSnapshot,
-                            previous: RuntimeStatsSnapshot?,
-                            interval: TimeInterval) -> StatsDelta {
+    public static func from(snapshot: Core.Metrics.RuntimeStatsSnapshot,
+                            previous: Core.Metrics.RuntimeStatsSnapshot?,
+                            interval: TimeInterval) -> Core.Metrics.StatsDelta {
         let dt = max(interval, 0.001)
         func rate(_ previous: UInt64?, _ current: UInt64?) -> Double {
             guard let previous, let current, current >= previous else { return 0 }
             return Double(current - previous) / dt
         }
 
-        return StatsDelta(
+        return Core.Metrics.StatsDelta(
             id: snapshot.id,
             cpuCoreFraction: snapshot.cpuCoreFraction ?? 0,
             memoryUsageBytes: snapshot.memoryUsageBytes ?? 0,
@@ -157,4 +158,6 @@ public struct StatsDelta: Sendable, Hashable {
             numProcesses: snapshot.numProcesses ?? 0
         )
     }
+}
+
 }

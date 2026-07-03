@@ -6,23 +6,23 @@ import ContainedCore
 @MainActor
 @Observable
 final class HealthCheckStore {
-    private var checks: [String: HealthCheck]
+    private var checks: [String: Core.Container.HealthCheck]
     private let defaults: UserDefaults
     private let key = "healthChecks"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         if let data = defaults.data(forKey: key),
-           let decoded = try? JSONDecoder().decode([String: HealthCheck].self, from: data) {
+           let decoded = try? JSONDecoder().decode([String: Core.Container.HealthCheck].self, from: data) {
             checks = decoded
         } else {
             checks = [:]
         }
     }
 
-    func check(for id: String) -> HealthCheck? { checks[id] }
+    func check(for id: String) -> Core.Container.HealthCheck? { checks[id] }
 
-    func setCheck(_ check: HealthCheck, for id: String) {
+    func setCheck(_ check: Core.Container.HealthCheck, for id: String) {
         if check.command.isEmpty { checks[id] = nil } else { checks[id] = check }
         persist()
     }
@@ -32,9 +32,9 @@ final class HealthCheckStore {
         persist()
     }
 
-    func backupSnapshot() -> [String: HealthCheck] { checks }
+    func backupSnapshot() -> [String: Core.Container.HealthCheck] { checks }
 
-    func applyBackup(_ snapshot: [String: HealthCheck], replace: Bool) {
+    func applyBackup(_ snapshot: [String: Core.Container.HealthCheck], replace: Bool) {
         if replace { checks = snapshot }
         else { checks.merge(snapshot) { _, imported in imported } }
         persist()
@@ -59,14 +59,14 @@ final class HealthCheckStore {
 @MainActor
 @Observable
 final class HealthMonitor {
-    private(set) var statusByID: [String: HealthStatus] = [:]
+    private(set) var statusByID: [String: Core.Container.HealthStatus] = [:]
     private var consecutiveFailures: [String: Int] = [:]
     private var lastProbe: [String: Date] = [:]
 
     /// Fired once when a container transitions into the unhealthy state.
-    var onUnhealthy: ((ContainerSnapshot) -> Void)?
+    var onUnhealthy: ((Core.Container.Snapshot) -> Void)?
 
-    func evaluate(snapshots: [ContainerSnapshot],
+    func evaluate(snapshots: [Core.Container.Snapshot],
                   store: HealthCheckStore,
                   client: Core.Orchestrator,
                   now: Date = Date()) async {
@@ -89,15 +89,15 @@ final class HealthMonitor {
 
             let failures = passed ? 0 : (consecutiveFailures[id] ?? 0) + 1
             consecutiveFailures[id] = failures
-            let newStatus = passed ? HealthStatus.healthy
-                                   : HealthDecision.status(consecutiveFailures: failures, retries: check.retries)
+            let newStatus = passed ? Core.Container.HealthStatus.healthy
+                                   : Core.Container.HealthDecision.status(consecutiveFailures: failures, retries: check.retries)
             let previous = statusByID[id]
             statusByID[id] = newStatus
             if newStatus == .unhealthy && previous != .unhealthy { onUnhealthy?(snapshot) }
         }
     }
 
-    func status(for id: String) -> HealthStatus { statusByID[id] ?? .unknown }
+    func status(for id: String) -> Core.Container.HealthStatus { statusByID[id] ?? .unknown }
 
     func reset() { statusByID.removeAll(); consecutiveFailures.removeAll(); lastProbe.removeAll() }
 }

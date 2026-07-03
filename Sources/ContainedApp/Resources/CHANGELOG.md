@@ -94,7 +94,7 @@
 ### Technical
 
 - Swift Package layout with `ContainedCore` for backend orchestration, `ContainedUI` for visual primitives, `ContainedUX` for interaction infrastructure, `ContainedApp` for app-owned SwiftUI/persistence/localization policy, and a tiny `Contained` executable launcher.
-- `ContainerCommands` is the single source of truth for `container` argv construction and is covered by golden tests.
+- `Core.Command` owns command previews and runtime invocation construction, with adapter-specific argv covered by golden tests.
 - `ContainedCore` now owns the shared runtime contract, Core orchestrator, Apple `container` adapter internals, typed async runtime methods, and typed stats streams.
 - `RunSpec` is the single source of truth for Run/Edit form state, validation, CLI preview, and actual execution.
 - `AppModel` owns bootstrap, client wiring, stores, refresh coordination, image updates, service lifecycle, config transfer, and resource-style lookup through focused extensions.

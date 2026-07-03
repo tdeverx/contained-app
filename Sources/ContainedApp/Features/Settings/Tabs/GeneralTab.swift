@@ -48,7 +48,7 @@ struct GeneralTab: View {
                 }
                 UI.Panel.Row(title: AppText.string("settings.general.normalizeStats", defaultValue: "Normalize stats")) {
                     Picker("", selection: statsNormalizationBinding) {
-                        ForEach(StatsNormalizationMode.allCases) { mode in
+                        ForEach(Core.Metrics.NormalizationMode.allCases) { mode in
                             Text(mode.displayName).tag(mode)
                         }
                     }
@@ -111,7 +111,7 @@ struct GeneralTab: View {
                 set: { app.applyHistoryRetention($0) })
     }
 
-    private var statsNormalizationBinding: Binding<StatsNormalizationMode> {
+    private var statsNormalizationBinding: Binding<Core.Metrics.NormalizationMode> {
         Binding(get: { settings.statsNormalizationMode },
                 set: { app.setStatsNormalizationMode($0) })
     }

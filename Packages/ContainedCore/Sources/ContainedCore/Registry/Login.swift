@@ -2,7 +2,8 @@ import Foundation
 
 /// One entry from `registry list --format json`. The on-disk shape isn't documented (the list is
 /// empty until you log in), so decode leniently across the likely key spellings for host/user.
-public struct RegistryLogin: Codable, Sendable, Identifiable, Hashable {
+public extension Core.Registry {
+struct Login: Codable, Sendable, Identifiable, Hashable {
     public let host: String
     public let username: String?
     public let created: Date?
@@ -35,4 +36,6 @@ public struct RegistryLogin: Codable, Sendable, Identifiable, Hashable {
         created = date(["created", "createdAt", "creationDate"])
         modified = date(["modified", "modifiedAt", "updated"])
     }
+}
+
 }

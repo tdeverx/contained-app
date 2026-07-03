@@ -5,7 +5,8 @@ public extension EnvironmentValues {
     @Entry var pageScaffoldBottomClearance: CGFloat = 0
 }
 
-public struct PageScaffold<Actions: View, Content: View>: View {
+public extension UI.Panel {
+struct PageScaffold<Actions: View, Content: View>: View {
     public let symbol: String
     public let title: String
     public let subtitle: String
@@ -32,7 +33,7 @@ public struct PageScaffold<Actions: View, Content: View>: View {
     public var body: some View {
         VStack(spacing: 0) {
             if !usesToolbarChrome {
-                PanelTitleBar(symbol: symbol, title: title, subtitle: subtitle) {
+                UI.Panel.Header(symbol: symbol, title: title, subtitle: subtitle) {
                     actions()
                 }
                 Divider()
@@ -57,8 +58,9 @@ public struct PageScaffold<Actions: View, Content: View>: View {
         }
     }
 }
+}
 
-public extension PageScaffold where Actions == EmptyView {
+public extension UI.Panel.PageScaffold where Actions == EmptyView {
     init(symbol: String,
          title: String,
          subtitle: String,

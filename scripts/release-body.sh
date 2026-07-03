@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Compose Markdown release notes for a channel build.
+# Usage: CHANNEL=nightly VERSION_VALUE=<version> ./scripts/release-body.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

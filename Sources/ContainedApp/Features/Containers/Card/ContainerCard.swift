@@ -5,15 +5,15 @@ import ContainedCore
 /// A personalized clear-glass card for one container. The same component renders both the compact
 /// grid card and the centered expanded detail card.
 struct ContainerCard: View {
-    let snapshot: ContainerSnapshot
+    let snapshot: Core.Container.Snapshot
     var style: Personalization
     var hasStyleOverride: Bool = true
     var density: UI.Card.Density
-    var stats: StatsDelta?
-    var statsNormalization: StatsNormalizationContext = .containerSpecific
+    var stats: Core.Metrics.StatsDelta?
+    var statsNormalization: Core.Metrics.NormalizationContext = .containerSpecific
     /// Every metric's recent history, so the footer's widget chips can flip the graph instantly
     /// without borrowing another metric's samples.
-    var histories: [GraphMetric: UI.Chart.SampleBuffer] = [:]
+    var histories: [Core.Metrics.GraphMetric: UI.Chart.SampleBuffer] = [:]
     var isBusy: Bool
     var hasImageUpdate: Bool = false
     var isExpanded: Bool = false
@@ -33,7 +33,7 @@ struct ContainerCard: View {
     var onToggleSelected: () -> Void = {}
     var onEndSelecting: () -> Void = {}
     /// App-managed healthcheck status (drives the heart badge).
-    var health: HealthStatus = .unknown
+    var health: Core.Container.HealthStatus = .unknown
     /// Multi-select mode: tapping toggles selection instead of opening the detail.
     var selecting: Bool = false
     var isSelected: Bool = false
@@ -81,10 +81,10 @@ struct ContainerCard: View {
     }
     private var activeWidget: WidgetConfiguration { styleForDisplay.widget(at: activeWidgetIndex) }
     private var activeWidgetColor: Color { activeWidget.tint?.color ?? tint }
-    private var activeWidgetComparisonMetric: GraphMetric? {
+    private var activeWidgetComparisonMetric: Core.Metrics.GraphMetric? {
         activeWidget.style.resolvedSecondaryMetric(primary: activeWidget.metric,
                                                    requested: activeWidget.secondaryMetric,
-                                                   options: GraphMetric.allCases)
+                                                   options: Core.Metrics.GraphMetric.allCases)
     }
     private var cardSize: UI.Card.Size { density.resourceSize }
 
@@ -370,7 +370,7 @@ struct ContainerCard: View {
         }
     }
 
-    private func sparklineScale(for metric: GraphMetric) -> UI.Chart.Scale {
+    private func sparklineScale(for metric: Core.Metrics.GraphMetric) -> UI.Chart.Scale {
         switch metric {
         case .cpu, .memory: return .fraction
         case .netRx, .netTx, .diskRead, .diskWrite: return .normalized

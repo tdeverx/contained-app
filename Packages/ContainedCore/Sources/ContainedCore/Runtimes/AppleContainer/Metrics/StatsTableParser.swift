@@ -14,7 +14,7 @@ struct ContainerStatsTableParser: Sendable {
 
     init() {}
 
-    public mutating func append(_ chunk: String) -> [RuntimeStatsSnapshot] {
+    public mutating func append(_ chunk: String) -> [Core.Metrics.RuntimeStatsSnapshot] {
         buffer += chunk
         guard let frame = Self.latestParseableFrame(in: buffer), frame != lastEmittedFrame else { return [] }
         guard let snapshots = Self.parseFrame(frame), !snapshots.isEmpty else { return [] }
@@ -23,7 +23,7 @@ struct ContainerStatsTableParser: Sendable {
         return snapshots
     }
 
-    static func parseLatestFrame(in output: String) -> [RuntimeStatsSnapshot] {
+    static func parseLatestFrame(in output: String) -> [Core.Metrics.RuntimeStatsSnapshot] {
         guard let frame = latestParseableFrame(in: output),
               let snapshots = parseFrame(frame) else {
             return []
@@ -31,7 +31,7 @@ struct ContainerStatsTableParser: Sendable {
         return snapshots
     }
 
-    static func parseFrame(_ frame: String) -> [RuntimeStatsSnapshot]? {
+    static func parseFrame(_ frame: String) -> [Core.Metrics.RuntimeStatsSnapshot]? {
         let lines = stripANSI(from: frame)
             .components(separatedBy: .newlines)
             .map { String($0) }
@@ -44,7 +44,7 @@ struct ContainerStatsTableParser: Sendable {
         }
         guard starts.count == columns.count else { return nil }
 
-        var snapshots: [RuntimeStatsSnapshot] = []
+        var snapshots: [Core.Metrics.RuntimeStatsSnapshot] = []
         for row in lines.dropFirst(headerIndex + 1) {
             let trimmed = row.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.hasPrefix("error collecting stats") { continue }
@@ -74,7 +74,7 @@ struct ContainerStatsTableParser: Sendable {
         columns.allSatisfy { line.contains($0) }
     }
 
-    private static func parseRow(_ row: String, starts: [Int]) -> RuntimeStatsSnapshot? {
+    private static func parseRow(_ row: String, starts: [Int]) -> Core.Metrics.RuntimeStatsSnapshot? {
         let fields = starts.enumerated().map { index, start in
             let end = index + 1 < starts.count ? starts[index + 1] : nil
             return field(in: row, start: start, end: end)
@@ -86,7 +86,7 @@ struct ContainerStatsTableParser: Sendable {
         let network = parseBytePair(fields[3])
         let block = parseBytePair(fields[4])
 
-        return RuntimeStatsSnapshot(
+        return Core.Metrics.RuntimeStatsSnapshot(
             id: id,
             cpuCoreFraction: parseCPU(fields[1]),
             memoryUsageBytes: memory.first,

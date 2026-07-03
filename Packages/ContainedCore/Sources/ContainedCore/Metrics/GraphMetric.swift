@@ -1,12 +1,13 @@
 /// A runtime-neutral metric that can be graphed from live or persisted container stats.
-public enum GraphMetric: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
+public extension Core.Metrics {
+enum GraphMetric: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
     case cpu, memory, netRx, netTx, diskRead, diskWrite
 
     public var id: String { rawValue }
 
-    public func value(from delta: StatsDelta,
-                      snapshot: ContainerSnapshot? = nil,
-                      normalization: StatsNormalizationContext = .containerSpecific) -> Double {
+    public func value(from delta: Core.Metrics.StatsDelta,
+                      snapshot: Core.Container.Snapshot? = nil,
+                      normalization: Core.Metrics.NormalizationContext = .containerSpecific) -> Double {
         switch self {
         case .cpu: return Self.cpuFraction(from: delta, snapshot: snapshot, normalization: normalization)
         case .memory: return Self.memoryFraction(from: delta, snapshot: snapshot, normalization: normalization)
@@ -17,9 +18,9 @@ public enum GraphMetric: String, CaseIterable, Identifiable, Codable, Hashable, 
         }
     }
 
-    public func value(from sample: any MetricHistorySample,
-                      snapshot: ContainerSnapshot? = nil,
-                      normalization: StatsNormalizationContext = .containerSpecific,
+    public func value(from sample: any Core.Metrics.HistorySample,
+                      snapshot: Core.Container.Snapshot? = nil,
+                      normalization: Core.Metrics.NormalizationContext = .containerSpecific,
                       memoryFallbackBytes: UInt64 = 0) -> Double {
         switch self {
         case .cpu:
@@ -39,23 +40,23 @@ public enum GraphMetric: String, CaseIterable, Identifiable, Codable, Hashable, 
         }
     }
 
-    public static func cpuFraction(from delta: StatsDelta,
-                                   snapshot: ContainerSnapshot?,
-                                   normalization: StatsNormalizationContext = .containerSpecific) -> Double {
+    public static func cpuFraction(from delta: Core.Metrics.StatsDelta,
+                                   snapshot: Core.Container.Snapshot?,
+                                   normalization: Core.Metrics.NormalizationContext = .containerSpecific) -> Double {
         sanitized(delta.cpuCoreFraction) / normalization.cpuLimit(for: snapshot)
     }
 
-    public static func memoryFraction(from delta: StatsDelta,
-                                      snapshot: ContainerSnapshot?,
-                                      normalization: StatsNormalizationContext = .containerSpecific) -> Double {
+    public static func memoryFraction(from delta: Core.Metrics.StatsDelta,
+                                      snapshot: Core.Container.Snapshot?,
+                                      normalization: Core.Metrics.NormalizationContext = .containerSpecific) -> Double {
         let limit = memoryLimitBytes(for: delta, snapshot: snapshot, normalization: normalization)
         guard limit > 0 else { return 0 }
         return sanitized(Double(delta.memoryUsageBytes) / Double(limit))
     }
 
-    public static func memoryLimitBytes(for delta: StatsDelta,
-                                        snapshot: ContainerSnapshot?,
-                                        normalization: StatsNormalizationContext = .containerSpecific) -> UInt64 {
+    public static func memoryLimitBytes(for delta: Core.Metrics.StatsDelta,
+                                        snapshot: Core.Container.Snapshot?,
+                                        normalization: Core.Metrics.NormalizationContext = .containerSpecific) -> UInt64 {
         normalization.memoryLimitBytes(for: delta, snapshot: snapshot)
     }
 
@@ -65,11 +66,13 @@ public enum GraphMetric: String, CaseIterable, Identifiable, Codable, Hashable, 
     }
 }
 
-public protocol MetricHistorySample {
+protocol HistorySample {
     var cpuFraction: Double { get }
     var memoryBytes: Double { get }
     var netRxBytesPerSec: Double { get }
     var netTxBytesPerSec: Double { get }
     var diskReadBytesPerSec: Double { get }
     var diskWriteBytesPerSec: Double { get }
+}
+
 }

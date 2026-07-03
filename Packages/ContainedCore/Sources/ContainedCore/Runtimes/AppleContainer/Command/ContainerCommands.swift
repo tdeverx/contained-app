@@ -66,7 +66,7 @@ enum ContainerCommands {
         return args
     }
 
-    static func run(_ request: ContainerCreateRequest) -> [String] {
+    static func run(_ request: Core.Container.CreateRequest) -> [String] {
         var args = ["run"]
         if request.detach { args.append("--detach") }
         if request.removeOnExit { args.append("--rm") }

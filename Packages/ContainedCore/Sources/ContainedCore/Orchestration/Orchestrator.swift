@@ -2,10 +2,10 @@ import Foundation
 
 public extension Core {
     struct Configuration: Sendable {
-        public var defaultRuntime: RuntimeKind
+        public var defaultRuntime: Core.Runtime.Kind
         public var appleContainer: AppleContainerConfiguration
 
-        public init(defaultRuntime: RuntimeKind = .appleContainer,
+        public init(defaultRuntime: Core.Runtime.Kind = .appleContainer,
                     appleContainer: AppleContainerConfiguration = AppleContainerConfiguration()) {
             self.defaultRuntime = defaultRuntime
             self.appleContainer = appleContainer
@@ -31,7 +31,7 @@ public extension Core {
 
         private let client: AppleContainerClient
         public let cliURL: URL
-        public let defaultRuntime: RuntimeKind
+        public let defaultRuntime: Core.Runtime.Kind
 
         public static func == (lhs: Core.Orchestrator, rhs: Core.Orchestrator) -> Bool {
             lhs.cliURL == rhs.cliURL && lhs.defaultRuntime == rhs.defaultRuntime
@@ -43,12 +43,12 @@ public extension Core {
             }
             return Core.Orchestrator(cliURL: url,
                                      defaultRuntime: configuration.defaultRuntime,
-                                     client: AppleContainerClient(runner: CommandRunner(executableURL: url)))
+                                     client: AppleContainerClient(runner: Core.Command.Runner(executableURL: url)))
         }
 
-        public static func testing(runner: any CommandRunning,
+        public static func testing(runner: any Core.Command.Running,
                                    cliURL: URL = URL(fileURLWithPath: "/usr/bin/container"),
-                                   defaultRuntime: RuntimeKind = .appleContainer) -> Core.Orchestrator {
+                                   defaultRuntime: Core.Runtime.Kind = .appleContainer) -> Core.Orchestrator {
             Core.Orchestrator(cliURL: cliURL,
                               defaultRuntime: defaultRuntime,
                               client: AppleContainerClient(runner: runner))
@@ -56,7 +56,7 @@ public extension Core {
 
         public static func bootstrap(configuration: Core.Configuration = Core.Configuration()) async -> Bootstrap {
             guard let orchestrator = live(configuration: configuration) else { return .cliMissing }
-            let runner = CommandRunner(executableURL: orchestrator.cliURL)
+            let runner = Core.Command.Runner(executableURL: orchestrator.cliURL)
             let versionData = try? await runner.run(ContainerCommands.version)
             let version = versionData.map { String(decoding: $0, as: UTF8.self) }
                 .flatMap(AppleContainerCLILocator.parseVersion)
@@ -70,15 +70,15 @@ public extension Core {
                           version: version)
         }
 
-        init(cliURL: URL, defaultRuntime: RuntimeKind, client: AppleContainerClient) {
+        init(cliURL: URL, defaultRuntime: Core.Runtime.Kind, client: AppleContainerClient) {
             self.cliURL = cliURL
             self.defaultRuntime = defaultRuntime
             self.client = client
         }
 
-        public var descriptor: RuntimeDescriptor { client.descriptor }
+        public var descriptor: Core.Runtime.Descriptor { client.descriptor }
 
-        public var availableRuntimeDescriptors: [RuntimeDescriptor] {
+        public var availableRuntimeDescriptors: [Core.Runtime.Descriptor] {
             [.appleContainer]
         }
 
@@ -86,40 +86,40 @@ public extension Core {
             availableRuntimeDescriptors.count > 1
         }
 
-        public func descriptor(for kind: RuntimeKind) -> RuntimeDescriptor {
+        public func descriptor(for kind: Core.Runtime.Kind) -> Core.Runtime.Descriptor {
             availableRuntimeDescriptors.first { $0.kind == kind } ?? .appleContainer
         }
 
-        public func supportsRuntime(_ kind: RuntimeKind, capability: RuntimeCapability = .containers) -> Bool {
+        public func supportsRuntime(_ kind: Core.Runtime.Kind, capability: Core.Runtime.Capability = .containers) -> Bool {
             availableRuntimeDescriptors.first { $0.kind == kind }?.supports(capability) == true
         }
 
-        private func requireRuntime(_ kind: RuntimeKind,
-                                    capability: RuntimeCapability) throws -> AppleContainerClient {
+        private func requireRuntime(_ kind: Core.Runtime.Kind,
+                                    capability: Core.Runtime.Capability) throws -> AppleContainerClient {
             guard client.descriptor.kind == kind else {
-                throw UnsupportedRuntimeCapability(kind: kind, capability: capability)
+                throw Core.Runtime.UnsupportedCapability(kind: kind, capability: capability)
             }
             try client.descriptor.require(capability)
             return client
         }
 
-        public func listContainers(all: Bool = true) async throws -> [ContainerSnapshot] {
+        public func listContainers(all: Bool = true) async throws -> [Core.Container.Snapshot] {
             try await client.listContainers(all: all)
         }
 
-        public func stats(ids: [String] = []) async throws -> [ContainerStats] {
+        public func stats(ids: [String] = []) async throws -> [Core.Metrics.ContainerStats] {
             try await client.stats(ids: ids)
         }
 
-        public func streamStats(ids: [String] = []) -> AsyncThrowingStream<[RuntimeStatsSnapshot], Swift.Error> {
+        public func streamStats(ids: [String] = []) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Swift.Error> {
             client.streamStats(ids: ids)
         }
 
-        public func diskUsage() async throws -> DiskUsage {
+        public func diskUsage() async throws -> Core.System.DiskUsage {
             try await client.diskUsage()
         }
 
-        public func systemProperties() async throws -> SystemProperties {
+        public func systemProperties() async throws -> Core.System.Properties {
             try await client.systemProperties()
         }
 
@@ -147,8 +147,8 @@ public extension Core {
             try await client.copy(source: source, destination: destination)
         }
 
-        public func terminalInvocation(containerID: String, shell: String) throws -> CommandInvocation {
-            CommandInvocation(executableURL: cliURL,
+        public func terminalInvocation(containerID: String, shell: String) throws -> Core.Command.Invocation {
+            Core.Command.Invocation(executableURL: cliURL,
                               arguments: ContainerCommands.execInteractive(containerID, shell: shell))
         }
 
@@ -156,65 +156,65 @@ public extension Core {
             client.streamSystemLogs(follow: follow, last: last)
         }
 
-        public func systemStatus() async throws -> SystemStatus {
+        public func systemStatus() async throws -> Core.System.Status {
             try await client.systemStatus()
         }
 
-        public func previewCreateCommand(for request: ContainerCreateRequest) throws -> RuntimeCommandPreview {
+        public func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
             try requireRuntime(request.runtimeKind, capability: .containers).previewCreateCommand(for: request)
         }
 
-        @discardableResult public func createContainer(_ request: ContainerCreateRequest) async throws -> ContainerCreateResult {
+        @discardableResult public func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
             try await requireRuntime(request.runtimeKind, capability: .containers).createContainer(request)
         }
 
         @discardableResult public func recreateContainer(originalID: String,
-                                                         request: ContainerCreateRequest) async throws -> ContainerCreateResult {
+                                                         request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
             let runtime = try requireRuntime(request.runtimeKind, capability: .containers)
             _ = try? await runtime.stop([originalID])
             _ = try await runtime.deleteContainers([originalID], force: true)
             return try await runtime.createContainer(request)
         }
 
-        public func translateCompose(_ project: ComposeProject,
+        public func translateCompose(_ project: Core.Compose.Project,
                                      baseDirectory: URL?,
-                                     runtimeKind: RuntimeKind = .appleContainer) throws -> RuntimeComposeImportPlan {
+                                     runtimeKind: Core.Runtime.Kind = .appleContainer) throws -> Core.Compose.ImportPlan {
             try requireRuntime(runtimeKind, capability: .composeImport)
                 .translateCompose(project, baseDirectory: baseDirectory)
         }
 
-        public func imageDefaults(for request: ContainerCreateRequest,
-                                  in images: [ImageResource]) throws -> ContainerImageDefaults? {
+        public func imageDefaults(for request: Core.Container.CreateRequest,
+                                  in images: [Core.Image.Resource]) throws -> Core.Container.ImageDefaults? {
             try requireRuntime(request.runtimeKind, capability: .containers)
                 .imageDefaults(for: request, in: images)
         }
 
-        public func planMigration(_ document: ContainerDocument,
-                                  to target: RuntimeKind?) throws -> RuntimeCoreSwitchPlan {
+        public func planMigration(_ document: Core.Container.Document,
+                                  to target: Core.Runtime.Kind?) throws -> Core.Migration.Plan {
             let source = document.canonical.createRequest.runtimeKind
             return try requireRuntime(source, capability: .coreMigration)
                 .coreSwitchPlan(for: document.canonical.createRequest.effectiveName ?? "", to: target.map(descriptor(for:)))
         }
 
         public func coreSwitchPlan(for containerID: String,
-                                   source: RuntimeKind = .appleContainer,
-                                   to target: RuntimeDescriptor?) throws -> RuntimeCoreSwitchPlan {
+                                   source: Core.Runtime.Kind = .appleContainer,
+                                   to target: Core.Runtime.Descriptor?) throws -> Core.Migration.Plan {
             try requireRuntime(source, capability: .coreMigration).coreSwitchPlan(for: containerID, to: target)
         }
 
-        public func networks() async throws -> [NetworkResource] {
+        public func networks() async throws -> [Core.Network.Resource] {
             try await client.networks()
         }
 
-        public func volumes() async throws -> [VolumeResource] {
+        public func volumes() async throws -> [Core.Volume.Resource] {
             try await client.volumes()
         }
 
-        public func images() async throws -> [ImageResource] {
+        public func images() async throws -> [Core.Image.Resource] {
             try await client.images()
         }
 
-        public func inspectImage(_ ref: String) async throws -> [ImageResource] {
+        public func inspectImage(_ ref: String) async throws -> [Core.Image.Resource] {
             try await client.inspectImage(ref)
         }
 
@@ -253,11 +253,11 @@ public extension Core {
             try await client.runContainer(arguments: arguments)
         }
 
-        @discardableResult public func performSystemAction(_ action: RuntimeSystemAction) async throws -> Data {
+        @discardableResult public func performSystemAction(_ action: Core.Runtime.SystemAction) async throws -> Data {
             try await client.performSystemAction(action)
         }
 
-        public func registries() async throws -> [RegistryLogin] {
+        public func registries() async throws -> [Core.Registry.Login] {
             try await client.registries()
         }
 

@@ -1,19 +1,15 @@
 import SwiftUI
 import ContainedUI
 
-public enum PanelPlacement: Equatable, Sendable {
-    case anchored
-    case centered
-}
-
-public struct MorphTargetConfig {
-    public var placement: PanelPlacement
-    public var safeArea: SafeAreaPolicy
+public extension UX.Morph {
+struct Target {
+    public var placement: UX.Panel.Placement
+    public var safeArea: UX.SafeArea.Policy
     public var margin: CGFloat
     public var proposedSize: (CGRect) -> CGSize
 
-    public init(placement: PanelPlacement,
-                safeArea: SafeAreaPolicy,
+    public init(placement: UX.Panel.Placement,
+                safeArea: UX.SafeArea.Policy,
                 margin: CGFloat,
                 proposedSize: @escaping (CGRect) -> CGSize) {
         self.placement = placement
@@ -23,27 +19,27 @@ public struct MorphTargetConfig {
     }
 
     public static func anchored(size: CGSize,
-                                safeArea: SafeAreaPolicy = .toolbarChrome,
-                                margin: CGFloat = MorphGeometryEngine.defaultMargin) -> MorphTargetConfig {
-        MorphTargetConfig(placement: .anchored,
+                                safeArea: UX.SafeArea.Policy = .toolbarChrome,
+                                margin: CGFloat = UX.Morph.Geometry.defaultMargin) -> UX.Morph.Target {
+        UX.Morph.Target(placement: .anchored,
                        safeArea: safeArea,
                        margin: margin,
                        proposedSize: { _ in size })
     }
 
     public static func centered(size: CGSize,
-                                safeArea: SafeAreaPolicy = .content,
-                                margin: CGFloat = MorphGeometryEngine.defaultMargin) -> MorphTargetConfig {
-        MorphTargetConfig(placement: .centered,
+                                safeArea: UX.SafeArea.Policy = .content,
+                                margin: CGFloat = UX.Morph.Geometry.defaultMargin) -> UX.Morph.Target {
+        UX.Morph.Target(placement: .centered,
                        safeArea: safeArea,
                        margin: margin,
                        proposedSize: { _ in size })
     }
 
-    public static func centered(safeArea: SafeAreaPolicy = .content,
-                                margin: CGFloat = MorphGeometryEngine.defaultMargin,
-                                proposedSize: @escaping (CGRect) -> CGSize) -> MorphTargetConfig {
-        MorphTargetConfig(placement: .centered,
+    public static func centered(safeArea: UX.SafeArea.Policy = .content,
+                                margin: CGFloat = UX.Morph.Geometry.defaultMargin,
+                                proposedSize: @escaping (CGRect) -> CGSize) -> UX.Morph.Target {
+        UX.Morph.Target(placement: .centered,
                        safeArea: safeArea,
                        margin: margin,
                        proposedSize: proposedSize)
@@ -51,11 +47,11 @@ public struct MorphTargetConfig {
 
     public func rect(origin: CGRect,
                      in container: CGSize,
-                     safeAreaManager: SafeAreaManager,
+                     safeAreaManager: UX.SafeArea.Manager,
                      proposedSize overrideSize: CGSize? = nil,
-                     placement overridePlacement: PanelPlacement? = nil) -> CGRect {
+                     placement overridePlacement: UX.Panel.Placement? = nil) -> CGRect {
         let bounds = safeAreaManager.bounds(in: container, policy: safeArea)
-        return MorphGeometryEngine.targetRect(origin: origin,
+        return UX.Morph.Geometry.targetRect(origin: origin,
                                         proposedSize: overrideSize ?? proposedSize(bounds),
                                         bounds: bounds,
                                         placement: overridePlacement ?? placement,
@@ -63,19 +59,7 @@ public struct MorphTargetConfig {
     }
 }
 
-public struct PanelBackdropStyle: OptionSet, Equatable, Sendable {
-    public let rawValue: Int
-
-    public init(rawValue: Int) {
-        self.rawValue = rawValue
-    }
-
-    public static let dim = PanelBackdropStyle(rawValue: 1 << 0)
-    public static let blur = PanelBackdropStyle(rawValue: 1 << 1)
-    public static let blurAndDim: PanelBackdropStyle = [.blur, .dim]
-}
-
-public enum MorphGeometryEngine {
+enum Geometry {
     public static let defaultMargin: CGFloat = UI.Layout.Spacing.l
     public static let centeredTopMargin: CGFloat = UI.Layout.Spacing.xxl * 2
 
@@ -93,7 +77,7 @@ public enum MorphGeometryEngine {
     }
 
     public static func targetRect(origin: CGRect, proposedSize: CGSize, container: CGSize,
-                                  placement: PanelPlacement,
+                                  placement: UX.Panel.Placement,
                                   margin: CGFloat = defaultMargin) -> CGRect {
         targetRect(origin: origin,
                    proposedSize: proposedSize,
@@ -103,7 +87,7 @@ public enum MorphGeometryEngine {
     }
 
     public static func targetRect(origin: CGRect, proposedSize: CGSize, bounds: CGRect,
-                                  placement: PanelPlacement,
+                                  placement: UX.Panel.Placement,
                                   margin: CGFloat = defaultMargin) -> CGRect {
         let size = fittedSize(proposedSize, in: bounds, margin: margin)
         switch placement {
@@ -138,6 +122,7 @@ public enum MorphGeometryEngine {
         return CGRect(x: x, y: y, width: width, height: height)
     }
 }
+}
 
 extension CGSize {
     var isUsableForMorphPanel: Bool {
@@ -145,6 +130,7 @@ extension CGSize {
     }
 }
 
+public extension UX.Morph {
 /// A centered material panel that **grows from an origin slot** (e.g. a toolbar button) over a
 /// dimmed/blurred backdrop, then shrinks back into it on close — the same in-place grow the container
 /// cards use for their detail panel, hoisted into a reusable primitive.
@@ -152,13 +138,13 @@ extension CGSize {
 /// Mount it inside a **window-spanning** `ZStack` whose coordinate space matches the one `originFrame`
 /// was measured in (so the grow starts from the real button location). It owns the open/close spring;
 /// the parent just toggles `isPresented` and supplies the slot frame + panel content.
-public struct MorphExpander<Content: View>: View {
+struct Expander<Content: View>: View {
     /// Bound presence. The expander animates the close itself, then flips this to `false` on completion.
     @Binding var isPresented: Bool
     /// The slot the panel grows out of / collapses back into, in this view's coordinate space.
     let originFrame: CGRect
-    var target: MorphTargetConfig
-    var backdropStyle: PanelBackdropStyle = .dim
+    var target: UX.Morph.Target
+    var backdropStyle: UX.Panel.BackdropStyle = .dim
     var showsBackdrop = true
     var showsPanelShadow = true
     var closeRequestToken = 0
@@ -173,7 +159,7 @@ public struct MorphExpander<Content: View>: View {
     /// content reports a new desired size via `.morphPanelSize(...)`. This is what lets a paged panel
     /// resize and re-center as it moves between sections.
     @State private var liveSize: CGSize?
-    @State private var livePlacement: PanelPlacement?
+    @State private var livePlacement: UX.Panel.Placement?
     @Namespace private var shellNamespace
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.morphSafeAreaManager) private var safeAreaManager
@@ -181,8 +167,8 @@ public struct MorphExpander<Content: View>: View {
 
     public init(isPresented: Binding<Bool>,
          originFrame: CGRect,
-         target: MorphTargetConfig = .centered(size: CGSize(width: 460, height: 440)),
-         backdropStyle: PanelBackdropStyle = .dim,
+         target: UX.Morph.Target = .centered(size: CGSize(width: 460, height: 440)),
+         backdropStyle: UX.Panel.BackdropStyle = .dim,
          showsBackdrop: Bool = true,
          showsPanelShadow: Bool = true,
          closeRequestToken: Int = 0,
@@ -209,7 +195,7 @@ public struct MorphExpander<Content: View>: View {
         GeometryReader { geo in
             let target = targetRect(in: geo.size)
             let source = originFrame.isUsableForMorph ? originFrame : target
-            let rect = MorphFrameGeometry(source: source,
+            let rect = UX.Morph.Frame(source: source,
                                   target: target,
                                   progress: expanded ? 1 : 0).rect
             let cornerRadius = expanded ? targetCornerRadius : sourceCornerRadius
@@ -291,9 +277,10 @@ public struct MorphExpander<Content: View>: View {
         withAnimation(spring) { expanded = false } completion: { isPresented = false }
     }
 }
+}
 
 public extension View {
-    func globalBackdrop(style: PanelBackdropStyle,
+    func globalBackdrop(style: UX.Panel.BackdropStyle,
                         progress: Double,
                         dimOpacity: Double = 0.28) -> some View {
         self
@@ -325,7 +312,7 @@ private struct MorphPanelShell: View {
     }
 }
 
-/// Hosted content reports its desired panel size up to the enclosing `MorphExpander`, which animates
+/// Hosted content reports its desired panel size up to the enclosing `UX.Morph.Expander`, which animates
 /// the panel to it — so a paged panel can resize and re-center between sections.
 struct MorphPanelSizeKey: PreferenceKey {
     static let defaultValue: CGSize? = nil
@@ -335,21 +322,21 @@ struct MorphPanelSizeKey: PreferenceKey {
 }
 
 struct MorphPanelPlacementKey: PreferenceKey {
-    static let defaultValue: PanelPlacement? = nil
-    static func reduce(value: inout PanelPlacement?,
-                       nextValue: () -> PanelPlacement?) {
+    static let defaultValue: UX.Panel.Placement? = nil
+    static func reduce(value: inout UX.Panel.Placement?,
+                       nextValue: () -> UX.Panel.Placement?) {
         if let next = nextValue() { value = next }
     }
 }
 
 public extension View {
-    /// Declare the desired size of the panel hosting this content (read by `MorphExpander`).
+    /// Declare the desired size of the panel hosting this content (read by `UX.Morph.Expander`).
     func morphPanelSize(_ size: CGSize) -> some View {
         preference(key: MorphPanelSizeKey.self, value: size)
     }
 
     /// Declare whether the hosting morph panel should stay near its source slot or move to center.
-    func morphPanelPlacement(_ placement: PanelPlacement) -> some View {
+    func morphPanelPlacement(_ placement: UX.Panel.Placement) -> some View {
         preference(key: MorphPanelPlacementKey.self, value: placement)
     }
 }

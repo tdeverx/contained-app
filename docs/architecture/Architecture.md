@@ -30,7 +30,7 @@ identifiers such as raw values, runtime descriptors, package error codes, or
 backend command output.
 
 Package errors follow the same ownership boundary. Core exposes
-stable codes and compact context through `ContainedPackageError`; the app maps
+stable codes and compact context through `Core.Error.PackageError`; the app maps
 those failures through `AppErrorPresentation` and `AppText` before showing
 toasts, inline errors, alerts, or Activity history. Arbitrary backend stderr is
 preserved as runtime-provided detail unless an adapter maps it to a known typed

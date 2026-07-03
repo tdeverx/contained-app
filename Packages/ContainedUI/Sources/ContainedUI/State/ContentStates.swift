@@ -1,6 +1,7 @@
 import SwiftUI
 
-public enum StateTone {
+public extension UI.State {
+enum Tone {
     case primary
     case neutral
     case tertiary
@@ -23,8 +24,10 @@ public enum StateTone {
         }
     }
 }
+}
 
-public enum SymbolSize {
+public extension UI.Symbol {
+enum Size {
     case caption2
     case caption
     case callout
@@ -46,17 +49,17 @@ public enum SymbolSize {
     }
 }
 
-public struct SymbolView: View {
+struct Image: View {
     public var systemName: String
-    public var tone: StateTone
+    public var tone: UI.State.Tone
     public var tint: Color?
-    public var size: SymbolSize
+    public var size: UI.Symbol.Size
     public var frameWidth: CGFloat?
 
     public init(systemName: String,
-                tone: StateTone = .neutral,
+                tone: UI.State.Tone = .neutral,
                 tint: Color? = nil,
-                size: SymbolSize = .callout,
+                size: UI.Symbol.Size = .callout,
                 frameWidth: CGFloat? = nil) {
         self.systemName = systemName
         self.tone = tone
@@ -66,20 +69,22 @@ public struct SymbolView: View {
     }
 
     public var body: some View {
-        Image(systemName: systemName)
+        SwiftUI.Image(systemName: systemName)
             .font(size.font)
             .foregroundStyle(tint ?? tone.color)
             .frame(width: frameWidth)
     }
 }
+}
 
-public struct StatusText: View {
+public extension UI.State {
+struct StatusText: View {
     public var text: String
-    public var tone: StateTone
+    public var tone: UI.State.Tone
     public var style: Font
 
     public init(_ text: String,
-                tone: StateTone = .neutral,
+                tone: UI.State.Tone = .neutral,
                 style: Font = .callout) {
         self.text = text
         self.tone = tone
@@ -93,18 +98,18 @@ public struct StatusText: View {
     }
 }
 
-public struct EmptyState: View {
+struct Empty: View {
     public var title: String
     public var systemImage: String
     public var description: String?
-    public var tone: StateTone
+    public var tone: UI.State.Tone
     public var minHeight: CGFloat?
     public var padding: CGFloat
 
     public init(_ title: String,
                 systemImage: String,
                 description: String? = nil,
-                tone: StateTone = .neutral,
+                tone: UI.State.Tone = .neutral,
                 minHeight: CGFloat? = nil,
                 padding: CGFloat = UI.Tokens.Space.xl) {
         self.title = title
@@ -117,7 +122,7 @@ public struct EmptyState: View {
 
     public var body: some View {
         VStack(spacing: UI.Tokens.Space.s) {
-            Image(systemName: systemImage)
+            SwiftUI.Image(systemName: systemImage)
                 .font(.title2)
                 .foregroundStyle(tone.color)
             Text(title)
@@ -135,7 +140,7 @@ public struct EmptyState: View {
     }
 }
 
-public struct HeroState<Actions: View>: View {
+struct Hero<Actions: View>: View {
     public var systemImage: String
     public var title: String
     public var message: String
@@ -153,7 +158,7 @@ public struct HeroState<Actions: View>: View {
 
     public var body: some View {
         VStack(spacing: UI.Tokens.Space.l) {
-            Image(systemName: systemImage)
+            SwiftUI.Image(systemName: systemImage)
                 .font(.system(size: UI.Tokens.IconSize.appIcon - UI.Tokens.Space.xs))
                 .foregroundStyle(.tint)
             Text(title).font(.title2.weight(.semibold))
@@ -168,7 +173,7 @@ public struct HeroState<Actions: View>: View {
     }
 }
 
-public struct LoadingState: View {
+struct Loading: View {
     public var title: String
     public var minHeight: CGFloat?
     public var padding: CGFloat
@@ -194,7 +199,7 @@ public struct LoadingState: View {
     }
 }
 
-public struct ProgressIndicator: View {
+struct ProgressIndicator: View {
     public var controlSize: ControlSize
     public var frameSize: CGFloat?
 
@@ -210,7 +215,7 @@ public struct ProgressIndicator: View {
     }
 }
 
-public struct SectionLabel: View {
+struct SectionLabel: View {
     public var title: String
 
     public init(_ title: String) {
@@ -224,16 +229,16 @@ public struct SectionLabel: View {
     }
 }
 
-public struct InlineStatus: View {
+struct InlineStatus: View {
     public var title: String
     public var systemImage: String?
     public var isWorking: Bool
-    public var tone: StateTone
+    public var tone: UI.State.Tone
 
     public init(_ title: String,
                 systemImage: String? = nil,
                 isWorking: Bool = false,
-                tone: StateTone = .neutral) {
+                tone: UI.State.Tone = .neutral) {
         self.title = title
         self.systemImage = systemImage
         self.isWorking = isWorking
@@ -245,7 +250,7 @@ public struct InlineStatus: View {
             if isWorking {
                 ProgressView().controlSize(.small)
             } else if let systemImage {
-                Image(systemName: systemImage)
+                SwiftUI.Image(systemName: systemImage)
                     .foregroundStyle(tone.color)
             }
             Text(title)
@@ -253,6 +258,7 @@ public struct InlineStatus: View {
                 .foregroundStyle(.secondary)
         }
     }
+}
 }
 
 public extension View {
@@ -324,7 +330,7 @@ public extension View {
             .foregroundStyle(.tertiary)
     }
 
-    func designStatusStyle(_ tone: StateTone) -> some View {
+    func designStatusStyle(_ tone: UI.State.Tone) -> some View {
         foregroundStyle(tone.color)
     }
 

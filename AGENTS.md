@@ -16,6 +16,7 @@ This file is the working contract for coding agents in this repository. Follow i
 - `Packages/ContainedUX` is the reusable navigation/layout package. Keep app sections, toolbar panels, stores, and concrete routing state in `Sources/ContainedApp`.
 - `Packages/ContainedCore` also exposes a separate `ContainedCoreFixtures` product for deterministic dev/test sample data under `Core.Fixtures.*`. Normal app, debug bundle, release, notarized, and non-notarized distributable builds must not depend on or link that fixture product.
 - `docs/` is structured by audience and ownership. User-facing behavior or workflow changes should update the matching page under `docs/app`, `docs/features`, `docs/development`, `docs/architecture`, or `docs/release`.
+- `docs/wiki/` stores the sync contract for the separate GitHub wiki repo: keep `File-Map.md` and `_Sidebar.md` aligned with maintained docs and package docs.
 - Package docs live beside each package as README + DocC. Keep package examples working and app-supplied strings explicit.
 - Keep directory names intentional: SwiftPM-owned folders stay `Sources` and `Tests`, Swift source domain folders use PascalCase, and repo infrastructure uses lowercase names such as `docs` and `scripts`.
 
@@ -70,7 +71,7 @@ This file is the working contract for coding agents in this repository. Follow i
   and dynamic templates; plain SwiftUI literals are acceptable when SwiftUI keeps
   them localization-ready.
 - Keep package errors display-neutral. Reusable targets should throw typed errors
-  with stable codes/context, preferably `ContainedPackageError`, while
+  with stable codes/context, preferably `Core.Error.PackageError`, while
   `Sources/ContainedApp` maps them through `AppErrorPresentation`/`AppText` before
   showing toasts, alerts, inline errors, or Activity entries. Preserve arbitrary
   backend stderr as runtime detail rather than pretending to localize it.

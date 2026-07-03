@@ -12,8 +12,8 @@ struct ContainersGridView: View {
     @Environment(UIState.self) private var ui
     @Environment(\.morphSafeAreaManager) private var safeAreaManager
 
-    @State private var detail: ContainerSnapshot?
-    @State private var deleting: ContainerSnapshot?
+    @State private var detail: Core.Container.Snapshot?
+    @State private var deleting: Core.Container.Snapshot?
     @State private var selecting = false
     @State private var selection: Set<String> = []
     /// Drives the in-place grow: false = card sits in its grid slot, true = promoted to the centered
@@ -26,7 +26,7 @@ struct ContainersGridView: View {
 
     // Each network is a collapsible section of the containers attached to it.
     @State private var collapsedNetworks: Set<String> = []
-    @State private var deletingNetwork: NetworkResource?
+    @State private var deletingNetwork: Core.Network.Resource?
 
     private let detailSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
 
@@ -37,14 +37,14 @@ struct ContainersGridView: View {
     private struct ContainerGroup: Identifiable {
         let name: String
         let symbol: String
-        let resource: NetworkResource?
-        let containers: [ContainerSnapshot]
+        let resource: Core.Network.Resource?
+        let containers: [Core.Container.Snapshot]
         let isBuiltin: Bool
         var id: String { name }
     }
 
     /// The network names a container is attached to (requested config ∪ runtime status).
-    private func networkNames(_ snapshot: ContainerSnapshot) -> [String] {
+    private func networkNames(_ snapshot: Core.Container.Snapshot) -> [String] {
         let names = snapshot.configuration.networks.map(\.network) + snapshot.status.networks.map(\.network)
         return Array(Set(names)).sorted()
     }
@@ -65,7 +65,7 @@ struct ContainersGridView: View {
         let byNetworkName = Dictionary(app.networks.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
         let defaultName = app.networks.first { $0.isBuiltin }?.name ?? "default"
 
-        var buckets: [String: [ContainerSnapshot]] = [:]
+        var buckets: [String: [Core.Container.Snapshot]] = [:]
         for network in app.networks { buckets[network.name] = [] }
         buckets[defaultName, default: []] = buckets[defaultName] ?? []
 
@@ -91,7 +91,7 @@ struct ContainersGridView: View {
 
     private var volumeGroups: [ContainerGroup] {
         let noVolume = "No volume"
-        var buckets: [String: [ContainerSnapshot]] = [:]
+        var buckets: [String: [Core.Container.Snapshot]] = [:]
         for snapshot in filtered {
             let volumes = Set(snapshot.configuration.mounts.compactMap { mount -> String? in
                 guard let source = mount.source, !source.isEmpty else { return nil }
@@ -114,7 +114,7 @@ struct ContainersGridView: View {
     }
 
     private var imageGroups: [ContainerGroup] {
-        var buckets: [String: [ContainerSnapshot]] = [:]
+        var buckets: [String: [Core.Container.Snapshot]] = [:]
         for snapshot in filtered {
             buckets[Format.shortImage(snapshot.image), default: []].append(snapshot)
         }
@@ -126,7 +126,7 @@ struct ContainersGridView: View {
     }
 
     /// Order a bucket of containers by the chosen sort.
-    private func sorted(_ containers: [ContainerSnapshot]) -> [ContainerSnapshot] {
+    private func sorted(_ containers: [Core.Container.Snapshot]) -> [Core.Container.Snapshot] {
         switch ui.sort {
         case .name:
             return containers.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
@@ -150,7 +150,7 @@ struct ContainersGridView: View {
                   spacing: UI.Layout.Spacing.m)]
     }
 
-    private var filtered: [ContainerSnapshot] {
+    private var filtered: [Core.Container.Snapshot] {
         store.snapshots.filter { snapshot in
             (!ui.runningOnly || snapshot.state == .running) &&
             (ui.search.text.isEmpty
@@ -287,7 +287,7 @@ struct ContainersGridView: View {
     }
 
     @ViewBuilder
-    private func networkMenu(_ resource: NetworkResource) -> some View {
+    private func networkMenu(_ resource: Core.Network.Resource) -> some View {
         Button { copyToPasteboard(resource.name) } label: { Label("Copy Name", systemImage: "doc.on.doc") }
         if !resource.isBuiltin {
             Divider()
@@ -308,15 +308,15 @@ struct ContainersGridView: View {
         Binding(get: { deletingNetwork != nil }, set: { if !$0 { deletingNetwork = nil } })
     }
 
-    private func deleteNetwork(_ network: NetworkResource) async {
+    private func deleteNetwork(_ network: Core.Network.Resource) async {
         guard let client = app.client else { return }
         do { _ = try await client.deleteNetworks([network.name]); await app.refreshNetworks() }
-        catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
     }
 
     @ViewBuilder
-    private func gridCard(_ snapshot: ContainerSnapshot) -> some View {
+    private func gridCard(_ snapshot: Core.Container.Snapshot) -> some View {
         let selected = detail?.id == snapshot.id
         compactCard(snapshot)
             // Stays laid out (so the slot is reserved and its frame keeps publishing) but invisible
@@ -342,13 +342,13 @@ struct ContainersGridView: View {
         cardFrames[id] = frame
     }
 
-    private func compactCard(_ snapshot: ContainerSnapshot) -> some View {
+    private func compactCard(_ snapshot: Core.Container.Snapshot) -> some View {
         containerCard(snapshot, isExpanded: false) {
             selecting ? toggle(snapshot.id) : openDetail(snapshot)
         }
     }
 
-    private func expandedCard(_ snapshot: ContainerSnapshot) -> some View {
+    private func expandedCard(_ snapshot: Core.Container.Snapshot) -> some View {
         // `controlsVisible: expanded` so the footer buttons + close fade out as soon as a close
         // starts (expanded → false), finishing before the shrink animation does.
         containerCard(snapshot,
@@ -357,7 +357,7 @@ struct ContainersGridView: View {
                       controlsVisible: expanded) {}
     }
 
-    private func containerCard(_ snapshot: ContainerSnapshot, isExpanded: Bool,
+    private func containerCard(_ snapshot: Core.Container.Snapshot, isExpanded: Bool,
                                cornerRadiusOverride: CGFloat? = nil,
                                controlsVisible: Bool = true,
                                onTap: @escaping () -> Void) -> some View {
@@ -430,7 +430,7 @@ struct ContainersGridView: View {
         return CGSize(width: width, height: height)
     }
 
-    private func openDetail(_ snapshot: ContainerSnapshot) {
+    private func openDetail(_ snapshot: Core.Container.Snapshot) {
         // Render the card at its slot first (expanded == false), then spring it open on the next
         // runloop so the grow has a real starting frame to animate from.
         detail = snapshot
@@ -486,7 +486,7 @@ struct ContainersGridView: View {
         }
     }
 
-    private func updateContainer(_ snapshot: ContainerSnapshot) {
+    private func updateContainer(_ snapshot: Core.Container.Snapshot) {
         Task {
             if await app.pullImageUpdate(snapshot.image) {
                 ui.openCreationPanel(editing: snapshot)
@@ -494,7 +494,7 @@ struct ContainersGridView: View {
         }
     }
 
-    private func customizeName(_ snapshot: ContainerSnapshot?) -> String {
+    private func customizeName(_ snapshot: Core.Container.Snapshot?) -> String {
         guard let snapshot else { return "" }
         return app.containerStyle(for: snapshot)
             .displayName(fallback: snapshot.id)
@@ -520,11 +520,11 @@ struct ContainersGridView: View {
 
 private struct ContainerCardMetricsRenderer: View {
     let metrics: ContainerMetricsState
-    let snapshot: ContainerSnapshot
+    let snapshot: Core.Container.Snapshot
     let style: Personalization
     let hasStyleOverride: Bool
     let density: UI.Card.Density
-    let statsNormalization: StatsNormalizationContext
+    let statsNormalization: Core.Metrics.NormalizationContext
     let selectedWidgetIndex: Binding<Int>
     let isBusy: Bool
     let hasImageUpdate: Bool
@@ -542,7 +542,7 @@ private struct ContainerCardMetricsRenderer: View {
     let onSelectMultiple: () -> Void
     let onToggleSelected: () -> Void
     let onEndSelecting: () -> Void
-    let health: HealthStatus
+    let health: Core.Container.HealthStatus
     let selecting: Bool
     let isSelected: Bool
 

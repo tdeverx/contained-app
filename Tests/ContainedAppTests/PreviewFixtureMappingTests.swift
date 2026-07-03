@@ -17,7 +17,7 @@ struct PreviewFixtureMappingTests {
 }
 
 private extension Personalization {
-    static func fixture(for snapshot: ContainerSnapshot) -> Personalization {
+    static func fixture(for snapshot: Core.Container.Snapshot) -> Personalization {
         var style = Personalization()
         style.nickname = snapshot.displayName
         style.icon = "shippingbox.fill"

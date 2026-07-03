@@ -5,19 +5,19 @@ public extension Core.Fixtures.AppleContainer {
     static let runtimeDescriptor = Core.Runtime.Descriptor.appleContainer
     static let runtimes = [runtimeDescriptor]
 
-    static let webContainer = ContainerSnapshot.placeholder(
+    static let webContainer = Core.Container.Snapshot.placeholder(
         id: "preview-web",
         image: "docker.io/library/nginx:latest",
         state: .running
     )
 
-    static let workerContainer = ContainerSnapshot.placeholder(
+    static let workerContainer = Core.Container.Snapshot.placeholder(
         id: "preview-worker",
         image: "ghcr.io/example/worker:nightly",
         state: .stopped
     )
 
-    static let stats = StatsDelta(
+    static let stats = Core.Metrics.StatsDelta(
         id: "preview-web",
         cpuCoreFraction: 0.62,
         memoryUsageBytes: 420_000_000,
@@ -29,7 +29,7 @@ public extension Core.Fixtures.AppleContainer {
         numProcesses: 9
     )
 
-    static let image = decode(ImageResource.self, from: """
+    static let image = decode(Core.Image.Resource.self, from: """
     {
       "configuration": {
         "name": "docker.io/library/nginx:latest",
@@ -63,9 +63,9 @@ public extension Core.Fixtures.AppleContainer {
     }
     """)
 
-    static let imageGroup = LocalImageTagGroup.group(containing: image, in: [image])
+    static let imageGroup = Core.Image.LocalTagGroup.group(containing: image, in: [image])
 
-    static let volume = decode(VolumeResource.self, from: """
+    static let volume = decode(Core.Volume.Resource.self, from: """
     {
       "configuration": {
         "name": "preview-data",
@@ -78,7 +78,7 @@ public extension Core.Fixtures.AppleContainer {
     }
     """)
 
-    static let network = decode(NetworkResource.self, from: """
+    static let network = decode(Core.Network.Resource.self, from: """
     {
       "id": "preview-network",
       "configuration": {
@@ -102,22 +102,22 @@ public extension Core.Fixtures.AppleContainer {
         capability: .coreMigration
     )
 
-    static let commandError = CommandError.nonZeroExit(
+    static let commandError = Core.Command.Error.nonZeroExit(
         code: 42,
         stderr: "preview failure",
         command: "container preview"
     )
 
-    static let createRequest: ContainerCreateRequest = {
-        var request = ContainerCreateRequest()
+    static let createRequest: Core.Container.CreateRequest = {
+        var request = Core.Container.CreateRequest()
         request.runtimeKind = .appleContainer
         request.image = image.reference
         request.platform = "linux/arm64"
         request.name = "preview-web"
         request.command = ["nginx", "-g", "daemon off;"]
-        request.env = [ContainerCreateKeyValue(key: "ENV", value: "preview")]
-        request.labels = [ContainerCreateKeyValue(key: "contained.stack", value: "preview")]
-        request.ports = [ContainerCreatePort(hostPort: "8080", containerPort: "80")]
+        request.env = [Core.Container.KeyValue(key: "ENV", value: "preview")]
+        request.labels = [Core.Container.KeyValue(key: "contained.stack", value: "preview")]
+        request.ports = [Core.Container.Port(hostPort: "8080", containerPort: "80")]
         request.cpus = "2"
         request.memory = "1g"
         request.workingDir = "/"

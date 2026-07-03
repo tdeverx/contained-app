@@ -2,7 +2,8 @@ import Foundation
 
 /// `system property list --format json` — the daemon's default configuration (builder + default
 /// container resources + kernel). Decoded leniently; unknown/empty sections are tolerated.
-public struct SystemProperties: Codable, Sendable, Hashable {
+public extension Core.System {
+struct Properties: Codable, Sendable, Hashable {
     public let build: Build?
     public let container: Defaults?
     public let machine: Defaults?
@@ -30,4 +31,6 @@ public struct SystemProperties: Codable, Sendable, Hashable {
         machine = try c.decodeIfPresent(Defaults.self, forKey: .machine)
         kernel = try c.decodeIfPresent(Kernel.self, forKey: .kernel)
     }
+}
+
 }

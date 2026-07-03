@@ -52,7 +52,7 @@ These controls deliberately do not mirror the CLI one-to-one:
 
 | UI control | CLI output | Notes |
 | --- | --- | --- |
-| Core picker | runtime adapter selection | Apple container is currently the only available core, so the picker is disabled. Future adapters fill the same form fields through `ContainerCreateRequest` instead of adding backend-specific forms. |
+| Core picker | runtime adapter selection | Apple container is currently the only available core, so the picker is disabled. Future adapters fill the same form fields through `Core.Container.CreateRequest` instead of adding backend-specific forms. |
 | Platform picker | `--platform <os/arch[/variant]>` | The UI offers common Apple-silicon presets plus Custom. Separate `--os` and `--arch` controls are omitted to avoid duplicate platform concepts because `--platform` takes precedence. |
 | Memory limit toggle + slider | `--memory <size>` | The user chooses a host-bounded amount; the app formats it as `M` or `G`. |
 | Shared memory toggle + slider | `--shm-size <size>` | Same UI pattern as memory, with a small default of `64M`. |

@@ -4,7 +4,8 @@ import SwiftUI
 /// toolbar proportions. Centralizing them here keeps the toolbar, creation tiles
 /// (`OptionTile`), and future band controls visually consistent.
 
-public struct MenuButton<LabelContent: View, MenuContent: View>: View {
+public extension UI.Control {
+struct MenuButton<LabelContent: View, MenuContent: View>: View {
     @ViewBuilder public var menuContent: () -> MenuContent
     @ViewBuilder public var labelContent: () -> LabelContent
 
@@ -28,8 +29,10 @@ public struct MenuButton<LabelContent: View, MenuContent: View>: View {
         .fixedSize(horizontal: true, vertical: false)
     }
 }
+}
 
-public struct ToolbarSearchField<Trailing: View>: View {
+public extension UI.Toolbar {
+struct SearchField<Trailing: View>: View {
     @Binding public var text: String
     public var prompt: String
     public var clearSearchLabel: String
@@ -85,7 +88,7 @@ public struct ToolbarSearchField<Trailing: View>: View {
 }
 
 /// Package-owned empty toolbar slot for stable morph origins and vanity chrome.
-public struct ToolbarVanitySlot<Content: View>: View {
+struct VanitySlot<Content: View>: View {
     public var minWidth: CGFloat
     public var interactive: Bool
     @ViewBuilder public var content: () -> Content
@@ -107,7 +110,7 @@ public struct ToolbarVanitySlot<Content: View>: View {
 }
 
 /// Package-owned toolbar button for custom status content.
-public struct ToolbarStatusButton<Content: View>: View {
+struct StatusButton<Content: View>: View {
     public var help: String
     public var action: () -> Void
     @ViewBuilder public var content: () -> Content
@@ -130,7 +133,7 @@ public struct ToolbarStatusButton<Content: View>: View {
 }
 
 /// Package-owned glass shell for toolbar clusters that mix action items and status/menu items.
-public struct ToolbarActionCluster<Content: View>: View {
+struct ActionCluster<Content: View>: View {
     public var spacing: CGFloat
     @ViewBuilder public var content: () -> Content
 
@@ -149,7 +152,7 @@ public struct ToolbarActionCluster<Content: View>: View {
 
 /// A toolbar-styled menu trigger that uses the shared toolbar icon lane while keeping native menu
 /// behavior.
-public struct ToolbarMenuButton<Content: View>: View {
+struct MenuButton<Content: View>: View {
     public let systemName: String
     public var help: String
     @ViewBuilder public var content: () -> Content
@@ -180,7 +183,7 @@ public struct ToolbarMenuButton<Content: View>: View {
 
 /// Shared two-line toolbar label used by page switchers and filter menus.
 /// The second line is always secondary so status/filter copy stays visually subordinate.
-public struct ToolbarTitleSubtitle: View {
+struct TitleSubtitle: View {
     public let symbol: String
     public let title: String
     public let subtitle: String
@@ -218,4 +221,5 @@ public struct ToolbarTitleSubtitle: View {
         .frame(height: UI.Tokens.Toolbar.buttonGroupHeight)
         .contentShape(Rectangle())
     }
+}
 }

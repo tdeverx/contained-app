@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Print release version/build values shared by CI workflows and bundle.sh.
+# Usage: CHANNEL=nightly BUILD=<build> SHA=<sha> ./scripts/version-info.sh [base|build|sha|version|env]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

@@ -1,6 +1,7 @@
 import Foundation
 
-public struct ContainerCreateKeyValue: Codable, Equatable, Hashable, Sendable, Identifiable {
+public extension Core.Container {
+struct KeyValue: Codable, Equatable, Hashable, Sendable, Identifiable {
     public var id = UUID()
     public var key: String
     public var value: String
@@ -20,7 +21,7 @@ public struct ContainerCreateKeyValue: Codable, Equatable, Hashable, Sendable, I
     }
 }
 
-public struct ContainerCreatePort: Codable, Equatable, Hashable, Sendable, Identifiable {
+struct Port: Codable, Equatable, Hashable, Sendable, Identifiable {
     public var id = UUID()
     public var hostPort: String
     public var containerPort: String
@@ -48,7 +49,7 @@ public struct ContainerCreatePort: Codable, Equatable, Hashable, Sendable, Ident
     }
 }
 
-public struct ContainerCreateVolume: Codable, Equatable, Hashable, Sendable, Identifiable {
+struct VolumeMount: Codable, Equatable, Hashable, Sendable, Identifiable {
     public var id = UUID()
     public var source: String
     public var target: String
@@ -76,7 +77,7 @@ public struct ContainerCreateVolume: Codable, Equatable, Hashable, Sendable, Ide
     }
 }
 
-public struct ContainerCreateSocket: Codable, Equatable, Hashable, Sendable, Identifiable {
+struct Socket: Codable, Equatable, Hashable, Sendable, Identifiable {
     public var id = UUID()
     public var hostPath: String
     public var containerPath: String
@@ -100,18 +101,18 @@ public struct ContainerCreateSocket: Codable, Equatable, Hashable, Sendable, Ide
     }
 }
 
-public struct ContainerImageDefaults: Codable, Equatable, Sendable {
+struct ImageDefaults: Codable, Equatable, Sendable {
     public var command: [String]
     public var entrypoint: [String]
     public var workingDirectory: String?
     public var user: String?
-    public var environment: [ContainerCreateKeyValue]
+    public var environment: [Core.Container.KeyValue]
 
     public init(command: [String] = [],
                 entrypoint: [String] = [],
                 workingDirectory: String? = nil,
                 user: String? = nil,
-                environment: [ContainerCreateKeyValue] = []) {
+                environment: [Core.Container.KeyValue] = []) {
         self.command = command
         self.entrypoint = entrypoint
         self.workingDirectory = workingDirectory
@@ -120,7 +121,7 @@ public struct ContainerImageDefaults: Codable, Equatable, Sendable {
     }
 }
 
-public struct ContainerCreateResult: Codable, Equatable, Sendable {
+struct CreateResult: Codable, Equatable, Sendable {
     public var id: String?
     public var output: String
 
@@ -130,8 +131,8 @@ public struct ContainerCreateResult: Codable, Equatable, Sendable {
     }
 }
 
-public struct ContainerCreateRequest: Codable, Equatable, Sendable {
-    public var runtimeKind: RuntimeKind = .appleContainer
+struct CreateRequest: Codable, Equatable, Sendable {
+    public var runtimeKind: Core.Runtime.Kind = .appleContainer
     public var image = ""
     public var platform = ""
     public var name = ""
@@ -143,14 +144,14 @@ public struct ContainerCreateRequest: Codable, Equatable, Sendable {
     public var tty = false
     public var cpus = ""
     public var memory = ""
-    public var env: [ContainerCreateKeyValue] = []
+    public var env: [Core.Container.KeyValue] = []
     public var envFiles: [String] = []
-    public var ports: [ContainerCreatePort] = []
-    public var volumes: [ContainerCreateVolume] = []
+    public var ports: [Core.Container.Port] = []
+    public var volumes: [Core.Container.VolumeMount] = []
     public var mounts: [String] = []
-    public var sockets: [ContainerCreateSocket] = []
-    public var labels: [ContainerCreateKeyValue] = []
-    public var restart: RestartPolicy = .no
+    public var sockets: [Core.Container.Socket] = []
+    public var labels: [Core.Container.KeyValue] = []
+    public var restart: Core.Container.RestartPolicy = .no
     public var readOnly = false
     public var useInit = false
     public var rosetta = false
@@ -195,4 +196,6 @@ public struct ContainerCreateRequest: Codable, Equatable, Sendable {
         }
         return result.map { "\($0.key)=\($0.value)" }.sorted()
     }
+}
+
 }

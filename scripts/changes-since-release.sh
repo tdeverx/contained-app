@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Emit channel/build changes since the previous appcast item for the same channel.
+# Usage: CHANNEL=nightly APPCAST=appcast.xml HEAD_REF=HEAD ./scripts/changes-since-release.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

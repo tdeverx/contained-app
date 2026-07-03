@@ -1,23 +1,23 @@
 import Foundation
 
-/// Typed facade over a `CommandRunning`. Returns decoded models; maps decode failures to
-/// `CommandError.decodingFailed` so callers handle one error type.
+/// Typed facade over a `Core.Command.Running`. Returns decoded models; maps decode failures to
+/// `Core.Command.Error.decodingFailed` so callers handle one error type.
 struct AppleContainerClient: Sendable {
-    let runner: any CommandRunning
-    var descriptor: RuntimeDescriptor { .appleContainer }
+    let runner: any Core.Command.Running
+    var descriptor: Core.Runtime.Descriptor { .appleContainer }
 
-    init(runner: any CommandRunning) {
+    init(runner: any Core.Command.Running) {
         self.runner = runner
     }
 
     // MARK: Reads
 
-    func listContainers(all: Bool = true) async throws -> [ContainerSnapshot] {
-        try await decode([ContainerSnapshot].self, ContainerCommands.list(all: all), "list")
+    func listContainers(all: Bool = true) async throws -> [Core.Container.Snapshot] {
+        try await decode([Core.Container.Snapshot].self, ContainerCommands.list(all: all), "list")
     }
 
-    func stats(ids: [String] = []) async throws -> [ContainerStats] {
-        try await decode([ContainerStats].self,
+    func stats(ids: [String] = []) async throws -> [Core.Metrics.ContainerStats] {
+        try await decode([Core.Metrics.ContainerStats].self,
                          ContainerCommands.stats(ids: ids),
                          "stats",
                          priority: .utility)
@@ -27,7 +27,7 @@ struct AppleContainerClient: Sendable {
         runner.stream(ContainerCommands.statsTableStream(ids: ids), priority: .utility)
     }
 
-    func streamStats(ids: [String] = []) -> AsyncThrowingStream<[RuntimeStatsSnapshot], Error> {
+    func streamStats(ids: [String] = []) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Error> {
         let source = statsTableStream(ids: ids)
         return AsyncThrowingStream { continuation in
             let task = Task(priority: .utility) {
@@ -49,12 +49,12 @@ struct AppleContainerClient: Sendable {
         }
     }
 
-    func diskUsage() async throws -> DiskUsage {
-        try await decode(DiskUsage.self, ContainerCommands.systemDF, "system df")
+    func diskUsage() async throws -> Core.System.DiskUsage {
+        try await decode(Core.System.DiskUsage.self, ContainerCommands.systemDF, "system df")
     }
 
-    func systemProperties() async throws -> SystemProperties {
-        try await decode(SystemProperties.self, ContainerCommands.systemPropertyList, "system property list")
+    func systemProperties() async throws -> Core.System.Properties {
+        try await decode(Core.System.Properties.self, ContainerCommands.systemPropertyList, "system property list")
     }
 
     /// List local DNS domains (`system dns list`). Returns domain names.
@@ -88,42 +88,42 @@ struct AppleContainerClient: Sendable {
         runner.stream(ContainerCommands.systemLogs(follow: follow, last: last))
     }
 
-    func systemStatus() async throws -> SystemStatus {
-        try await decode(SystemStatus.self, ContainerCommands.systemStatus, "system status")
+    func systemStatus() async throws -> Core.System.Status {
+        try await decode(Core.System.Status.self, ContainerCommands.systemStatus, "system status")
     }
 
-    func previewCreateCommand(for request: ContainerCreateRequest) throws -> RuntimeCommandPreview {
+    func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
         AppleContainerCreateTranslator.preview(for: request)
     }
 
-    @discardableResult func createContainer(_ request: ContainerCreateRequest) async throws -> ContainerCreateResult {
+    @discardableResult func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
         let data = try await runner.run(ContainerCommands.run(request))
         return AppleContainerCreateTranslator.result(from: data, request: request)
     }
 
-    func translateCompose(_ project: ComposeProject, baseDirectory: URL?) throws -> RuntimeComposeImportPlan {
+    func translateCompose(_ project: Core.Compose.Project, baseDirectory: URL?) throws -> Core.Compose.ImportPlan {
         AppleContainerCreateTranslator.composePlan(for: project, baseDirectory: baseDirectory)
     }
 
-    func imageDefaults(for request: ContainerCreateRequest,
-                              in images: [ImageResource]) throws -> ContainerImageDefaults? {
+    func imageDefaults(for request: Core.Container.CreateRequest,
+                              in images: [Core.Image.Resource]) throws -> Core.Container.ImageDefaults? {
         AppleContainerCreateTranslator.imageDefaults(for: request, in: images)
     }
 
-    func networks() async throws -> [NetworkResource] {
-        try await decode([NetworkResource].self, ContainerCommands.networkList(), "network list")
+    func networks() async throws -> [Core.Network.Resource] {
+        try await decode([Core.Network.Resource].self, ContainerCommands.networkList(), "network list")
     }
 
-    func volumes() async throws -> [VolumeResource] {
-        try await decode([VolumeResource].self, ContainerCommands.volumeList(), "volume list")
+    func volumes() async throws -> [Core.Volume.Resource] {
+        try await decode([Core.Volume.Resource].self, ContainerCommands.volumeList(), "volume list")
     }
 
-    func images() async throws -> [ImageResource] {
-        try await decode([ImageResource].self, ContainerCommands.imageList(), "image list")
+    func images() async throws -> [Core.Image.Resource] {
+        try await decode([Core.Image.Resource].self, ContainerCommands.imageList(), "image list")
     }
 
-    func inspectImage(_ ref: String) async throws -> [ImageResource] {
-        try await decode([ImageResource].self, ContainerCommands.imageInspect([ref]), "image inspect")
+    func inspectImage(_ ref: String) async throws -> [Core.Image.Resource] {
+        try await decode([Core.Image.Resource].self, ContainerCommands.imageInspect([ref]), "image inspect")
     }
 
     // MARK: Streaming
@@ -157,14 +157,14 @@ struct AppleContainerClient: Sendable {
         try await runner.run(arguments)
     }
 
-    @discardableResult func performSystemAction(_ action: RuntimeSystemAction) async throws -> Data {
+    @discardableResult func performSystemAction(_ action: Core.Runtime.SystemAction) async throws -> Data {
         try await runner.run(["system", action.rawValue])
     }
 
     // MARK: Registries
 
-    func registries() async throws -> [RegistryLogin] {
-        try await decode([RegistryLogin].self, ContainerCommands.registryList(), "registry list")
+    func registries() async throws -> [Core.Registry.Login] {
+        try await decode([Core.Registry.Login].self, ContainerCommands.registryList(), "registry list")
     }
 
     /// Log in to `server` as `username`, piping `password` via stdin (never in argv).
@@ -242,12 +242,12 @@ struct AppleContainerClient: Sendable {
     private func decode<T: Decodable>(_ type: T.Type,
                                       _ args: [String],
                                       _ name: String,
-                                      priority: CommandExecutionPriority = .userInitiated) async throws -> T {
+                                      priority: Core.Command.ExecutionPriority = .userInitiated) async throws -> T {
         let data = try await runner.run(args, stdin: nil, priority: priority)
         do {
-            return try ContainerJSON.decode(type, from: data)
+            return try Core.Container.JSON.decode(type, from: data)
         } catch {
-            throw CommandError.decodingFailed(underlying: String(describing: error), command: name)
+            throw Core.Command.Error.decodingFailed(underlying: String(describing: error), command: name)
         }
     }
 }

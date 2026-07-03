@@ -2,11 +2,11 @@ import Foundation
 import ContainedCore
 
 extension AppModel {
-    func localImageGroups() -> [LocalImageTagGroup] {
+    func localImageGroups() -> [Core.Image.LocalTagGroup] {
         if let imageGroupsCache {
             return imageGroupsCache
         }
-        let groups = LocalImageTagGroup.groups(for: images)
+        let groups = Core.Image.LocalTagGroup.groups(for: images)
         imageGroupsCache = groups
         return groups
     }
@@ -20,7 +20,7 @@ extension AppModel {
         return personalization.imageDefault(for: reference, groupID: groupID) ?? defaultImageStyle
     }
 
-    func imageGroupStyle(for group: LocalImageTagGroup) -> Personalization {
+    func imageGroupStyle(for group: Core.Image.LocalTagGroup) -> Personalization {
         personalization.imageGroupDefault(for: group.id) ?? defaultImageStyle
     }
 
@@ -35,7 +35,7 @@ extension AppModel {
         return style
     }
 
-    func containerStyle(for snapshot: ContainerSnapshot) -> Personalization {
+    func containerStyle(for snapshot: Core.Container.Snapshot) -> Personalization {
         let groupID = imageGroupID(containing: snapshot.image)
         return personalization.resolved(id: snapshot.id,
                                         image: snapshot.image,
@@ -44,14 +44,14 @@ extension AppModel {
     }
 
     /// Containers that mount the named volume. Used by volume cards to aggregate I/O activity.
-    func containersMounting(volume name: String) -> [ContainerSnapshot] {
+    func containersMounting(volume name: String) -> [Core.Container.Snapshot] {
         containers.snapshots.filter { snapshot in
             snapshot.configuration.mounts.contains { $0.source == name }
         }
     }
 
     /// Current block read/write rate for a volume, summed across every container mounting it.
-    func volumeIORate(for name: String, metric: GraphMetric) -> Double {
+    func volumeIORate(for name: String, metric: Core.Metrics.GraphMetric) -> Double {
         containersMounting(volume: name).reduce(0) { total, snapshot in
             total + (containers.metricsState(for: snapshot.id).stats.map {
                 metric.value(from: $0, snapshot: snapshot, normalization: statsNormalizationContext)
@@ -60,7 +60,7 @@ extension AppModel {
     }
 
     /// Read/write sparkline series for a volume. Series are right-aligned so recent samples line up.
-    func volumeIOHistory(for name: String, metric: GraphMetric) -> [Double] {
+    func volumeIOHistory(for name: String, metric: Core.Metrics.GraphMetric) -> [Double] {
         let series = containersMounting(volume: name).compactMap { snapshot in
             containers.metricsState(for: snapshot.id).historyByMetric[metric]?.values
         }

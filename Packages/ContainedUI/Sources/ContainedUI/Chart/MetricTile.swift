@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct MetricTile: View {
+public extension UI.Control {
+struct MetricTile: View {
     public var label: String
     public var value: String
     public var caption: String?
@@ -29,8 +30,9 @@ public struct MetricTile: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, UI.Tokens.Space.m)
         .padding(.vertical, UI.Tokens.Space.s)
-        .background(ThemeMaterial.toolbarHoverFill,
+        .background(UI.Theme.Material.toolbarHoverFill,
                     in: RoundedRectangle(cornerRadius: UI.Tokens.Radius.control,
                                          style: .continuous))
     }
+}
 }

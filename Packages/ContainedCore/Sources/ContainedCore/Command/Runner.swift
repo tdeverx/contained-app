@@ -1,6 +1,7 @@
 import Foundation
 
-public enum CommandExecutionPriority: Sendable {
+public extension Core.Command {
+enum ExecutionPriority: Sendable {
     case userInitiated
     case utility
     case background
@@ -23,19 +24,21 @@ public enum CommandExecutionPriority: Sendable {
 }
 
 /// Abstraction over `container` CLI execution so stores can be tested against a mock with no daemon.
-public protocol CommandRunning: Sendable {
-    /// Run a command to completion. Returns stdout `Data` on success; throws `CommandError` on
+protocol Running: Sendable {
+    /// Run a command to completion. Returns stdout `Data` on success; throws `Core.Command.Error` on
     /// launch failure or non-zero exit (carrying stderr).
     func run(_ arguments: [String],
              stdin: Data?,
-             priority: CommandExecutionPriority) async throws -> Data
+             priority: Core.Command.ExecutionPriority) async throws -> Data
 
     /// Stream a long-running command's merged stdout+stderr as it arrives. Cancelling the consuming
     /// task (or finishing the stream) terminates the child process — no leaked `logs -f`/`stats`.
-    func stream(_ arguments: [String], priority: CommandExecutionPriority) -> AsyncThrowingStream<String, Error>
+    func stream(_ arguments: [String], priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Swift.Error>
 }
 
-public extension CommandRunning {
+}
+
+public extension Core.Command.Running {
     func run(_ arguments: [String]) async throws -> Data {
         try await run(arguments, stdin: nil, priority: .userInitiated)
     }
@@ -44,13 +47,14 @@ public extension CommandRunning {
         try await run(arguments, stdin: stdin, priority: .userInitiated)
     }
 
-    func stream(_ arguments: [String]) -> AsyncThrowingStream<String, Error> {
+    func stream(_ arguments: [String]) -> AsyncThrowingStream<String, Swift.Error> {
         stream(arguments, priority: .userInitiated)
     }
 }
 
+public extension Core.Command {
 /// Concrete runner backed by `Foundation.Process`.
-public final class CommandRunner: CommandRunning {
+final class Runner: Running {
     public let executableURL: URL
 
     public init(executableURL: URL) {
@@ -67,7 +71,7 @@ public final class CommandRunner: CommandRunning {
 
     public func run(_ arguments: [String],
                     stdin: Data?,
-                    priority: CommandExecutionPriority) async throws -> Data {
+                    priority: Core.Command.ExecutionPriority) async throws -> Data {
         let executableURL = self.executableURL
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: priority.dispatchQoS).async {
@@ -86,7 +90,7 @@ public final class CommandRunner: CommandRunning {
                 do {
                     try process.run()
                 } catch {
-                    continuation.resume(throwing: CommandError.launchFailed(underlying: error.localizedDescription))
+                    continuation.resume(throwing: Core.Command.Error.launchFailed(underlying: error.localizedDescription))
                     return
                 }
 
@@ -119,7 +123,7 @@ public final class CommandRunner: CommandRunning {
                 } else {
                     let stderr = String(decoding: errBox.data, as: UTF8.self)
                         .trimmingCharacters(in: .whitespacesAndNewlines)
-                    continuation.resume(throwing: CommandError.nonZeroExit(
+                    continuation.resume(throwing: Core.Command.Error.nonZeroExit(
                         code: process.terminationStatus,
                         stderr: stderr,
                         command: arguments.joined(separator: " ")
@@ -129,7 +133,7 @@ public final class CommandRunner: CommandRunning {
         }
     }
 
-    public func stream(_ arguments: [String], priority: CommandExecutionPriority) -> AsyncThrowingStream<String, Error> {
+    public func stream(_ arguments: [String], priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Swift.Error> {
         let executableURL = self.executableURL
         return AsyncThrowingStream { continuation in
             // Process/FileHandle aren't Sendable; box them so the @Sendable onTermination closure
@@ -166,7 +170,7 @@ public final class CommandRunner: CommandRunning {
                 do {
                     try process.run()
                 } catch {
-                    continuation.finish(throwing: CommandError.launchFailed(underlying: error.localizedDescription))
+                    continuation.finish(throwing: Core.Command.Error.launchFailed(underlying: error.localizedDescription))
                 }
             }
         }
@@ -196,4 +200,6 @@ private final class DataBox: @unchecked Sendable {
     func set(_ data: Data) {
         lock.withLock { storage = data }
     }
+}
+
 }

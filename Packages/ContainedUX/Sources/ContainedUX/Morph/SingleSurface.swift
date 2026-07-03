@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct MorphFrameGeometry: Equatable, Sendable {
+public extension UX.Morph {
+struct Frame: Equatable, Sendable {
     public var source: CGRect
     public var target: CGRect
     public var progress: CGFloat
@@ -8,7 +9,7 @@ public struct MorphFrameGeometry: Equatable, Sendable {
     public init(source: CGRect, target: CGRect, progress: CGFloat) {
         self.source = source
         self.target = target
-        self.progress = MorphGeometryEngine.clampedProgress(progress)
+        self.progress = UX.Morph.Geometry.clampedProgress(progress)
     }
 
     public var rect: CGRect {
@@ -18,9 +19,9 @@ public struct MorphFrameGeometry: Equatable, Sendable {
 
 /// Hosts one promoted surface while it grows from an existing slot into a larger target rect.
 ///
-/// This is the single-card version of the rect motion used by `MorphExpander`: callers keep the
+/// This is the single-card version of the rect motion used by `UX.Morph.Expander`: callers keep the
 /// source view laid out in place, hide it while selected, and render one overlay through this helper.
-public struct MorphSingleSurface<Content: View>: View {
+struct SingleSurface<Content: View>: View {
     public var source: CGRect
     public var target: CGRect
     public var progress: CGFloat
@@ -40,23 +41,23 @@ public struct MorphSingleSurface<Content: View>: View {
     }
 
     public var body: some View {
-        let rect = MorphFrameGeometry(source: source, target: target, progress: progress).rect
+        let rect = UX.Morph.Frame(source: source, target: target, progress: progress).rect
         content()
             .frame(width: max(rect.width, 1), height: max(rect.height, 1), alignment: alignment)
             .position(x: rect.midX, y: rect.midY)
     }
 }
 
-/// Hosts one promoted card-like surface with the same lifecycle as `MorphExpander`, but without
+/// Hosts one promoted card-like surface with the same lifecycle as `UX.Morph.Expander`, but without
 /// drawing a separate panel shell around the content.
 ///
 /// Use this when the promoted content is already its own visual surface, such as an expanded design
-/// card. Panel contents should still use `MorphExpander`.
-public struct MorphSingleSurfaceExpander<Content: View>: View {
+/// card. Panel contents should still use `UX.Morph.Expander`.
+struct SingleSurfaceExpander<Content: View>: View {
     @Binding var isPresented: Bool
     public var originFrame: CGRect
-    public var target: MorphTargetConfig
-    public var backdropStyle: PanelBackdropStyle
+    public var target: UX.Morph.Target
+    public var backdropStyle: UX.Panel.BackdropStyle
     public var showsBackdrop: Bool
     public var closeRequestToken: Int
     public var onBackdropTap: (() -> Void)?
@@ -65,15 +66,15 @@ public struct MorphSingleSurfaceExpander<Content: View>: View {
 
     @State private var expanded = false
     @State private var liveSize: CGSize?
-    @State private var livePlacement: PanelPlacement?
+    @State private var livePlacement: UX.Panel.Placement?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.morphSafeAreaManager) private var safeAreaManager
     private var spring: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
 
     public init(isPresented: Binding<Bool>,
                 originFrame: CGRect,
-                target: MorphTargetConfig,
-                backdropStyle: PanelBackdropStyle = .dim,
+                target: UX.Morph.Target,
+                backdropStyle: UX.Panel.BackdropStyle = .dim,
                 showsBackdrop: Bool = true,
                 closeRequestToken: Int = 0,
                 onBackdropTap: (() -> Void)? = nil,
@@ -158,8 +159,9 @@ public struct MorphSingleSurfaceExpander<Content: View>: View {
         }
     }
 }
+}
 
-public extension MorphGeometryEngine {
+public extension UX.Morph.Geometry {
     static func clampedProgress(_ progress: CGFloat) -> CGFloat {
         min(max(progress.isFinite ? progress : 0, 0), 1)
     }
@@ -190,6 +192,6 @@ public extension MorphGeometryEngine {
 
 public extension CGRect {
     func morphInterpolated(to target: CGRect, progress: CGFloat) -> CGRect {
-        MorphGeometryEngine.interpolatedRect(from: self, to: target, progress: progress)
+        UX.Morph.Geometry.interpolatedRect(from: self, to: target, progress: progress)
     }
 }

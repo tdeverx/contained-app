@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// A package-owned surface for compact inline controls such as search fields and text editors.
-public struct InputSurface<Content: View>: View {
+public extension UI.Surface {
+struct Input<Content: View>: View {
     public var horizontalPadding: CGFloat
     public var verticalPadding: CGFloat
     public var minHeight: CGFloat?
@@ -24,4 +25,5 @@ public struct InputSurface<Content: View>: View {
             .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .leading)
             .materialSurface(.thin, cornerRadius: UI.Tokens.Radius.control)
     }
+}
 }

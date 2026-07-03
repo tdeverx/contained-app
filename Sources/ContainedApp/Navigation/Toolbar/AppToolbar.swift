@@ -21,7 +21,7 @@ struct AppToolbar: View {
 
     @State private var slots: [UIState.ToolbarMorph: CGRect] = [:]
     @State private var addSoftDismiss: (() -> Void)?
-    @State private var toolbarImageDetail: LocalImageTagGroup?
+    @State private var toolbarImageDetail: Core.Image.LocalTagGroup?
     @State private var toolbarImageSourceFrame: CGRect?
     @State private var toolbarImageDetailPresented = false
     @State private var toolbarImageCloseRequestToken = 0
@@ -455,11 +455,11 @@ struct AppToolbar: View {
         UI.Panel.Size.imageDetail
     }
 
-    private func currentToolbarImageGroup(_ group: LocalImageTagGroup) -> LocalImageTagGroup {
+    private func currentToolbarImageGroup(_ group: Core.Image.LocalTagGroup) -> Core.Image.LocalTagGroup {
         app.localImageGroups().first { $0.id == group.id } ?? group
     }
 
-    private func openToolbarImageDetail(_ group: LocalImageTagGroup, sourceFrame: CGRect) {
+    private func openToolbarImageDetail(_ group: Core.Image.LocalTagGroup, sourceFrame: CGRect) {
         toolbarImageDetail = group
         toolbarImageSourceFrame = sourceFrame
         toolbarImageDetailPresented = true

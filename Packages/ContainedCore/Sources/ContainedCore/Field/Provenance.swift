@@ -1,6 +1,7 @@
 import Foundation
 
-public struct RuntimeFieldPath: Codable, Equatable, Hashable, Sendable {
+public extension Core.Field {
+struct Path: Codable, Equatable, Hashable, Sendable {
     public var rawValue: String
 
     public init(_ rawValue: String) {
@@ -8,10 +9,12 @@ public struct RuntimeFieldPath: Codable, Equatable, Hashable, Sendable {
     }
 }
 
-public struct RuntimeFieldProvenanceMap: Codable, Equatable, Sendable {
-    public var fields: [RuntimeFieldPath: RuntimeKind]
+struct ProvenanceMap: Codable, Equatable, Sendable {
+    public var fields: [Core.Field.Path: Core.Runtime.Kind]
 
-    public init(fields: [RuntimeFieldPath: RuntimeKind] = [:]) {
+    public init(fields: [Core.Field.Path: Core.Runtime.Kind] = [:]) {
         self.fields = fields
     }
+}
+
 }

@@ -1,6 +1,7 @@
 import Foundation
 
-public enum RegistryManifestError: ContainedPackageError, Equatable {
+public extension Core.Registry {
+enum ManifestError: Core.Error.PackageError, Equatable {
     case invalidResponse
     case unauthorized
     case notFound
@@ -29,7 +30,7 @@ public enum RegistryManifestError: ContainedPackageError, Equatable {
     }
 }
 
-public struct RegistryManifestClient: Sendable {
+struct ManifestClient: Sendable {
     private let session: URLSession
 
     public init(session: URLSession = .shared) {
@@ -37,11 +38,11 @@ public struct RegistryManifestClient: Sendable {
     }
 
     public func remoteDigest(for imageRef: String) async throws -> String {
-        let ref = RegistryImageReference.parse(imageRef)
+        let ref = Core.Registry.ImageReference.parse(imageRef)
         return try await remoteDigest(for: ref)
     }
 
-    public func remoteDigest(for ref: RegistryImageReference) async throws -> String {
+    public func remoteDigest(for ref: Core.Registry.ImageReference) async throws -> String {
         let initial = try await manifestResponse(for: ref, bearerToken: nil)
         if initial.status == 401, let challenge = BearerChallenge(header: initial.authHeader) {
             let token = try await token(for: challenge, fallbackScope: ref.authScope)
@@ -50,7 +51,7 @@ public struct RegistryManifestClient: Sendable {
         return try digest(from: initial)
     }
 
-    private func manifestResponse(for ref: RegistryImageReference, bearerToken: String?) async throws -> ManifestResponse {
+    private func manifestResponse(for ref: Core.Registry.ImageReference, bearerToken: String?) async throws -> ManifestResponse {
         var request = URLRequest(url: ref.manifestURL)
         request.httpMethod = "HEAD"
         request.setValue(Self.acceptHeader, forHTTPHeaderField: "Accept")
@@ -58,7 +59,7 @@ public struct RegistryManifestClient: Sendable {
             request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
         }
         let (_, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw RegistryManifestError.invalidResponse }
+        guard let http = response as? HTTPURLResponse else { throw Core.Registry.ManifestError.invalidResponse }
         return ManifestResponse(
             status: http.statusCode,
             digest: http.value(forHTTPHeaderField: "Docker-Content-Digest"),
@@ -69,14 +70,14 @@ public struct RegistryManifestClient: Sendable {
     private func digest(from response: ManifestResponse) throws -> String {
         switch response.status {
         case 200..<300:
-            guard let digest = response.digest, !digest.isEmpty else { throw RegistryManifestError.missingDigest }
+            guard let digest = response.digest, !digest.isEmpty else { throw Core.Registry.ManifestError.missingDigest }
             return digest
         case 401:
-            throw RegistryManifestError.unauthorized
+            throw Core.Registry.ManifestError.unauthorized
         case 404:
-            throw RegistryManifestError.notFound
+            throw Core.Registry.ManifestError.notFound
         default:
-            throw RegistryManifestError.httpStatus(response.status)
+            throw Core.Registry.ManifestError.httpStatus(response.status)
         }
     }
 
@@ -88,14 +89,14 @@ public struct RegistryManifestClient: Sendable {
         }
         items.append(URLQueryItem(name: "scope", value: challenge.scope ?? fallbackScope))
         components?.queryItems = items
-        guard let url = components?.url else { throw RegistryManifestError.tokenUnavailable }
+        guard let url = components?.url else { throw Core.Registry.ManifestError.tokenUnavailable }
         let (data, response) = try await session.data(from: url)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw RegistryManifestError.tokenUnavailable
+            throw Core.Registry.ManifestError.tokenUnavailable
         }
         let decoded = try JSONDecoder().decode(TokenResponse.self, from: data)
         guard let token = decoded.token ?? decoded.accessToken, !token.isEmpty else {
-            throw RegistryManifestError.tokenUnavailable
+            throw Core.Registry.ManifestError.tokenUnavailable
         }
         return token
     }
@@ -175,4 +176,6 @@ private struct BearerChallenge {
         commit()
         return result
     }
+}
+
 }

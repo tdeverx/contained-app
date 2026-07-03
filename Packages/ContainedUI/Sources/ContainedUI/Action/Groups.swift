@@ -4,15 +4,16 @@ import SwiftUI
 ///
 /// Feature views provide action descriptions; the design system owns button grouping, sizing,
 /// selection tinting, hover treatment, accessibility labels, and cancel/destructive behavior.
-public struct ActionGroup: View {
-    public var actions: [ActionItem]
+public extension UI.Action {
+struct Group: View {
+    public var actions: [UI.Action.Item]
     public var spacing: CGFloat
     public var height: CGFloat
     public var minWidth: CGFloat?
     public var singleItem: Bool?
     public var interactive: Bool
 
-    public init(_ actions: [ActionItem],
+    public init(_ actions: [UI.Action.Item],
                 spacing: CGFloat = 0,
                 height: CGFloat = UI.Tokens.Toolbar.buttonGroupHeight,
                 minWidth: CGFloat? = nil,
@@ -26,7 +27,7 @@ public struct ActionGroup: View {
         self.interactive = interactive
     }
 
-    public init(_ action: ActionItem,
+    public init(_ action: UI.Action.Item,
                 height: CGFloat = UI.Tokens.Toolbar.buttonGroupHeight,
                 minWidth: CGFloat? = nil,
                 interactive: Bool = true) {
@@ -43,13 +44,13 @@ public struct ActionGroup: View {
                        minWidth: minWidth,
                        singleItem: singleItem ?? (actions.count == 1),
                        interactive: interactive) {
-            ActionItems(actions)
+            UI.Action.Items(actions)
         }
     }
 }
 
 /// Package-owned glass cluster for mixed content, such as a menu plus action items.
-public struct ActionCluster<Content: View>: View {
+struct Cluster<Content: View>: View {
     public var spacing: CGFloat
     public var height: CGFloat
     public var minWidth: CGFloat?
@@ -81,9 +82,11 @@ public struct ActionCluster<Content: View>: View {
         }
     }
 }
+}
 
 /// Package-owned input cluster for search fields and compact inline controls.
-public struct InputCluster<Content: View>: View {
+public extension UI.Control {
+struct InputCluster<Content: View>: View {
     @ViewBuilder public var content: () -> Content
 
     public init(@ViewBuilder content: @escaping () -> Content) {
@@ -98,12 +101,14 @@ public struct InputCluster<Content: View>: View {
         }
     }
 }
+}
 
 /// Package-owned action item renderer for mixed groups that also contain menus or status labels.
-public struct ActionItems: View {
-    public var actions: [ActionItem]
+public extension UI.Action {
+struct Items: View {
+    public var actions: [UI.Action.Item]
 
-    public init(_ actions: [ActionItem]) {
+    public init(_ actions: [UI.Action.Item]) {
         self.actions = actions
     }
 
@@ -127,7 +132,7 @@ public struct ActionItems: View {
 }
 
 /// Semantic label for menus embedded in glass action groups.
-public struct ActionMenuLabel: View {
+struct MenuLabel: View {
     public var systemName: String
     public var help: String
     public var role: ButtonRole?
@@ -149,4 +154,5 @@ public struct ActionMenuLabel: View {
                            tint: tint,
                            help: help)
     }
+}
 }

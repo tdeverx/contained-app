@@ -59,7 +59,7 @@ struct CommandTests {
               interval: 10s
               retries: 5
         """
-        let project = try ComposeParser.parse(yaml, projectName: "demo")
+        let project = try Core.Compose.Parser.parse(yaml, projectName: "demo")
         let web = project.services.first { $0.key == "web" }
         let db = project.services.first { $0.key == "db" }
         #expect(web?.dependsOn.first?.service == "db")
@@ -68,43 +68,43 @@ struct CommandTests {
         #expect(db?.healthcheck?.intervalSeconds == 10)
         #expect(db?.healthcheck?.retries == 5)
         // db must launch before web
-        let (order, cycle) = ComposeOrder.sorted(project.services)
+        let (order, cycle) = Core.Compose.Order.sorted(project.services)
         #expect(!cycle)
         #expect(order.firstIndex(of: "db")! < order.firstIndex(of: "web")!)
     }
 
     @Test func composeCycleFallsBack() {
-        let a = ComposeService(key: "a", name: "a", image: "x", platform: nil, command: nil, ports: [], volumes: [],
+        let a = Core.Compose.Service(key: "a", name: "a", image: "x", platform: nil, command: nil, ports: [], volumes: [],
                                environment: [], restart: nil,
-                               dependsOn: [ComposeDependency(service: "b", condition: .started)], healthcheck: nil)
-        let b = ComposeService(key: "b", name: "b", image: "x", platform: nil, command: nil, ports: [], volumes: [],
+                               dependsOn: [Core.Compose.Dependency(service: "b", condition: .started)], healthcheck: nil)
+        let b = Core.Compose.Service(key: "b", name: "b", image: "x", platform: nil, command: nil, ports: [], volumes: [],
                                environment: [], restart: nil,
-                               dependsOn: [ComposeDependency(service: "a", condition: .started)], healthcheck: nil)
-        let (order, cycle) = ComposeOrder.sorted([a, b])
+                               dependsOn: [Core.Compose.Dependency(service: "a", condition: .started)], healthcheck: nil)
+        let (order, cycle) = Core.Compose.Order.sorted([a, b])
         #expect(cycle)
         #expect(order == ["a", "b"])   // declared order on cycle
     }
 
     @Test func healthDecision() {
-        #expect(HealthDecision.status(consecutiveFailures: 0, retries: 3) == .healthy)
-        #expect(HealthDecision.status(consecutiveFailures: 2, retries: 3) == .healthy)
-        #expect(HealthDecision.status(consecutiveFailures: 3, retries: 3) == .unhealthy)
-        #expect(HealthDecision.status(consecutiveFailures: 5, retries: 3) == .unhealthy)
+        #expect(Core.Container.HealthDecision.status(consecutiveFailures: 0, retries: 3) == .healthy)
+        #expect(Core.Container.HealthDecision.status(consecutiveFailures: 2, retries: 3) == .healthy)
+        #expect(Core.Container.HealthDecision.status(consecutiveFailures: 3, retries: 3) == .unhealthy)
+        #expect(Core.Container.HealthDecision.status(consecutiveFailures: 5, retries: 3) == .unhealthy)
         // retries floored at 1 so a zero/negative budget can't make it permanently healthy
-        #expect(HealthDecision.status(consecutiveFailures: 1, retries: 0) == .unhealthy)
+        #expect(Core.Container.HealthDecision.status(consecutiveFailures: 1, retries: 0) == .unhealthy)
     }
 
     @Test func hubSearchURL() {
-        let url = HubSearch.url(query: "nginx", pageSize: 10)
+        let url = Core.Registry.HubSearch.url(query: "nginx", pageSize: 10)
         #expect(url?.absoluteString == "https://hub.docker.com/v2/search/repositories/?query=nginx&page_size=10")
-        #expect(HubSearch.url(query: "   ") == nil)   // blank query → no request
+        #expect(Core.Registry.HubSearch.url(query: "   ") == nil)   // blank query → no request
     }
 
     @Test func hubSearchDecodes() throws {
         let json = """
         {"results":[{"repo_name":"library/nginx","short_description":"web server","star_count":18000,"is_official":true,"is_automated":false}]}
         """
-        let decoded = try JSONDecoder().decode(HubSearchResponse.self, from: Data(json.utf8))
+        let decoded = try JSONDecoder().decode(Core.Registry.HubSearchResponse.self, from: Data(json.utf8))
         #expect(decoded.results.first?.repoName == "library/nginx")
         #expect(decoded.results.first?.isOfficial == true)
         #expect(decoded.results.first?.starCount == 18000)
@@ -112,11 +112,11 @@ struct CommandTests {
     }
 
     @Test func statsDeltaComputesCPUFraction() {
-        let prev = ContainerStats(id: "x", cpuUsageUsec: 1_000_000, memoryUsageBytes: 100, memoryLimitBytes: 1000,
+        let prev = Core.Metrics.ContainerStats(id: "x", cpuUsageUsec: 1_000_000, memoryUsageBytes: 100, memoryLimitBytes: 1000,
                                   blockReadBytes: 0, blockWriteBytes: 0, networkRxBytes: 0, networkTxBytes: 0, numProcesses: 1)
-        let curr = ContainerStats(id: "x", cpuUsageUsec: 1_500_000, memoryUsageBytes: 200, memoryLimitBytes: 1000,
+        let curr = Core.Metrics.ContainerStats(id: "x", cpuUsageUsec: 1_500_000, memoryUsageBytes: 200, memoryLimitBytes: 1000,
                                   blockReadBytes: 0, blockWriteBytes: 1024, networkRxBytes: 2048, networkTxBytes: 0, numProcesses: 2)
-        let delta = StatsDelta.between(previous: prev, current: curr, interval: 1.0)
+        let delta = Core.Metrics.StatsDelta.between(previous: prev, current: curr, interval: 1.0)
         // 0.5s of CPU over 1s wall = 0.5 cores.
         #expect(abs(delta.cpuCoreFraction - 0.5) < 0.0001)
         #expect(delta.memoryFraction == 0.2)
@@ -126,18 +126,18 @@ struct CommandTests {
     }
 
     @Test func statsDeltaConvertsRuntimeSnapshotRates() {
-        let previous = RuntimeStatsSnapshot(id: "x", cpuCoreFraction: 0.1,
+        let previous = Core.Metrics.RuntimeStatsSnapshot(id: "x", cpuCoreFraction: 0.1,
                                             memoryUsageBytes: 100, memoryLimitBytes: 1000,
                                             blockReadBytes: 1_000, blockWriteBytes: 2_000,
                                             networkRxBytes: 3_000, networkTxBytes: 4_000,
                                             numProcesses: 1)
-        let current = RuntimeStatsSnapshot(id: "x", cpuCoreFraction: 0.42,
+        let current = Core.Metrics.RuntimeStatsSnapshot(id: "x", cpuCoreFraction: 0.42,
                                            memoryUsageBytes: 200, memoryLimitBytes: 1000,
                                            blockReadBytes: 1_500, blockWriteBytes: 2_800,
                                            networkRxBytes: 4_000, networkTxBytes: 4_400,
                                            numProcesses: 3)
 
-        let delta = StatsDelta.from(snapshot: current, previous: previous, interval: 2)
+        let delta = Core.Metrics.StatsDelta.from(snapshot: current, previous: previous, interval: 2)
         #expect(delta.cpuCoreFraction == 0.42)
         #expect(delta.memoryFraction == 0.2)
         #expect(delta.blockReadBytesPerSec == 250)

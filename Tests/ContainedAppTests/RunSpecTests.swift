@@ -296,7 +296,7 @@ struct RunSpecTests {
 
     @Test func adoptsPulledImageDefaultsIntoEmptyRunFields() throws {
         let data = try Data(contentsOf: fixturesURL.appending(path: "image-inspect.json"))
-        let images = try ContainerJSON.decode([ImageResource].self, from: data)
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: data)
         var spec = RunSpec()
         spec.image = "alpine"
 
@@ -315,7 +315,7 @@ struct RunSpecTests {
 
     @Test func adoptingImageDefaultsDoesNotOverwriteExistingEdits() throws {
         let data = try Data(contentsOf: fixturesURL.appending(path: "image-inspect.json"))
-        let images = try ContainerJSON.decode([ImageResource].self, from: data)
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: data)
         var spec = RunSpec()
         spec.image = "alpine"
         spec.command = "custom"
@@ -389,7 +389,7 @@ struct RunSpecTests {
           }
         }
         """
-        let snapshot = try JSONDecoder().decode(ContainerSnapshot.self, from: Data(json.utf8))
+        let snapshot = try JSONDecoder().decode(Core.Container.Snapshot.self, from: Data(json.utf8))
         let spec = RunSpec(from: snapshot.configuration)
 
         #expect(spec.image == "example/app:1")
@@ -442,15 +442,15 @@ struct RunSpecTests {
     }
 }
 
-private struct RunSpecTestRunner: CommandRunning {
+private struct RunSpecTestRunner: Core.Command.Running {
     func run(_ arguments: [String],
              stdin: Data?,
-             priority: CommandExecutionPriority) async throws -> Data {
+             priority: Core.Command.ExecutionPriority) async throws -> Data {
         Data()
     }
 
     func stream(_ arguments: [String],
-                priority: CommandExecutionPriority) -> AsyncThrowingStream<String, Error> {
+                priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { $0.finish() }
     }
 }

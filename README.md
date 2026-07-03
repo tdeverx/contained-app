@@ -12,7 +12,9 @@
 
 <h1 align="center">Contained</h1>
 
-Contained is a native macOS control surface for Apple's [`container`](https://github.com/apple/container) CLI. It gives containers, images, volumes, networks, registries, logs, templates, and app-managed health/restart behavior a Mac-first SwiftUI interface without hiding the underlying command line.
+<p align="center">
+  A native macOS control surface for Apple's <a href="https://github.com/apple/container"><code>container</code></a> CLI.
+</p>
 
 <p align="center">
   <img src=".github/assets/screenshot.png" width="900" alt="Contained running containers">
@@ -21,12 +23,14 @@ Contained is a native macOS control surface for Apple's [`container`](https://gi
 
 ## What It Does
 
+Contained gives containers, images, volumes, networks, registries, logs, templates, app-managed health, and restart behavior a Mac-first SwiftUI interface while keeping the underlying command line visible.
+
 - Run, edit, stop, restart, inspect, and delete containers.
-- Browse rich Liquid Glass cards with local-only tint, icon, nickname, and graph personalization.
+- Browse Liquid Glass cards with local-only tint, icon, nickname, and graph personalization.
 - Manage images, tags, updates, archives, volumes, networks, registry credentials, templates, activity history, and system resources.
 - Import Compose files into editable run forms instead of launching opaque stacks.
-- Reveal the exact `container` CLI command before privileged run/edit operations.
-- Optionally enable the floating toolbar, morph panels, command palette, Docker Hub search, image build workspace, keyboard shortcuts, and Compose import from Settings -> Experimental.
+- Preview the exact `container` command before privileged run/edit operations.
+- Try experimental toolbar panels, morph surfaces, command palette, Docker Hub search, image build workspace, keyboard shortcuts, and Compose import from Settings.
 
 ## Install
 
@@ -42,13 +46,12 @@ Requirements:
 
 ## Build
 
-Contained has two supported development entry points that share the same package
-graph:
+Contained has two supported development entry points over the same package graph.
 
-- Xcode: `Contained.xcworkspace` contains a native macOS app target that builds
-  and runs `Contained.app` directly for SwiftUI iteration.
-- SwiftPM: `Package.swift`, `swift build`, `swift test`, and `scripts/bundle.sh`
-  remain the CI, release, packaging, signing, notarization, and appcast path.
+| Path | Use it for |
+| --- | --- |
+| `Contained.xcworkspace` | Native Xcode build/run, SwiftUI previews, and manual UI iteration |
+| `Package.swift` | CI, tests, bundle generation, signing, notarization, release notes, and appcasts |
 
 ```sh
 open Contained.xcworkspace
@@ -64,52 +67,45 @@ Maintainers use `scripts/release.sh` and `scripts/appcast.sh` for signing, notar
 
 ## Documentation
 
-Maintained docs live in [`docs`](docs) beside the code so architecture and
-workflow changes can be reviewed with implementation changes:
+Start with the [documentation index](docs/README.md). The most-used pages are:
 
 - App: [Home](docs/app/Home.md), [Installation](docs/app/Installation.md), [Keyboard Shortcuts](docs/app/Keyboard-Shortcuts.md), [Troubleshooting](docs/app/Troubleshooting.md), [Updates](docs/app/Updates.md), [System Settings](docs/app/System-Settings.md)
 - Features: [Feature Overview](docs/features/Features.md), [Containers](docs/features/Containers.md), [Images](docs/features/Images.md), [Resources](docs/features/Resources.md), [Creation Workflow](docs/features/Creation-Workflow.md), [Run / Edit Form](docs/features/Run-Edit-Form.md), [Compose Import](docs/features/Compose-Import.md), [Command Palette](docs/features/Command-Palette.md)
 - Architecture: [Architecture](docs/architecture/Architecture.md), [Runtime Adapters](docs/architecture/Runtime-Adapters.md), [Design System](docs/architecture/Design-System.md)
-- Development: [Contributing](docs/development/Contributing.md), [Issues and Discussions](docs/development/Issues-and-Discussions.md), [Localization](docs/app/Localization.md)
+- Development: [Contributing](docs/development/Contributing.md), [Issues and Discussions](docs/development/Issues-and-Discussions.md), [Documentation Map](docs/development/Documentation-Map.md), [Localization](docs/app/Localization.md)
 - Release: [Release Runbook](docs/release/Release.md)
 
-Each local package also has its own README and DocC landing page under
-`Packages/<PackageName>/`.
+Package docs live beside each local package:
 
-## Contributing And Support
+- [ContainedCore](Packages/ContainedCore/README.md)
+- [ContainedUI](Packages/ContainedUI/README.md)
+- [ContainedUX](Packages/ContainedUX/README.md)
 
-Start with the [docs](docs) and
-[Troubleshooting](docs/app/Troubleshooting.md).
-Use [Discussions Q&A](https://github.com/tdeverx/contained-app/discussions/categories/q-a)
-for setup help and questions, and
-[open an issue](https://github.com/tdeverx/contained-app/issues/new/choose) for
-actionable bugs, crashes, regressions, or tracked feature work.
-
-Please read the [contributing guide](docs/development/Contributing.md)
-before opening a larger PR. Do not post vulnerabilities publicly; use
-[private vulnerability reporting](https://github.com/tdeverx/contained-app/security/advisories/new)
-instead.
+The checked-in [wiki map](docs/wiki/README.md) explains how maintained docs map to the separate GitHub wiki repository.
 
 ## Architecture
 
-The root package contains the app launcher and app implementation, then consumes
-standalone local packages:
+The root package contains a tiny SwiftPM launcher and the shared app implementation, then consumes standalone local packages.
 
-- [`ContainedCore`](Packages/ContainedCore/README.md): the backend/orchestration package. It exposes `Core.*` APIs for runtime descriptors/capabilities, canonical container models, command previews, Compose import/export semantics, Apple `container` adapter internals, metrics, typed errors, and future runtime migration planning.
-- [`ContainedUI`](Packages/ContainedUI/README.md): reusable SwiftUI/AppKit visual primitives, tokens, spacing, material, cards, panels, controls, feedback, and data visualization.
-- [`ContainedUX`](Packages/ContainedUX/README.md): reusable safe-area, morphing, measurement, and panel-host infrastructure.
-- `ContainedApp`: SwiftUI app shell, navigation, feature views, stores, history, settings, Sparkle support, app state migration, app-specific presentation mappings, localization, and the join point between Core/UI/UX.
-- `Contained`: tiny SwiftPM executable launcher used by command-line builds and bundle scripts.
+| Owner | Responsibility |
+| --- | --- |
+| [ContainedCore](Packages/ContainedCore/README.md) | Backend orchestration through `Core.*`: runtime descriptors, canonical container models, command previews, Compose import/export, Apple `container` adapter internals, metrics, typed errors, and migration planning |
+| [ContainedUI](Packages/ContainedUI/README.md) | Visual system through `UI.*`: tokens, materials, cards, panels, controls, state views, and charts |
+| [ContainedUX](Packages/ContainedUX/README.md) | Interaction infrastructure through `UX.*`: safe areas, morphing, source measurement, and panel placement |
+| `ContainedApp` | SwiftUI shell, navigation, feature views, stores, history, settings, Sparkle, presentation mapping, localization, and app policy |
+| `Contained` | SwiftPM executable launcher used by command-line builds and bundle scripts |
 
-Ownership shorthand: UI owns visuals, UX owns interaction/morph/panel movement,
-Core owns backend orchestration, and ContainedApp joins those packages with
-localization, persistence, settings, routing, and feature policy.
-Core also exposes a separate `ContainedCoreFixtures` product for deterministic
-test/preview data under `Core.Fixtures.*`; normal app and distributable bundle
-targets do not link it.
+Integration is CLI-based rather than private-framework based. The app talks to `Core.Orchestrator`; Core owns adapter-specific argv and process details. Personalization and app-managed metadata stay local to Contained so the user's container resources remain clean when used directly from the terminal.
 
-Integration is intentionally CLI-based rather than private-framework based. The app talks to `Core.Orchestrator`; Core owns adapter-specific argv/process details. Personalization and app-managed metadata stay local to Contained so the user's container resources remain clean when used directly from the terminal.
-Reusable packages expose display-neutral errors with stable package codes/context; the app owns localized messages, alerts, and Activity history presentation.
+Core also exposes a separate `ContainedCoreFixtures` product for deterministic test/preview data under `Core.Fixtures.*`. Normal app and distributable bundle targets do not link it.
+
+## Contributing And Support
+
+Read the [contributing guide](docs/development/Contributing.md) before opening a larger PR.
+
+- Use [Discussions Q&A](https://github.com/tdeverx/contained-app/discussions/categories/q-a) for setup help and questions.
+- Use [issues](https://github.com/tdeverx/contained-app/issues/new/choose) for actionable bugs, crashes, regressions, and tracked feature work.
+- Use [private vulnerability reporting](https://github.com/tdeverx/contained-app/security/advisories/new) for security issues.
 
 ## License
 

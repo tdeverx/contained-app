@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Fail material PRs that forget a committed release note or change fragment.
+# Usage: BASE_REF=origin/nightly HEAD_REF=HEAD ./scripts/require-release-note.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

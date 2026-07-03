@@ -10,16 +10,16 @@ struct ToolbarUpdatesPanel: View {
     @Environment(UIState.self) private var ui
     var showClose = true
     var coordinateSpaceName = AppToolbar.space
-    var hiddenImageGroupID: LocalImageTagGroup.ID?
-    var onOpenImage: (LocalImageTagGroup, CGRect) -> Void
+    var hiddenImageGroupID: Core.Image.LocalTagGroup.ID?
+    var onOpenImage: (Core.Image.LocalTagGroup, CGRect) -> Void
     var onClose: () -> Void
-    @State private var imageFrames: [LocalImageTagGroup.ID: CGRect] = [:]
+    @State private var imageFrames: [Core.Image.LocalTagGroup.ID: CGRect] = [:]
 
-    private var imageGroups: [LocalImageTagGroup] {
+    private var imageGroups: [Core.Image.LocalTagGroup] {
         sortedImageGroups(app.localImageGroups().filter(matchesFilter))
     }
 
-    private var imageSections: [(title: String, groups: [LocalImageTagGroup])] {
+    private var imageSections: [(title: String, groups: [Core.Image.LocalTagGroup])] {
         switch ui.imageGrouping {
         case .none:
             return [("", imageGroups)]
@@ -124,7 +124,7 @@ struct ToolbarUpdatesPanel: View {
         }
     }
 
-    private func imageRow(_ group: LocalImageTagGroup) -> some View {
+    private func imageRow(_ group: Core.Image.LocalTagGroup) -> some View {
         ToolbarImageGroupCard(group: group,
                               isExpanded: false,
                               onTap: {
@@ -145,12 +145,12 @@ struct ToolbarUpdatesPanel: View {
             }
     }
 
-    private func updateImageFrame(_ frame: CGRect, for id: LocalImageTagGroup.ID) {
+    private func updateImageFrame(_ frame: CGRect, for id: Core.Image.LocalTagGroup.ID) {
         guard imageFrames[id]?.isClose(to: frame) != true else { return }
         imageFrames[id] = frame
     }
 
-    private func imageRank(_ group: LocalImageTagGroup) -> Int {
+    private func imageRank(_ group: Core.Image.LocalTagGroup) -> Int {
         switch app.imageUpdateStatus(for: group.primaryReference).state {
         case .updateAvailable: return 0
         case .error: return 1
@@ -160,7 +160,7 @@ struct ToolbarUpdatesPanel: View {
         }
     }
 
-    private func sortedImageGroups(_ groups: [LocalImageTagGroup]) -> [LocalImageTagGroup] {
+    private func sortedImageGroups(_ groups: [Core.Image.LocalTagGroup]) -> [Core.Image.LocalTagGroup] {
         groups.sorted { lhs, rhs in
             switch ui.imageSort {
             case .status:
@@ -176,7 +176,7 @@ struct ToolbarUpdatesPanel: View {
         }
     }
 
-    private func matchesFilter(_ group: LocalImageTagGroup) -> Bool {
+    private func matchesFilter(_ group: Core.Image.LocalTagGroup) -> Bool {
         switch ui.imageFilter {
         case .all:
             return true
@@ -187,12 +187,12 @@ struct ToolbarUpdatesPanel: View {
         }
     }
 
-    private func registryTitle(_ group: LocalImageTagGroup) -> String {
-        let parsed = RegistryImageReference.parse(group.primaryReference)
+    private func registryTitle(_ group: Core.Image.LocalTagGroup) -> String {
+        let parsed = Core.Registry.ImageReference.parse(group.primaryReference)
         return parsed.registry == "registry-1.docker.io" ? "docker.io" : parsed.registry
     }
 
-    private func statusTitle(_ group: LocalImageTagGroup) -> String {
+    private func statusTitle(_ group: Core.Image.LocalTagGroup) -> String {
         switch app.imageUpdateStatus(for: group.primaryReference).state {
         case .updateAvailable: return "Updates available"
         case .error: return "Errors"

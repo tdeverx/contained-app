@@ -2,7 +2,8 @@ import SwiftUI
 
 /// A transient error banner: a warning glyph + message on a glass surface, sliding up from the bottom.
 /// Used as a bottom overlay to surface caller-supplied error copy without a blocking alert.
-public struct ErrorBannerView: View {
+public extension UI.State {
+struct ErrorBanner: View {
     public let message: String
 
     public init(message: String) {
@@ -20,4 +21,5 @@ public struct ErrorBannerView: View {
         .padding(UI.Tokens.Space.l)
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
+}
 }

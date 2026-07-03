@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Smoke-check a built Contained.app before packaging or publishing.
+# Usage: VERSION=<version> BUILD=<build> ./scripts/validate-bundle.sh [Contained.app]
 set -euo pipefail
 
 app="${1:-Contained.app}"

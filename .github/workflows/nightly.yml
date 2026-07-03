@@ -16,6 +16,8 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'README.md'
+      - 'Packages/*/README.md'
+      - 'Packages/*/Sources/*/*.docc/**'
       - 'CODE_OF_CONDUCT.md'
       - '.github/CONTRIBUTING.md'
       - '.github/assets/**'

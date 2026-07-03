@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Write composed Sparkle release-note HTML fragments next to each archive in an updates directory.
+# Usage: CHANNEL=nightly VERSION_VALUE=<version> ./scripts/release-notes.sh [updates-dir]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

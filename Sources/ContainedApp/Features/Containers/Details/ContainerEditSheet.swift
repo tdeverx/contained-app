@@ -9,7 +9,7 @@ import ContainedCore
 struct ContainerEditSheet: View {
     enum Mode {
         case new(prefill: RunSpec?)
-        case edit(ContainerSnapshot, onComplete: () -> Void)
+        case edit(Core.Container.Snapshot, onComplete: () -> Void)
     }
 
     @Environment(\.dismiss) private var dismiss

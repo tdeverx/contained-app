@@ -6,7 +6,7 @@ import ContainedCore
 /// workflow while this view owns per-widget ordering, metric, and chart editing.
 struct CustomizeWidgetsPanel: View {
     @Binding var style: Personalization
-    let graphOptions: [GraphMetric]
+    let graphOptions: [Core.Metrics.GraphMetric]
     let settingsDisabled: Bool
 
     private var activeWidgetIndices: [Int] {
@@ -202,7 +202,7 @@ struct CustomizeWidgetsPanel: View {
         return AppText.string("customize.widget.title", defaultValue: "Widget \(position + 1)")
     }
 
-    private func graphLabel(_ metric: GraphMetric) -> String {
+    private func graphLabel(_ metric: Core.Metrics.GraphMetric) -> String {
         guard graphOptions.allSatisfy({ $0 == .diskRead || $0 == .diskWrite }) else {
             return metric.displayName
         }
@@ -239,7 +239,7 @@ struct CustomizeWidgetsPanel: View {
         style.widgets.swapAt(index, indices[targetPosition])
     }
 
-    private func nextWidgetMetric() -> GraphMetric {
+    private func nextWidgetMetric() -> Core.Metrics.GraphMetric {
         let activeMetrics = Set(activeWidgetIndices.map { style.widget(at: $0).metric })
         return graphOptions.first { !activeMetrics.contains($0) } ?? graphOptions.first ?? .cpu
     }
@@ -248,7 +248,7 @@ struct CustomizeWidgetsPanel: View {
         style.widget(at: index).style
     }
 
-    private func secondaryMetricFallback(for index: Int) -> GraphMetric? {
+    private func secondaryMetricFallback(for index: Int) -> Core.Metrics.GraphMetric? {
         let widget = style.widget(at: index)
         return widget.style.resolvedSecondaryMetric(primary: widget.metric,
                                                     requested: widget.secondaryMetric,
@@ -266,7 +266,7 @@ struct CustomizeWidgetsPanel: View {
         }
     }
 
-    private func widgetMetricBinding(_ index: Int) -> Binding<GraphMetric> {
+    private func widgetMetricBinding(_ index: Int) -> Binding<Core.Metrics.GraphMetric> {
         Binding {
             style.widget(at: index).metric
         } set: { newValue in
@@ -294,7 +294,7 @@ struct CustomizeWidgetsPanel: View {
         }
     }
 
-    private func widgetSecondaryMetricBinding(_ index: Int, fallback: GraphMetric) -> Binding<GraphMetric> {
+    private func widgetSecondaryMetricBinding(_ index: Int, fallback: Core.Metrics.GraphMetric) -> Binding<Core.Metrics.GraphMetric> {
         Binding {
             let widget = style.widget(at: index)
             return widget.style.resolvedSecondaryMetric(primary: widget.metric,

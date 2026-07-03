@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Standard in-window panel header for toolbar morphs and embedded panels.
-public struct PanelTitleBar<Trailing: View>: View {
+public extension UI.Panel {
+struct Header<Trailing: View>: View {
     public let symbol: String
     public let title: String
     public var subtitle: String?
@@ -52,4 +53,5 @@ public struct PanelTitleBar<Trailing: View>: View {
         .frame(minHeight: UI.Tokens.Toolbar.buttonGroupHeight)
         .padding(padding)
     }
+}
 }

@@ -22,7 +22,7 @@ struct SettingsBackup: Codable, Equatable {
     var keepInMenuBar: Bool
     var cliPathOverride: String
     var refreshInterval: Double
-    var statsNormalizationMode: StatsNormalizationMode
+    var statsNormalizationMode: Core.Metrics.NormalizationMode
     var imageUpdateIntervalHours: Int
     var imageUpdateChecksEnabled: Bool
     var appUpdateChecksEnabled: Bool
@@ -74,7 +74,7 @@ struct SettingsBackup: Codable, Equatable {
          keepInMenuBar: Bool,
          cliPathOverride: String,
          refreshInterval: Double,
-         statsNormalizationMode: StatsNormalizationMode = .container,
+         statsNormalizationMode: Core.Metrics.NormalizationMode = .container,
          imageUpdateIntervalHours: Int,
          imageUpdateChecksEnabled: Bool,
          appUpdateChecksEnabled: Bool,
@@ -156,7 +156,7 @@ struct SettingsBackup: Codable, Equatable {
         keepInMenuBar = try container.decodeIfPresent(Bool.self, forKey: .keepInMenuBar) ?? true
         cliPathOverride = try container.decodeIfPresent(String.self, forKey: .cliPathOverride) ?? ""
         refreshInterval = try container.decodeIfPresent(Double.self, forKey: .refreshInterval) ?? 2
-        statsNormalizationMode = try container.decodeIfPresent(StatsNormalizationMode.self, forKey: .statsNormalizationMode) ?? .container
+        statsNormalizationMode = try container.decodeIfPresent(Core.Metrics.NormalizationMode.self, forKey: .statsNormalizationMode) ?? .container
         imageUpdateIntervalHours = try container.decodeIfPresent(Int.self, forKey: .imageUpdateIntervalHours) ?? 6
         imageUpdateChecksEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageUpdateChecksEnabled) ?? true
         appUpdateChecksEnabled = try container.decodeIfPresent(Bool.self, forKey: .appUpdateChecksEnabled) ?? true

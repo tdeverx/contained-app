@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct OptionStack<Content: View>: View {
+public extension UI.Control {
+struct OptionStack<Content: View>: View {
     public var spacing: CGFloat
     @ViewBuilder public var content: () -> Content
 
@@ -19,7 +20,7 @@ public struct OptionStack<Content: View>: View {
     }
 }
 
-public struct OptionTile: View {
+struct OptionTile: View {
     public static let defaultHeight: CGFloat = 100
 
     public let symbol: String
@@ -88,6 +89,7 @@ public struct OptionTile: View {
         .accessibilityLabel(title)
         .accessibilityHint(subtitle ?? "")
     }
+}
 }
 
 private struct OptionalMatchedGeometry: ViewModifier {

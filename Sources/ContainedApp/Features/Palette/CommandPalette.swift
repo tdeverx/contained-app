@@ -441,11 +441,11 @@ enum PaletteItemAccessory {
 
 enum PaletteItemVisual {
     case plain
-    case container(ContainerSnapshot)
-    case imageGroup(LocalImageTagGroup)
+    case container(Core.Container.Snapshot)
+    case imageGroup(Core.Image.LocalTagGroup)
     case imageTag(String, groupID: String)
-    case volume(VolumeResource)
-    case network(NetworkResource)
+    case volume(Core.Volume.Resource)
+    case network(Core.Network.Resource)
     case tint(UI.Theme.Tint)
 }
 

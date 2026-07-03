@@ -36,7 +36,7 @@ struct CreationFlow: View {
     @Query(sort: \Template.createdAt, order: .reverse) private var saved: [Template]
 
     let start: Start
-    let editSnapshot: ContainerSnapshot?
+    let editSnapshot: Core.Container.Snapshot?
     /// Close the host (dismiss the sheet / collapse the morph panel).
     var onClose: () -> Void
     var onSoftDismissChange: (((() -> Void)?) -> Void)?
@@ -90,7 +90,7 @@ struct CreationFlow: View {
 
     init(start: Start, onClose: @escaping () -> Void,
          prefill: RunSpec? = nil,
-         editSnapshot: ContainerSnapshot? = nil,
+         editSnapshot: Core.Container.Snapshot? = nil,
          searchQuery: String = "",
          returnEntry: UIState.CreationEntry? = nil,
          onSoftDismissChange: (((() -> Void)?) -> Void)? = nil) {

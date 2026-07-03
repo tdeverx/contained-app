@@ -11,7 +11,7 @@ final class UIState {
     struct CreationPresentation {
         var entry: CreationEntry = .menu
         var prefillSpec: RunSpec?
-        var editSnapshot: ContainerSnapshot?
+        var editSnapshot: Core.Container.Snapshot?
         var returnEntry: CreationEntry?
         var searchQuery = ""
         var requestToken = 0
@@ -69,7 +69,7 @@ final class UIState {
     /// A one-shot action requested by menus or the command palette. `RootView` consumes global
     /// actions, while toolbar panels and the Containers page handle their local operations directly.
     var pendingAction: PendingAction?
-    var editSheetSnapshot: ContainerSnapshot?
+    var editSheetSnapshot: Core.Container.Snapshot?
 
     // MARK: Actions
 
@@ -218,7 +218,7 @@ final class UIState {
         openCreationPanel(entry: .configure, prefill: spec, searchQuery: searchQuery, returningTo: returnEntry)
     }
 
-    func openCreationPanel(editing snapshot: ContainerSnapshot) {
+    func openCreationPanel(editing snapshot: Core.Container.Snapshot) {
         guard panelNavigationEnabled else {
             editSheetSnapshot = snapshot
             return

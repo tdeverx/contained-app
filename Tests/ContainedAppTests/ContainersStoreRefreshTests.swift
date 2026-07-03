@@ -101,7 +101,7 @@ struct ContainersStoreRefreshTests {
 
     @Test func graphMetricCaptionsUseContainerResourceLimits() {
         let snapshot = Self.snapshot(id: "web", cpus: 4, memoryInBytes: 1_024)
-        let delta = StatsDelta(id: "web",
+        let delta = Core.Metrics.StatsDelta(id: "web",
                                cpuCoreFraction: 1,
                                memoryUsageBytes: 512,
                                memoryLimitBytes: 2_048,
@@ -111,17 +111,17 @@ struct ContainersStoreRefreshTests {
                                blockWriteBytesPerSec: 40,
                                numProcesses: 2)
 
-        #expect(GraphMetric.cpu.value(from: delta, snapshot: snapshot) == 0.25)
-        #expect(GraphMetric.memory.value(from: delta, snapshot: snapshot) == 0.5)
-        #expect(GraphMetric.netRx.value(from: delta, snapshot: snapshot) == 10)
-        #expect(GraphMetric.netTx.value(from: delta, snapshot: snapshot) == 20)
-        #expect(GraphMetric.diskRead.value(from: delta, snapshot: snapshot) == 30)
-        #expect(GraphMetric.diskWrite.value(from: delta, snapshot: snapshot) == 40)
-        #expect(GraphMetric.cpu.caption(from: delta, snapshot: snapshot) == "25%")
-        #expect(GraphMetric.memory.caption(from: delta, snapshot: snapshot) == "50%")
-        #expect(GraphMetric.cpu.chipCaption(from: delta, snapshot: snapshot) == "25%")
-        #expect(GraphMetric.memory.chipCaption(from: delta, snapshot: snapshot) == "50%")
-        #expect(GraphMetric.memoryLimitBytes(for: delta, snapshot: snapshot) == 1_024)
+        #expect(Core.Metrics.GraphMetric.cpu.value(from: delta, snapshot: snapshot) == 0.25)
+        #expect(Core.Metrics.GraphMetric.memory.value(from: delta, snapshot: snapshot) == 0.5)
+        #expect(Core.Metrics.GraphMetric.netRx.value(from: delta, snapshot: snapshot) == 10)
+        #expect(Core.Metrics.GraphMetric.netTx.value(from: delta, snapshot: snapshot) == 20)
+        #expect(Core.Metrics.GraphMetric.diskRead.value(from: delta, snapshot: snapshot) == 30)
+        #expect(Core.Metrics.GraphMetric.diskWrite.value(from: delta, snapshot: snapshot) == 40)
+        #expect(Core.Metrics.GraphMetric.cpu.caption(from: delta, snapshot: snapshot) == "25%")
+        #expect(Core.Metrics.GraphMetric.memory.caption(from: delta, snapshot: snapshot) == "50%")
+        #expect(Core.Metrics.GraphMetric.cpu.chipCaption(from: delta, snapshot: snapshot) == "25%")
+        #expect(Core.Metrics.GraphMetric.memory.chipCaption(from: delta, snapshot: snapshot) == "50%")
+        #expect(Core.Metrics.GraphMetric.memoryLimitBytes(for: delta, snapshot: snapshot) == 1_024)
     }
 
     @Test func percentFormattingUsesDecimalsOnlyWhenUseful() {
@@ -136,7 +136,7 @@ struct ContainersStoreRefreshTests {
 
     @Test func graphMetricChipCaptionsExposeSmallPercentChanges() {
         let snapshot = Self.snapshot(id: "web", cpus: 8, memoryInBytes: 1_000_000)
-        let delta = StatsDelta(id: "web",
+        let delta = Core.Metrics.StatsDelta(id: "web",
                                cpuCoreFraction: 0.032,
                                memoryUsageBytes: 4_000,
                                memoryLimitBytes: 1_000_000,
@@ -146,24 +146,24 @@ struct ContainersStoreRefreshTests {
                                blockWriteBytesPerSec: 40,
                                numProcesses: 2)
 
-        #expect(GraphMetric.cpu.caption(from: delta, snapshot: snapshot) == "0.4%")
-        #expect(GraphMetric.cpu.chipCaption(from: delta, snapshot: snapshot) == "0.4%")
-        #expect(GraphMetric.memory.chipCaption(from: delta, snapshot: snapshot) == "0.4%")
+        #expect(Core.Metrics.GraphMetric.cpu.caption(from: delta, snapshot: snapshot) == "0.4%")
+        #expect(Core.Metrics.GraphMetric.cpu.chipCaption(from: delta, snapshot: snapshot) == "0.4%")
+        #expect(Core.Metrics.GraphMetric.memory.chipCaption(from: delta, snapshot: snapshot) == "0.4%")
 
-        let machine = StatsNormalizationContext(mode: .machine,
+        let machine = Core.Metrics.NormalizationContext(mode: .machine,
                                                 machineCPUs: 16,
                                                 machineMemoryBytes: 2_000_000)
-        #expect(GraphMetric.cpu.chipCaption(from: delta,
+        #expect(Core.Metrics.GraphMetric.cpu.chipCaption(from: delta,
                                             snapshot: snapshot,
                                             normalization: machine) == "0.2%")
-        #expect(GraphMetric.memory.chipCaption(from: delta,
+        #expect(Core.Metrics.GraphMetric.memory.chipCaption(from: delta,
                                                snapshot: snapshot,
                                                normalization: machine) == "0.2%")
     }
 
     @Test func graphMetricCaptionsKeepTinyContainerCPUVisible() {
         let snapshot = Self.snapshot(id: "web", cpus: 4, memoryInBytes: 1_000_000)
-        let delta = StatsDelta(id: "web",
+        let delta = Core.Metrics.StatsDelta(id: "web",
                                cpuCoreFraction: 0.0012,
                                memoryUsageBytes: 4_000,
                                memoryLimitBytes: 1_000_000,
@@ -173,17 +173,17 @@ struct ContainersStoreRefreshTests {
                                blockWriteBytesPerSec: 40,
                                numProcesses: 2)
 
-        #expect(GraphMetric.cpu.value(from: delta, snapshot: snapshot) == 0.0003)
-        #expect(GraphMetric.cpu.caption(from: delta, snapshot: snapshot) == "0.03%")
-        #expect(GraphMetric.cpu.chipCaption(from: delta, snapshot: snapshot) == "0.03%")
+        #expect(Core.Metrics.GraphMetric.cpu.value(from: delta, snapshot: snapshot) == 0.0003)
+        #expect(Core.Metrics.GraphMetric.cpu.caption(from: delta, snapshot: snapshot) == "0.03%")
+        #expect(Core.Metrics.GraphMetric.cpu.chipCaption(from: delta, snapshot: snapshot) == "0.03%")
     }
 
     @Test func graphMetricCaptionsCanUseMachineResourceLimits() {
         let snapshot = Self.snapshot(id: "web", cpus: 4, memoryInBytes: 1_024)
-        let normalization = StatsNormalizationContext(mode: .machine,
+        let normalization = Core.Metrics.NormalizationContext(mode: .machine,
                                                       machineCPUs: 8,
                                                       machineMemoryBytes: 4_096)
-        let delta = StatsDelta(id: "web",
+        let delta = Core.Metrics.StatsDelta(id: "web",
                                cpuCoreFraction: 1,
                                memoryUsageBytes: 512,
                                memoryLimitBytes: 2_048,
@@ -193,11 +193,11 @@ struct ContainersStoreRefreshTests {
                                blockWriteBytesPerSec: 40,
                                numProcesses: 2)
 
-        #expect(GraphMetric.cpu.value(from: delta, snapshot: snapshot, normalization: normalization) == 0.125)
-        #expect(GraphMetric.memory.value(from: delta, snapshot: snapshot, normalization: normalization) == 0.125)
-        #expect(GraphMetric.cpu.caption(from: delta, snapshot: snapshot, normalization: normalization) == "13%")
-        #expect(GraphMetric.memory.caption(from: delta, snapshot: snapshot, normalization: normalization) == "13%")
-        #expect(GraphMetric.memoryLimitBytes(for: delta, snapshot: snapshot, normalization: normalization) == 4_096)
+        #expect(Core.Metrics.GraphMetric.cpu.value(from: delta, snapshot: snapshot, normalization: normalization) == 0.125)
+        #expect(Core.Metrics.GraphMetric.memory.value(from: delta, snapshot: snapshot, normalization: normalization) == 0.125)
+        #expect(Core.Metrics.GraphMetric.cpu.caption(from: delta, snapshot: snapshot, normalization: normalization) == "13%")
+        #expect(Core.Metrics.GraphMetric.memory.caption(from: delta, snapshot: snapshot, normalization: normalization) == "13%")
+        #expect(Core.Metrics.GraphMetric.memoryLimitBytes(for: delta, snapshot: snapshot, normalization: normalization) == 4_096)
     }
 
     @Test func graphMetricHistoryValuesUseCurrentNormalization() {
@@ -211,16 +211,16 @@ struct ContainersStoreRefreshTests {
                                   diskReadBytesPerSec: 30,
                                   diskWriteBytesPerSec: 40)
 
-        #expect(GraphMetric.cpu.value(from: sample, snapshot: snapshot) == 0.25)
-        #expect(GraphMetric.memory.value(from: sample, snapshot: snapshot, memoryFallbackBytes: 2_048) == 0.5)
-        #expect(GraphMetric.netRx.value(from: sample, snapshot: snapshot) == 10)
-        #expect(GraphMetric.diskWrite.value(from: sample, snapshot: snapshot) == 40)
+        #expect(Core.Metrics.GraphMetric.cpu.value(from: sample, snapshot: snapshot) == 0.25)
+        #expect(Core.Metrics.GraphMetric.memory.value(from: sample, snapshot: snapshot, memoryFallbackBytes: 2_048) == 0.5)
+        #expect(Core.Metrics.GraphMetric.netRx.value(from: sample, snapshot: snapshot) == 10)
+        #expect(Core.Metrics.GraphMetric.diskWrite.value(from: sample, snapshot: snapshot) == 40)
 
-        let machine = StatsNormalizationContext(mode: .machine,
+        let machine = Core.Metrics.NormalizationContext(mode: .machine,
                                                 machineCPUs: 8,
                                                 machineMemoryBytes: 4_096)
-        #expect(GraphMetric.cpu.value(from: sample, snapshot: snapshot, normalization: machine) == 0.125)
-        #expect(GraphMetric.memory.value(from: sample,
+        #expect(Core.Metrics.GraphMetric.cpu.value(from: sample, snapshot: snapshot, normalization: machine) == 0.125)
+        #expect(Core.Metrics.GraphMetric.memory.value(from: sample,
                                          snapshot: snapshot,
                                          normalization: machine,
                                          memoryFallbackBytes: 2_048) == 0.125)
@@ -255,7 +255,7 @@ struct ContainersStoreRefreshTests {
         #expect(containerPoints.map { $0.netRxKBPerSec } == [1, 2])
         #expect(containerPoints.map { $0.netTxKBPerSec } == [2, 4])
 
-        let machine = StatsNormalizationContext(mode: .machine,
+        let machine = Core.Metrics.NormalizationContext(mode: .machine,
                                                 machineCPUs: 4,
                                                 machineMemoryBytes: 2_048)
         let machinePoints = HistoryChartPoint.points(from: samples,
@@ -280,7 +280,7 @@ struct ContainersStoreRefreshTests {
         #expect(metrics.values(for: .cpu).last == 0.5)
         #expect(metrics.values(for: .memory).last == 0.5)
 
-        store.configureStatsNormalization(StatsNormalizationContext(mode: .machine,
+        store.configureStatsNormalization(Core.Metrics.NormalizationContext(mode: .machine,
                                                                     machineCPUs: 4,
                                                                     machineMemoryBytes: 2_000))
 
@@ -288,7 +288,7 @@ struct ContainersStoreRefreshTests {
         #expect(metrics.values(for: .memory) == [0.25])
     }
 
-    private static func streamedStats(cpuCoreFraction: Double, networkRxBytes: UInt64) -> RuntimeStatsSnapshot {
+    private static func streamedStats(cpuCoreFraction: Double, networkRxBytes: UInt64) -> Core.Metrics.RuntimeStatsSnapshot {
         streamedStats(id: "fixture-web",
                       cpuCoreFraction: cpuCoreFraction,
                       memoryUsageBytes: 2_322_432,
@@ -299,8 +299,8 @@ struct ContainersStoreRefreshTests {
                                       cpuCoreFraction: Double,
                                       memoryUsageBytes: UInt64,
                                       memoryLimitBytes: UInt64 = 1_073_741_824,
-                                      networkRxBytes: UInt64) -> RuntimeStatsSnapshot {
-        RuntimeStatsSnapshot(id: id,
+                                      networkRxBytes: UInt64) -> Core.Metrics.RuntimeStatsSnapshot {
+        Core.Metrics.RuntimeStatsSnapshot(id: id,
                              cpuCoreFraction: cpuCoreFraction,
                              memoryUsageBytes: memoryUsageBytes,
                              memoryLimitBytes: memoryLimitBytes,
@@ -311,7 +311,7 @@ struct ContainersStoreRefreshTests {
                              numProcesses: 1)
     }
 
-    private static func snapshot(id: String, cpus: Int, memoryInBytes: UInt64) -> ContainerSnapshot {
+    private static func snapshot(id: String, cpus: Int, memoryInBytes: UInt64) -> Core.Container.Snapshot {
         let payload = """
         {
           "configuration": {
@@ -327,7 +327,7 @@ struct ContainersStoreRefreshTests {
           "status": { "state": "running" }
         }
         """
-        return try! JSONDecoder().decode(ContainerSnapshot.self, from: Data(payload.utf8))
+        return try! JSONDecoder().decode(Core.Container.Snapshot.self, from: Data(payload.utf8))
     }
 }
 
@@ -343,13 +343,13 @@ private final class TestClock {
     }
 }
 
-private actor RecordingRunner: CommandRunning {
+private actor RecordingRunner: Core.Command.Running {
     private var calls: [[String]] = []
     private var statsRuns = 0
 
     func run(_ arguments: [String],
              stdin: Data?,
-             priority: CommandExecutionPriority) async throws -> Data {
+             priority: Core.Command.ExecutionPriority) async throws -> Data {
         calls.append(arguments)
         switch arguments.first {
         case "list":
@@ -362,7 +362,7 @@ private actor RecordingRunner: CommandRunning {
         }
     }
 
-    nonisolated func stream(_ arguments: [String], priority: CommandExecutionPriority) -> AsyncThrowingStream<String, Error> {
+    nonisolated func stream(_ arguments: [String], priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in continuation.finish() }
     }
 

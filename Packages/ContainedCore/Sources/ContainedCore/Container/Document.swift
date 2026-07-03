@@ -1,21 +1,25 @@
 import Foundation
 
-public struct ContainerSpec: Codable, Equatable, Sendable {
-    public var createRequest: ContainerCreateRequest
+public extension Core.Container {
+struct Spec: Codable, Equatable, Sendable {
+    public var createRequest: Core.Container.CreateRequest
 
-    public init(createRequest: ContainerCreateRequest = ContainerCreateRequest()) {
+    public init(createRequest: Core.Container.CreateRequest = Core.Container.CreateRequest()) {
         self.createRequest = createRequest
     }
 }
 
-public struct RuntimeProjection: Codable, Equatable, Sendable {
-    public var kind: RuntimeKind
-    public var schemaVersion: CoreSchemaVersion
+}
+
+public extension Core.Runtime {
+struct Projection: Codable, Equatable, Sendable {
+    public var kind: Core.Runtime.Kind
+    public var schemaVersion: Core.Schema.Version
     public var preservedFields: [String: String]
     public var unsupportedFields: [String]
 
-    public init(kind: RuntimeKind,
-                schemaVersion: CoreSchemaVersion = .current,
+    public init(kind: Core.Runtime.Kind,
+                schemaVersion: Core.Schema.Version = .current,
                 preservedFields: [String: String] = [:],
                 unsupportedFields: [String] = []) {
         self.kind = kind
@@ -24,17 +28,21 @@ public struct RuntimeProjection: Codable, Equatable, Sendable {
         self.unsupportedFields = unsupportedFields
     }
 }
+}
 
-public struct ContainerDocument: Codable, Equatable, Sendable {
-    public var canonical: ContainerSpec
-    public var projections: [RuntimeKind: RuntimeProjection]
-    public var provenance: RuntimeFieldProvenanceMap
+public extension Core.Container {
+struct Document: Codable, Equatable, Sendable {
+    public var canonical: Core.Container.Spec
+    public var projections: [Core.Runtime.Kind: Core.Runtime.Projection]
+    public var provenance: Core.Field.ProvenanceMap
 
-    public init(canonical: ContainerSpec = ContainerSpec(),
-                projections: [RuntimeKind: RuntimeProjection] = [:],
-                provenance: RuntimeFieldProvenanceMap = RuntimeFieldProvenanceMap()) {
+    public init(canonical: Core.Container.Spec = Core.Container.Spec(),
+                projections: [Core.Runtime.Kind: Core.Runtime.Projection] = [:],
+                provenance: Core.Field.ProvenanceMap = Core.Field.ProvenanceMap()) {
         self.canonical = canonical
         self.projections = projections
         self.provenance = provenance
     }
+}
+
 }

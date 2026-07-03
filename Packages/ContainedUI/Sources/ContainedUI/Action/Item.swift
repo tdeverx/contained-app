@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Semantic action description for package-owned glass action chrome.
-public struct ActionItem {
+public extension UI.Action {
+struct Item {
     public var systemName: String
     public var title: String?
     public var help: String
@@ -28,4 +29,5 @@ public struct ActionItem {
         self.isEnabled = isEnabled
         self.action = action
     }
+}
 }

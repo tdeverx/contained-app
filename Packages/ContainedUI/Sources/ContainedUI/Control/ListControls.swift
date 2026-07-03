@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct ListStack<Content: View>: View {
+public extension UI.List {
+struct Stack<Content: View>: View {
     public var spacing: CGFloat
     public var padding: CGFloat
     @ViewBuilder public var content: () -> Content
@@ -21,7 +22,7 @@ public struct ListStack<Content: View>: View {
     }
 }
 
-public struct ListSection<Content: View>: View {
+struct Section<Content: View>: View {
     public var title: String
     public var spacing: CGFloat
     @ViewBuilder public var content: () -> Content
@@ -36,13 +37,13 @@ public struct ListSection<Content: View>: View {
 
     public var body: some View {
         LazyVStack(alignment: .leading, spacing: spacing) {
-            SectionLabel(title)
+            UI.State.SectionLabel(title)
             content()
         }
     }
 }
 
-public struct MetadataRow<Accessory: View>: View {
+struct MetadataRow<Accessory: View>: View {
     public var systemImage: String
     public var title: String
     public var subtitle: String?
@@ -93,8 +94,9 @@ public struct MetadataRow<Accessory: View>: View {
         }
     }
 }
+}
 
-public extension MetadataRow where Accessory == EmptyView {
+public extension UI.List.MetadataRow where Accessory == EmptyView {
     init(systemImage: String,
          title: String,
          subtitle: String? = nil,
@@ -112,7 +114,8 @@ public extension MetadataRow where Accessory == EmptyView {
     }
 }
 
-public struct MetadataBadgeRow<Accessory: View>: View {
+public extension UI.List {
+struct MetadataBadgeRow<Accessory: View>: View {
     public var systemImage: String
     public var title: String
     public var badge: String?
@@ -148,7 +151,7 @@ public struct MetadataBadgeRow<Accessory: View>: View {
                         .font(isMonospaced ? .system(.callout, design: .monospaced) : .callout)
                         .lineLimit(1)
                     if let badge {
-                        BadgeText(text: badge)
+                        UI.Badge.Text(text: badge)
                     }
                 }
                 if let subtitle {
@@ -164,7 +167,7 @@ public struct MetadataBadgeRow<Accessory: View>: View {
     }
 }
 
-public struct KeyValueRow: View {
+struct KeyValueRow: View {
     public var label: String
     public var value: String
     public var valueMonospaced: Bool
@@ -208,7 +211,7 @@ public struct KeyValueRow: View {
     }
 }
 
-public struct CompactInfoRow: View {
+struct CompactInfoRow: View {
     public var title: String
     public var value: String
     public var titleWidth: CGFloat
@@ -232,4 +235,5 @@ public struct CompactInfoRow: View {
             Spacer(minLength: 0)
         }
     }
+}
 }

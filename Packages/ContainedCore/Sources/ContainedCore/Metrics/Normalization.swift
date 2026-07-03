@@ -1,20 +1,21 @@
 import Foundation
 
-public enum StatsNormalizationMode: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
+public extension Core.Metrics {
+enum NormalizationMode: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
     case container
     case machine = "global"
 
     public var id: String { rawValue }
 }
 
-public struct StatsNormalizationContext: Equatable, Sendable {
-    public var mode: StatsNormalizationMode
+struct NormalizationContext: Equatable, Sendable {
+    public var mode: Core.Metrics.NormalizationMode
     public var machineCPUs: Int?
     public var machineMemoryBytes: UInt64?
 
-    public static let containerSpecific = StatsNormalizationContext(mode: .container)
+    public static let containerSpecific = Core.Metrics.NormalizationContext(mode: .container)
 
-    public init(mode: StatsNormalizationMode = .container,
+    public init(mode: Core.Metrics.NormalizationMode = .container,
                 machineCPUs: Int? = nil,
                 machineMemoryBytes: UInt64? = nil) {
         self.mode = mode
@@ -22,7 +23,7 @@ public struct StatsNormalizationContext: Equatable, Sendable {
         self.machineMemoryBytes = machineMemoryBytes
     }
 
-    public func cpuLimit(for snapshot: ContainerSnapshot?) -> Double {
+    public func cpuLimit(for snapshot: Core.Container.Snapshot?) -> Double {
         switch mode {
         case .container:
             return max(Double(snapshot?.configuration.resources.cpus ?? 1), 1)
@@ -31,7 +32,7 @@ public struct StatsNormalizationContext: Equatable, Sendable {
         }
     }
 
-    public func memoryLimitBytes(for snapshot: ContainerSnapshot?, fallback: UInt64 = 0) -> UInt64 {
+    public func memoryLimitBytes(for snapshot: Core.Container.Snapshot?, fallback: UInt64 = 0) -> UInt64 {
         switch mode {
         case .container:
             let configuredLimit = snapshot?.configuration.resources.memoryInBytes ?? 0
@@ -44,7 +45,9 @@ public struct StatsNormalizationContext: Equatable, Sendable {
         }
     }
 
-    public func memoryLimitBytes(for delta: StatsDelta, snapshot: ContainerSnapshot?) -> UInt64 {
+    public func memoryLimitBytes(for delta: Core.Metrics.StatsDelta, snapshot: Core.Container.Snapshot?) -> UInt64 {
         memoryLimitBytes(for: snapshot, fallback: delta.memoryLimitBytes)
     }
+}
+
 }

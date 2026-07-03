@@ -1,6 +1,7 @@
 import SwiftUI
 
-public struct SearchField: View {
+public extension UI.Control {
+struct SearchField: View {
     @Binding public var text: String
     public var prompt: String
     public var clearLabel: String
@@ -20,7 +21,7 @@ public struct SearchField: View {
     }
 
     public var body: some View {
-        InputCluster {
+        UI.Control.InputCluster {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
             TextField(prompt, text: $text)
@@ -41,4 +42,4 @@ public struct SearchField: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
-
+}

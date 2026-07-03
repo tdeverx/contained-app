@@ -1,6 +1,7 @@
 import Foundation
 
-public struct RegistryImageReference: Sendable, Hashable {
+public extension Core.Registry {
+struct ImageReference: Sendable, Hashable {
     public let original: String
     public let registry: String
     public let repository: String
@@ -19,7 +20,7 @@ public struct RegistryImageReference: Sendable, Hashable {
         return "\(displayRegistry)/\(repository)\(separator)\(reference)"
     }
 
-    public static func parse(_ raw: String) -> RegistryImageReference {
+    public static func parse(_ raw: String) -> Core.Registry.ImageReference {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let digestSplit = trimmed.split(separator: "@", maxSplits: 1, omittingEmptySubsequences: false)
         let namePart = String(digestSplit.first ?? "")
@@ -61,7 +62,7 @@ public struct RegistryImageReference: Sendable, Hashable {
             registry = rawRegistry
         }
 
-        return RegistryImageReference(
+        return Core.Registry.ImageReference(
             original: trimmed,
             registry: registry,
             repository: repository,
@@ -73,4 +74,6 @@ public struct RegistryImageReference: Sendable, Hashable {
     public static func normalizedKey(_ raw: String) -> String {
         parse(raw).normalizedKey
     }
+}
+
 }

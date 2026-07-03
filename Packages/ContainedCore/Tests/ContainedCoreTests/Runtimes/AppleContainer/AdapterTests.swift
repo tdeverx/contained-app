@@ -5,7 +5,7 @@ import Testing
 @Suite("Runtime adapter boundary")
 struct AppleContainerAdapterTests {
     @Test func runtimeKindAcceptsFutureAdapters() throws {
-        let descriptor = RuntimeDescriptor(kind: RuntimeKind(rawValue: "future-engine"),
+        let descriptor = Core.Runtime.Descriptor(kind: Core.Runtime.Kind(rawValue: "future-engine"),
                                            displayName: "Future Engine",
                                            capabilities: [.containers])
 
@@ -13,12 +13,12 @@ struct AppleContainerAdapterTests {
         #expect(descriptor.executableName == nil)
         #expect(descriptor.supports(.containers))
         #expect(!descriptor.supports(.imageBuild))
-        #expect(throws: UnsupportedRuntimeCapability.self) {
+        #expect(throws: Core.Runtime.UnsupportedCapability.self) {
             try descriptor.require(.imageBuild)
         }
         do {
             try descriptor.require(.imageBuild)
-        } catch let error as UnsupportedRuntimeCapability {
+        } catch let error as Core.Runtime.UnsupportedCapability {
             #expect(error.packageName == "ContainedCore")
             #expect(error.packageErrorCode == "unsupportedRuntimeCapability")
             #expect(error.packageErrorContext["kind"] == "future-engine")
@@ -26,7 +26,7 @@ struct AppleContainerAdapterTests {
     }
 
     @Test func commandErrorsExposePackageCodesAndContext() {
-        let error = CommandError.nonZeroExit(code: 42, stderr: "boom", command: "container list")
+        let error = Core.Command.Error.nonZeroExit(code: 42, stderr: "boom", command: "container list")
 
         #expect(error.packageName == "ContainedCore")
         #expect(error.packageErrorCode == "nonZeroExit")
@@ -47,7 +47,7 @@ struct AppleContainerAdapterTests {
     }
 
     @Test func appleRuntimeDescriptorAdvertisesCurrentCapabilities() throws {
-        let descriptor = RuntimeDescriptor.appleContainer
+        let descriptor = Core.Runtime.Descriptor.appleContainer
 
         #expect(descriptor.kind == .appleContainer)
         #expect(descriptor.displayName == "Apple container")
@@ -60,7 +60,7 @@ struct AppleContainerAdapterTests {
     }
 
     @Test func appleCreateTranslatorBuildsPreviewAndResult() {
-        var request = ContainerCreateRequest()
+        var request = Core.Container.CreateRequest()
         request.image = "nginx:latest"
         request.name = "web"
         request.cpus = "2"
@@ -95,7 +95,7 @@ struct AppleContainerAdapterTests {
               test: ["CMD", "curl", "-f", "http://localhost:8080"]
               retries: 2
         """
-        let project = try ComposeParser.parse(yaml, projectName: "demo")
+        let project = try Core.Compose.Parser.parse(yaml, projectName: "demo")
         let base = URL(filePath: "/opt/stacks/demo", directoryHint: .isDirectory)
         let plan = AppleContainerCreateTranslator.composePlan(for: project, baseDirectory: base)
         let item = try #require(plan.items.first)
@@ -134,7 +134,7 @@ struct AppleContainerAdapterTests {
         let bad = MockCommandRunner(result: .success(Data("Error: content with digest sha256:...".utf8)))
         let client = AppleContainerClient(runner: bad)
 
-        await #expect(throws: CommandError.self) {
+        await #expect(throws: Core.Command.Error.self) {
             _ = try await client.listContainers()
         }
     }
@@ -145,7 +145,7 @@ struct AppleContainerAdapterTests {
                                                                       command: "list")))
         let client = AppleContainerClient(runner: failing)
 
-        await #expect(throws: CommandError.self) {
+        await #expect(throws: Core.Command.Error.self) {
             _ = try await client.listContainers()
         }
     }
@@ -188,7 +188,7 @@ struct AppleContainerAdapterTests {
         let stream = try Fixture.string("stats-table")
         let runner = MockCommandRunner(result: .success(Data()), streamChunks: [stream])
         let runtime: any ContainerRuntimeClient = AppleContainerClient(runner: runner)
-        var received: [[RuntimeStatsSnapshot]] = []
+        var received: [[Core.Metrics.RuntimeStatsSnapshot]] = []
 
         for try await samples in runtime.streamStats(ids: ["buildkit", "sonarrhd"]) {
             received.append(samples)

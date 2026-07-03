@@ -5,14 +5,15 @@ import Foundation
 /// The local environment has no volumes yet (fixture is `[]`), so this is modeled leniently from
 /// the `apple/container` source layout (`configuration` + computed `name`/`labels`). Fields are
 /// confirmed/expanded once a real volume fixture is captured.
-public struct VolumeResource: Codable, Sendable, Identifiable, Hashable {
-    public let configuration: VolumeConfiguration
+public extension Core.Volume {
+struct Resource: Codable, Sendable, Identifiable, Hashable {
+    public let configuration: Core.Volume.Configuration
     public var id: String { configuration.name }
     public var name: String { configuration.name }
     public var labels: [String: String] { configuration.labels }
 }
 
-public struct VolumeConfiguration: Codable, Sendable, Hashable {
+struct Configuration: Codable, Sendable, Hashable {
     public let name: String
     public let source: String?
     public let format: String?
@@ -29,4 +30,6 @@ public struct VolumeConfiguration: Codable, Sendable, Hashable {
         creationDate = try c.decodeIfPresent(Date.self, forKey: .creationDate)
         labels = try c.decodeIfPresent([String: String].self, forKey: .labels) ?? [:]
     }
+}
+
 }

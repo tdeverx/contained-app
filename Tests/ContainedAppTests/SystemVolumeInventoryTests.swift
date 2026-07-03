@@ -6,10 +6,10 @@ import ContainedCore
 @Suite("System volume inventory")
 struct SystemVolumeInventoryTests {
     @Test func classifiesNamedBindAndAnonymousMounts() throws {
-        let volume = try decode(VolumeResource.self, from: """
+        let volume = try decode(Core.Volume.Resource.self, from: """
         {"configuration":{"name":"data","format":"apfs","sizeInBytes":1024}}
         """)
-        let snapshot = try decode(ContainerSnapshot.self, from: """
+        let snapshot = try decode(Core.Container.Snapshot.self, from: """
         {
           "id": "web",
           "status": {"state": "running"},

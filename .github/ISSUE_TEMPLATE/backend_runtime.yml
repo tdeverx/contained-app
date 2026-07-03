@@ -1,5 +1,5 @@
 name: Backend or runtime work
-description: Apple container, Docker compatibility, command abstraction, compose, or runtime behavior
+description: Apple container, Docker-compatible runtimes, command orchestration, Compose, or runtime behavior
 labels: ["feature", "backend", "triage"]
 body:
   - type: textarea
@@ -7,7 +7,7 @@ body:
     attributes:
       label: Runtime area
       description: What backend, command, data model, or runtime behavior is involved?
-      placeholder: Apple container, Docker, compose, images, networks, volumes, command building...
+      placeholder: Apple container, Docker-compatible runtime, Compose, images, networks, volumes, command previews...
     validations:
       required: true
 
@@ -25,8 +25,8 @@ body:
       label: Research / design checklist
       description: What should be answered before implementation starts?
       placeholder: |
-        - [ ] Inventory affected ContainerCommands and ContainerClient call sites
-        - [ ] Identify Apple container compatibility requirements
+        - [ ] Inventory affected Core.Orchestrator operations and adapter internals
+        - [ ] Identify Apple container runtime requirements
         - [ ] Note Docker or future-backend differences
     validations:
       required: false
@@ -37,8 +37,8 @@ body:
       label: Implementation checklist
       description: What likely needs to change?
       placeholder: |
-        - [ ] Keep CLI actions behind ContainerCommands and ContainerClient
-        - [ ] Put pure decisions in ContainedCore
+        - [ ] Keep CLI actions behind ContainedCore adapter internals
+        - [ ] Route app-owned backend work through Core.Orchestrator
         - [ ] Add focused tests
     validations:
       required: false
@@ -48,7 +48,7 @@ body:
     attributes:
       label: Acceptance criteria
       placeholder: |
-        - [ ] Existing Apple container behavior stays compatible
+        - [ ] Existing Apple container behavior stays intact
         - [ ] SwiftUI does not assemble backend argv inline
         - [ ] Unsupported backend capabilities are handled clearly
     validations:
@@ -57,7 +57,7 @@ body:
   - type: textarea
     id: related
     attributes:
-      label: Related links, blockers, or compatibility notes
+      label: Related links, blockers, or runtime notes
       description: Issues, docs, commands, migration concerns, backend-specific notes, known blockers, or a suggested milestone.
     validations:
       required: false

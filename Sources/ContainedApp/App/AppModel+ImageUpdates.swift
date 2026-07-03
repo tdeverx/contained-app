@@ -32,14 +32,14 @@ extension AppModel {
     // MARK: Status lookup
 
     /// The tracked update status for an image reference (defaults to an empty/unknown status).
-    func imageUpdateStatus(for reference: String) -> ImageUpdateStatus {
-        imageUpdates[imageUpdateKey(reference)] ?? ImageUpdateStatus()
+    func imageUpdateStatus(for reference: String) -> Core.Image.UpdateStatus {
+        imageUpdates[imageUpdateKey(reference)] ?? Core.Image.UpdateStatus()
     }
 
     /// The normalized dictionary key for a reference, so `nginx` and `docker.io/library/nginx:latest`
     /// map to the same tracked status.
     func imageUpdateKey(_ reference: String) -> String {
-        RegistryImageReference.normalizedKey(reference)
+        Core.Registry.ImageReference.normalizedKey(reference)
     }
 
     // MARK: Sweeps
@@ -101,7 +101,7 @@ extension AppModel {
                 if notify { flash(AppText.imageLocalDigestUnavailable(Format.shortImage(reference))) }
                 return
             }
-            let status = ImageUpdateStatus.resolved(localDigest: localDigest, remoteDigest: remoteDigest)
+            let status = Core.Image.UpdateStatus.resolved(localDigest: localDigest, remoteDigest: remoteDigest)
             imageUpdates[key] = status
             if notify {
                 switch status.state {
@@ -148,7 +148,7 @@ extension AppModel {
             do {
                 images = try await client.images()
                 imagesError = nil
-            } catch let error as CommandError {
+            } catch let error as Core.Command.Error {
                 imagesError = error.appDisplayMessage
                 return
             } catch {
@@ -220,17 +220,17 @@ extension AppModel {
 
     // MARK: Persistence
 
-    static func loadImageUpdates(defaults: UserDefaults = .standard) -> [String: ImageUpdateStatus] {
+    static func loadImageUpdates(defaults: UserDefaults = .standard) -> [String: Core.Image.UpdateStatus] {
         guard let data = defaults.data(forKey: imageUpdatesKey),
-              let decoded = try? JSONDecoder().decode([String: ImageUpdateStatus].self, from: data) else {
+              let decoded = try? JSONDecoder().decode([String: Core.Image.UpdateStatus].self, from: data) else {
             return [:]
         }
         // Never persist a transient "checking" state; restore it as unknown.
-        return decoded.mapValues { $0.state == .checking ? ImageUpdateStatus() : $0 }
+        return decoded.mapValues { $0.state == .checking ? Core.Image.UpdateStatus() : $0 }
     }
 
-    static func saveImageUpdates(_ updates: [String: ImageUpdateStatus], defaults: UserDefaults = .standard) {
-        let stable = updates.mapValues { $0.state == .checking ? ImageUpdateStatus() : $0 }
+    static func saveImageUpdates(_ updates: [String: Core.Image.UpdateStatus], defaults: UserDefaults = .standard) {
+        let stable = updates.mapValues { $0.state == .checking ? Core.Image.UpdateStatus() : $0 }
         if let data = try? JSONEncoder().encode(stable) {
             defaults.set(data, forKey: imageUpdatesKey)
         }

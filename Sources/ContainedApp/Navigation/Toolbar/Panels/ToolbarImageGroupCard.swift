@@ -8,7 +8,7 @@ import ContainedCore
 struct ToolbarImageGroupCard: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    let group: LocalImageTagGroup
+    let group: Core.Image.LocalTagGroup
     let isExpanded: Bool
     var onTap: () -> Void
     var onClose: () -> Void
@@ -125,7 +125,7 @@ struct ToolbarImageGroupCard: View {
     // MARK: Detail sub-pages
 
     @ViewBuilder
-    private func imageBody(_ group: LocalImageTagGroup) -> some View {
+    private func imageBody(_ group: Core.Image.LocalTagGroup) -> some View {
         if !isExpanded {
             tagList(group)
         } else {
@@ -294,7 +294,7 @@ struct ToolbarImageGroupCard: View {
                              action: .none)
         }
 
-        let parsed = RegistryImageReference.parse(reference)
+        let parsed = Core.Registry.ImageReference.parse(reference)
         let registry = displayRegistry(parsed.registry)
 
         guard !parsed.isDigestReference else {
@@ -345,7 +345,7 @@ struct ToolbarImageGroupCard: View {
                 tagBusy = false
                 tagTarget = ""
                 withAnimation(spring) { page = .tags }
-            } catch let error as CommandError {
+            } catch let error as Core.Command.Error {
                 app.flash(error.appDisplayMessage); tagBusy = false
             } catch {
                 app.flash(error.appDisplayMessage); tagBusy = false
@@ -397,7 +397,7 @@ struct ToolbarImageGroupCard: View {
         }
     }
 
-    private func imageFooterInfo(_ status: ImageUpdateStatus) -> some View {
+    private func imageFooterInfo(_ status: Core.Image.UpdateStatus) -> some View {
         UI.Card.FooterMini {
             UI.Symbol.Image(systemName: updateSymbol(status.state),
                          tone: updateTone(status.state),
@@ -407,7 +407,7 @@ struct ToolbarImageGroupCard: View {
         }
     }
 
-    private func imageFooterTagCount(_ group: LocalImageTagGroup) -> some View {
+    private func imageFooterTagCount(_ group: Core.Image.LocalTagGroup) -> some View {
         UI.Card.FooterMini {
             UI.Symbol.Image(systemName: "tag", size: .caption)
         } text: {
@@ -416,7 +416,7 @@ struct ToolbarImageGroupCard: View {
     }
 
     @ViewBuilder
-    private func imageFooterActions(_ group: LocalImageTagGroup) -> some View {
+    private func imageFooterActions(_ group: Core.Image.LocalTagGroup) -> some View {
         footerAction("play", help: AppText.run) {
             ui.runImage(group.primaryReference)
             if isExpanded { onClose() }
@@ -435,7 +435,7 @@ struct ToolbarImageGroupCard: View {
         footerAction("trash", help: AppText.prune, role: .destructive) { pruning = true }
     }
 
-    private func tagList(_ group: LocalImageTagGroup) -> some View {
+    private func tagList(_ group: Core.Image.LocalTagGroup) -> some View {
         LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
             Text("Tags")
                 .designHeadlineLabelStyle()
@@ -453,7 +453,7 @@ struct ToolbarImageGroupCard: View {
         }
     }
 
-    private func tagRow(_ reference: String, in group: LocalImageTagGroup) -> some View {
+    private func tagRow(_ reference: String, in group: Core.Image.LocalTagGroup) -> some View {
         let style = app.imageStyle(for: reference)
         return UI.Card.Scaffold(size: .medium,
                             fill: style.fillBackground ? style.color : nil,
@@ -498,7 +498,7 @@ struct ToolbarImageGroupCard: View {
     /// Right-click actions for a single tag — mirrors the footer buttons so the row is consistent with
     /// the group card (which has its own context menu).
     @ViewBuilder
-    private func tagMenu(_ reference: String, in group: LocalImageTagGroup) -> some View {
+    private func tagMenu(_ reference: String, in group: Core.Image.LocalTagGroup) -> some View {
         Button { ui.runImage(reference); if isExpanded { onClose() } } label: { Label("Run…", systemImage: "play") }
         Button { copyToPasteboard(reference) } label: { Label("Copy reference", systemImage: "doc.on.doc") }
         Divider()
@@ -516,7 +516,7 @@ struct ToolbarImageGroupCard: View {
     }
 
     @ViewBuilder
-    private func cardMenu(_ group: LocalImageTagGroup) -> some View {
+    private func cardMenu(_ group: Core.Image.LocalTagGroup) -> some View {
         Button { ui.runImage(group.primaryReference) } label: { Label("Run…", systemImage: "play") }
         if let image = primaryImage(group) {
             // History / Tag / Push grow the detail morph into a sub-page, so they're offered only
@@ -549,7 +549,7 @@ struct ToolbarImageGroupCard: View {
         UI.Card.IconChip(symbol: style.symbol, tint: style.color)
     }
 
-    private func updateSymbol(_ state: ImageUpdateState) -> String {
+    private func updateSymbol(_ state: Core.Image.UpdateState) -> String {
         switch state {
         case .unknown: return "questionmark.circle"
         case .checking: return "arrow.triangle.2.circlepath"
@@ -559,7 +559,7 @@ struct ToolbarImageGroupCard: View {
         }
     }
 
-    private func updateTone(_ state: ImageUpdateState) -> UI.State.Tone {
+    private func updateTone(_ state: Core.Image.UpdateState) -> UI.State.Tone {
         switch state {
         case .current: return .success
         case .updateAvailable, .error: return .warning
@@ -569,7 +569,7 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func repositoryName(_ reference: String) -> String {
-        let parsed = RegistryImageReference.parse(reference)
+        let parsed = Core.Registry.ImageReference.parse(reference)
         if parsed.registry == "registry-1.docker.io", parsed.repository.hasPrefix("library/") {
             return String(parsed.repository.dropFirst("library/".count))
         }
@@ -577,12 +577,12 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func repositoryTitle(_ reference: String) -> String {
-        let parsed = RegistryImageReference.parse(reference)
+        let parsed = Core.Registry.ImageReference.parse(reference)
         return parsed.repository.split(separator: "/").map(String.init).last ?? parsed.repository
     }
 
     private func repositoryOwner(_ reference: String) -> String {
-        let parsed = RegistryImageReference.parse(reference)
+        let parsed = Core.Registry.ImageReference.parse(reference)
         let parts = parsed.repository.split(separator: "/").map(String.init)
         if parts.count > 1 {
             return parts.dropLast().joined(separator: "/")
@@ -590,7 +590,7 @@ struct ToolbarImageGroupCard: View {
         return parsed.registry == "registry-1.docker.io" ? "docker.io" : parsed.registry
     }
 
-    private func updateFooterText(_ status: ImageUpdateStatus) -> String {
+    private func updateFooterText(_ status: Core.Image.UpdateStatus) -> String {
         switch status.state {
         case .unknown: return "Not checked"
         case .checking: return "Checking"
@@ -600,7 +600,7 @@ struct ToolbarImageGroupCard: View {
         }
     }
 
-    private func primaryImage(_ group: LocalImageTagGroup) -> ContainedCore.ImageResource? {
+    private func primaryImage(_ group: Core.Image.LocalTagGroup) -> Core.Image.Resource? {
         group.images.first { $0.reference == group.primaryReference } ?? group.images.first
     }
 
@@ -613,7 +613,7 @@ struct ToolbarImageGroupCard: View {
                 set: { if !$0 { confirmingPushReference = nil } })
     }
 
-    private func matchingRegistryLogin(for registry: String) -> RegistryLogin? {
+    private func matchingRegistryLogin(for registry: String) -> Core.Registry.Login? {
         let normalized = normalizedRegistryHost(registry)
         return app.registries.first { normalizedRegistryHost($0.host) == normalized }
     }
@@ -646,18 +646,18 @@ struct ToolbarImageGroupCard: View {
             await app.refreshImagesIfNeeded(force: true)
             app.flash(AppText.deletedImage(Format.shortImage(reference)))
             deletingReference = nil
-        } catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        } catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
     }
 
     private func prune(all: Bool) async {
         guard let client = app.client else { return }
         do { _ = try await client.pruneImages(all: all); await app.refreshImagesIfNeeded(force: true) }
-        catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
     }
 
-    private func save(_ image: ContainedCore.ImageResource) {
+    private func save(_ image: Core.Image.Resource) {
         guard let client = app.client else { return }
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.init(filenameExtension: "tar") ?? .data]

@@ -8,7 +8,7 @@ import ContainedCore
 struct RegistriesTab: View {
     @Environment(AppModel.self) private var app
     @State private var loggingIn = false
-    @State private var loggingOut: RegistryLogin?
+    @State private var loggingOut: Core.Registry.Login?
 
     var body: some View {
         LazyVStack(spacing: UI.Layout.Spacing.l) {
@@ -51,10 +51,10 @@ struct RegistriesTab: View {
         Binding(get: { loggingOut != nil }, set: { if !$0 { loggingOut = nil } })
     }
 
-    private func logout(_ login: RegistryLogin) async {
+    private func logout(_ login: Core.Registry.Login) async {
         guard let client = app.client else { return }
         do { _ = try await client.registryLogout(server: login.host); await app.refreshRegistries() }
-        catch let error as CommandError { app.flash(error.appDisplayMessage) }
+        catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
         catch { app.flash(error.appDisplayMessage) }
     }
 }

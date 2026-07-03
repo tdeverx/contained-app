@@ -4,7 +4,8 @@ import SwiftUI
 /// detail headers.
 /// Centralizes the styling chain and the VoiceOver label so icon-only menus are consistently
 /// accessible.
-public struct RowMenu<Content: View>: View {
+public extension UI.Control {
+struct RowMenu<Content: View>: View {
     public var systemImage: String
     public var accessibilityLabel: String
     @ViewBuilder public var content: () -> Content
@@ -32,4 +33,5 @@ public struct RowMenu<Content: View>: View {
         .fixedSize()
         .accessibilityLabel(accessibilityLabel)
     }
+}
 }
