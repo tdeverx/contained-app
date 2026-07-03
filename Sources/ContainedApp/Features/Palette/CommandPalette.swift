@@ -346,7 +346,7 @@ struct PaletteItem: Identifiable {
                             visual: .volume(volume),
                             icon: "externaldrive",
                             tint: .secondary) {
-                    var spec = RunSpec()
+                    var spec = ContainerFormState()
                     spec.volumes = [VolumeMap(source: volume.name, target: "/data")]
                     ui.openCreationPanel(entry: .configure, prefill: spec)
                 }
@@ -364,7 +364,7 @@ struct PaletteItem: Identifiable {
                             visual: .network(network),
                             icon: "network",
                             tint: .secondary) {
-                    var spec = RunSpec()
+                    var spec = ContainerFormState()
                     spec.network = network.name
                     ui.openCreationPanel(entry: .configure, prefill: spec)
                 }

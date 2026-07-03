@@ -10,7 +10,7 @@ final class UIState {
 
     struct CreationPresentation {
         var entry: CreationEntry = .menu
-        var prefillSpec: RunSpec?
+        var prefillSpec: ContainerFormState?
         var editSnapshot: Core.Container.Snapshot?
         var returnEntry: CreationEntry?
         var searchQuery = ""
@@ -35,8 +35,8 @@ final class UIState {
 
     struct PrefillPresentation {
         var showRunSheet = false
-        var currentSpec: RunSpec?
-        var queue: [RunSpec] = []
+        var currentSpec: ContainerFormState?
+        var queue: [ContainerFormState] = []
     }
 
     var creation = CreationPresentation()
@@ -144,7 +144,7 @@ final class UIState {
         if !panelNavigationEnabled {
             switch action {
             case .runContainer:
-                presentCreate(RunSpec())
+                presentCreate(ContainerFormState())
                 return
             case .pullImage, .createVolume, .createNetwork, .activityHistory:
                 navigateForClassicFallback(action)
@@ -181,13 +181,13 @@ final class UIState {
 
     /// Open the creation flow in the toolbar add morph at a specific page.
     func openCreationPanel(entry: CreationEntry = .menu,
-                           prefill spec: RunSpec? = nil,
+                           prefill spec: ContainerFormState? = nil,
                            searchQuery: String = "",
                            returningTo returnEntry: CreationEntry? = nil) {
         guard panelNavigationEnabled else {
             switch entry {
             case .menu, .chooser, .configure:
-                presentCreate(spec ?? RunSpec())
+                presentCreate(spec ?? ContainerFormState())
             case .network:
                 navigate(to: .networks)
             case .volume:
@@ -208,7 +208,7 @@ final class UIState {
         toolbar.activeMorph = .add
     }
 
-    func openCreationPanel(prefill spec: RunSpec,
+    func openCreationPanel(prefill spec: ContainerFormState,
                            returningTo returnEntry: CreationEntry? = nil,
                            searchQuery: String = "") {
         guard panelNavigationEnabled else {
@@ -246,7 +246,7 @@ final class UIState {
     func runImage(_ reference: String,
                   returningTo returnEntry: CreationEntry? = nil,
                   searchQuery: String = "") {
-        var spec = RunSpec()
+        var spec = ContainerFormState()
         spec.image = reference
         guard panelNavigationEnabled else {
             presentCreate(spec)
@@ -256,7 +256,7 @@ final class UIState {
         openCreationPanel(prefill: spec, returningTo: returnEntry, searchQuery: searchQuery)
     }
 
-    func useTemplate(_ spec: RunSpec) {
+    func useTemplate(_ spec: ContainerFormState) {
         guard panelNavigationEnabled else {
             presentCreate(spec)
             return
@@ -266,7 +266,7 @@ final class UIState {
     }
 
     /// Open the New-Container window prefilled with `spec`.
-    func presentCreate(_ spec: RunSpec) {
+    func presentCreate(_ spec: ContainerFormState) {
         prefill.currentSpec = spec
         prefill.showRunSheet = true
     }
@@ -274,7 +274,7 @@ final class UIState {
     /// Open the New-Container window for each queued spec in turn (compose import). Pulls each image
     /// first (with progress), then presents the first editor; the rest follow as editors close. The
     /// editor is the creation panel when panel navigation is enabled, otherwise the classic sheet.
-    func beginPrefillQueue(_ specs: [RunSpec], using app: AppModel) {
+    func beginPrefillQueue(_ specs: [ContainerFormState], using app: AppModel) {
         guard let first = specs.first else { return }
         prefill.queue = Array(specs.dropFirst())
         Task {
@@ -291,7 +291,7 @@ final class UIState {
         DispatchQueue.main.async { self.presentNextPrefill(next) }
     }
 
-    private func presentNextPrefill(_ spec: RunSpec) {
+    private func presentNextPrefill(_ spec: ContainerFormState) {
         if panelNavigationEnabled {
             openCreationPanel(prefill: spec)
         } else {

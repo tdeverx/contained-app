@@ -82,6 +82,10 @@ enum ContainerCommands {
         if request.ssh { args.append("--ssh") }
         if request.virtualization { args.append("--virtualization") }
         if !request.platform.isEmpty { args += ["--platform", request.platform] }
+        if request.platform.isEmpty {
+            if !request.os.isEmpty { args += ["--os", request.os] }
+            if !request.architecture.isEmpty { args += ["--arch", request.architecture] }
+        }
         if !request.workingDir.isEmpty { args += ["--workdir", request.workingDir] }
         if !request.user.isEmpty { args += ["--user", request.user] }
         if !request.uid.isEmpty { args += ["--uid", request.uid] }

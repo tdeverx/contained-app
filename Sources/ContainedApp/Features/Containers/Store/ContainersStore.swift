@@ -264,7 +264,7 @@ final class ContainersStore {
     /// (the user-set name, or the id `container run` prints for a generated name), or nil on failure.
     /// The id lets the caller attach local personalization to exactly this container.
     @discardableResult
-    func run(_ spec: RunSpec) async -> String? {
+    func run(_ spec: ContainerFormState) async -> String? {
         guard let client else { return nil }
         let started = Date()
         logger?.record("Running container from creation flow",
@@ -272,7 +272,7 @@ final class ContainersStore {
                        severity: .info)
         diagnosticLogger.notice("Run started from creation flow")
         do {
-            let result = try await client.createContainer(spec.createRequest)
+            let result = try await client.createContainer(spec.document)
             performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
@@ -297,7 +297,7 @@ final class ContainersStore {
     /// Recreate macro: tear down `originalID` and run `spec` in its place. Container config is
     /// immutable, so edits become a replacement run. Errors are surfaced for the caller to show.
     @discardableResult
-    func recreate(originalID: String, spec: RunSpec) async -> Bool {
+    func recreate(originalID: String, spec: ContainerFormState) async -> Bool {
         guard let client else { return false }
         busyIDs.insert(originalID)
         intentionalStops.insert(originalID)   // don't let the watchdog fight the teardown
@@ -306,7 +306,7 @@ final class ContainersStore {
         logger?.record("Recreating \(originalID)", category: .lifecycle, containerID: originalID)
         diagnosticLogger.notice("Recreate started for \(originalID, privacy: .public)")
         do {
-            _ = try await client.recreateContainer(originalID: originalID, request: spec.createRequest)
+            _ = try await client.recreateContainer(originalID: originalID, document: spec.document)
             performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)

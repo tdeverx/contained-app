@@ -12,27 +12,18 @@ struct ImportPlan: Equatable, Sendable {
     public var items: [Core.Compose.ImportItem]
     public var warnings: [String]
 
-    public init(requests: [Core.Container.CreateRequest], warnings: [String] = []) {
-        self.items = requests.map { Core.Compose.ImportItem(request: $0) }
-        self.warnings = warnings
-    }
-
     public init(items: [Core.Compose.ImportItem], warnings: [String] = []) {
         self.items = items
         self.warnings = warnings
     }
-
-    public var requests: [Core.Container.CreateRequest] {
-        items.map(\.request)
-    }
 }
 
 struct ImportItem: Equatable, Sendable {
-    public var request: Core.Container.CreateRequest
+    public var document: Core.Schema.Document
     public var healthCheck: Core.Container.HealthCheck?
 
-    public init(request: Core.Container.CreateRequest, healthCheck: Core.Container.HealthCheck? = nil) {
-        self.request = request
+    public init(document: Core.Schema.Document, healthCheck: Core.Container.HealthCheck? = nil) {
+        self.document = document
         self.healthCheck = healthCheck
     }
 }

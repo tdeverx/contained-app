@@ -14,16 +14,13 @@ struct Spec: Codable, Equatable, Sendable {
 public extension Core.Runtime {
 struct Projection: Codable, Equatable, Sendable {
     public var kind: Core.Runtime.Kind
-    public var schemaVersion: Core.Schema.Version
     public var preservedFields: [String: String]
     public var unsupportedFields: [String]
 
     public init(kind: Core.Runtime.Kind,
-                schemaVersion: Core.Schema.Version = .current,
                 preservedFields: [String: String] = [:],
                 unsupportedFields: [String] = []) {
         self.kind = kind
-        self.schemaVersion = schemaVersion
         self.preservedFields = preservedFields
         self.unsupportedFields = unsupportedFields
     }

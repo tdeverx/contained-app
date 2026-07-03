@@ -8,7 +8,7 @@ import ContainedCore
 /// existing container and, on Save, tears it down and re-runs the edited spec in its place.
 struct ContainerEditSheet: View {
     enum Mode {
-        case new(prefill: RunSpec?)
+        case new(prefill: ContainerFormState?)
         case edit(Core.Container.Snapshot, onComplete: () -> Void)
     }
 

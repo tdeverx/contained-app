@@ -32,18 +32,25 @@ before a UI route enables a command.
 
 ## Create, Import, Export, And Core Choice
 
-The global Run/Edit form is app-owned form state, but it round-trips through
-`Core.Container.CreateRequest`, a runtime-neutral model. Each request carries
-its intended runtime, so the core choice is per-container or per-import item
-rather than a global app setting.
+The global Run/Edit form is app-owned form state, but editable runtime fields
+round-trip through `Core.Schema.Document`, a runtime-neutral schema document.
+Each document carries its intended runtime, so the core choice is per-container
+or per-import item rather than a global app setting.
 
 Core translates into and out of the shared model:
 
-- `previewCreateCommand(for:)` returns the command preview for the selected runtime.
-- `createContainer(_:)` and `recreateContainer(originalID:request:)` create from shared fields.
-- `translateCompose(_:baseDirectory:runtimeKind:)` turns parsed Compose projects into standardized create requests plus warnings.
-- `imageDefaults(for:in:)` lets the selected runtime provide image-specific defaults for the same form fields.
+- `schemaDefinition(for:runtimeKind:)` publishes the selected runtime's run/edit field metadata.
+- `previewCreateCommand(for:)` validates a schema document and returns the command preview for the selected runtime.
+- `createContainer(_:)` and `recreateContainer(originalID:document:)` create from schema documents.
+- `translateCompose(_:baseDirectory:runtimeKind:)` turns parsed Compose projects into schema documents plus warnings and provenance.
+- `imageDefaults(for:in:)` lets the selected runtime provide image-specific defaults for the same schema fields.
 - `planMigration(_:to:)` and `coreSwitchPlan(for:source:to:)` describe future export/import migration before the app enables a cross-core swap.
+
+Before validation or execution, Core runs schema documents through
+`Core.Schema.DocumentMigrator`. The migrator does not require a version ladder:
+it compares values with the selected runtime's current schema, maps any
+descriptor-published legacy paths, safely coerces simple value-kind drift, and
+then lets validation report unresolved unknown or wrong-typed fields.
 
 The UI currently shows Apple container as the only enabled core and disables the
 picker until another runtime descriptor is registered. The disabled control is

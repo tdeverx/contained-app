@@ -16,6 +16,7 @@ Use Core for:
 - canonical container create/edit/import/export models
 - command previews and host command invocations
 - Compose import/export plans
+- run/edit schema conformance before validation and execution
 - image defaults and registry helpers
 - stats snapshots, metric normalization, and history inputs
 - typed display-neutral package errors
@@ -39,13 +40,12 @@ and plans rather than Yams types.
 ```swift
 import ContainedCore
 
-var request = Core.Container.CreateRequest()
-request.runtimeKind = .appleContainer
-request.name = "web"
-request.image = "nginx:latest"
+var document = Core.Schema.Document.containerCreate()
+document.set(.containerName, .string("web"))
+document.set(.imageReference, .string("nginx:latest"))
 
 let core = Core.Orchestrator.testing(runner: PreviewRunner())
-let preview = try core.previewCreateCommand(for: request)
+let preview = try core.previewCreateCommand(for: document)
 ```
 
 ## Fixtures

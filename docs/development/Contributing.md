@@ -68,7 +68,7 @@ Xcode/Contained/         tiny native Xcode app launcher and Info.plist
 Contained.xcworkspace/   Xcode entry point
 Contained.xcodeproj/     native macOS app target that links ContainedApp
 Packages/*/Tests/        package-local unit tests
-Tests/ContainedAppTests/     RunSpec form state + runtime mapping
+Tests/ContainedAppTests/     ContainerFormState form state + runtime mapping
 scripts/                 bundle.sh, release.sh, appcast.sh
 docs/app/                user-facing app docs
 docs/features/           feature and workflow docs
@@ -102,7 +102,7 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Use Xcode for functional SwiftUI loops.** The shared `Contained` scheme builds/runs the app and runs `ContainedAppTests`; `ContainedAppTests` is the focused app-test scheme; package schemes come from the package manifests; `ContainedPreviews` is reserved for preview-oriented development.
 - **Navigation infrastructure belongs in `ContainedUX` only when it is generic.** App sections, pending actions, concrete toolbar panels, and `UIState` stay in `Sources/ContainedApp` until they can cross the boundary without app policy.
 - **Every backend action goes through `ContainedCore`.** Apple `container` argv builders and adapter clients are Core internals with golden tests. The UI never assembles argv inline; app stores call `Core.Orchestrator`.
-- **Runtime-facing code should use `Core.*` namespaces.** The Apple `container` implementation is the only enabled adapter today. Future Docker-compatible, Podman, Lima-backed, remote, or other runtimes should be sibling adapter folders inside Core and advertise capability differences through `Core.Runtime.Descriptor`. Create/import flows should translate through `Core.Container.CreateRequest` and carry `Core.Runtime.Kind` per container, not as a global app setting.
+- **Runtime-facing code should use `Core.*` namespaces.** The Apple `container` implementation is the only enabled adapter today. Future Docker-compatible, Podman, Lima-backed, remote, or other runtimes should be sibling adapter folders inside Core and advertise capability differences through `Core.Runtime.Descriptor`. Run/edit/import flows should translate through `Core.Schema.Document` and carry `Core.Runtime.Kind` per container, not as a global app setting.
 - **Pure decision logic is factored into `ContainedCore`** (`Core.Container.RestartDecision`, `Core.Container.HealthDecision`, compose ordering, runtime translation) and unit-tested without spawning processes.
 - **No `contained.*` personalization labels.** Card styles and healthchecks live in local stores. Only `contained.restart` and `contained.stack` are written (they must round-trip through the container).
 - **Never put secrets or personal data in test fixtures.** Fixtures are captured CLI output — scrub tokens, domains, and paths before committing. (`.gitignore` blocks signing material; push protection is on.)

@@ -7,8 +7,9 @@
 
 ### Runtime & Creation
 
-- Consolidated runtime contracts, the Core orchestrator, the Apple `container` adapter, command previews, typed runtime methods, typed stats streams, Compose translation, image defaults, and runtime-neutral create/import models inside `ContainedCore`.
+- Consolidated runtime contracts, the Core orchestrator, the Apple `container` adapter, command previews, typed runtime methods, typed stats streams, Compose translation, image defaults, and runtime-neutral schema/import models inside `ContainedCore`.
 - Added open-ended runtime identifiers and disabled per-container runtime selection so future Docker-compatible, Podman, Lima-backed, remote, or other adapters can plug into Core without becoming app-side switches.
+- Replaced the app-owned Run/Edit request shape with Core-published schema documents that carry generic field paths, Apple/Docker/Compose source aliases, runtime-specific tips, disabled-field explanations, provenance, schema-conformance migration, and Apple `--os`/`--arch` support.
 - Routed terminal exec, service lifecycle actions, package errors, and reusable-package copy through Core/app-owned presentation boundaries.
 
 ### UI & Performance

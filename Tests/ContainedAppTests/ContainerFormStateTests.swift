@@ -3,18 +3,18 @@ import Testing
 import ContainedCore
 @testable import ContainedApp
 
-@Suite("RunSpec create requests + runtime mapping")
+@Suite("ContainerFormState create requests + runtime mapping")
 @MainActor
-struct RunSpecTests {
+struct ContainerFormStateTests {
 
-    @Test func basicArgv() {
-        var spec = RunSpec()
+    @Test func basicArgv() throws {
+        var spec = ContainerFormState()
         spec.image = "nginx:latest"
-        #expect(spec.arguments() == ["run", "--detach", "nginx:latest"])
+        #expect(try arguments(spec) == ["run", "--detach", "nginx:latest"])
     }
 
-    @Test func coreFlagsArgv() {
-        var spec = RunSpec()
+    @Test func coreFlagsArgv() throws {
+        var spec = ContainerFormState()
         spec.image = "alpine"
         spec.name = "web"
         spec.detach = false
@@ -25,7 +25,7 @@ struct RunSpecTests {
         spec.readOnly = true
         spec.useInit = true
         spec.command = "echo hi"
-        let args = spec.arguments()
+        let args = try arguments(spec)
         #expect(args.prefix(2) == ["run", "--rm"])
         #expect(args.contains(["--name", "web"].joined()) == false)   // sanity: not joined
         #expect(subsequence(["--name", "web"], in: args))
@@ -38,8 +38,8 @@ struct RunSpecTests {
         #expect(args.suffix(3) == ["alpine", "echo", "hi"])
     }
 
-    @Test func advancedFlagsArgv() {
-        var spec = RunSpec()
+    @Test func advancedFlagsArgv() throws {
+        var spec = ContainerFormState()
         spec.image = "alpine"
         spec.interactive = true
         spec.tty = true
@@ -67,7 +67,7 @@ struct RunSpecTests {
         spec.scheme = "https"
         spec.progress = "plain"
         spec.maxConcurrentDownloads = "2"
-        let args = spec.arguments()
+        let args = try arguments(spec)
         #expect(args.contains("--interactive"))
         #expect(args.contains("--tty"))
         #expect(subsequence(["--workdir", "/app"], in: args))
@@ -97,8 +97,8 @@ struct RunSpecTests {
         #expect(args.filter { $0 == "--cap-add" }.count == 1)   // the empty cap was skipped
     }
 
-    @Test func portsVolumesEnvAndLabelsArgv() {
-        var spec = RunSpec()
+    @Test func portsVolumesEnvAndLabelsArgv() throws {
+        var spec = ContainerFormState()
         spec.image = "nginx"
         spec.ports = [PortMap(hostPort: "8080", containerPort: "80", proto: "tcp"),
                       PortMap(hostPort: "53", containerPort: "53", proto: "udp")]
@@ -107,7 +107,7 @@ struct RunSpecTests {
         spec.env = [KeyValue(key: "KEY", value: "val")]
         spec.labels = [KeyValue(key: "team", value: "infra")]
         spec.restart = .onFailure
-        let args = spec.arguments()
+        let args = try arguments(spec)
         #expect(subsequence(["--publish", "8080:80"], in: args))
         #expect(subsequence(["--publish", "53:53/udp"], in: args))
         #expect(subsequence(["--volume", "/data:/var/lib:ro"], in: args))
@@ -140,12 +140,12 @@ struct RunSpecTests {
         let project = try Core.Compose.parse(yaml, projectName: "demo")
         let plan = try core.translateCompose(project, baseDirectory: nil)
         let item = try #require(plan.items.first)
-        let spec = RunSpec(request: item.request, healthCheck: item.healthCheck)
+        let spec = ContainerFormState(document: item.document, healthCheck: item.healthCheck)
         #expect(spec.image == "postgres:16")
         #expect(spec.platform == "linux/arm64")
         #expect(spec.name == "db")
         #expect(spec.ports.first?.spec == "5432:5432")
-        #expect(subsequence(["--platform", "linux/arm64"], in: spec.arguments()))
+        #expect(subsequence(["--platform", "linux/arm64"], in: try arguments(spec)))
         #expect(spec.restart == .always)
         #expect(spec.labels.contains { $0.key == "contained.stack" && $0.value == "demo" })
         #expect(spec.healthCheck.enabled)
@@ -163,11 +163,12 @@ struct RunSpecTests {
         """
         let base = URL(filePath: "/Volumes/Vault/.Docker/compose", directoryHint: .isDirectory)
         let project = try! Core.Compose.parse(yaml, projectName: "demo")
+        let definition = Core.Schema.Definition.appleContainerCreate
         let resolved = try core.translateCompose(project, baseDirectory: base)
             .items
             .first?
-            .request
-            .volumes
+            .document
+            .volumes(.storageVolumes, in: definition)
             .first
 
         #expect(resolved?.source == "/Volumes/Vault/.Docker/configs/bazarr")
@@ -234,8 +235,8 @@ struct RunSpecTests {
         let plan = try core.translateCompose(project,
                                              baseDirectory: URL(filePath: "/opt/stacks/demo", directoryHint: .isDirectory))
         let item = try #require(plan.items.first)
-        let spec = RunSpec(request: item.request, healthCheck: item.healthCheck)
-        let args = spec.arguments()
+        let spec = ContainerFormState(document: item.document, healthCheck: item.healthCheck)
+        let args = try arguments(spec)
 
         #expect(spec.image == "example/app:1")
         #expect(spec.platform == "linux/arm64")
@@ -286,21 +287,21 @@ struct RunSpecTests {
     }
 
     @Test func memoryParsingRoundTrips() {
-        #expect(RunSpecForm.parseMemoryGB("1G") == 1)
-        #expect(RunSpecForm.parseMemoryGB("512M") == 0.5)
-        #expect(RunSpecForm.parseMemoryGB("2g") == 2)
-        #expect(RunSpecForm.parseMemoryGB("") == nil)
-        #expect(RunSpecForm.memorySpec(gb: 2) == "2G")
-        #expect(RunSpecForm.memorySpec(gb: 1.5) == "1536M")
+        #expect(ContainerFormStateMemoryFormatter.parseGB("1G") == 1)
+        #expect(ContainerFormStateMemoryFormatter.parseGB("512M") == 0.5)
+        #expect(ContainerFormStateMemoryFormatter.parseGB("2g") == 2)
+        #expect(ContainerFormStateMemoryFormatter.parseGB("") == nil)
+        #expect(ContainerFormStateMemoryFormatter.spec(gb: 2) == "2G")
+        #expect(ContainerFormStateMemoryFormatter.spec(gb: 1.5) == "1536M")
     }
 
     @Test func adoptsPulledImageDefaultsIntoEmptyRunFields() throws {
         let data = try Data(contentsOf: fixturesURL.appending(path: "image-inspect.json"))
         let images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: data)
-        var spec = RunSpec()
+        var spec = ContainerFormState()
         spec.image = "alpine"
 
-        let maybeDefaults = try core.imageDefaults(for: spec.createRequest, in: images)
+        let maybeDefaults = try core.imageDefaults(for: spec.document, in: images)
         let defaults = try #require(maybeDefaults)
         let applied = spec.adoptImageDefaults(from: defaults)
 
@@ -316,13 +317,13 @@ struct RunSpecTests {
     @Test func adoptingImageDefaultsDoesNotOverwriteExistingEdits() throws {
         let data = try Data(contentsOf: fixturesURL.appending(path: "image-inspect.json"))
         let images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: data)
-        var spec = RunSpec()
+        var spec = ContainerFormState()
         spec.image = "alpine"
         spec.command = "custom"
         spec.workingDir = "/app"
         spec.env = [KeyValue(key: "PATH", value: "/custom")]
 
-        let maybeDefaults = try core.imageDefaults(for: spec.createRequest, in: images)
+        let maybeDefaults = try core.imageDefaults(for: spec.document, in: images)
         let defaults = try #require(maybeDefaults)
         _ = spec.adoptImageDefaults(from: defaults)
 
@@ -331,14 +332,14 @@ struct RunSpecTests {
         #expect(spec.env.filter { $0.key == "PATH" }.map(\.value) == ["/custom"])
     }
 
-    @Test func runSpecIsCodable() throws {
-        var spec = RunSpec()
+    @Test func containerFormStateIsCodable() throws {
+        var spec = ContainerFormState()
         spec.image = "redis:7"
         spec.ports = [PortMap(hostPort: "6379", containerPort: "6379", proto: "tcp")]
         spec.capAdd = ["CAP_NET_RAW"]
         let data = try JSONEncoder().encode(spec)
-        let decoded = try JSONDecoder().decode(RunSpec.self, from: data)
-        #expect(decoded.arguments() == spec.arguments())
+        let decoded = try JSONDecoder().decode(ContainerFormState.self, from: data)
+        #expect(try arguments(decoded) == (try arguments(spec)))
     }
 
     @Test func editPrefillRestoresAdvancedContainerConfiguration() throws {
@@ -390,7 +391,7 @@ struct RunSpecTests {
         }
         """
         let snapshot = try JSONDecoder().decode(Core.Container.Snapshot.self, from: Data(json.utf8))
-        let spec = RunSpec(from: snapshot.configuration)
+        let spec = ContainerFormState(from: snapshot.configuration)
 
         #expect(spec.image == "example/app:1")
         #expect(spec.platform == "linux/amd64/v2")
@@ -438,11 +439,15 @@ struct RunSpecTests {
     }
 
     private var core: Core.Orchestrator {
-        Core.Orchestrator.testing(runner: RunSpecTestRunner())
+        Core.Orchestrator.testing(runner: ContainerFormStateTestRunner())
+    }
+
+    private func arguments(_ spec: ContainerFormState) throws -> [String] {
+        try core.previewCreateCommand(for: spec.document).command
     }
 }
 
-private struct RunSpecTestRunner: Core.Command.Running {
+private struct ContainerFormStateTestRunner: Core.Command.Running {
     func run(_ arguments: [String],
              stdin: Data?,
              priority: Core.Command.ExecutionPriority) async throws -> Data {

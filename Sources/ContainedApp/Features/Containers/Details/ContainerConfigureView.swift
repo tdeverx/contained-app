@@ -24,7 +24,7 @@ struct ContainerConfigureView: View {
     let leading: Leading
     var onFinished: () -> Void
 
-    @State private var spec: RunSpec
+    @State private var spec: ContainerFormState
     @State private var working = false
     @State private var confirming = false
     @State private var loaded = false
@@ -36,8 +36,8 @@ struct ContainerConfigureView: View {
         self.leading = leading
         self.onFinished = onFinished
         switch mode {
-        case .new(let prefill):      _spec = State(initialValue: prefill ?? RunSpec())
-        case .edit(let snapshot, _): _spec = State(initialValue: RunSpec(from: snapshot.configuration))
+        case .new(let prefill):      _spec = State(initialValue: prefill ?? ContainerFormState())
+        case .edit(let snapshot, _): _spec = State(initialValue: ContainerFormState(from: snapshot.configuration))
         }
     }
 
@@ -51,7 +51,7 @@ struct ContainerConfigureView: View {
                 validationSummary
             }
         } content: {
-            RunSpecForm(spec: $spec)
+            ContainerSchemaForm(spec: $spec)
                 .padding(UI.Layout.Spacing.s)
         } footer: {
             if app.settings.revealCLI {

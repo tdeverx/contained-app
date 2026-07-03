@@ -44,6 +44,7 @@ struct Service: Sendable, Hashable, Identifiable {
     public let ulimits: [String]
     public let dependsOn: [Core.Compose.Dependency]
     public let healthcheck: Core.Compose.Healthcheck?
+    public let preservedFields: [Core.Field.Path: Core.Schema.Value]
 
     public var id: String { key }
 
@@ -55,7 +56,8 @@ struct Service: Sendable, Hashable, Identifiable {
                 interactive: Bool = false, tty: Bool = false, capAdd: [String] = [],
                 capDrop: [String] = [], dns: [String] = [], dnsSearch: [String] = [],
                 dnsOptions: [String] = [], tmpfs: [String] = [], ulimits: [String] = [],
-                dependsOn: [Core.Compose.Dependency], healthcheck: Core.Compose.Healthcheck?) {
+                dependsOn: [Core.Compose.Dependency], healthcheck: Core.Compose.Healthcheck?,
+                preservedFields: [Core.Field.Path: Core.Schema.Value] = [:]) {
         self.key = key; self.name = name; self.image = image; self.platform = platform; self.command = command
         self.entrypoint = entrypoint; self.workingDir = workingDir; self.user = user; self.cpus = cpus
         self.memory = memory; self.ports = ports; self.volumes = volumes; self.environment = environment
@@ -65,6 +67,7 @@ struct Service: Sendable, Hashable, Identifiable {
         self.capAdd = capAdd; self.capDrop = capDrop; self.dns = dns; self.dnsSearch = dnsSearch
         self.dnsOptions = dnsOptions; self.tmpfs = tmpfs; self.ulimits = ulimits
         self.dependsOn = dependsOn; self.healthcheck = healthcheck
+        self.preservedFields = preservedFields
     }
 }
 
@@ -166,7 +169,15 @@ enum Parser {
          "depends_on", "healthcheck", "platform", "entrypoint", "working_dir", "user", "cpus",
          "mem_limit", "env_file", "labels", "read_only", "init", "stdin_open",
          "tty", "cap_add", "cap_drop", "dns", "dns_search", "dns_opt", "tmpfs", "ulimits",
-         "network_mode", "networks"]
+         "network_mode", "networks",
+         "extra_hosts", "hostname", "domainname", "mac_address", "expose", "pull_policy",
+         "attach", "logging", "label_file", "stop_signal", "stop_grace_period",
+         "devices", "gpus", "group_add", "privileged", "security_opt", "sysctls",
+         "cgroup", "userns_mode", "pid", "ipc", "uts", "cpu_shares", "cpu_quota",
+         "cpu_period", "cpuset", "cpu_rt_runtime", "cpu_rt_period", "mem_reservation",
+         "memswap_limit", "mem_swappiness", "oom_kill_disable", "oom_score_adj",
+         "blkio_config", "storage_opt", "volumes_from", "secrets", "configs",
+         "profiles", "deploy", "scale", "links", "provider", "models", "use_api_socket"]
 
     private static func service(name: String, body: [String: Any], warnings: inout [String]) -> Core.Compose.Service {
         for key in body.keys where !supportedKeys.contains(key) {
@@ -206,7 +217,8 @@ enum Parser {
             tmpfs: stringList(body["tmpfs"], service: name, key: "tmpfs", warnings: &warnings),
             ulimits: ulimits(body["ulimits"], service: name, warnings: &warnings),
             dependsOn: dependencies(body["depends_on"]),
-            healthcheck: healthcheck(body["healthcheck"])
+            healthcheck: healthcheck(body["healthcheck"]),
+            preservedFields: preservedFields(body, service: name)
         )
     }
 
@@ -224,6 +236,60 @@ enum Parser {
             }
         }
         return []
+    }
+
+    private static func preservedFields(_ body: [String: Any], service: String) -> [Core.Field.Path: Core.Schema.Value] {
+        var fields: [Core.Field.Path: Core.Schema.Value] = [:]
+        putStringList(&fields, .networkExtraHosts, body["extra_hosts"])
+        putString(&fields, .networkHostname, body["hostname"])
+        putString(&fields, .networkDomainName, body["domainname"])
+        putString(&fields, .networkMacAddress, body["mac_address"])
+        putStringList(&fields, .networkExpose, body["expose"])
+        putString(&fields, .imagePullPolicy, body["pull_policy"])
+        putStringOrBoolList(&fields, .processAttachStreams, body["attach"])
+        putLogging(&fields, body["logging"])
+        putStringList(&fields, .metadataLabelFiles, body["label_file"])
+        putString(&fields, .lifecycleStopSignal, body["stop_signal"])
+        putString(&fields, .lifecycleStopGracePeriod, body["stop_grace_period"])
+        putStringList(&fields, .devices, body["devices"])
+        putString(&fields, .gpus, body["gpus"])
+        putStringList(&fields, .processSupplementalGroups, body["group_add"])
+        putBool(&fields, .securityPrivileged, body["privileged"])
+        putStringList(&fields, .securityOptions, body["security_opt"])
+        putKeyValues(&fields, .kernelSysctls, body["sysctls"])
+        putString(&fields, .namespaceCgroup, body["cgroup"])
+        putString(&fields, .namespaceUser, body["userns_mode"])
+        putString(&fields, .namespacePID, body["pid"])
+        putString(&fields, .namespaceIPC, body["ipc"])
+        putString(&fields, .namespaceUTS, body["uts"])
+        putString(&fields, .resourcesCPUShares, body["cpu_shares"])
+        putString(&fields, .resourcesCPUQuota, body["cpu_quota"])
+        putString(&fields, .resourcesCPUPeriod, body["cpu_period"])
+        putString(&fields, .resourcesCPUSet, body["cpuset"])
+        putString(&fields, .resourcesCPURealtimeRuntime, body["cpu_rt_runtime"])
+        putString(&fields, .resourcesCPURealtimePeriod, body["cpu_rt_period"])
+        putString(&fields, .resourcesMemoryReservation, body["mem_reservation"])
+        putString(&fields, .resourcesMemorySwapLimit, body["memswap_limit"])
+        putString(&fields, .resourcesMemorySwappiness, body["mem_swappiness"])
+        putBool(&fields, .resourcesOOMKillDisable, body["oom_kill_disable"])
+        putString(&fields, .resourcesOOMScoreAdjust, body["oom_score_adj"])
+        putString(&fields, .resourcesBlockIO, body["blkio_config"].map(stringify))
+        putKeyValues(&fields, .storageOptions, body["storage_opt"])
+        putStringList(&fields, .storageVolumesFrom, body["volumes_from"])
+        putStringList(&fields, .composeSecrets, body["secrets"])
+        putStringList(&fields, .composeConfigs, body["configs"])
+        putStringList(&fields, .composeProfiles, body["profiles"])
+        putString(&fields, .composeDeploy, body["deploy"].map(stringify))
+        putString(&fields, .composeScale, body["scale"])
+        putStringList(&fields, .composeLinks, body["links"])
+        let dependencies = dependencies(body["depends_on"])
+        if !dependencies.isEmpty {
+            fields[.composeDependsOn] = .stringList(dependencies.map { "\($0.service)=\($0.condition.rawValue)" })
+        }
+        putString(&fields, .composeProvider, body["provider"].map(stringify))
+        putStringList(&fields, .composeModels, body["models"])
+        putBool(&fields, .composeUseAPISocket, body["use_api_socket"])
+        return fields
     }
 
     /// Parse a `healthcheck:` block. `test` accepts `["CMD-SHELL", "<cmd>"]`, `["CMD", a, b]`, or a
@@ -407,12 +473,78 @@ enum Parser {
         return nil
     }
 
+    private static func putString(_ fields: inout [Core.Field.Path: Core.Schema.Value],
+                                  _ path: Core.Field.Path,
+                                  _ value: Any?) {
+        guard let string = stringValue(value), !string.isEmpty else { return }
+        fields[path] = .string(string)
+    }
+
+    private static func putBool(_ fields: inout [Core.Field.Path: Core.Schema.Value],
+                                _ path: Core.Field.Path,
+                                _ value: Any?) {
+        guard let bool = value as? Bool else { return }
+        fields[path] = .bool(bool)
+    }
+
+    private static func putStringList(_ fields: inout [Core.Field.Path: Core.Schema.Value],
+                                      _ path: Core.Field.Path,
+                                      _ value: Any?) {
+        let values: [String]
+        if let scalar = stringValue(value) {
+            values = [scalar]
+        } else if let list = value as? [Any] {
+            values = list.map(stringify).filter { !$0.isEmpty }
+        } else if let map = value as? [String: Any] {
+            values = map.keys.sorted().map { key in
+                let rendered = stringify(map[key])
+                return rendered.isEmpty ? key : "\(key)=\(rendered)"
+            }
+        } else {
+            values = []
+        }
+        guard !values.isEmpty else { return }
+        fields[path] = .stringList(values)
+    }
+
+    private static func putStringOrBoolList(_ fields: inout [Core.Field.Path: Core.Schema.Value],
+                                            _ path: Core.Field.Path,
+                                            _ value: Any?) {
+        if let bool = value as? Bool {
+            fields[path] = .stringList([String(bool)])
+            return
+        }
+        putStringList(&fields, path, value)
+    }
+
+    private static func putKeyValues(_ fields: inout [Core.Field.Path: Core.Schema.Value],
+                                     _ path: Core.Field.Path,
+                                     _ value: Any?) {
+        let values = keyValues(value).compactMap { entry -> Core.Container.KeyValue? in
+            guard let eq = entry.firstIndex(of: "=") else { return nil }
+            return Core.Container.KeyValue(key: String(entry[..<eq]),
+                                           value: String(entry[entry.index(after: eq)...]))
+        }
+        guard !values.isEmpty else { return }
+        fields[path] = .keyValueList(values)
+    }
+
+    private static func putLogging(_ fields: inout [Core.Field.Path: Core.Schema.Value],
+                                   _ value: Any?) {
+        guard let map = value as? [String: Any] else { return }
+        putString(&fields, .loggingDriver, map["driver"])
+        putKeyValues(&fields, .loggingOptions, map["options"])
+    }
+
     private static func stringify(_ value: Any?) -> String {
         switch value {
         case let s as String: return s
         case let b as Bool: return b ? "true" : "false"
         case let i as Int: return String(i)
         case let d as Double: return String(d)
+        case let list as [Any]: return list.map(stringify).joined(separator: ",")
+        case let map as [String: Any]:
+            return map.keys.sorted().map { "\($0)=\(stringify(map[$0]))" }.joined(separator: ",")
         default: return ""
         }
     }

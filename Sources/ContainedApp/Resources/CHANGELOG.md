@@ -70,7 +70,7 @@
 
 - Package-first SwiftPM layout with `ContainedCore` for backend orchestration, `ContainedUI` for visual primitives, `ContainedUX` for interaction infrastructure, `ContainedApp` for app-owned SwiftUI/persistence/localization policy, and a tiny `Contained` executable launcher.
 - `Core.Orchestrator` is the app-facing backend boundary; Core owns runtime descriptors, command previews, Apple `container` adapter internals, typed async runtime methods, Compose/image-default translation, and typed stats streams.
-- `RunSpec` owns Run/Edit form state, validation, CLI preview, and execution mapping.
+- Core-published run/edit schema documents own editable runtime fields, schema conformance, validation, source aliases, disabled runtime explanations, command previews, and execution mapping.
 - `AppModel`, focused stores, `UIState`, and toolbar option enums centralize bootstrap, navigation, refresh coordination, image updates, settings, resource styles, filters, and fallback routing.
 - SwiftData-backed history records events, metric samples, and templates with bounded retention and backup/import support.
 - Checked-in Xcode workspace and native macOS app target build and run `Contained.app` directly while SwiftPM remains the CI, release, packaging, signing, notarization, and appcast source of truth.

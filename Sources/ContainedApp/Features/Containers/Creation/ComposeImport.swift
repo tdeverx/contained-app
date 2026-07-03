@@ -2,7 +2,7 @@ import AppKit
 import ContainedCore
 
 /// Import a `compose.yaml` without a dedicated page: pick the file, translate each service with an
-/// image into a `RunSpec`, pull the images, then open a prefilled New-Container editor per service
+/// image into a `ContainerFormState`, pull the images, then open a prefilled New-Container editor per service
 /// (the prefill queue steps through them). Triggered from File ▸ Import Compose…, drag-and-drop,
 /// and the palette.
 @MainActor
@@ -43,7 +43,7 @@ enum ComposeImport {
                 return
             }
             let plan = try client.translateCompose(parsed, baseDirectory: baseDirectory)
-            let specs = plan.items.map { RunSpec(request: $0.request, healthCheck: $0.healthCheck) }
+            let specs = plan.items.map { ContainerFormState(document: $0.document, healthCheck: $0.healthCheck) }
             guard !specs.isEmpty else {
                 app.flash(AppText.composeNoServicesWithImages)
                 app.logger.record("Compose import \(parsed.name) had no services with images",

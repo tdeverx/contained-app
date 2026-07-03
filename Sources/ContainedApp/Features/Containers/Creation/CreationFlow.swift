@@ -58,7 +58,7 @@ struct CreationFlow: View {
         }
     }
     @State private var page: Page
-    @State private var spec = RunSpec()
+    @State private var spec = ContainerFormState()
     @State private var initialSearchQuery = ""
     @State private var localImageQuery = ""
     @State private var composeText = ""
@@ -89,7 +89,7 @@ struct CreationFlow: View {
     }
 
     init(start: Start, onClose: @escaping () -> Void,
-         prefill: RunSpec? = nil,
+         prefill: ContainerFormState? = nil,
          editSnapshot: Core.Container.Snapshot? = nil,
          searchQuery: String = "",
          returnEntry: UIState.CreationEntry? = nil,
@@ -191,7 +191,7 @@ struct CreationFlow: View {
                     }
                     box(symbol: "slider.horizontal.3", title: AppText.string("creation.option.scratch", defaultValue: "Start from scratch"),
                         subtitle: AppText.string("creation.option.scratch.subtitle", defaultValue: "Configure manually"),
-                        matchedID: "creation-option-2") { configure(with: RunSpec()) }
+                        matchedID: "creation-option-2") { configure(with: ContainerFormState()) }
                 }
                 optionRow {
                     box(symbol: "shippingbox.and.arrow.backward", title: AppText.string("creation.option.compose", defaultValue: "Compose"),
@@ -392,7 +392,7 @@ struct CreationFlow: View {
         withAnimation(springAnim) { page = next }
     }
 
-    private func configure(with picked: RunSpec, returningTo returnPage: Page? = nil) {
+    private func configure(with picked: ContainerFormState, returningTo returnPage: Page? = nil) {
         let currentPage = page
         spec = picked
         configureReturnPage = returnPage ?? (currentPage == .configure ? nil : currentPage)

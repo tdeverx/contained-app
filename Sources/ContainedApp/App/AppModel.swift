@@ -95,7 +95,7 @@ final class AppModel {
         )
     }
     var availableRuntimeDescriptors: [Core.Runtime.Descriptor] {
-        [.appleContainer]
+        client?.availableRuntimeDescriptors ?? [.appleContainer]
     }
     var runtimeCoreSelectorIsEnabled: Bool {
         availableRuntimeDescriptors.count > 1
@@ -317,14 +317,14 @@ final class AppModel {
         await capturedError(work)?.appDisplayMessage
     }
 
-    func previewCreateCommand(for spec: RunSpec) -> [String] {
-        (try? core(for: spec.effectiveRuntimeKind)?.previewCreateCommand(for: spec.createRequest).command)
-            ?? spec.arguments()
+    func previewCreateCommand(for spec: ContainerFormState) -> [String] {
+        (try? core(for: spec.effectiveRuntimeKind)?.previewCreateCommand(for: spec.document).command)
+            ?? []
     }
 
-    func imageDefaults(for spec: RunSpec) -> Core.Container.ImageDefaults? {
+    func imageDefaults(for spec: ContainerFormState) -> Core.Container.ImageDefaults? {
         guard let client = core(for: spec.effectiveRuntimeKind) else { return nil }
-        return try? client.imageDefaults(for: spec.createRequest, in: images)
+        return try? client.imageDefaults(for: spec.document, in: images)
     }
 
     /// Run a throwing action while preserving the original error for Activity/package metadata.
@@ -469,7 +469,7 @@ final class AppModel {
     /// visible progress bar — so a fresh template or image "just works" instead of appearing to do
     /// nothing while the image silently downloads. Attaches local style + healthcheck on success.
     @discardableResult
-    func createContainer(_ spec: RunSpec) async -> String? {
+    func createContainer(_ spec: ContainerFormState) async -> String? {
         guard core(for: spec.effectiveRuntimeKind) != nil else {
             let error = Core.Runtime.UnsupportedCapability(kind: spec.effectiveRuntimeKind, capability: .containers)
             createError = error.appDisplayMessage
@@ -501,7 +501,7 @@ final class AppModel {
     /// Recreate an existing container from an edited spec. Pulls the replacement image before
     /// deleting the current container so an unavailable image does not strand the edit flow.
     @discardableResult
-    func recreateContainer(originalID: String, spec: RunSpec) async -> String? {
+    func recreateContainer(originalID: String, spec: ContainerFormState) async -> String? {
         guard core(for: spec.effectiveRuntimeKind) != nil else {
             let error = Core.Runtime.UnsupportedCapability(kind: spec.effectiveRuntimeKind, capability: .containers)
             flash(error.appDisplayMessage)

@@ -55,7 +55,7 @@ bundles, signing, notarization, and appcast scripts.
 
 - **`Core.Orchestrator`** — the only backend object app stores own. It bootstraps the Apple CLI today, exposes available runtime descriptors, routes selected-runtime operations, and returns typed command invocations for host-owned UI integrations such as SwiftTerm.
 - **`Core.Runtime.Kind` / `Core.Runtime.Descriptor` / `Core.Runtime.Capability`** — open runtime identifiers and support metadata. Future engines register descriptors inside Core; the app reads capabilities instead of switching on backend names.
-- **`Core.Container.CreateRequest`** — runtime-neutral create/recreate fields used by the app form and adapter import/default translation. It carries the intended runtime per container so the core choice is not app-global.
+- **`Core.Schema.Document`** — runtime-neutral run/edit/recreate fields published by Core. Documents carry the intended runtime per container, generic field paths, source aliases, tips, support state, provenance, and validation; Core conforms documents to the selected schema before projecting executable values into `Core.Container.CreateRequest` internally.
 - **`Core.Compose`** — Core-level interchange semantics for Compose import/export. Yams is internal to `Core.Compose.YAML`; public APIs expose Core models and typed plans, never Yams types.
 - **`Runtimes/AppleContainer`** — Core-internal Apple adapter implementation. It owns CLI discovery, command execution, Apple create/import/default translation, command builders, and the Apple stats-table parser.
 - **`Core.Error.PackageError`** — display-neutral error metadata shared by reusable packages. It gives the app a package name, stable code, and context without forcing packages to own localized copy.

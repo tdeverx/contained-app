@@ -18,8 +18,17 @@ enum AppleContainerCreateTranslator {
                                    baseDirectory: URL?) -> Core.Compose.ImportPlan {
         let items = project.services.compactMap { service -> Core.Compose.ImportItem? in
             guard service.image != nil else { return nil }
+            var document = Core.Schema.Document.containerCreate(from: createRequest(for: service, projectName: project.name, baseDirectory: baseDirectory))
+            for path in document.values.keys
+                where !(document.values[path] ?? .string("")).isEmpty {
+                document.provenance.sources[path] = .compose
+            }
+            for (path, value) in service.preservedFields {
+                document.values[path] = value
+                document.provenance.sources[path] = .compose
+            }
             return Core.Compose.ImportItem(
-                request: createRequest(for: service, projectName: project.name, baseDirectory: baseDirectory),
+                document: document,
                 healthCheck: healthCheck(for: service)
             )
         }

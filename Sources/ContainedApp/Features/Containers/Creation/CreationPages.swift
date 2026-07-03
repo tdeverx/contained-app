@@ -120,7 +120,7 @@ struct CreationVolumeFields: View {
 struct CreationLocalImagesContent: View {
     @Environment(AppModel.self) private var app
     @Binding var query: String
-    var onSelect: (RunSpec) -> Void
+    var onSelect: (ContainerFormState) -> Void
 
     var body: some View {
         LazyVStack(spacing: UI.Layout.Spacing.m) {
@@ -189,7 +189,7 @@ struct CreationPastedComposeContent: View {
 
 struct CreationTemplatesContent: View {
     let templates: [Template]
-    var onSelect: (RunSpec) -> Void
+    var onSelect: (ContainerFormState) -> Void
 
     var body: some View {
         ScrollView {

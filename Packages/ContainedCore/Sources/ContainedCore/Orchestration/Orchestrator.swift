@@ -29,7 +29,7 @@ public extension Core {
             case ready(orchestrator: Core.Orchestrator, cliURL: URL, version: String?)
         }
 
-        private let client: AppleContainerClient
+        private let runtimes: [Core.Runtime.Kind: any ContainerRuntimeClient]
         public let cliURL: URL
         public let defaultRuntime: Core.Runtime.Kind
 
@@ -43,7 +43,9 @@ public extension Core {
             }
             return Core.Orchestrator(cliURL: url,
                                      defaultRuntime: configuration.defaultRuntime,
-                                     client: AppleContainerClient(runner: Core.Command.Runner(executableURL: url)))
+                                     runtimes: [
+                                        Core.Runtime.Kind.appleContainer: AppleContainerClient(runner: Core.Command.Runner(executableURL: url)),
+                                     ])
         }
 
         public static func testing(runner: any Core.Command.Running,
@@ -51,7 +53,9 @@ public extension Core {
                                    defaultRuntime: Core.Runtime.Kind = .appleContainer) -> Core.Orchestrator {
             Core.Orchestrator(cliURL: cliURL,
                               defaultRuntime: defaultRuntime,
-                              client: AppleContainerClient(runner: runner))
+                              runtimes: [
+                                Core.Runtime.Kind.appleContainer: AppleContainerClient(runner: runner),
+                              ])
         }
 
         public static func bootstrap(configuration: Core.Configuration = Core.Configuration()) async -> Bootstrap {
@@ -70,16 +74,20 @@ public extension Core {
                           version: version)
         }
 
-        init(cliURL: URL, defaultRuntime: Core.Runtime.Kind, client: AppleContainerClient) {
+        init(cliURL: URL, defaultRuntime: Core.Runtime.Kind, runtimes: [Core.Runtime.Kind: any ContainerRuntimeClient]) {
             self.cliURL = cliURL
             self.defaultRuntime = defaultRuntime
-            self.client = client
+            self.runtimes = runtimes
         }
 
-        public var descriptor: Core.Runtime.Descriptor { client.descriptor }
+        private var defaultClient: any ContainerRuntimeClient {
+            runtimes[defaultRuntime] ?? runtimes[.appleContainer]!
+        }
+
+        public var descriptor: Core.Runtime.Descriptor { defaultClient.descriptor }
 
         public var availableRuntimeDescriptors: [Core.Runtime.Descriptor] {
-            [.appleContainer]
+            runtimes.values.map(\.descriptor).sorted { $0.displayName < $1.displayName }
         }
 
         public var runtimeCoreSelectorIsEnabled: Bool {
@@ -95,56 +103,62 @@ public extension Core {
         }
 
         private func requireRuntime(_ kind: Core.Runtime.Kind,
-                                    capability: Core.Runtime.Capability) throws -> AppleContainerClient {
-            guard client.descriptor.kind == kind else {
+                                    capability: Core.Runtime.Capability) throws -> any ContainerRuntimeClient {
+            guard let runtime = runtimes[kind] else {
                 throw Core.Runtime.UnsupportedCapability(kind: kind, capability: capability)
             }
-            try client.descriptor.require(capability)
-            return client
+            try runtime.descriptor.require(capability)
+            return runtime
+        }
+
+        public func schemaDefinition(for operation: Core.Schema.Operation,
+                                     runtimeKind: Core.Runtime.Kind? = nil) -> Core.Schema.Definition {
+            Core.Schema.Definition.containerRunEdit(runtimeKind: runtimeKind ?? defaultRuntime,
+                                                    operation: operation)
         }
 
         public func listContainers(all: Bool = true) async throws -> [Core.Container.Snapshot] {
-            try await client.listContainers(all: all)
+            try await defaultClient.listContainers(all: all)
         }
 
         public func stats(ids: [String] = []) async throws -> [Core.Metrics.ContainerStats] {
-            try await client.stats(ids: ids)
+            try await defaultClient.stats(ids: ids)
         }
 
         public func streamStats(ids: [String] = []) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Swift.Error> {
-            client.streamStats(ids: ids)
+            defaultClient.streamStats(ids: ids)
         }
 
         public func diskUsage() async throws -> Core.System.DiskUsage {
-            try await client.diskUsage()
+            try await defaultClient.diskUsage()
         }
 
         public func systemProperties() async throws -> Core.System.Properties {
-            try await client.systemProperties()
+            try await defaultClient.systemProperties()
         }
 
         public func dnsDomains() async throws -> [String] {
-            try await client.dnsDomains()
+            try await defaultClient.dnsDomains()
         }
 
         @discardableResult public func createDNSDomain(_ domain: String) async throws -> Data {
-            try await client.createDNSDomain(domain)
+            try await defaultClient.createDNSDomain(domain)
         }
 
         @discardableResult public func deleteDNSDomain(_ domain: String) async throws -> Data {
-            try await client.deleteDNSDomain(domain)
+            try await defaultClient.deleteDNSDomain(domain)
         }
 
         @discardableResult public func setRecommendedKernel() async throws -> Data {
-            try await client.setRecommendedKernel()
+            try await defaultClient.setRecommendedKernel()
         }
 
         public func execCapture(_ id: String, _ command: [String]) async throws -> String {
-            try await client.execCapture(id, command)
+            try await defaultClient.execCapture(id, command)
         }
 
         @discardableResult public func copy(source: String, destination: String) async throws -> Data {
-            try await client.copy(source: source, destination: destination)
+            try await defaultClient.copy(source: source, destination: destination)
         }
 
         public func terminalInvocation(containerID: String, shell: String) throws -> Core.Command.Invocation {
@@ -153,27 +167,46 @@ public extension Core {
         }
 
         public func streamSystemLogs(follow: Bool, last: Int? = 500) -> AsyncThrowingStream<String, Swift.Error> {
-            client.streamSystemLogs(follow: follow, last: last)
+            defaultClient.streamSystemLogs(follow: follow, last: last)
         }
 
         public func systemStatus() async throws -> Core.System.Status {
-            try await client.systemStatus()
+            try await defaultClient.systemStatus()
         }
 
-        public func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
+        private func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
             try requireRuntime(request.runtimeKind, capability: .containers).previewCreateCommand(for: request)
         }
 
-        @discardableResult public func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
+        public func previewCreateCommand(for document: Core.Schema.Document) throws -> Core.Command.Preview {
+            let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
+            let request = try document.validatedRequest(definition: definition)
+            return try previewCreateCommand(for: request)
+        }
+
+        @discardableResult private func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
             try await requireRuntime(request.runtimeKind, capability: .containers).createContainer(request)
         }
 
-        @discardableResult public func recreateContainer(originalID: String,
+        @discardableResult public func createContainer(_ document: Core.Schema.Document) async throws -> Core.Container.CreateResult {
+            let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
+            let request = try document.validatedRequest(definition: definition)
+            return try await createContainer(request)
+        }
+
+        @discardableResult private func recreateContainer(originalID: String,
                                                          request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
             let runtime = try requireRuntime(request.runtimeKind, capability: .containers)
             _ = try? await runtime.stop([originalID])
             _ = try await runtime.deleteContainers([originalID], force: true)
             return try await runtime.createContainer(request)
+        }
+
+        @discardableResult public func recreateContainer(originalID: String,
+                                                         document: Core.Schema.Document) async throws -> Core.Container.CreateResult {
+            let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
+            let request = try document.validatedRequest(definition: definition)
+            return try await recreateContainer(originalID: originalID, request: request)
         }
 
         public func translateCompose(_ project: Core.Compose.Project,
@@ -183,10 +216,17 @@ public extension Core {
                 .translateCompose(project, baseDirectory: baseDirectory)
         }
 
-        public func imageDefaults(for request: Core.Container.CreateRequest,
+        private func imageDefaults(for request: Core.Container.CreateRequest,
                                   in images: [Core.Image.Resource]) throws -> Core.Container.ImageDefaults? {
             try requireRuntime(request.runtimeKind, capability: .containers)
                 .imageDefaults(for: request, in: images)
+        }
+
+        public func imageDefaults(for document: Core.Schema.Document,
+                                  in images: [Core.Image.Resource]) throws -> Core.Container.ImageDefaults? {
+            let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
+            let request = try document.validatedRequest(definition: definition)
+            return try imageDefaults(for: request, in: images)
         }
 
         public func planMigration(_ document: Core.Container.Document,
@@ -203,31 +243,31 @@ public extension Core {
         }
 
         public func networks() async throws -> [Core.Network.Resource] {
-            try await client.networks()
+            try await defaultClient.networks()
         }
 
         public func volumes() async throws -> [Core.Volume.Resource] {
-            try await client.volumes()
+            try await defaultClient.volumes()
         }
 
         public func images() async throws -> [Core.Image.Resource] {
-            try await client.images()
+            try await defaultClient.images()
         }
 
         public func inspectImage(_ ref: String) async throws -> [Core.Image.Resource] {
-            try await client.inspectImage(ref)
+            try await defaultClient.inspectImage(ref)
         }
 
         public func streamLogs(id: String,
                                follow: Bool = true,
                                tail: Int? = 200,
                                boot: Bool = false) -> AsyncThrowingStream<String, Swift.Error> {
-            client.streamLogs(id: id, follow: follow, tail: tail, boot: boot)
+            defaultClient.streamLogs(id: id, follow: follow, tail: tail, boot: boot)
         }
 
         public func streamPull(_ ref: String,
                                platform: String? = nil) -> AsyncThrowingStream<String, Swift.Error> {
-            client.streamPull(ref, platform: platform)
+            defaultClient.streamPull(ref, platform: platform)
         }
 
         public func streamBuild(context: String,
@@ -236,111 +276,111 @@ public extension Core {
                                 buildArgs: [String: String] = [:],
                                 noCache: Bool = false,
                                 platform: String? = nil) -> AsyncThrowingStream<String, Swift.Error> {
-            client.streamBuild(context: context,
-                               tag: tag,
-                               dockerfile: dockerfile,
-                               buildArgs: buildArgs,
-                               noCache: noCache,
-                               platform: platform)
+            defaultClient.streamBuild(context: context,
+                                      tag: tag,
+                                      dockerfile: dockerfile,
+                                      buildArgs: buildArgs,
+                                      noCache: noCache,
+                                      platform: platform)
         }
 
         public func streamPush(_ ref: String,
                                platform: String? = nil) -> AsyncThrowingStream<String, Swift.Error> {
-            client.streamPush(ref, platform: platform)
+            defaultClient.streamPush(ref, platform: platform)
         }
 
         @discardableResult public func runContainer(arguments: [String]) async throws -> Data {
-            try await client.runContainer(arguments: arguments)
+            try await defaultClient.runContainer(arguments: arguments)
         }
 
         @discardableResult public func performSystemAction(_ action: Core.Runtime.SystemAction) async throws -> Data {
-            try await client.performSystemAction(action)
+            try await defaultClient.performSystemAction(action)
         }
 
         public func registries() async throws -> [Core.Registry.Login] {
-            try await client.registries()
+            try await defaultClient.registries()
         }
 
         @discardableResult public func registryLogin(server: String,
                                                      username: String,
                                                      password: String) async throws -> Data {
-            try await client.registryLogin(server: server, username: username, password: password)
+            try await defaultClient.registryLogin(server: server, username: username, password: password)
         }
 
         @discardableResult public func registryLogout(server: String) async throws -> Data {
-            try await client.registryLogout(server: server)
+            try await defaultClient.registryLogout(server: server)
         }
 
         @discardableResult public func deleteImages(_ refs: [String]) async throws -> Data {
-            try await client.deleteImages(refs)
+            try await defaultClient.deleteImages(refs)
         }
 
         @discardableResult public func tagImage(source: String, target: String) async throws -> Data {
-            try await client.tagImage(source: source, target: target)
+            try await defaultClient.tagImage(source: source, target: target)
         }
 
         @discardableResult public func saveImages(_ refs: [String], to output: String) async throws -> Data {
-            try await client.saveImages(refs, to: output)
+            try await defaultClient.saveImages(refs, to: output)
         }
 
         @discardableResult public func loadImages(from input: String) async throws -> Data {
-            try await client.loadImages(from: input)
+            try await defaultClient.loadImages(from: input)
         }
 
         @discardableResult public func exportContainer(_ id: String, to output: String) async throws -> Data {
-            try await client.exportContainer(id, to: output)
+            try await defaultClient.exportContainer(id, to: output)
         }
 
         @discardableResult public func pruneImages(all: Bool = false) async throws -> Data {
-            try await client.pruneImages(all: all)
+            try await defaultClient.pruneImages(all: all)
         }
 
         @discardableResult public func start(_ ids: [String]) async throws -> Data {
-            try await client.start(ids)
+            try await defaultClient.start(ids)
         }
 
         @discardableResult public func stop(_ ids: [String]) async throws -> Data {
-            try await client.stop(ids)
+            try await defaultClient.stop(ids)
         }
 
         @discardableResult public func deleteContainers(_ ids: [String], force: Bool) async throws -> Data {
-            try await client.deleteContainers(ids, force: force)
+            try await defaultClient.deleteContainers(ids, force: force)
         }
 
         @discardableResult public func pruneContainers() async throws -> Data {
-            try await client.pruneContainers()
+            try await defaultClient.pruneContainers()
         }
 
         @discardableResult public func pruneVolumes() async throws -> Data {
-            try await client.pruneVolumes()
+            try await defaultClient.pruneVolumes()
         }
 
         @discardableResult public func pruneNetworks() async throws -> Data {
-            try await client.pruneNetworks()
+            try await defaultClient.pruneNetworks()
         }
 
         @discardableResult public func createVolume(name: String,
                                                     size: String? = nil,
                                                     labels: [String: String] = [:]) async throws -> Data {
-            try await client.createVolume(name: name, size: size, labels: labels)
+            try await defaultClient.createVolume(name: name, size: size, labels: labels)
         }
 
         @discardableResult public func deleteVolumes(_ names: [String]) async throws -> Data {
-            try await client.deleteVolumes(names)
+            try await defaultClient.deleteVolumes(names)
         }
 
         @discardableResult public func createNetwork(name: String,
                                                      subnet: String? = nil,
                                                      internalOnly: Bool = false,
                                                      labels: [String: String] = [:]) async throws -> Data {
-            try await client.createNetwork(name: name,
-                                           subnet: subnet,
-                                           internalOnly: internalOnly,
-                                           labels: labels)
+            try await defaultClient.createNetwork(name: name,
+                                                  subnet: subnet,
+                                                  internalOnly: internalOnly,
+                                                  labels: labels)
         }
 
         @discardableResult public func deleteNetworks(_ names: [String]) async throws -> Data {
-            try await client.deleteNetworks(names)
+            try await defaultClient.deleteNetworks(names)
         }
     }
 }

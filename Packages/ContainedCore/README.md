@@ -50,13 +50,12 @@ let descriptors = core.availableRuntimeDescriptors
 ## Create Preview Example
 
 ```swift
-var request = Core.Container.CreateRequest()
-request.runtimeKind = .appleContainer
-request.name = "web"
-request.image = "nginx:latest"
-request.ports = [.init(hostPort: "8080", containerPort: "80")]
+var document = Core.Schema.Document.containerCreate()
+document.set(.containerName, .string("web"))
+document.set(.imageReference, .string("nginx:latest"))
+document.set(.networkPorts, .portList([.init(hostPort: "8080", containerPort: "80")]))
 
-let preview = try core.previewCreateCommand(for: request)
+let preview = try core.previewCreateCommand(for: document)
 let command = preview.command
 ```
 
@@ -65,11 +64,18 @@ let command = preview.command
 ```swift
 let project = try Core.Compose.parse(composeText, projectName: "stack")
 let plan = try core.translateCompose(project, baseDirectory: composeDirectory)
-let requests = plan.items.map(\.request)
+let documents = plan.items.map(\.document)
 ```
 
 Compose is a Core-level interchange format. `Core.Compose.YAML` is the only
 place that imports Yams; no public Core API exposes Yams types.
+
+## Schema Conformance
+
+Run/edit documents pass through `Core.Schema.DocumentMigrator` before validation
+or execution. The migrator reads the selected runtime's schema descriptors,
+maps descriptor-published legacy paths, coerces simple value-kind drift, and
+leaves unresolved deviations as field-keyed validation issues.
 
 ## Migration Planning Example
 

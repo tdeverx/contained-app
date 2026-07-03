@@ -135,6 +135,8 @@ struct CreateRequest: Codable, Equatable, Sendable {
     public var runtimeKind: Core.Runtime.Kind = .appleContainer
     public var image = ""
     public var platform = ""
+    public var os = ""
+    public var architecture = ""
     public var name = ""
     public var command: [String] = []
     public var entrypoint = ""

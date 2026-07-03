@@ -4,7 +4,7 @@ import ContainedCore
 
 /// Reusable Docker Hub image search. Before the user types it offers ready-to-run **starters** and a
 /// curated list of **popular** images as quick-picks; while typing it debounces and queries Hub, with
-/// explicit loading and empty states. Selecting anything yields a prefilled `RunSpec` (the starters
+/// explicit loading and empty states. Selecting anything yields a prefilled `ContainerFormState` (the starters
 /// carry a full recipe; a Hub result or popular image carries just the image reference).
 ///
 /// Used by `CreationFlow` for the image-search entry point. Inline fuzzy matching is separate from
@@ -12,7 +12,7 @@ import ContainedCore
 struct RegistryImageSearch: View {
     /// Called with a prefilled spec when the user picks a starter, a popular image, or a search result.
     var initialQuery = ""
-    var onSelect: (RunSpec) -> Void
+    var onSelect: (ContainerFormState) -> Void
 
     @State private var query = ""
     @State private var appliedInitialQuery = false
@@ -239,8 +239,8 @@ struct RecommendedImage: Identifiable, Hashable {
     ]
 
     /// Build a minimal spec that just targets `reference` — the configure form fills in the rest.
-    static func spec(for reference: String) -> RunSpec {
-        var spec = RunSpec()
+    static func spec(for reference: String) -> ContainerFormState {
+        var spec = ContainerFormState()
         spec.image = reference
         return spec
     }

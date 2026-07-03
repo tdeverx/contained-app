@@ -13,7 +13,7 @@
 		0E2100010000000000000002 /* ContainersStoreRefreshTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000002 /* ContainersStoreRefreshTests.swift */; };
 		0E2100010000000000000003 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000003 /* MigrationTests.swift */; };
 		0E2100010000000000000004 /* PaletteSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000004 /* PaletteSearchTests.swift */; };
-		0E2100010000000000000005 /* RunSpecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000005 /* RunSpecTests.swift */; };
+		0E2100010000000000000005 /* ContainerFormStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000005 /* ContainerFormStateTests.swift */; };
 		0E2100010000000000000006 /* SystemVolumeInventoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000006 /* SystemVolumeInventoryTests.swift */; };
 		0E2100010000000000000007 /* UpdaterControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000007 /* UpdaterControllerTests.swift */; };
 		0E2100010000000000000008 /* ContainedApp in Frameworks */ = {isa = PBXBuildFile; productRef = 0E20000B0000000000000001 /* ContainedApp */; };
@@ -38,7 +38,7 @@
 		0E2100020000000000000002 /* ContainersStoreRefreshTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainersStoreRefreshTests.swift; sourceTree = "<group>"; };
 		0E2100020000000000000003 /* MigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		0E2100020000000000000004 /* PaletteSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteSearchTests.swift; sourceTree = "<group>"; };
-		0E2100020000000000000005 /* RunSpecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunSpecTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000005 /* ContainerFormStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerFormStateTests.swift; sourceTree = "<group>"; };
 		0E2100020000000000000006 /* SystemVolumeInventoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemVolumeInventoryTests.swift; sourceTree = "<group>"; };
 		0E2100020000000000000007 /* UpdaterControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterControllerTests.swift; sourceTree = "<group>"; };
 		0E2100020000000000000008 /* ContainedAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ContainedAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -110,7 +110,7 @@
 				0E2100020000000000000002 /* ContainersStoreRefreshTests.swift */,
 				0E2100020000000000000003 /* MigrationTests.swift */,
 				0E2100020000000000000004 /* PaletteSearchTests.swift */,
-				0E2100020000000000000005 /* RunSpecTests.swift */,
+				0E2100020000000000000005 /* ContainerFormStateTests.swift */,
 				0E2100020000000000000006 /* SystemVolumeInventoryTests.swift */,
 				0E2100020000000000000007 /* UpdaterControllerTests.swift */,
 			);
@@ -235,7 +235,7 @@
 				0E2100010000000000000002 /* ContainersStoreRefreshTests.swift in Sources */,
 				0E2100010000000000000003 /* MigrationTests.swift in Sources */,
 				0E2100010000000000000004 /* PaletteSearchTests.swift in Sources */,
-				0E2100010000000000000005 /* RunSpecTests.swift in Sources */,
+				0E2100010000000000000005 /* ContainerFormStateTests.swift in Sources */,
 				0E2100010000000000000006 /* SystemVolumeInventoryTests.swift in Sources */,
 				0E2100010000000000000007 /* UpdaterControllerTests.swift in Sources */,
 			);

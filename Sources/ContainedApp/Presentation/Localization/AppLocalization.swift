@@ -9,6 +9,10 @@ enum AppText {
         String(localized: key, defaultValue: defaultValue, bundle: .main)
     }
 
+    static func dynamicString(_ key: String, defaultValue: String) -> String {
+        NSLocalizedString(key, tableName: nil, bundle: .main, value: defaultValue, comment: "")
+    }
+
     static var back: String { string("common.back", defaultValue: "Back") }
     static var cancel: String { string("common.cancel", defaultValue: "Cancel") }
     static var clearSearch: String { string("common.clearSearch", defaultValue: "Clear search") }
