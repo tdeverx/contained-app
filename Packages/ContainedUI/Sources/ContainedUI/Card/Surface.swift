@@ -278,7 +278,7 @@ private struct CardMaterialSurface: ViewModifier {
                     if let glass = material.glass {
                         Color.clear.glassEffect(glass, in: shape)
                     } else {
-                        VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                        VisualEffectBackground(material: material, blendingMode: .withinWindow)
                     }
 
                     fillLayer(shape)
@@ -303,6 +303,19 @@ private struct CardMaterialSurface: ViewModifier {
     private var shadowColor: Color { SharedSurfaceRendering.shadowColor(for: colorScheme) }
     private var shadowRadius: CGFloat { 10 }
     private var shadowY: CGFloat { 4 }
+}
+
+public extension View {
+    @ViewBuilder
+    func designCardSelectionOverlay(when isSelected: Bool) -> some View {
+        overlay {
+            if isSelected {
+                RoundedRectangle(cornerRadius: UI.Tokens.Radius.card, style: .continuous)
+                    .fill(UI.Theme.Material.toolbarHoverFill)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
 }
 
 private extension View {
@@ -472,4 +485,22 @@ extension CardSurface where Widget == EmptyView {
     }
     .padding(UI.Tokens.Space.xl)
     .frame(width: 420)
+}
+
+#Preview("Card Selection Overlay") {
+    VStack(spacing: UI.Tokens.Space.m) {
+        Text("Unselected")
+            .frame(maxWidth: .infinity)
+            .padding(UI.Tokens.Space.l)
+            .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card)
+            .designCardSelectionOverlay(when: false)
+
+        Text("Selected")
+            .frame(maxWidth: .infinity)
+            .padding(UI.Tokens.Space.l)
+            .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card)
+            .designCardSelectionOverlay(when: true)
+    }
+    .padding(UI.Tokens.Space.xl)
+    .frame(width: 320)
 }

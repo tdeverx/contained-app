@@ -26,7 +26,7 @@ struct RegistriesTab: View {
                             Button("Log Out", role: .destructive) { loggingOut = login }
                         }
                         .contextMenu {
-                            Button { copyToPasteboard(login.host) } label: { Label("Copy Server", systemImage: "doc.on.doc") }
+                            UI.Copy.ValueLabel("Copy Server", value: login.host)
                             Divider()
                             Button(role: .destructive) { loggingOut = login } label: { Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right") }
                         }

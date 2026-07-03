@@ -137,11 +137,7 @@ struct RuntimeTab: View {
             UI.List.MetadataRow(systemImage: "terminal",
                               title: command,
                               isMonospaced: true) {
-                Button { copyToPasteboard(command) } label: {
-                    UI.Symbol.Image(systemName: "doc.on.doc")
-                }
-                    .buttonStyle(.borderless)
-                    .help(AppText.copyCommand)
+                UI.Copy.Icon(value: command, help: AppText.copyCommand)
             }
         }
     }

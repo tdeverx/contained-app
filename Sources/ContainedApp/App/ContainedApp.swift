@@ -1,14 +1,14 @@
 import SwiftUI
 import ContainedUI
-import AppKit
 import ContainedCore
 
 public struct ContainedApplication: App {
+    @Environment(\.openURL) private var openURL
     @State private var app = AppModel()
     @State private var ui = UIState()
 
     public init() {
-        NSWindow.allowsAutomaticWindowTabbing = false
+        Platform.disableAutomaticWindowTabbing()
     }
 
     public var body: some Scene {
@@ -60,7 +60,7 @@ public struct ContainedApplication: App {
                     Divider()
                     Button("New Volume…") { route(.createVolume) }
                     Button("New Network…") { route(.createNetwork) }
-                    Button("Import Compose…") { ComposeImport.pickAndImport(app: app, ui: ui) }
+                    Button("Import Compose…") { route(.importCompose) }
                         .disabled(!app.settings.composeImportEnabled)
                 }
             }
@@ -154,18 +154,18 @@ public struct ContainedApplication: App {
                 }
             }
             CommandGroup(replacing: .help) {
-                Button("Contained Help") { NSWorkspace.shared.open(Links.helpURL) }
-                Button("Features Guide") { NSWorkspace.shared.open(Links.featuresURL) }
-                Button("Installation & Updates") { NSWorkspace.shared.open(Links.installURL) }
-                Button("Keyboard Shortcuts") { NSWorkspace.shared.open(Links.shortcutsURL) }
-                Button("Troubleshooting") { NSWorkspace.shared.open(Links.troubleshootingURL) }
+                Button("Contained Help") { openURL(Links.helpURL) }
+                Button("Features Guide") { openURL(Links.featuresURL) }
+                Button("Installation & Updates") { openURL(Links.installURL) }
+                Button("Keyboard Shortcuts") { openURL(Links.shortcutsURL) }
+                Button("Troubleshooting") { openURL(Links.troubleshootingURL) }
                 Divider()
                 Button("Release Notes") { showReleaseNotes() }
-                Button("Architecture") { NSWorkspace.shared.open(Links.architectureURL) }
-                Button("Contributing") { NSWorkspace.shared.open(Links.contributingURL) }
+                Button("Architecture") { openURL(Links.architectureURL) }
+                Button("Contributing") { openURL(Links.contributingURL) }
                 Divider()
-                Button("Report an Issue…") { NSWorkspace.shared.open(Links.issuesURL) }
-                Button("View Source on GitHub") { NSWorkspace.shared.open(Links.repoURL) }
+                Button("Report an Issue…") { openURL(Links.issuesURL) }
+                Button("View Source on GitHub") { openURL(Links.repoURL) }
                 Divider()
                 Button("Reveal CLI Binary in Finder") { revealCLIBinary() }
             }
@@ -240,16 +240,12 @@ public struct ContainedApplication: App {
     /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).
     private func revealCLIBinary() {
         guard let url = app.runtimeCLIURL(for: .appleContainer) else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([url])
+        Platform.revealInFinder(url)
     }
 
     /// Bring the main window to the front so panel morphs open in the right window.
     private func activateMainWindow() {
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        for window in NSApplication.shared.windows where window.canBecomeMain {
-            window.makeKeyAndOrderFront(nil)
-            break
-        }
+        Platform.activateMainWindow()
     }
 }
 

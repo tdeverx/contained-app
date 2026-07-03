@@ -9,6 +9,7 @@ cd "$(dirname "$0")/.."
 
 CONFIG="${1:-release}"
 APP="Contained.app"
+CURRENT_RELEASE_NOTES="CurrentReleaseNotes.md"
 # Update channel — selects the per-channel app icon (Resources/<channel>.icon). Defaults to
 # nightly (the default channel); CI overrides via env per branch.
 CHANNEL="${CHANNEL:-nightly}"
@@ -69,6 +70,9 @@ for bundle_name in Contained_ContainedApp.bundle Contained_Contained.bundle; do
     break
   fi
 done
+
+echo "▸ Generating bundled release notes…"
+CHANNEL="$CHANNEL" VERSION_VALUE="$VERSION" ./scripts/release-body.sh > "$APP/Contents/Resources/$CURRENT_RELEASE_NOTES"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

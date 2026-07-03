@@ -12,6 +12,29 @@ struct UpdaterControllerTests {
             .deletingLastPathComponent()
     }
 
+    private static func makeAppBundle(resources: [String: String]) throws -> Bundle {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("ContainedUpdaterTests-\(UUID().uuidString)")
+        let app = root.appendingPathComponent("Contained.app")
+        let resourcesRoot = app.appendingPathComponent("Contents/Resources")
+        try FileManager.default.createDirectory(at: resourcesRoot, withIntermediateDirectories: true)
+        for (relativePath, text) in resources {
+            let resource = resourcesRoot.appendingPathComponent(relativePath)
+            try FileManager.default.createDirectory(
+                at: resource.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try text.write(to: resource, atomically: true, encoding: .utf8)
+        }
+        try """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0"><dict><key>CFBundlePackageType</key><string>APPL</string></dict></plist>
+        """.write(to: app.appendingPathComponent("Contents/Info.plist"), atomically: true, encoding: .utf8)
+
+        return try #require(Bundle(url: app))
+    }
+
     @Test func whatsNewIsNotMarkedSeenUntilClose() {
         let defaults = UserDefaults(suiteName: "ContainedUpdaterTests-\(UUID().uuidString)")!
         let updater = UpdaterController(defaults: defaults)
@@ -81,6 +104,34 @@ struct UpdaterControllerTests {
         #expect(html.contains("First complete Contained release"))
     }
 
+    @Test func bundledCurrentReleaseNotesArePreferredOverChangelogExtraction() throws {
+        let bundle = try Self.makeAppBundle(resources: [
+            "CurrentReleaseNotes.md": """
+            ## Changes Since Last Nightly
+
+            - Generated build note.
+
+            ## Full Release Notes
+
+            - Generated full note.
+            """,
+            "Contained_ContainedApp.bundle/Contents/Resources/CHANGELOG.md": """
+            # Changelog
+
+            ## [Unreleased]
+
+            - Changelog-only note.
+            """,
+        ])
+
+        let html = try #require(UpdaterController.releaseNotesHTML(for: "1.0.0-nightly.999+abcdef",
+                                                                   bundle: bundle))
+
+        #expect(html.contains("Generated build note."))
+        #expect(html.contains("Generated full note."))
+        #expect(!html.contains("Changelog-only note."))
+    }
+
     @Test func prereleaseVersionsUseBaseChangelogSection() throws {
         let root = Self.repositoryRoot
         let releaseChangelog = root.appendingPathComponent("CHANGELOG.md")
@@ -143,25 +194,22 @@ struct UpdaterControllerTests {
     }
 
     @Test func appBundleChangelogURLUsesContentsResources() throws {
-        let root = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("ContainedUpdaterTests-\(UUID().uuidString)")
-        let app = root.appendingPathComponent("Contained.app")
-        let resources = app
+        let bundle = try Self.makeAppBundle(resources: [
+            "Contained_ContainedApp.bundle/Contents/Resources/CHANGELOG.md": "# Changelog\n",
+        ])
+        let resources = bundle.bundleURL
             .appendingPathComponent("Contents/Resources/Contained_ContainedApp.bundle/Contents/Resources")
-        try FileManager.default.createDirectory(at: resources, withIntermediateDirectories: true)
-        try "# Changelog\n".write(to: resources.appendingPathComponent("CHANGELOG.md"),
-                                  atomically: true,
-                                  encoding: .utf8)
-        try """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0"><dict><key>CFBundlePackageType</key><string>APPL</string></dict></plist>
-        """.write(to: app.appendingPathComponent("Contents/Info.plist"), atomically: true, encoding: .utf8)
-
-        let bundle = try #require(Bundle(url: app))
         let url = UpdaterController.changelogResourceURL(bundle: bundle)
 
         #expect(url == resources.appendingPathComponent("CHANGELOG.md"))
+    }
+
+    @Test func updaterDoesNotUseDebugSourceTreeChangelogFallback() throws {
+        let source = try String(contentsOf: Self.repositoryRoot
+            .appendingPathComponent("Sources/ContainedApp/Services/Updates/UpdaterController.swift"),
+                                encoding: .utf8)
+
+        #expect(!source.contains("sourceTreeChangelogResourceURL"))
     }
 
     @Test func releaseNotesScriptComposesNightlyChangesAndFullNotes() throws {

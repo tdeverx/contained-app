@@ -290,7 +290,7 @@ struct ContainerCard: View {
         if hasImageUpdate {
             Button { onUpdate() } label: { Label("Update Container…", systemImage: "arrow.down.circle") }
         }
-        Button { copyToPasteboard(snapshot.id) } label: { Label("Copy ID", systemImage: "doc.on.doc") }
+        UI.Copy.ValueLabel("Copy ID", value: snapshot.id)
         Divider()
         Button(role: .destructive) { onDelete() } label: { Label("Delete", systemImage: "trash") }
     }

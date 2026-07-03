@@ -80,11 +80,7 @@ public extension UI.Console {
                 }
                 Spacer()
                 Text(lineCountLabel(lines.count)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                MaterialButton(singleItem: true) {
-                    MaterialButtonItem(systemName: "doc.on.doc", help: copyLogHelp) {
-                        copyToPasteboard(lines.joined(separator: "\n"))
-                    }
-                }
+                UI.Copy.Icon(value: lines.joined(separator: "\n"), help: copyLogHelp)
             }
             .font(.callout)
             .padding(UI.Tokens.Space.s)
@@ -115,6 +111,16 @@ public extension UI.Console {
     }
 }
 
+public extension View {
+    func terminalSurfaceChrome() -> some View {
+        padding(UI.Tokens.Space.s)
+            .background(.black.opacity(UI.Tokens.Terminal.surfaceOpacity),
+                        in: RoundedRectangle(cornerRadius: UI.Tokens.Radius.card,
+                                             style: .continuous))
+            .padding(UI.Tokens.Space.s)
+    }
+}
+
 #Preview("Stream Console") {
     UI.Console.Stream(stream: {
         AsyncThrowingStream { continuation in
@@ -131,4 +137,13 @@ public extension UI.Console {
     failureLabel: { error in error.localizedDescription })
     .frame(width: 520, height: 320)
     .padding(UI.Tokens.Space.xl)
+}
+
+#Preview("Terminal Surface Chrome") {
+    Text("preview-web$ nginx -g 'daemon off;'")
+        .font(.system(.caption, design: .monospaced))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .terminalSurfaceChrome()
+        .padding(UI.Tokens.Space.xl)
+        .frame(width: 420)
 }

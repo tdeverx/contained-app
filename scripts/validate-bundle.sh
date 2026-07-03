@@ -7,6 +7,7 @@ app="${1:-Contained.app}"
 plist="$app/Contents/Info.plist"
 binary="$app/Contents/MacOS/Contained"
 sparkle_framework="$app/Contents/Frameworks/Sparkle.framework"
+current_release_notes="$app/Contents/Resources/CurrentReleaseNotes.md"
 
 fail() {
   echo "✗ $*" >&2
@@ -25,6 +26,7 @@ for bundle_name in Contained_ContainedApp.bundle Contained_Contained.bundle; do
   fi
 done
 [ -n "$resource_changelog" ] || fail "Bundled CHANGELOG.md resource is missing"
+[ -s "$current_release_notes" ] || fail "CurrentReleaseNotes.md resource is missing or empty"
 [ -d "$sparkle_framework" ] || fail "Sparkle.framework is missing from the bundle"
 
 plist_value() {

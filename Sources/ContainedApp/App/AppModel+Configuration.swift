@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 import ContainedCore
 
@@ -18,9 +17,12 @@ extension AppModel {
     }
 
     func exportConfiguration(to url: URL, sections: Set<AppStateSection> = Set(AppStateSection.allCases)) throws {
+        try configurationData(sections: sections).write(to: url, options: .atomic)
+    }
+
+    func configurationData(sections: Set<AppStateSection> = Set(AppStateSection.allCases)) throws -> Data {
         let envelope = try AppStateEnvelope.make(from: self, sections: sections)
-        let data = try JSONEncoder.containedBackup().encode(envelope)
-        try data.write(to: url, options: .atomic)
+        return try JSONEncoder.containedBackup().encode(envelope)
     }
 
     func importConfiguration(from url: URL,
@@ -37,22 +39,6 @@ extension AppModel {
         database.setSetting(StateMigrator.currentSchemaVersion, for: StateMigrator.schemaVersionSettingKey)
         downgradeSchemaVersion = nil
         flash(AppText.keptReadableLocalData)
-    }
-
-    func exportForDowngradeAndReset() {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.containedBackup, .json]
-        panel.nameFieldStringValue = "Contained Downgrade Backup.containedbackup"
-        panel.canCreateDirectories = true
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            try exportConfiguration(to: url)
-            resetIncompatibleLocalState()
-            downgradeSchemaVersion = nil
-            flash(AppText.exportedBackupAndReset)
-        } catch {
-            flash(error.appDisplayMessage)
-        }
     }
 
     func resetIncompatibleLocalState() {

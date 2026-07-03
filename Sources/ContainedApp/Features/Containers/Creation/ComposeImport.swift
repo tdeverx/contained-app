@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 import ContainedCore
 
 /// Import a `compose.yaml` without a dedicated page: pick the file, translate each service with an
@@ -7,17 +7,6 @@ import ContainedCore
 /// and the palette.
 @MainActor
 enum ComposeImport {
-    /// Show an open panel, then import the chosen file.
-    static func pickAndImport(app: AppModel, ui: UIState) {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.yaml]
-        panel.message = AppText.chooseComposeFile
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        importFile(at: url, app: app, ui: ui)
-    }
-
     /// Parse a compose file and feed its services into the prefill queue (also used by drag-and-drop).
     static func importFile(at url: URL,
                            runtimeKind: Core.Runtime.Kind? = nil,

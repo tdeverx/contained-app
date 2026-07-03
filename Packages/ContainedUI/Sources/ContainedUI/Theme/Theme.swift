@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 public extension UI.Theme {
 /// Material/elevation constants for reusable design surfaces. Keep glass, shadow, and stroke choices
@@ -69,16 +68,6 @@ enum Appearance: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
-    /// The AppKit appearance to force on the app. `nil` for `.system` releases the override so the app
-    /// tracks the live OS appearance — `.preferredColorScheme(nil)` alone doesn't reliably re-sync a
-    /// window that was previously pinned, so we set `NSApplication.appearance` directly.
-    public var nsAppearance: NSAppearance? {
-        switch self {
-        case .system: return nil
-        case .light: return NSAppearance(named: .aqua)
-        case .dark: return NSAppearance(named: .darkAqua)
-        }
-    }
 }
 
 }
@@ -130,27 +119,6 @@ enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
-    /// The vibrancy material. Glass cases fall back to a sensible default for the rare place that
-    /// needs a behind-window material (e.g. the root content backing, which can't be glass).
-    public var nsMaterial: NSVisualEffectView.Material {
-        switch self {
-        case .glassClear, .glassRegular: return .fullScreenUI
-        case .fullScreenUI:          return .fullScreenUI
-        case .underWindowBackground: return .underWindowBackground
-        case .underPageBackground:   return .underPageBackground
-        case .windowBackground:      return .windowBackground
-        case .contentBackground:     return .contentBackground
-        case .sidebar:               return .sidebar
-        case .headerView:            return .headerView
-        case .titlebar:              return .titlebar
-        case .sheet:                 return .sheet
-        case .popover:               return .popover
-        case .menu:                  return .menu
-        case .selection:             return .selection
-        case .hudWindow:             return .hudWindow
-        case .toolTip:               return .toolTip
-        }
-    }
 }
 }
 
@@ -173,7 +141,7 @@ private struct SheetMaterial: ViewModifier {
                 if let glass = material.glass {
                     Color.clear.glassEffect(glass, in: Rectangle()).ignoresSafeArea()
                 } else {
-                    VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                    VisualEffectBackground(material: material, blendingMode: .withinWindow)
                         .ignoresSafeArea()
                 }
             }
@@ -220,7 +188,7 @@ private struct FloatingPanelMaterial: AnimatableModifier {
                 if let glass = material.glass {
                     Color.clear.glassEffect(glass, in: shape)
                 } else {
-                    VisualEffectBackground(material: material.nsMaterial, blendingMode: .withinWindow)
+                    VisualEffectBackground(material: material, blendingMode: .withinWindow)
                         .clipShape(shape)
                 }
             }
@@ -241,7 +209,7 @@ private struct ToolbarControlMaterial<S: Shape>: ViewModifier {
         } else {
             // A vibrancy material chosen for buttons — back the capsule with it and clip.
             content.background {
-                VisualEffectBackground(material: buttonMaterial.nsMaterial, blendingMode: .withinWindow)
+                VisualEffectBackground(material: buttonMaterial, blendingMode: .withinWindow)
                     .clipShape(shape)
             }
         }

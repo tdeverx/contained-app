@@ -277,9 +277,12 @@ struct SystemContent: View {
 
     @ViewBuilder
     private func volumeMenu(_ entry: VolumeInventoryEntry) -> some View {
-        Button { copyToPasteboard(entry.source ?? entry.title) } label: { Label(AppText.string("volume.copySource", defaultValue: "Copy source"), systemImage: "doc.on.doc") }
+        UI.Copy.ValueLabel(AppText.string("volume.copySource", defaultValue: "Copy source"),
+                           value: entry.source ?? entry.title)
         if let destination = entry.destination {
-            Button { copyToPasteboard(destination) } label: { Label(AppText.string("volume.copyDestination", defaultValue: "Copy destination"), systemImage: "arrow.down.doc") }
+            UI.Copy.ValueLabel(AppText.string("volume.copyDestination", defaultValue: "Copy destination"),
+                               value: destination,
+                               systemName: "arrow.down.doc")
         } else {
             Button(AppText.string("volume.copyDestination", defaultValue: "Copy destination"), systemImage: "arrow.down.doc") {}
                 .disabled(true)

@@ -1,6 +1,5 @@
 import SwiftUI
 import ContainedUI
-import AppKit
 import ContainedCore
 
 /// One result row in the command palette. Renders a different card layout per `PaletteItem.visual`

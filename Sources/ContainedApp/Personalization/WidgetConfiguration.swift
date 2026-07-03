@@ -1,4 +1,3 @@
-import AppKit
 import ContainedUI
 import ContainedCore
 
@@ -91,8 +90,7 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
     }
 
     var resolvedSystemImage: String {
-        guard !icon.isEmpty,
-              NSImage(systemSymbolName: icon, accessibilityDescription: nil) != nil else {
+        guard !icon.isEmpty else {
             return metric.systemImage
         }
         return icon

@@ -4,10 +4,10 @@ import AppKit
 /// Behind-window vibrancy so the desktop shows through the content area (blurred). No SwiftUI
 /// equivalent for `.behindWindow` blending — flagged AppKit bridge.
 struct VisualEffectBackground: NSViewRepresentable {
-    var material: NSVisualEffectView.Material
+    var material: UI.Theme.WindowMaterial
     var blendingMode: NSVisualEffectView.BlendingMode
 
-    init(material: NSVisualEffectView.Material = .fullScreenUI,
+    init(material: UI.Theme.WindowMaterial = .fullScreenUI,
          blendingMode: NSVisualEffectView.BlendingMode = .behindWindow) {
         self.material = material
         self.blendingMode = blendingMode
@@ -17,13 +17,37 @@ struct VisualEffectBackground: NSViewRepresentable {
         let view = NSVisualEffectView()
         view.blendingMode = blendingMode
         view.state = .active
-        view.material = material
+        view.material = material.visualEffectMaterial
         return view
     }
 
     func updateNSView(_ view: NSVisualEffectView, context: Context) {
         view.blendingMode = blendingMode
-        view.material = material
+        view.material = material.visualEffectMaterial
+    }
+}
+
+private extension UI.Theme.WindowMaterial {
+    /// Glass cases fall back to a sensible vibrancy material for places that need a behind-window
+    /// layer, such as root content backing.
+    var visualEffectMaterial: NSVisualEffectView.Material {
+        switch self {
+        case .glassClear, .glassRegular: return .fullScreenUI
+        case .fullScreenUI:          return .fullScreenUI
+        case .underWindowBackground: return .underWindowBackground
+        case .underPageBackground:   return .underPageBackground
+        case .windowBackground:      return .windowBackground
+        case .contentBackground:     return .contentBackground
+        case .sidebar:               return .sidebar
+        case .headerView:            return .headerView
+        case .titlebar:              return .titlebar
+        case .sheet:                 return .sheet
+        case .popover:               return .popover
+        case .menu:                  return .menu
+        case .selection:             return .selection
+        case .hudWindow:             return .hudWindow
+        case .toolTip:               return .toolTip
+        }
     }
 }
 
@@ -32,9 +56,9 @@ struct VisualEffectBackground: NSViewRepresentable {
 /// wallpapers is left to the OS "Reduce transparency" accessibility setting.
 public extension UI.Theme {
 struct BackgroundLayer: View {
-    public var material: NSVisualEffectView.Material
+    public var material: UI.Theme.WindowMaterial
 
-    public init(material: NSVisualEffectView.Material = .fullScreenUI) {
+    public init(material: UI.Theme.WindowMaterial = .fullScreenUI) {
         self.material = material
     }
 

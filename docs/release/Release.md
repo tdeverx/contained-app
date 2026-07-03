@@ -25,8 +25,9 @@ The app's Settings → Updates picker changes the feed URL. Appcast items do not
 ## Release Notes
 
 Release notes are composed by `scripts/release-body.sh` and embedded by `scripts/release-notes.sh`.
-The bundled in-app What's New view mirrors that order so local release notes and Sparkle appcast
-notes do not drift.
+`scripts/bundle.sh` also writes the same generated Markdown to `CurrentReleaseNotes.md` inside the
+app bundle so the in-app What's New view reads the current build artifact instead of reconstructing
+notes from the source changelog.
 
 - Stable ships `Full Release Notes` for the base marketing version, such as `1.0.0`.
 - Beta ships `Changes Since Last Beta` followed by `Full Release Notes`.

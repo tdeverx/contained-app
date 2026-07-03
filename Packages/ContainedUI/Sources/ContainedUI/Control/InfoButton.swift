@@ -41,7 +41,7 @@ public extension UI.Control {
                         .frame(width: 300)
                         .padding(UI.Tokens.Space.m)
                         .background {
-                            VisualEffectBackground(material: modalMaterial.nsMaterial, blendingMode: .withinWindow)
+                            VisualEffectBackground(material: modalMaterial, blendingMode: .withinWindow)
                         }
                         .presentationBackground(.clear)
                 }

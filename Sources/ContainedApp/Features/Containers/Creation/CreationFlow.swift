@@ -2,7 +2,7 @@ import SwiftUI
 import ContainedUX
 import ContainedUI
 import SwiftData
-import AppKit
+import UniformTypeIdentifiers
 import ContainedCore
 
 /// The unified, **paged** creation flow hosted by the toolbar's `+` morph panel, where each page
@@ -71,6 +71,8 @@ struct CreationFlow: View {
     @State private var working = false
     @State private var configureToken = 0
     @State private var configureReturnPage: Page?
+    @State private var selectingComposeFile = false
+    @State private var selectingImageArchive = false
     @Namespace private var tileNamespace
 
     private var springAnim: Animation { .spring(response: 0.42, dampingFraction: 0.86) }
@@ -127,6 +129,14 @@ struct CreationFlow: View {
             }
             .onDisappear { onSoftDismissChange?(nil) }
             .onChange(of: page) { _, _ in publishSoftDismiss() }
+            .fileImporter(isPresented: $selectingComposeFile,
+                          allowedContentTypes: UTType.composeDocuments) { result in
+                handleSelectedComposeFile(result)
+            }
+            .fileImporter(isPresented: $selectingImageArchive,
+                          allowedContentTypes: UTType.imageArchives) { result in
+                handleSelectedImageArchive(result)
+            }
     }
 
     @ViewBuilder
@@ -488,14 +498,17 @@ struct CreationFlow: View {
 
     /// Pick a compose file, then use the existing prefill queue (one form per service).
     private func selectComposeFile() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.yaml]
-        panel.message = AppText.chooseComposeFile
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        onClose()
-        ComposeImport.importFile(at: url, runtimeKind: resourceRuntimeKind, app: app, ui: ui)
+        selectingComposeFile = true
+    }
+
+    private func handleSelectedComposeFile(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            onClose()
+            ComposeImport.importFile(at: url, runtimeKind: resourceRuntimeKind, app: app, ui: ui)
+        case .failure(let error):
+            app.flash(error.appDisplayMessage)
+        }
     }
 
     private func importPastedCompose() {
@@ -507,14 +520,17 @@ struct CreationFlow: View {
 
     /// Pick an image tar archive and load it into the local image store.
     private func selectImageArchive() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.init(filenameExtension: "tar") ?? .data]
-        panel.message = AppText.chooseImageTarArchive
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        onClose()
-        app.loadImageTar(at: url, runtimeKind: resourceRuntimeKind)
+        selectingImageArchive = true
+    }
+
+    private func handleSelectedImageArchive(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            onClose()
+            app.loadImageTar(at: url, runtimeKind: resourceRuntimeKind)
+        case .failure(let error):
+            app.flash(error.appDisplayMessage)
+        }
     }
 
     private func createVolume() {

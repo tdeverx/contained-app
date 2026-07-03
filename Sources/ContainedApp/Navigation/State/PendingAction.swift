@@ -2,6 +2,7 @@
 enum PendingAction: Equatable {
     case runContainer
     case pullImage, loadImage, pruneImages
+    case importCompose
     case createVolume
     case createNetwork
     case registryLogin

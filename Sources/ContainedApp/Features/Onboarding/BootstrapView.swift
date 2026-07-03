@@ -1,18 +1,30 @@
 import SwiftUI
 import ContainedUI
-import AppKit
+import UniformTypeIdentifiers
 import ContainedCore
 
 /// First-run / degraded states: CLI missing, unsupported version, or service stopped — each with
 /// the action that resolves it (start service, locate the CLI, continue anyway, try again).
 struct BootstrapView: View {
+    @Environment(\.openURL) private var openURL
     @Environment(AppModel.self) private var app
     @State private var starting = false
+    @State private var locatingCLI = false
 
     var body: some View {
         UI.State.Hero(systemImage: icon, title: title, message: message) {
             actions
         }
+        .fileImporter(isPresented: $locatingCLI,
+                      allowedContentTypes: [.unixExecutable, .item]) { result in
+            switch result {
+            case .success(let url):
+                Task { await app.useCLIPath(url.path) }
+            case .failure(let error):
+                app.flash(error.appDisplayMessage)
+            }
+        }
+        .fileDialogDefaultDirectory(URL(fileURLWithPath: "/usr/local/bin"))
     }
 
     @ViewBuilder
@@ -69,19 +81,11 @@ struct BootstrapView: View {
     }
 
     private func openReleases() {
-        if let url = URL(string: "https://github.com/apple/container/releases") { NSWorkspace.shared.open(url) }
+        if let url = URL(string: "https://github.com/apple/container/releases") { openURL(url) }
     }
 
     private func locateCLI() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.message = AppText.selectContainerBinary
-        panel.directoryURL = URL(fileURLWithPath: "/usr/local/bin")
-        if panel.runModal() == .OK, let url = panel.url {
-            Task { await app.useCLIPath(url.path) }
-        }
+        locatingCLI = true
     }
 
     private var icon: String {

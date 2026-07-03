@@ -19,15 +19,19 @@ struct ReleaseNotesView: View {
     }
 }
 
-private struct HTMLView: NSViewRepresentable {
+private struct HTMLView: View {
     var html: String
+    @State private var page = WebPage()
 
-    func makeNSView(context: Context) -> WKWebView {
-        WKWebView()
+    var body: some View {
+        WebView(page)
+            .task(id: html) {
+                page.load(html: document)
+            }
     }
 
-    func updateNSView(_ webView: WKWebView, context: Context) {
-        let document = """
+    private var document: String {
+        """
         <!doctype html>
         <html>
         <head>
@@ -51,6 +55,5 @@ private struct HTMLView: NSViewRepresentable {
         <body>\(html)</body>
         </html>
         """
-        webView.loadHTMLString(document, baseURL: nil)
     }
 }

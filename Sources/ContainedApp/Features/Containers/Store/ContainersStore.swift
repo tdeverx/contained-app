@@ -305,7 +305,6 @@ final class ContainersStore {
         diagnosticLogger.notice("Run started from creation flow")
         do {
             let result = try await client.createContainer(spec.document)
-            performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
             logger?.record("Run finished in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
@@ -342,7 +341,6 @@ final class ContainersStore {
         diagnosticLogger.notice("Recreate started for \(runtimeID, privacy: .public)")
         do {
             _ = try await client.recreateContainer(originalID: runtimeID, document: spec.document)
-            performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
             logger?.record("Recreated \(runtimeID) in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
@@ -381,7 +379,6 @@ final class ContainersStore {
         diagnosticLogger.notice("\(verb) started for \(id, privacy: .public)")
         do {
             try await body(client)
-            performHaptic()
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
             logger?.record("\(verb) finished in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",

@@ -295,13 +295,9 @@ private struct NetworksPage: View {
 
     @ViewBuilder
     private func networkMenu(_ network: Core.Network.Resource) -> some View {
-        Button { copyToPasteboard(network.name) } label: {
-            Label("Copy Name", systemImage: "doc.on.doc")
-        }
+        UI.Copy.ValueLabel("Copy Name", value: network.name)
         if let subnet = network.status?.ipv4Subnet {
-            Button { copyToPasteboard(subnet) } label: {
-                Label("Copy IPv4 Subnet", systemImage: "network")
-            }
+            UI.Copy.ValueLabel("Copy IPv4 Subnet", value: subnet, systemName: "network")
         }
         if !network.isBuiltin {
             Divider()

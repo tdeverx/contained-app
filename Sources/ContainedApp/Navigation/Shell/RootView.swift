@@ -1,6 +1,5 @@
 import SwiftUI
 import ContainedUX
-import AppKit
 import UniformTypeIdentifiers
 import ContainedCore
 import ContainedUI
@@ -15,6 +14,10 @@ struct RootView: View {
     /// Image load/prune are global actions because they can be invoked from pages, toolbar panels,
     /// menus, and the command palette.
     @State private var pruningImages = false
+    @State private var importingImageArchive = false
+    @State private var importingComposeFile = false
+    @State private var exportingDowngradeBackup = false
+    @State private var downgradeBackupDocument: DataFileDocument?
     /// System logs are reachable from menus and the command palette while system resources can render
     /// as either a sidebar page or toolbar panel.
     @State private var showSystemLogs = false
@@ -32,9 +35,9 @@ struct RootView: View {
         }
         .sheet(isPresented: downgradeBinding) {
             DowngradeDecisionView(schemaVersion: app.downgradeSchemaVersion ?? StateMigrator.currentSchemaVersion,
-                                  onExportAndReset: { app.exportForDowngradeAndReset() },
+                                  onExportAndReset: prepareDowngradeBackupExport,
                                   onKeep: { app.resolveDowngradeByKeepingReadableData() },
-                                  onQuit: { NSApplication.shared.terminate(nil) })
+                                  onQuit: { Platform.quit() })
         }
         .sheet(isPresented: whatsNewBinding) {
             ReleaseNotesView(title: AppText.string("releaseNotes.whatsNew", defaultValue: "What's New"),
@@ -49,6 +52,7 @@ struct RootView: View {
         .onChange(of: ui.pendingAction) { _, action in
             switch action {
             case .loadImage:     ui.pendingAction = nil; loadImageTar()
+            case .importCompose: ui.pendingAction = nil; importingComposeFile = true
             case .pruneImages:   ui.pendingAction = nil; pruningImages = true
             case .registryLogin: ui.pendingAction = nil; ui.openSettings(to: .registries)
             case .systemLogs:    ui.pendingAction = nil; showSystemLogs = true
@@ -78,6 +82,13 @@ struct RootView: View {
             }
             return false
         }
+        .modifier(RootFileDialogs(importingImageArchive: $importingImageArchive,
+                                  importingComposeFile: $importingComposeFile,
+                                  exportingDowngradeBackup: $exportingDowngradeBackup,
+                                  downgradeBackupDocument: $downgradeBackupDocument,
+                                  onImageArchive: handleImportedImageArchive,
+                                  onComposeFile: handleImportedComposeFile,
+                                  onDowngradeBackupExport: handleDowngradeBackupExport))
         // Long-running operations (image pulls, etc.) now surface in the bottom-left status capsule
         // (see `AppToolbar` → `UI.State.ActivityStatusIndicator`); only transient banners float at the bottom.
         .overlay(alignment: .bottom) {
@@ -100,14 +111,12 @@ struct RootView: View {
         .environment(\.pageScaffoldUsesToolbarChrome, settings.experimentalToolbarUI)
         .environment(\.pageScaffoldBottomClearance, settings.experimentalToolbarUI ? AppToolbar.bandHeight : 0)
         .preferredColorScheme(settings.appearance.colorScheme)
-        .onAppear { applyAppearance(settings.appearance) }
         .onAppear { ui.toolbarUIEnabled = settings.experimentalToolbarUI }
         .onAppear {
             ui.panelNavigationEnabled = settings.usesPanelNavigation
             ui.ensureSelectedSectionIsNavigable()
             updateContainerStatsVisibility()
         }
-        .onChange(of: settings.appearance) { _, mode in applyAppearance(mode) }
         .onChange(of: settings.experimentalToolbarUI) { _, enabled in
             ui.toolbarUIEnabled = enabled
             ui.panelNavigationEnabled = settings.usesPanelNavigation
@@ -149,7 +158,7 @@ struct RootView: View {
     private func toolbarShell(settings: SettingsStore) -> some View {
         GeometryReader { _ in
             ZStack {
-                UI.Theme.BackgroundLayer(material: settings.windowMaterial.nsMaterial)
+                UI.Theme.BackgroundLayer(material: settings.windowMaterial)
                 toolbarContent
             }
         }
@@ -164,7 +173,7 @@ struct RootView: View {
 
     private func classicShell(settings: SettingsStore) -> some View {
         ZStack {
-            UI.Theme.BackgroundLayer(material: settings.windowMaterial.nsMaterial)
+            UI.Theme.BackgroundLayer(material: settings.windowMaterial)
             content
                 .ignoresSafeArea(.container, edges: .vertical)
         }
@@ -229,22 +238,19 @@ struct RootView: View {
         }
     }
 
-    /// Force (or release, for `.system`) the app-wide AppKit appearance. Setting `NSApplication.appearance`
-    /// directly — rather than relying only on `.preferredColorScheme` — makes "System" re-sync to the
-    /// live OS theme even after the app was pinned to Light/Dark.
-    private func applyAppearance(_ mode: UI.Theme.Appearance) {
-        NSApplication.shared.appearance = mode.nsAppearance
-    }
-
     /// Pick an image `.tar` and load it into the local store.
     private func loadImageTar() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.init(filenameExtension: "tar") ?? .data]
-        panel.message = AppText.chooseImageTarArchive
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        importingImageArchive = true
+    }
+
+    private func handleImportedImageArchive(_ result: Result<URL, Error>) {
+        guard let url = importedURL(from: result) else { return }
         loadImageTar(at: url)
+    }
+
+    private func handleImportedComposeFile(_ result: Result<URL, Error>) {
+        guard let url = importedURL(from: result) else { return }
+        ComposeImport.importFile(at: url, app: app, ui: ui)
     }
 
     private func loadImageTar(at url: URL) {
@@ -273,7 +279,38 @@ struct RootView: View {
     /// Toggle the front window between its zoomed (filled) and restored size — emulates the
     /// title-bar double-click now that there's no title bar to double-click.
     private func zoomFrontWindow() {
-        (NSApp.keyWindow ?? NSApp.mainWindow)?.zoom(nil)
+        Platform.zoomFrontWindow()
+    }
+
+    private func importedURL(from result: Result<URL, Error>) -> URL? {
+        switch result {
+        case .success(let url):
+            return url
+        case .failure(let error):
+            app.flash(error.appDisplayMessage)
+            return nil
+        }
+    }
+
+    private func prepareDowngradeBackupExport() {
+        do {
+            downgradeBackupDocument = DataFileDocument(data: try app.configurationData())
+            exportingDowngradeBackup = true
+        } catch {
+            app.flash(error.appDisplayMessage)
+        }
+    }
+
+    private func handleDowngradeBackupExport(_ result: Result<URL, Error>) {
+        defer { downgradeBackupDocument = nil }
+        switch result {
+        case .success:
+            app.resetIncompatibleLocalState()
+            app.downgradeSchemaVersion = nil
+            app.flash(AppText.exportedBackupAndReset)
+        case .failure(let error):
+            app.flash(error.appDisplayMessage)
+        }
     }
 
     @ViewBuilder
@@ -302,4 +339,29 @@ struct RootView: View {
         ClassicShell(sidebarNavigationEnabled: app.settings.sidebarNavigationEnabled)
     }
 
+}
+
+private struct RootFileDialogs: ViewModifier {
+    @Binding var importingImageArchive: Bool
+    @Binding var importingComposeFile: Bool
+    @Binding var exportingDowngradeBackup: Bool
+    @Binding var downgradeBackupDocument: DataFileDocument?
+    var onImageArchive: (Result<URL, Error>) -> Void
+    var onComposeFile: (Result<URL, Error>) -> Void
+    var onDowngradeBackupExport: (Result<URL, Error>) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .fileImporter(isPresented: $importingImageArchive,
+                          allowedContentTypes: UTType.imageArchives,
+                          onCompletion: onImageArchive)
+            .fileImporter(isPresented: $importingComposeFile,
+                          allowedContentTypes: UTType.composeDocuments,
+                          onCompletion: onComposeFile)
+            .fileExporter(isPresented: $exportingDowngradeBackup,
+                          document: downgradeBackupDocument,
+                          contentTypes: UTType.containedBackupDocuments,
+                          defaultFilename: "Contained Downgrade Backup.containedbackup",
+                          onCompletion: onDowngradeBackupExport)
+    }
 }

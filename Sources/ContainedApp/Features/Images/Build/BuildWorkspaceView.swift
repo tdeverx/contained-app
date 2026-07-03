@@ -1,13 +1,10 @@
 import SwiftUI
 import ContainedUI
-import AppKit
+import UniformTypeIdentifiers
 import ContainedCore
 
 /// Build an image from a Dockerfile + context, streaming the BuildKit log via
 /// `container build --progress plain`.
-///
-/// AppKit bridge (flagged per the build rule): the folder picker uses `NSOpenPanel` — SwiftUI has
-/// no native directory chooser on macOS. Only the picker touches AppKit.
 struct BuildWorkspaceView: View {
     @Environment(AppModel.self) private var app
 
@@ -19,6 +16,7 @@ struct BuildWorkspaceView: View {
     @State private var buildArgs: [KeyValue] = []
     @State private var runtimeKind = Core.Runtime.Kind.appleContainer
     @State private var building = false
+    @State private var choosingContext = false
     @State private var run = 0          // bump to restart the console
     private var canBuild: Bool { contextDir != nil && !tag.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -50,6 +48,15 @@ struct BuildWorkspaceView: View {
             }
         }
         .onAppear(perform: normalizeRuntimeSelection)
+        .fileImporter(isPresented: $choosingContext,
+                      allowedContentTypes: [.folder]) { result in
+            switch result {
+            case .success(let url):
+                contextDir = url
+            case .failure(let error):
+                app.flash(error.appDisplayMessage)
+            }
+        }
     }
 
     private var form: some View {
@@ -178,13 +185,7 @@ struct BuildWorkspaceView: View {
     }
 
     private func chooseFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.prompt = AppText.choose
-        panel.message = AppText.chooseBuildContextFolder
-        if panel.runModal() == .OK { contextDir = panel.url }
+        choosingContext = true
     }
 
     private var buildRuntimes: [Core.Runtime.Descriptor] {

@@ -1,11 +1,11 @@
 import SwiftUI
-import AppKit
 import ContainedCore
 import ContainedUI
 
 /// The menu shown by the menu-bar extra: a compact command surface with service status, running
 /// containers, live resource counts, and the same creation / navigation affordances as the app menu.
 struct MenuBarContent: View {
+    @Environment(\.openURL) private var openURL
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
 
@@ -92,7 +92,7 @@ struct MenuBarContent: View {
                 Divider()
                 Button("New Volume…") { activate(); route(.createVolume) }
                 Button("New Network…") { activate(); route(.createNetwork) }
-                Button("Import Compose…") { activate(); ComposeImport.pickAndImport(app: app, ui: ui) }
+                Button("Import Compose…") { activate(); route(.importCompose) }
                     .disabled(!app.settings.composeImportEnabled)
             }
 
@@ -140,9 +140,9 @@ struct MenuBarContent: View {
                 Button("About Contained") { activate(); openSettings(to: .about) }
                 Button("Reveal CLI Binary in Finder") { activate(); revealCLIBinary() }
                 Divider()
-                Button("Release Notes") { activate(); NSWorkspace.shared.open(Links.releasesURL) }
-                Button("Troubleshooting") { activate(); NSWorkspace.shared.open(Links.troubleshootingURL) }
-                Button("Keyboard Shortcuts") { activate(); NSWorkspace.shared.open(Links.shortcutsURL) }
+                Button("Release Notes") { activate(); openURL(Links.releasesURL) }
+                Button("Troubleshooting") { activate(); openURL(Links.troubleshootingURL) }
+                Button("Keyboard Shortcuts") { activate(); openURL(Links.shortcutsURL) }
             }
 
             Divider()
@@ -202,7 +202,7 @@ struct MenuBarContent: View {
         HStack(spacing: UI.Layout.Spacing.s) {
             Button("Open Contained") { activate() }
             Spacer(minLength: 0)
-            Button("Quit") { NSApplication.shared.terminate(nil) }
+            Button("Quit") { Platform.quit() }
         }
         .buttonStyle(.borderless)
     }
@@ -235,11 +235,7 @@ struct MenuBarContent: View {
 
     /// Bring the main window to the front.
     private func activate() {
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        for window in NSApplication.shared.windows where window.canBecomeMain {
-            window.makeKeyAndOrderFront(nil)
-            break
-        }
+        Platform.activateMainWindow()
     }
 
     private func containerName(for snapshot: Core.Container.Snapshot) -> String {
@@ -274,6 +270,6 @@ struct MenuBarContent: View {
     /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).
     private func revealCLIBinary() {
         guard let url = app.runtimeCLIURL(for: .appleContainer) else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([url])
+        Platform.revealInFinder(url)
     }
 }

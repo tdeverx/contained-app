@@ -224,6 +224,18 @@ struct TitleSubtitle: View {
 }
 }
 
+public extension View {
+    func subtleTileBackground() -> some View {
+        background(.quaternary.opacity(UI.Tokens.InlineControl.subtleTileOpacity),
+                   in: RoundedRectangle(cornerRadius: UI.Tokens.Radius.control,
+                                        style: .continuous))
+    }
+
+    func toolbarControlContentShape() -> some View {
+        contentShape(Capsule(style: .continuous))
+    }
+}
+
 #Preview("Toolbar Controls") {
     ToolbarControlsPreview()
         .padding(UI.Tokens.Space.xl)
@@ -258,6 +270,9 @@ private struct ToolbarControlsPreview: View {
                                              subtitle: "Ready")
                 }
             }
+            Text("Tile")
+                .padding(UI.Tokens.Space.m)
+                .subtleTileBackground()
         }
     }
 }

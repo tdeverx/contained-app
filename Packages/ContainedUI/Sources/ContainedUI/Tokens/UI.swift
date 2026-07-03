@@ -10,6 +10,7 @@ public extension UI {
     enum Control {}
     enum Action {}
     enum Command {}
+    enum Copy {}
     enum State {}
     enum Symbol {}
     enum Chart {}

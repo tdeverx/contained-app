@@ -120,7 +120,7 @@ final class UIState {
 
     func navigateForClassicFallback(_ action: PendingAction) {
         switch action {
-        case .runContainer:
+        case .runContainer, .importCompose:
             navigate(to: .containers)
         case .pullImage, .loadImage, .pruneImages:
             navigate(to: .images)
@@ -170,7 +170,7 @@ final class UIState {
             case .build:
                 navigate(to: .build)
                 return
-            case .loadImage, .pruneImages, .systemLogs:
+            case .loadImage, .pruneImages, .importCompose, .systemLogs:
                 pendingAction = action
                 return
             case .registryLogin:
@@ -190,7 +190,7 @@ final class UIState {
             openCreationPanel(entry: .build)
         case .activityHistory:
             toolbar.activeMorph = .activity
-        case .loadImage, .pruneImages, .systemLogs:
+        case .loadImage, .pruneImages, .importCompose, .systemLogs:
             pendingAction = action
         case .registryLogin:
             break

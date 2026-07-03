@@ -1,10 +1,10 @@
 import SwiftUI
 import ContainedUI
-import AppKit
 import ContainedCore
+import UniformTypeIdentifiers
 
 /// Browse a running container's filesystem (`exec ls -1ap`) and copy files in/out with the native
-/// `container cp`. AppKit bridge (flagged): `NSOpenPanel`/`NSSavePanel` for host file selection.
+/// `container cp`.
 struct FilesTab: View {
     @Environment(AppModel.self) private var app
     let snapshot: Core.Container.Snapshot
@@ -13,6 +13,10 @@ struct FilesTab: View {
     @State private var entries: [String] = []
     @State private var loading = false
     @State private var error: String?
+    @State private var copyingIn = false
+    @State private var movingCopiedFile = false
+    @State private var copiedFileURL: URL?
+    @State private var copiedFileName = ""
 
     var body: some View {
         if snapshot.state != .running {
@@ -26,6 +30,14 @@ struct FilesTab: View {
                 listing
             }
             .task(id: path) { await load() }
+            .fileImporter(isPresented: $copyingIn,
+                          allowedContentTypes: [.item, .folder]) { result in
+                handleCopyInSelection(result)
+            }
+            .fileMover(isPresented: $movingCopiedFile,
+                       file: copiedFileURL) { result in
+                handleCopyOutMove(result)
+            }
         }
     }
 
@@ -39,7 +51,7 @@ struct FilesTab: View {
             if loading { UI.State.InlineStatus(AppText.string("files.loading", defaultValue: "loading"), isWorking: true) }
             UI.Action.Group(UI.Action.Item(systemName: "square.and.arrow.down",
                                            help: AppText.string("files.copyIntoFolder", defaultValue: "Copy a file into this folder")) {
-                    copyIn()
+                    copyingIn = true
             })
             UI.Action.Group(UI.Action.Item(systemName: "arrow.clockwise", help: AppText.refresh) { Task { await load() } })
         }
@@ -114,28 +126,30 @@ struct FilesTab: View {
     }
 
     private func copyOut(_ name: String) {
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = name
-        panel.message = AppText.copyFileFromContainerPanel(name)
-        guard panel.runModal() == .OK, let dest = panel.url else { return }
         Task {
             do {
+                let stagedURL = try StagedFile.url(named: name)
                 _ = try await app.client?.copy(source: "\(snapshot.id):\(joined(name))",
-                                               destination: dest.path,
+                                               destination: stagedURL.path,
                                                runtimeKind: snapshot.runtimeKind)
-                app.flash(AppText.copiedFileToHost(name))
+                copiedFileURL = stagedURL
+                copiedFileName = name
+                movingCopiedFile = true
             } catch let e as Core.Command.Error { app.flash(e.appDisplayMessage) }
             catch { app.flash(error.appDisplayMessage) }
         }
     }
 
-    private func copyIn() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = AppText.copyFileIntoContainerPanel(path)
-        guard panel.runModal() == .OK, let src = panel.url else { return }
+    private func handleCopyInSelection(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let src):
+            copyIn(src)
+        case .failure(let error):
+            app.flash(error.appDisplayMessage)
+        }
+    }
+
+    private func copyIn(_ src: URL) {
         Task {
             do {
                 _ = try await app.client?.copy(source: src.path,
@@ -145,6 +159,20 @@ struct FilesTab: View {
                 await load()
             } catch let e as Core.Command.Error { app.flash(e.appDisplayMessage) }
             catch { app.flash(error.appDisplayMessage) }
+        }
+    }
+
+    private func handleCopyOutMove(_ result: Result<URL, Error>) {
+        defer {
+            StagedFile.cleanup(copiedFileURL)
+            copiedFileURL = nil
+            copiedFileName = ""
+        }
+        switch result {
+        case .success:
+            app.flash(AppText.copiedFileToHost(copiedFileName))
+        case .failure(let error):
+            app.flash(error.appDisplayMessage)
         }
     }
 }

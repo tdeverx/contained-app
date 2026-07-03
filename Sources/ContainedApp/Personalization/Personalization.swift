@@ -1,7 +1,6 @@
 import SwiftUI
 import ContainedUI
 import ContainedCore
-import AppKit
 
 /// Resolved visual style for a container card: a colored icon plus an optional colored glass
 /// background with adjustable opacity and gradient. Stored entirely locally (never written back to
@@ -54,8 +53,7 @@ struct Personalization: Codable, Hashable, Sendable {
 
     var symbol: String {
         guard iconEnabled,
-              !icon.isEmpty,
-              NSImage(systemSymbolName: icon, accessibilityDescription: nil) != nil else {
+              !icon.isEmpty else {
             return Self.defaultSymbol
         }
         return icon

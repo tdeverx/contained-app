@@ -80,7 +80,7 @@ struct PaletteItem: Identifiable {
                                      kind: .create,
                                      icon: "square.on.square",
                                      tint: .accentColor) {
-                ComposeImport.pickAndImport(app: app, ui: ui)
+                ui.dispatch(.importCompose)
             })
         }
         // Registry credentials live on the Settings → Registries page, not as a standalone app page.

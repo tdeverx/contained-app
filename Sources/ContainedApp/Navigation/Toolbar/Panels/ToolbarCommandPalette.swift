@@ -2,7 +2,6 @@ import SwiftUI
 import ContainedUX
 import ContainedUI
 import SwiftData
-import AppKit
 import ContainedCore
 
 /// A labelled group of palette rows (a heading + its items). Title is nil for a query's flat ranked

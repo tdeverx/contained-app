@@ -136,9 +136,57 @@ final class UpdaterController {
 
     private static func releaseNotesHTML(for version: String) -> String? {
         let containingBundle = Bundle(for: UpdaterBundleToken.self)
-        guard let url = changelogResourceURL(bundle: containingBundle) ?? changelogResourceURL(),
+        for bundle in [Bundle.main, containingBundle] {
+            if let html = currentReleaseNotesHTML(bundle: bundle) {
+                return html
+            }
+        }
+        for bundle in [containingBundle, Bundle.main] {
+            if let html = changelogReleaseNotesHTML(for: version, bundle: bundle) {
+                return html
+            }
+        }
+        return nil
+    }
+
+    static func releaseNotesHTML(for version: String, bundle: Bundle) -> String? {
+        currentReleaseNotesHTML(bundle: bundle) ?? changelogReleaseNotesHTML(for: version, bundle: bundle)
+    }
+
+    private static func currentReleaseNotesHTML(bundle: Bundle) -> String? {
+        guard let url = currentReleaseNotesResourceURL(bundle: bundle),
+              let markdown = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        let trimmed = markdown.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return ChangelogSection.html(from: trimmed)
+    }
+
+    private static func changelogReleaseNotesHTML(for version: String, bundle: Bundle) -> String? {
+        guard let url = changelogResourceURL(bundle: bundle),
               let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         return ChangelogSection.releaseNotesHTML(version: version, from: text)
+    }
+
+    static func currentReleaseNotesResourceURL(bundle: Bundle = .main) -> URL? {
+        if let directResource = bundle.url(forResource: "CurrentReleaseNotes", withExtension: "md") {
+            return directResource.absoluteURL.standardizedFileURL
+        }
+        if let resourceDirectory = bundle.resourceURL {
+            let directResource = resourceDirectory.appendingPathComponent("CurrentReleaseNotes.md")
+            if FileManager.default.fileExists(atPath: directResource.path) {
+                return directResource.absoluteURL.standardizedFileURL
+            }
+        }
+        if bundle.bundleURL.pathExtension == "app" {
+            let directResource = bundle.bundleURL
+                .appendingPathComponent("Contents")
+                .appendingPathComponent("Resources")
+                .appendingPathComponent("CurrentReleaseNotes.md")
+            if FileManager.default.fileExists(atPath: directResource.path) {
+                return directResource.absoluteURL.standardizedFileURL
+            }
+        }
+        return nil
     }
 
     static func changelogResourceURL(bundle: Bundle = .main) -> URL? {
@@ -171,11 +219,6 @@ final class UpdaterController {
         if let loadedBundleResource = loadedResourceBundleChangelog() {
             return loadedBundleResource
         }
-        #if DEBUG
-        if let sourceTreeResource = sourceTreeChangelogResourceURL() {
-            return sourceTreeResource
-        }
-        #endif
         return Bundle.module.url(forResource: "CHANGELOG", withExtension: "md")
     }
 
@@ -225,22 +268,6 @@ final class UpdaterController {
                 .appendingPathComponent("CHANGELOG.md"),
         ]
     }
-
-    #if DEBUG
-    private static func sourceTreeChangelogResourceURL() -> URL? {
-        let root = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        for candidate in [
-            root.appendingPathComponent("Sources/ContainedApp/Resources/CHANGELOG.md"),
-            root.appendingPathComponent("CHANGELOG.md"),
-        ] where FileManager.default.fileExists(atPath: candidate.path) {
-            return candidate.standardizedFileURL
-        }
-        return nil
-    }
-    #endif
 
     /// Sparkle's delegate must be an `NSObject`. It points the updater at the selected channel's feed
     /// (overriding `SUFeedURL`) and reports the allowed channel set (empty — feed selection *is* the

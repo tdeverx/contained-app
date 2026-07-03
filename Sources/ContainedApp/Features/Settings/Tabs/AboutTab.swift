@@ -1,6 +1,5 @@
 import SwiftUI
 import ContainedUI
-import AppKit
 import ContainedCore
 
 // MARK: - About
@@ -12,8 +11,9 @@ struct AboutTab: View {
         LazyVStack(spacing: UI.Layout.Spacing.l) {
             UI.Panel.Section {
                 HStack(spacing: UI.Layout.Spacing.m) {
-                    Image(nsImage: NSApp.applicationIconImage)
+                    Image(systemName: "shippingbox.fill")
                         .resizable()
+                        .symbolRenderingMode(.hierarchical)
                         .frame(width: UI.Control.Size.appIcon, height: UI.Control.Size.appIcon)
                     VStack(alignment: .leading, spacing: UI.Layout.Spacing.xxs) {
                         Text("Contained").designTitleLabelStyle()

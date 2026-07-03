@@ -36,9 +36,7 @@ struct LogsTab: View {
             }
             Spacer()
             Text(AppText.lineCount(lines.count)).designSecondaryCaption().monospacedDigit()
-            UI.Action.Group(UI.Action.Item(systemName: "doc.on.doc", help: AppText.copyAll) {
-                    copyToPasteboard(lines.joined(separator: "\n"))
-            })
+            UI.Copy.Icon(value: lines.joined(separator: "\n"), help: AppText.copyAll)
             UI.Action.Group(UI.Action.Item(systemName: "trash",
                                            help: AppText.clear,
                                            role: .destructive,

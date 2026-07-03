@@ -262,7 +262,7 @@ struct EventRow: View {
         } else {
             Button { event.isRead = true; save() } label: { Label("Mark as Read", systemImage: "checkmark.circle") }
         }
-        Button { copyToPasteboard(event.message) } label: { Label("Copy Message", systemImage: "doc.on.doc") }
+        UI.Copy.ValueLabel("Copy Message", value: event.message)
         Divider()
         Button(role: .destructive) { modelContext.delete(event); save() } label: {
             Label("Delete Event", systemImage: "trash")

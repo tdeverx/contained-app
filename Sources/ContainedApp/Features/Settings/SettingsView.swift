@@ -1,7 +1,6 @@
 import SwiftUI
 import ContainedUX
 import ContainedUI
-import AppKit
 import ContainedCore
 
 /// App preferences. Six sections, each built from the same `UI.Panel.Section` glass-card model so spacing,

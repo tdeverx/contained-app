@@ -1,7 +1,6 @@
 import SwiftUI
 import ContainedUX
 import ContainedUI
-import AppKit
 import ContainedCore
 
 /// The Containers screen: a responsive grid of personalized glass cards. Density and the running
@@ -19,6 +18,7 @@ struct ContainersGridView: View {
     /// Drives the in-place grow: false = card sits in its grid slot, true = promoted to the centered
     /// panel. A single spring on this flag owns the whole motion (no matchedGeometry to fight).
     @State private var expanded = false
+    @State private var lifecycleFeedback = 0
     /// Live frames of every visible grid card (in the "grid" coordinate space) so the promoted card
     /// can start from the exact slot it was tapped in.
     @State private var cardFrames: [String: CGRect] = [:]
@@ -233,6 +233,7 @@ struct ContainersGridView: View {
             Button("Delete", role: .destructive) { Task { await deleteNetwork(network) } }
         } message: { _ in Text("This removes the network. Containers must be detached first.") }
         .refreshable { await store.refresh() }
+        .sensoryFeedback(.success, trigger: lifecycleFeedback)
         // Report the in-page search count so the toolbar can escalate an empty search into the palette.
         .onAppear { ui.search.pageResultCount = filtered.count }
         .onChange(of: filtered.count) { _, count in ui.search.pageResultCount = count }
@@ -289,7 +290,7 @@ struct ContainersGridView: View {
 
     @ViewBuilder
     private func networkMenu(_ resource: Core.Network.Resource) -> some View {
-        Button { copyToPasteboard(resource.name) } label: { Label("Copy Name", systemImage: "doc.on.doc") }
+        UI.Copy.ValueLabel("Copy Name", value: resource.name)
         if !resource.isBuiltin {
             Divider()
             Button(role: .destructive) { deletingNetwork = resource } label: { Label("Delete Network", systemImage: "trash") }
@@ -302,7 +303,7 @@ struct ContainersGridView: View {
 
     /// Zoom (fill/restore) the window — the title-bar gesture, relocated to the empty background.
     private func zoomFrontWindow() {
-        (NSApp.keyWindow ?? NSApp.mainWindow)?.zoom(nil)
+        Platform.zoomFrontWindow()
     }
 
     private var deleteNetworkBinding: Binding<Bool> {
@@ -382,9 +383,9 @@ struct ContainersGridView: View {
             cornerRadiusOverride: cornerRadiusOverride,
             controlsVisible: controlsVisible,
             onTap: onTap,
-            onStart: { Task { await store.start(key) } },
-            onStop: { Task { await store.stop(key) } },
-            onRestart: { Task { await store.restart(key) } },
+            onStart: { lifecycleAction { await store.start(key) } },
+            onStop: { lifecycleAction { await store.stop(key) } },
+            onRestart: { lifecycleAction { await store.restart(key) } },
             onEdit: { ui.openCreationPanel(editing: snapshot) },
             onUpdate: { updateContainer(snapshot) },
             onDelete: { deleting = snapshot },
@@ -488,6 +489,14 @@ struct ContainersGridView: View {
         Task {
             for id in ids { await action(id) }
             endSelecting()
+            lifecycleFeedback &+= 1
+        }
+    }
+
+    private func lifecycleAction(_ action: @escaping () async -> Void) {
+        Task {
+            await action()
+            lifecycleFeedback &+= 1
         }
     }
 

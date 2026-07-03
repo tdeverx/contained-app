@@ -7,7 +7,6 @@ public extension UI.Command {
         public let command: [String]
         public var copyHelp: String
         public var copiedAccessibilityLabel: String
-        @State private var copied = false
 
         private var rendered: String { (["container"] + command).joined(separator: " ") }
 
@@ -27,20 +26,11 @@ public extension UI.Command {
                     Text(rendered)
                         .font(.system(.caption, design: .monospaced))
                         .textSelection(.enabled)
+                        .copyable([rendered])
                         .lineLimit(1)
                 }
                 Spacer(minLength: UI.Tokens.Space.s)
-                Button {
-                    copyToPasteboard(rendered)
-                    withAnimation { copied = true }
-                    Task { try? await Task.sleep(for: .seconds(1.4)); withAnimation { copied = false } }
-                } label: {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                        .foregroundStyle(copied ? .green : .secondary)
-                }
-                .buttonStyle(.plain)
-                .help(copyHelp)
-                .accessibilityLabel(copied ? copiedAccessibilityLabel : copyHelp)
+                UI.Copy.Icon(value: rendered, help: copyHelp)
             }
             .padding(.horizontal, UI.Tokens.Space.s)
             .padding(.vertical, UI.Tokens.Space.s)

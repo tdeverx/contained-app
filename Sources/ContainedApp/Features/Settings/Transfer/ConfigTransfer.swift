@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 import UniformTypeIdentifiers
 import ContainedUI
 
@@ -17,14 +16,13 @@ enum ConfigImportMode: String, CaseIterable, Identifiable {
     var replacesExistingData: Bool { self == .replace }
 }
 
-extension UTType {
-    static let containedBackup = UTType(exportedAs: "app.contained.backup")
-}
-
 struct ConfigTransferControls: View {
     @Environment(AppModel.self) private var app
     @State private var sections = Set(AppStateSection.allCases)
     @State private var importMode: ConfigImportMode = .merge
+    @State private var exportingBackup = false
+    @State private var importingBackup = false
+    @State private var backupDocument: DataFileDocument?
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
@@ -45,6 +43,22 @@ struct ConfigTransferControls: View {
                 Button("Clean Up Orphans") { app.purgeDeadRows() }
             }
         }
+        .fileExporter(isPresented: $exportingBackup,
+                      document: backupDocument,
+                      contentTypes: UTType.containedBackupDocuments,
+                      defaultFilename: "Contained Backup.containedbackup") { result in
+            backupDocument = nil
+            switch result {
+            case .success:
+                app.flash(AppText.exportedBackup)
+            case .failure(let error):
+                app.flash(error.appDisplayMessage)
+            }
+        }
+        .fileImporter(isPresented: $importingBackup,
+                      allowedContentTypes: UTType.containedBackupDocuments) { result in
+            handleBackupImport(result)
+        }
     }
 
     private func binding(for section: AppStateSection) -> Binding<Bool> {
@@ -57,25 +71,23 @@ struct ConfigTransferControls: View {
     }
 
     private func exportBackup() {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.containedBackup, .json]
-        panel.nameFieldStringValue = "Contained Backup.containedbackup"
-        panel.canCreateDirectories = true
-        guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            try app.exportConfiguration(to: url, sections: sections)
-            app.flash(AppText.exportedBackup)
+            backupDocument = DataFileDocument(data: try app.configurationData(sections: sections))
+            exportingBackup = true
         } catch {
             app.flash(error.appDisplayMessage)
         }
     }
 
     private func importBackup() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.containedBackup, .json]
-        panel.canChooseFiles = true
-        panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        importingBackup = true
+    }
+
+    private func handleBackupImport(_ result: Result<URL, Error>) {
+        guard case .success(let url) = result else {
+            if case .failure(let error) = result { app.flash(error.appDisplayMessage) }
+            return
+        }
         do {
             try app.importConfiguration(from: url,
                                         sections: sections,

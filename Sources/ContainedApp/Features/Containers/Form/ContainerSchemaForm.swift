@@ -1,7 +1,7 @@
 import SwiftUI
 import ContainedUX
 import ContainedUI
-import AppKit
+import UniformTypeIdentifiers
 import ContainedCore
 
 /// The shared container Create/Edit form body: progressive-disclosure sections mapping the `run`
@@ -662,44 +662,7 @@ struct ContainerSchemaForm: View {
     }
 
     private func sourcePicker(source: Binding<String>) -> some View {
-        Menu {
-            Button {
-                pickHostSource(into: source)
-            } label: {
-                Label(AppText.string("runSpec.chooseFileOrFolder", defaultValue: "Choose File or Folder..."), systemImage: "folder")
-            }
-            if !app.volumes.isEmpty {
-                Divider()
-                ForEach(app.volumes) { volume in
-                    Button {
-                        source.wrappedValue = volume.name
-                    } label: {
-                        Label(volume.name, systemImage: source.wrappedValue == volume.name ? "checkmark" : "externaldrive")
-                    }
-                }
-            }
-            Divider()
-            Button {
-                ui.dispatch(.createVolume)
-            } label: {
-                Label(AppText.string("runSpec.createNewVolume", defaultValue: "Create New Volume..."), systemImage: "plus")
-            }
-        } label: {
-            Image(systemName: "folder.badge.gearshape")
-        }
-        .buttonStyle(.borderless)
-        .help(AppText.string("runSpec.sourcePicker.help", defaultValue: "Choose a host path, existing volume, or create a new volume"))
-        .task { await app.refreshVolumes() }
-    }
-
-    private func pickHostSource(into source: Binding<String>) {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = AppText.chooseHostFileOrFolder
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        source.wrappedValue = url.path
+        HostSourcePicker(source: source)
     }
 
     private func fieldLabel(_ field: Core.Schema.FieldDescriptor) -> String {
@@ -753,6 +716,56 @@ struct ContainerSchemaForm: View {
         case .socketList(let values):
             let rendered = values.filter(\.isValid).map(\.spec)
             return rendered.isEmpty ? AppText.string("schema.value.notSet", defaultValue: "Not set") : rendered.joined(separator: ", ")
+        }
+    }
+}
+
+private struct HostSourcePicker: View {
+    @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
+    @Binding var source: String
+    @State private var choosingHostSource = false
+
+    var body: some View {
+        Menu {
+            Button {
+                choosingHostSource = true
+            } label: {
+                Label(AppText.string("runSpec.chooseFileOrFolder", defaultValue: "Choose File or Folder..."),
+                      systemImage: "folder")
+            }
+            if !app.volumes.isEmpty {
+                Divider()
+                ForEach(app.volumes) { volume in
+                    Button {
+                        source = volume.name
+                    } label: {
+                        Label(volume.name, systemImage: source == volume.name ? "checkmark" : "externaldrive")
+                    }
+                }
+            }
+            Divider()
+            Button {
+                ui.dispatch(.createVolume)
+            } label: {
+                Label(AppText.string("runSpec.createNewVolume", defaultValue: "Create New Volume..."),
+                      systemImage: "plus")
+            }
+        } label: {
+            Image(systemName: "folder.badge.gearshape")
+        }
+        .buttonStyle(.borderless)
+        .help(AppText.string("runSpec.sourcePicker.help",
+                             defaultValue: "Choose a host path, existing volume, or create a new volume"))
+        .task { await app.refreshVolumes() }
+        .fileImporter(isPresented: $choosingHostSource,
+                      allowedContentTypes: [.item, .folder]) { result in
+            switch result {
+            case .success(let url):
+                source = url.path
+            case .failure(let error):
+                app.flash(error.appDisplayMessage)
+            }
         }
     }
 }

@@ -2,7 +2,6 @@ import SwiftUI
 import ContainedUX
 import ContainedUI
 import SwiftData
-import AppKit
 import ContainedCore
 
 struct ToolbarUpdatesPanel: View {

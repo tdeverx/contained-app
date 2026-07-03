@@ -2,7 +2,6 @@ import SwiftUI
 import ContainedUX
 import ContainedUI
 import SwiftData
-import AppKit
 import ContainedCore
 
 struct ToolbarImageGroupCard: View {
@@ -22,6 +21,9 @@ struct ToolbarImageGroupCard: View {
     @State private var tagBusy = false
     @State private var confirmingPushReference: String?
     @State private var pushStartedReference: String?
+    @State private var savedImageArchiveURL: URL?
+    @State private var savedImageArchiveName = ""
+    @State private var movingSavedImageArchive = false
 
     enum ImageDetailPage: Hashable {
         case tags
@@ -77,6 +79,10 @@ struct ToolbarImageGroupCard: View {
             }
         } message: { reference in
             Text("This publishes \(Format.shortImage(reference)) to its registry. The registry may still reject the push if your account cannot write to that repository.")
+        }
+        .fileMover(isPresented: $movingSavedImageArchive,
+                   file: savedImageArchiveURL) { result in
+            handleSavedImageArchiveMove(result)
         }
     }
 
@@ -501,7 +507,7 @@ struct ToolbarImageGroupCard: View {
                 ui.runImage(reference, runtimeKind: tag.runtimeKind)
                 if isExpanded { onClose() }
             }
-            footerAction("doc.on.doc", help: AppText.copyReference) { copyToPasteboard(reference) }
+            UI.Copy.Icon(value: reference, help: AppText.copyReference)
             footerAction("trash", help: AppText.deleteTag, role: .destructive) { deletingTag = tag }
         } widget: {
             EmptyView()
@@ -515,7 +521,7 @@ struct ToolbarImageGroupCard: View {
     private func tagMenu(_ tag: Core.Image.LocalTag, in group: Core.Image.LocalTagGroup) -> some View {
         let reference = tag.reference
         Button { ui.runImage(reference, runtimeKind: tag.runtimeKind); if isExpanded { onClose() } } label: { Label("Run…", systemImage: "play") }
-        Button { copyToPasteboard(reference) } label: { Label("Copy reference", systemImage: "doc.on.doc") }
+        UI.Copy.ValueLabel("Copy reference", value: reference)
         Divider()
         Button(role: .destructive) { deletingTag = tag } label: { Label("Delete tag", systemImage: "trash") }
     }
@@ -707,19 +713,39 @@ struct ToolbarImageGroupCard: View {
 
     private func save(_ image: Core.Image.Resource) {
         guard let client = app.client else { return }
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "tar") ?? .data]
-        panel.nameFieldStringValue = Format.shortImage(image.reference).replacingOccurrences(of: ":", with: "_") + ".tar"
-        panel.message = AppText.saveImageTarArchive(Format.shortImage(image.reference))
-        guard panel.runModal() == .OK, let url = panel.url else { return }
         Task {
-            if let error = await app.captured({ _ = try await client.saveImages([image.reference],
-                                                                                to: url.path,
-                                                                                runtimeKind: image.runtimeKind) }) {
-                app.flash(error)
-            } else {
-                app.flash(AppText.savedFile(url.lastPathComponent))
+            do {
+                let name = Format.shortImage(image.reference).replacingOccurrences(of: ":", with: "_") + ".tar"
+                let stagedURL = try StagedFile.url(named: name)
+                if let error = await app.captured({
+                    _ = try await client.saveImages([image.reference],
+                                                    to: stagedURL.path,
+                                                    runtimeKind: image.runtimeKind)
+                }) {
+                    StagedFile.cleanup(stagedURL)
+                    app.flash(error)
+                } else {
+                    savedImageArchiveURL = stagedURL
+                    savedImageArchiveName = name
+                    movingSavedImageArchive = true
+                }
+            } catch {
+                app.flash(error.appDisplayMessage)
             }
+        }
+    }
+
+    private func handleSavedImageArchiveMove(_ result: Result<URL, Error>) {
+        defer {
+            StagedFile.cleanup(savedImageArchiveURL)
+            savedImageArchiveURL = nil
+            savedImageArchiveName = ""
+        }
+        switch result {
+        case .success(let url):
+            app.flash(AppText.savedFile(url.lastPathComponent.isEmpty ? savedImageArchiveName : url.lastPathComponent))
+        case .failure(let error):
+            app.flash(error.appDisplayMessage)
         }
     }
 
