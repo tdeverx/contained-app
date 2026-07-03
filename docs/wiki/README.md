@@ -21,3 +21,7 @@ contract here.
 Wiki-local links, page titles, and navigation labels may be adjusted when
 syncing into the separate wiki repo, but the mapped source file remains the
 maintained content owner.
+
+Root repo index pages such as `README.md`, `docs/README.md`, and this sync
+contract are not mirrored into the wiki. They should link to maintained docs;
+`File-Map.md` decides which maintained docs become wiki pages.

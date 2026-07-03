@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Fixture coverage for release/version/change/appcast helper scripts.
+# Usage: ./scripts/test-release-scripts.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

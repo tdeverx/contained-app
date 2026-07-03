@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Insert promoted beta/stable appcast items into the nightly appcast.
+# Usage: ./scripts/promote-appcast-to-nightly.sh [--non-nightly-only] <promoted-appcast.xml> <nightly-appcast.xml>
 set -euo pipefail
 
 FILTER_MODE="all"

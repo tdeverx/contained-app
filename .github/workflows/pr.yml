@@ -33,7 +33,7 @@ jobs:
           while IFS= read -r file; do
             [ -n "$file" ] || continue
             case "$file" in
-              docs/**|README.md|Packages/*/README.md|Packages/*/Sources/*/*.docc/**|CODE_OF_CONDUCT.md|.github/CONTRIBUTING.md|.github/assets/**|.github/ISSUE_TEMPLATE/**|LICENSE|NOTICE|SECURITY.md|SUPPORT.md|CODEOWNERS|.github/dependabot.yml|.gitignore|appcast.xml)
+              docs/**|README.md|Packages/*/README.md|Packages/*/Sources/*/*.docc/**|CODE_OF_CONDUCT.md|.github/*.md|.github/assets/**|.github/ISSUE_TEMPLATE/**|LICENSE|NOTICE|SECURITY.md|SUPPORT.md|CODEOWNERS|.github/dependabot.yml|.gitignore|appcast.xml)
                 ;;
               *)
                 material=true

@@ -60,7 +60,7 @@ if [ -d "$FRAMEWORK_SRC" ]; then
 fi
 
 # Bundle app resources if SwiftPM produced them. The app implementation lives in the
-# ContainedApp library target; keep the previous bundle name as a fallback for older build folders.
+# ContainedApp library target; SwiftPM bundle names vary across target graph shapes.
 BUILD_PRODUCTS="$(swift build -c "$CONFIG" --show-bin-path)"
 for bundle_name in Contained_ContainedApp.bundle Contained_Contained.bundle; do
   BUNDLE_RES="$BUILD_PRODUCTS/$bundle_name"

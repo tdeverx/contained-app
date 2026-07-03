@@ -11,6 +11,7 @@
 # which includes the ~28pt title bar. The icon-view content height = frame - 28,
 # and Finder draws the background top-anchored at natural size, so the frame
 # must be 528 + 28 = 556 tall for the full image to show without clipping.
+# Usage: ./scripts/make-dmg.sh <stable|beta|nightly> <Contained.app> <output.dmg>
 set -euo pipefail
 
 CHANNEL="${1:?channel (stable|beta|nightly)}"

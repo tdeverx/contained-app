@@ -2,7 +2,6 @@ import SwiftUI
 import ContainedCore
 
 /// Local store of per-container healthchecks (keyed by container id), persisted to UserDefaults.
-/// Migrated to SwiftData in WS7, alongside personalization.
 @MainActor
 @Observable
 final class HealthCheckStore {

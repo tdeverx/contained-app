@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Ensure build/generation steps did not leave tracked files dirty.
+# Usage: ./scripts/check-generated-clean.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Compile committed markdown change fragments from a directory or git range.
+# Usage: ./scripts/collect-changes.sh [<git-range>] [changes-dir]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

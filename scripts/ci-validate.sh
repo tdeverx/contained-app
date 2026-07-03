@@ -64,10 +64,50 @@ echo "▸ Checking shell script strict mode…"
 for script in scripts/*.sh; do
   [ "$(sed -n '1p' "$script")" = '#!/usr/bin/env bash' ] || fail "$script must start with #!/usr/bin/env bash"
   rg -q '^set -euo pipefail$' "$script" || fail "$script must enable set -euo pipefail"
+  rg -q '^# .+' "$script" || fail "$script must document one purpose"
+  rg -q '^# Usage:' "$script" || fail "$script must document usage"
 done
 
 echo "▸ Checking workflow YAML syntax…"
 ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path) }' .github/workflows/*.yml
+
+echo "▸ Checking workflow path filters…"
+release_meta_paths=(
+  'docs/**'
+  'README.md'
+  'Packages/*/README.md'
+  'Packages/*/Sources/*/*.docc/**'
+  'CODE_OF_CONDUCT.md'
+  '.github/*.md'
+  '.github/ISSUE_TEMPLATE/**'
+  '.github/assets/**'
+  '.github/dependabot.yml'
+  'CODEOWNERS'
+  'LICENSE'
+  'NOTICE'
+  'SECURITY.md'
+  'SUPPORT.md'
+  '.gitignore'
+  'appcast.xml'
+)
+for workflow in .github/workflows/nightly.yml .github/workflows/beta.yml .github/workflows/stable.yml; do
+  for pattern in "${release_meta_paths[@]}"; do
+    rg -Fq -- "- '$pattern'" "$workflow" || fail "$workflow paths-ignore is missing $pattern"
+  done
+done
+for pattern in "${release_meta_paths[@]}"; do
+  rg -Fq -- "$pattern" .github/workflows/pr.yml || fail ".github/workflows/pr.yml material classifier is missing $pattern"
+done
+codeql_meta_paths=(
+  "${release_meta_paths[@]}"
+  'CHANGELOG.md'
+  'Sources/ContainedApp/Resources/CHANGELOG.md'
+  'changes/**'
+)
+for pattern in "${codeql_meta_paths[@]}"; do
+  matches="$(rg -F -- "- '$pattern'" .github/workflows/codeql.yml | wc -l | tr -d ' ')"
+  [ "$matches" -ge 2 ] || fail ".github/workflows/codeql.yml paths-ignore is missing $pattern in pull_request or push"
+done
 
 echo "▸ Checking local Markdown links…"
 ruby <<'RUBY'
@@ -108,38 +148,20 @@ wiki_map="docs/wiki/File-Map.md"
 wiki_sidebar="docs/wiki/_Sidebar.md"
 [ -f "$wiki_map" ] || fail "missing $wiki_map"
 [ -f "$wiki_sidebar" ] || fail "missing $wiki_sidebar"
-required_docs=(
-  docs/app/Home.md
-  docs/app/Installation.md
-  docs/app/Keyboard-Shortcuts.md
-  docs/app/Localization.md
-  docs/app/System-Settings.md
-  docs/app/Troubleshooting.md
-  docs/app/Updates.md
-  docs/features/Features.md
-  docs/features/Containers.md
-  docs/features/Images.md
-  docs/features/Resources.md
-  docs/features/Creation-Workflow.md
-  docs/features/Run-Edit-Form.md
-  docs/features/Compose-Import.md
-  docs/features/Command-Palette.md
-  docs/architecture/Architecture.md
-  docs/architecture/Runtime-Adapters.md
-  docs/architecture/Design-System.md
-  docs/development/Contributing.md
-  docs/development/Issues-and-Discussions.md
-  docs/development/Documentation-Map.md
-  docs/release/Release.md
-  Packages/ContainedCore/README.md
-  Packages/ContainedCore/Sources/ContainedCore/ContainedCore.docc/ContainedCore.md
-  Packages/ContainedUI/README.md
-  Packages/ContainedUI/Sources/ContainedUI/ContainedUI.docc/ContainedUI.md
-  Packages/ContainedUX/README.md
-  Packages/ContainedUX/Sources/ContainedUX/ContainedUX.docc/ContainedUX.md
-)
+required_docs=()
+while IFS= read -r doc; do
+  required_docs+=("$doc")
+done < <(find docs/app docs/features docs/architecture docs/development docs/release -type f -name '*.md' | sort)
+while IFS= read -r doc; do
+  required_docs+=("$doc")
+done < <(find Packages \( -path '*/.build' -o -path '*/.swiftpm' \) -prune -o \( -path 'Packages/*/README.md' -o -path 'Packages/*/Sources/*/*.docc/*.md' \) -type f -print | sort)
 for doc in "${required_docs[@]}"; do
   [ -f "$doc" ] || fail "mapped documentation source is missing: $doc"
+  case "$doc" in
+    docs/*) docs_index_target="${doc#docs/}" ;;
+    *) docs_index_target="../$doc" ;;
+  esac
+  rg -Fq "($docs_index_target)" docs/README.md || fail "docs/README.md is missing $doc"
   rg -Fq "\`$doc\`" "$wiki_map" || fail "$wiki_map is missing $doc"
 done
 while IFS='|' read -r _ source target _; do
@@ -155,7 +177,7 @@ done < "$wiki_map"
 echo "▸ Checking package boundary and naming invariants…"
 check_no_matches "stale package names" '\b(ContainedDesignSystem|ContainedNavigation|ContainedRuntime|AppleContainerRuntime|ContainedPreviewSupport)\b' README.md AGENTS.md docs Packages Sources Tests .github
 check_no_matches "stale flat public names" '\b(DesignCard|DesignTokens|PanelHeader|SheetHeader|LiveSparkline|ErrorToast|ResourceGlassCard|ResourceCardHeader|RuntimeKind|RuntimeDescriptor|RuntimeCapability|RuntimeCommandPreview|RuntimeComposeImportPlan|RuntimeCoreSwitchPlan|ContainerCreateRequest|ContainerCreateResult|ContainerSnapshot)\b' README.md AGENTS.md docs Packages Sources Tests .github
-check_no_matches "stale refactor wording" '\b(refactor history|compatibility alias|compatibility aliases|temporary migration|legacy compatibility|bridge wrappers|old package)\b' README.md AGENTS.md docs Packages Sources Tests scripts .github
+check_no_matches "stale refactor wording" '\b(refactor history|compatibility alias|compatibility aliases|temporary migration|legacy compatibility|bridge wrappers|old package|Migrated to|WS[0-9]+|previous bundle name|older build folders)\b' README.md AGENTS.md docs Packages Sources Tests scripts .github
 check_no_matches "app adapter internals" '\b(ContainerCommands|AppleContainerClient|AppleContainerCLILocator|ContainerRuntimeClient)\b' Sources/ContainedApp Tests/ContainedAppTests docs .github
 check_no_matches "Core imports UI/UX/app-only dependencies" '^import (ContainedUI|ContainedUX|SwiftUI|Sparkle|SwiftTerm)$' Packages/ContainedCore/Sources/ContainedCore
 check_no_matches "UI imports Core/UX/App" '^import (ContainedCore|ContainedUX|ContainedApp|Sparkle|SwiftTerm)$' Packages/ContainedUI/Sources/ContainedUI

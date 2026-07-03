@@ -17,6 +17,9 @@ release documentation.
 | `docs/release/` | Release, packaging, appcast, signing, and channel runbooks |
 
 Keep `docs/README.md` as the entry point for the maintained docs tree.
+Root `README.md`, `docs/README.md`, and `docs/wiki/README.md` are repo-local
+entry/index pages. They should point readers at maintained sources, but they are
+not synced as wiki content.
 
 ## Package Docs
 
@@ -46,6 +49,9 @@ contract under `docs/wiki/` instead of duplicating wiki content.
 
 When a maintained doc is added, renamed, or removed, update
 `docs/wiki/File-Map.md` and `docs/wiki/_Sidebar.md` in the same change.
+`scripts/ci-validate.sh` checks this from the current tree, so new app,
+feature, architecture, development, release, package README, and package DocC
+landing pages must be indexed and mapped before CI passes.
 
 ## Naming Rules
 
