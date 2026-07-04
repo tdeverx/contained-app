@@ -3,9 +3,8 @@ import ContainedUX
 import ContainedUI
 import ContainedCore
 
-/// App preferences. Six sections, each built from the same `UI.Panel.Section` glass-card model so spacing,
-/// headers, and explanatory footers stay consistent: Appearance (theme + glass), General (behavior,
-/// data, CLI), Runtime, Registries, Updates, and About.
+/// App preferences. Sections use native grouped forms inside the shared settings panel shell:
+/// Appearance, General, Runtime, Registries, Updates, Experimental, and About.
 ///
 /// Hosted in the toolbar Settings morph panel via the shared `UI.Panel.Scaffold`.
 /// Sections switch via a header menu rather than a `TabView`.
@@ -62,7 +61,7 @@ struct SettingsContent: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        UI.Panel.Scaffold(width: UI.Panel.Size.settings.width) {
+        UI.Panel.Scaffold(width: UI.Panel.Size.settings.width, scrolls: false) {
             if showsHeader {
                 VStack(spacing: 0) {
                     header
@@ -71,7 +70,6 @@ struct SettingsContent: View {
             }
         } content: {
             sectionBody(settings: settings)
-                .padding(UI.Layout.Spacing.s)
         }
         .morphPanelPlacement(.centered)
         .onAppear { consumeRequestedPage() }

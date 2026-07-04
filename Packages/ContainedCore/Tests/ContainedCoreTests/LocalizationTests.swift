@@ -14,7 +14,7 @@ struct CoreLocalizationTests {
     }
 
     @Test func downstreamResolversCanOverrideOrWrapCoreStrings() throws {
-        let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .docker)
+        let definition = Core.Schema.Definition.containerRunEdit(runtimeProfile: DockerRuntimeModule().schemaProfile())
         let image = try #require(definition.descriptor(for: .imageReference))
         let wrapped = image.localizedLabel { entry in
             "[app] \(entry.defaultValue)"
@@ -24,7 +24,7 @@ struct CoreLocalizationTests {
     }
 
     @Test func schemaSupportReasonsUseCoreLocalization() throws {
-        let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .docker)
+        let definition = Core.Schema.Definition.containerRunEdit(runtimeProfile: DockerRuntimeModule().schemaProfile())
         let kernel = try #require(definition.descriptor(for: .kernelPath))
         let reason = kernel.support(for: .docker).localizedDisabledReason()
 

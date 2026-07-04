@@ -12,6 +12,8 @@ product-specific presentation policy.
 - `Core.Runtime.Module`, the adapter contract used by built-in runtime modules
   to provide descriptors, CLI lookup, readiness, command previews, terminal
   invocations, schema support profiles, and runtime clients.
+- `Runtime/ModuleRegistry.swift`, the shared default registry. Concrete
+  adapter implementation files stay under `Runtimes/<RuntimeName>/`.
 - `Core.Container` semantic create/edit/import/export models.
 - `Core.Compose` import/export plans and Compose YAML parsing/writing internals.
 - `Core.Command` command previews, command execution, and host invocations.
@@ -42,7 +44,6 @@ let result = await Core.Orchestrator.bootstrap(
     configuration: Core.Configuration(
         runtimes: [
             .appleContainer: .init(cliPathOverride: nil),
-            .docker: .init(cliPathOverride: nil),
         ]
     )
 )
@@ -77,12 +78,14 @@ let command = preview.command
 let project = try Core.Compose.parse(composeText, projectName: "stack")
 let plan = try core.translateCompose(project,
                                      baseDirectory: composeDirectory,
-                                     runtimeKind: .docker)
+                                     runtimeKind: .appleContainer)
 let documents = plan.items.map(\.document)
 ```
 
 Compose is a Core-level interchange format. `Core.Compose.YAML` is the only
 place that imports Yams; no public Core API exposes Yams types.
+Docker projection support exists for direct adapter tests and future provider
+work, but the Docker module is not in the default registry yet.
 
 ## Schema Conformance
 

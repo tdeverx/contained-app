@@ -50,6 +50,7 @@ final class AppModel {
     private(set) var networks: [Core.Network.Resource] = []
     private(set) var registries: [Core.Registry.Login] = []
     private(set) var properties: Core.System.Properties?
+    private(set) var resourceInventoryErrors: [String: String] = [:]
     // `images`/`imagesError`/`imageUpdates` are written by both this file and the image-update sweep
     // in `AppModel+ImageUpdates.swift`, so their setters can't be `private(set)`.
     var images: [Core.Image.Resource] = [] {
@@ -86,6 +87,9 @@ final class AppModel {
     }
     static let imageUpdatesKey = "imageUpdateStatuses"
     static let imageUpdateLastSweepKey = "imageUpdateLastSweep"
+    var databaseFailureMessage: String? {
+        database.lastFailure?.localizedDescription
+    }
     var imageUpdateInterval: TimeInterval { TimeInterval(settings.imageUpdateIntervalHours) * 60 * 60 }
     var imageUpdateLastRunDate: Date? { lastImageUpdateSweep }
     var imageUpdateNextRunDate: Date {
@@ -120,11 +124,18 @@ final class AppModel {
             defaultValue: "Only one container runtime is reachable. Additional runtimes will appear here automatically."
         )
     }
-    var appleRuntimeAvailable: Bool {
-        client?.supportsRuntime(.appleContainer) == true
+    var serviceControlRuntimeKind: Core.Runtime.Kind? {
+        registeredRuntimeDescriptors.first { $0.supports(.serviceControl) }?.kind
     }
-    var appleRuntimeReady: Bool {
-        runtimeIsReady(.appleContainer)
+
+    var serviceControlRuntimeAvailable: Bool {
+        guard let kind = serviceControlRuntimeKind else { return false }
+        return client?.supportsRuntime(kind, capability: .serviceControl) == true
+    }
+
+    var serviceControlRuntimeReady: Bool {
+        guard let kind = serviceControlRuntimeKind else { return false }
+        return runtimeIsReady(kind)
     }
 
     func runtimeIsReady(_ kind: Core.Runtime.Kind) -> Bool {
@@ -137,6 +148,13 @@ final class AppModel {
 
     func runtimeVersion(for kind: Core.Runtime.Kind) -> String? {
         runtimeReadiness[kind]?.version
+    }
+
+    func firstRuntimeKind(supporting capability: Core.Runtime.Capability,
+                          readyOnly: Bool = true) -> Core.Runtime.Kind? {
+        registeredRuntimeDescriptors.first { descriptor in
+            descriptor.supports(capability) && (!readyOnly || runtimeIsReady(descriptor.kind))
+        }?.kind
     }
 
     /// One in-flight operation shown in the bottom progress bar.
@@ -205,11 +223,10 @@ final class AppModel {
     }
 
     func bootstrapIfNeeded() async {
-        logger.record("Checking container CLI", category: .system, severity: .debug)
-        let configuration = Core.Configuration(runtimes: [
-            .appleContainer: .init(cliPathOverride: settings.cliPathOverride),
-            .docker: .init(cliPathOverride: settings.dockerCLIPathOverride),
-        ])
+        logger.record("Checking container runtime CLI", category: .system, severity: .debug)
+        let configuration = Core.Configuration(runtimes: Dictionary(uniqueKeysWithValues: supportedRuntimeDescriptors.map { descriptor in
+            (descriptor.kind, Core.Runtime.Configuration(cliPathOverride: settings.runtimePathOverride(for: descriptor.kind)))
+        }))
         let result = await Core.Orchestrator.bootstrap(configuration: configuration)
         switch result {
         case .cliMissing(let readiness):
@@ -226,9 +243,9 @@ final class AppModel {
             database.upsertRuntimeReadiness(readiness,
                                             descriptors: supportedRuntimeDescriptors)
             let anyReady = runtimeReadiness.values.contains { $0.state == .ready }
-            if !anyReady, let apple = runtimeReadiness[.appleContainer], apple.state == .unsupported {
-                bootstrap = .unsupported(version: apple.version ?? "")
-                logger.record("Unsupported container CLI version \(apple.version ?? "unknown")", category: .system, severity: .error)
+            if !anyReady, let unsupported = runtimeReadiness.values.first(where: { $0.state == .unsupported }) {
+                bootstrap = .unsupported(version: unsupported.version ?? "")
+                logger.record("Unsupported container runtime CLI version \(unsupported.version ?? "unknown")", category: .system, severity: .error)
                 return
             }
         }
@@ -244,7 +261,8 @@ final class AppModel {
 
     /// Point at a specific `container` binary (onboarding "Locate…") and re-detect.
     func useCLIPath(_ path: String) async {
-        settings.cliPathOverride = path
+        guard let kind = supportedRuntimeDescriptors.first?.kind else { return }
+        settings.setRuntimePathOverride(path, for: kind)
         await retryBootstrap()
     }
 
@@ -312,23 +330,25 @@ final class AppModel {
             do {
                 let status = try await client.systemStatus(runtimeKind: descriptor.kind)
                 firstStatus = firstStatus ?? status
-                if descriptor.kind == .appleContainer { systemStatus = status }
                 if status.isRunning {
-                    logger.record("\(descriptor.displayName) is running", category: .system, severity: .debug)
-                    markRuntimeReadiness(descriptor.kind, state: .ready)
+                    if markRuntimeReadiness(descriptor.kind, state: .ready) {
+                        logger.record("\(descriptor.displayName) is running", category: .system, severity: .debug)
+                    }
                 } else {
-                    logger.record("\(descriptor.displayName) is stopped", category: .system, severity: .warning)
-                    markRuntimeReadiness(descriptor.kind, state: .endpointUnavailable)
+                    if markRuntimeReadiness(descriptor.kind, state: .endpointUnavailable) {
+                        logger.record("\(descriptor.displayName) is stopped", category: .system, severity: .warning)
+                    }
                 }
             } catch {
-                logger.recordFailure("Couldn't read \(descriptor.displayName) status",
-                                     error: error,
-                                     category: .system,
-                                     severity: .error)
-                markRuntimeReadiness(descriptor.kind, state: .endpointUnavailable, message: error.appDisplayMessage)
+                if markRuntimeReadiness(descriptor.kind, state: .endpointUnavailable, message: error.appDisplayMessage) {
+                    logger.recordFailure("Couldn't read \(descriptor.displayName) status",
+                                         error: error,
+                                         category: .system,
+                                         severity: .warning)
+                }
             }
         }
-        if systemStatus == nil { systemStatus = firstStatus }
+        systemStatus = firstStatus
         let hasReadyRuntime = runtimeReadiness.values.contains { $0.state == .ready }
         bootstrap = hasReadyRuntime ? .ready : .serviceStopped
         if hasReadyRuntime {
@@ -349,15 +369,19 @@ final class AppModel {
         }
     }
 
+    @discardableResult
     private func markRuntimeReadiness(_ kind: Core.Runtime.Kind,
                                       state: Core.RuntimeReadiness.State,
-                                      message: String? = nil) {
-        guard var readiness = runtimeReadiness[kind] else { return }
+                                      message: String? = nil) -> Bool {
+        guard var readiness = runtimeReadiness[kind] else { return false }
+        let changed = readiness.state != state || readiness.message != message
+        guard changed else { return false }
         readiness.state = state
         readiness.message = message
         runtimeReadiness[kind] = readiness
         database.upsertRuntimeReadiness(Array(runtimeReadiness.values),
                                         descriptors: supportedRuntimeDescriptors)
+        return true
     }
 
     /// `system df` is throttled during background refresh; the System panel can force a fresh read.
@@ -370,7 +394,8 @@ final class AppModel {
     private func refreshDiskUsage(force: Bool = false) async {
         guard let client else { return }
         if !force, let last = lastDiskUsageDate, Date().timeIntervalSince(last) < Self.diskUsageThrottle { return }
-        if appleRuntimeReady, let usage = try? await client.diskUsage(runtimeKind: .appleContainer) {
+        if let kind = firstRuntimeKind(supporting: .systemStatus),
+           let usage = try? await client.diskUsage(runtimeKind: kind) {
             diskUsage = usage
             lastDiskUsageDate = Date()
         }
@@ -384,7 +409,13 @@ final class AppModel {
         guard let client else { return }
         if !force, let last = lastImagesDate, Date().timeIntervalSince(last) < Self.imagesThrottle { return }
         let started = Date()
-        imagesError = await captured { self.images = try await client.runtimeImages() }
+        do {
+            let inventory = try await client.imageInventory()
+            images = inventory.items
+            imagesError = partialInventoryMessage(inventory.failures)
+        } catch {
+            imagesError = error.appDisplayMessage
+        }
         lastImagesDate = Date()
         let elapsed = Date().timeIntervalSince(started)
         if elapsed >= 0.75 || force {
@@ -401,7 +432,7 @@ final class AppModel {
     }
 
     func previewCreateCommand(for spec: ContainerFormState) -> [String] {
-        (try? core(for: spec.effectiveRuntimeKind)?.previewCreateCommand(for: spec.document).command)
+        (try? core(for: spec.effectiveRuntimeKind)?.previewCreateCommand(for: spec.materializedDocumentForRun()).command)
             ?? []
     }
 
@@ -542,8 +573,8 @@ final class AppModel {
     /// Force-reload the daemon's system properties (e.g. after a kernel change).
     func reloadProperties() async {
         guard let client, bootstrap == .ready else { return }
-        guard appleRuntimeReady else { return }
-        if let p = try? await client.systemProperties(runtimeKind: .appleContainer) {
+        guard let kind = firstRuntimeKind(supporting: .systemProperties) else { return }
+        if let p = try? await client.systemProperties(runtimeKind: kind) {
             properties = p
             applyStatsNormalizationContext()
         }
@@ -553,19 +584,42 @@ final class AppModel {
     /// and called when that panel opens.
     func refreshVolumes() async {
         guard let client, bootstrap == .ready else { return }
-        if let v = try? await client.runtimeVolumes() {
-            volumes = v
-            database.upsertVolumes(v)
+        do {
+            let inventory = try await client.volumeInventory()
+            volumes = inventory.items
+            database.upsertVolumes(inventory.items)
+            setResourceInventoryError(partialInventoryMessage(inventory.failures), for: "volumes")
+        } catch {
+            resourceInventoryErrors["volumes"] = error.appDisplayMessage
         }
     }
 
     /// Refresh the cached network list. Networks back the collapsible groups on the Containers page.
     func refreshNetworks() async {
         guard let client, bootstrap == .ready else { return }
-        if let n = try? await client.runtimeNetworks() {
-            networks = n
-            database.upsertNetworks(n)
+        do {
+            let inventory = try await client.networkInventory()
+            networks = inventory.items
+            database.upsertNetworks(inventory.items)
+            setResourceInventoryError(partialInventoryMessage(inventory.failures), for: "networks")
+        } catch {
+            resourceInventoryErrors["networks"] = error.appDisplayMessage
         }
+    }
+
+    private func setResourceInventoryError(_ message: String?, for key: String) {
+        if let message {
+            resourceInventoryErrors[key] = message
+        } else {
+            resourceInventoryErrors.removeValue(forKey: key)
+        }
+    }
+
+    private func partialInventoryMessage(_ failures: [Core.Runtime.InventoryFailure]) -> String? {
+        guard !failures.isEmpty else { return nil }
+        let runtimes = failures.map(\.kind.rawValue).sorted().joined(separator: ", ")
+        return AppText.string("runtime.inventory.partialFailure",
+                              defaultValue: "Some runtimes could not refresh: \(runtimes).")
     }
 
     // MARK: Create (pull-aware)
@@ -592,6 +646,16 @@ final class AppModel {
                 return nil
             }
         }
+        do {
+            try await prepareLinkedVolumePaths(for: spec)
+        } catch {
+            createError = error.appDisplayMessage
+            logger.recordFailure("Failed preparing linked volume paths",
+                                 error: error,
+                                 category: .lifecycle,
+                                 severity: .warning)
+            return nil
+        }
         let newID = await containers.run(spec)
         if newID == nil { createError = containers.errorMessage ?? "Couldn't create the container." }
         if let newID {
@@ -599,6 +663,7 @@ final class AppModel {
                 ?? spec.effectiveRuntimeKind.scopedID(for: newID)
             if !spec.personalization.isDefault { personalization.setOverride(spec.personalization, for: scopedID) }
             healthChecks.setCheck(spec.healthCheck, for: scopedID)
+            database.setLinkedVolumePaths(spec.linkedVolumePathsForPersistence, for: scopedID)
             logger.record("Created \(newID)", category: .lifecycle, containerID: scopedID)
             flash(AppText.createdContainer(newID))
         }
@@ -625,6 +690,17 @@ final class AppModel {
         if !(await imageIsLocal(spec.image, runtimeKind: spec.effectiveRuntimeKind)) {
             guard await pullImage(spec.image, runtimeKind: spec.effectiveRuntimeKind) else { return nil }
         }
+        do {
+            try await prepareLinkedVolumePaths(for: spec)
+        } catch {
+            flash(error.appDisplayMessage)
+            logger.recordFailure("Failed preparing linked volume paths",
+                                 error: error,
+                                 category: .lifecycle,
+                                 severity: .warning,
+                                 containerID: originalScopedID)
+            return nil
+        }
         guard await containers.recreate(originalID: originalID, spec: spec) else { return nil }
         let newID = spec.name.isEmpty ? originalRuntimeID : spec.name
         let newScopedID = containers.snapshots.first { $0.id == newID && $0.runtimeKind == spec.effectiveRuntimeKind }?.scopedID
@@ -632,6 +708,7 @@ final class AppModel {
         if newID != originalRuntimeID {
             personalization.clearOverride(id: originalScopedID)
             healthChecks.clear(id: originalScopedID)
+            database.setLinkedVolumePaths([], for: originalScopedID)
         }
         if spec.personalization.isDefault {
             personalization.clearOverride(id: newScopedID)
@@ -639,8 +716,54 @@ final class AppModel {
             personalization.setOverride(spec.personalization, for: newScopedID)
         }
         healthChecks.setCheck(spec.healthCheck, for: newScopedID)
+        database.setLinkedVolumePaths(spec.linkedVolumePathsForPersistence, for: newScopedID)
         logger.record("Recreated \(newID)", category: .lifecycle, containerID: newScopedID)
         return newID
+    }
+
+    private func prepareLinkedVolumePaths(for spec: ContainerFormState) async throws {
+        guard let plan = spec.volumeLinkPlan() else { return }
+        guard let client = core(for: plan.runtimeKind) else {
+            throw Core.Runtime.UnsupportedCapability(kind: plan.runtimeKind, capability: .containers)
+        }
+        var request = Core.Container.CreateRequest(runtimeKind: plan.runtimeKind)
+        request.image = plan.image
+        request.platform = plan.platform
+        request.os = plan.os
+        request.architecture = plan.architecture
+        request.detach = false
+        request.removeOnExit = true
+        request.entrypoint = "/bin/sh"
+        request.volumes = plan.volumeMounts
+        request.command = ["-c", linkedVolumePathScript(for: plan)]
+        _ = try await client.createContainer(Core.Schema.Document.containerCreate(from: request))
+    }
+
+    private func linkedVolumePathScript(for plan: VolumeLinkPlan) -> String {
+        var lines = ["set -eu"]
+        for link in plan.links {
+            let linkPath = shellQuote(link.linkPath)
+            let targetPath = shellQuote(link.targetPath)
+            lines.append("mkdir -p \"$(dirname \(linkPath))\"")
+            lines.append("""
+            if [ -e \(linkPath) ] || [ -L \(linkPath) ]; then
+              if [ -L \(linkPath) ]; then
+                current="$(readlink \(linkPath))"
+                if [ "$current" != \(targetPath) ]; then ln -sfn \(targetPath) \(linkPath); fi
+              else
+                echo "Cannot create linked path: path exists and is not a symlink." >&2
+                exit 64
+              fi
+            else
+              ln -s \(targetPath) \(linkPath)
+            fi
+            """)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private func shellQuote(_ value: String) -> String {
+        "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
     }
 
     /// Move a logical container record to another runtime. The source runtime instance is hidden and
@@ -885,15 +1008,15 @@ final class AppModel {
     /// then re-reads service status. Failures are intentionally ignored because `refreshSystem`
     /// reports the resulting state regardless.
     private func runServiceLifecycle(_ actions: [Core.Runtime.SystemAction], resetWatchdog: Bool) async {
-        guard appleRuntimeAvailable else {
-            flash(AppText.string("runtime.service.appleOnly",
-                                 defaultValue: "Service controls are only available for Apple container. Start Docker externally, then retry."))
+        guard let kind = serviceControlRuntimeKind, serviceControlRuntimeAvailable else {
+            flash(AppText.string("runtime.service.unavailable",
+                                 defaultValue: "Service controls are not available for the current runtime. Start the runtime provider externally, then retry."))
             return
         }
         guard let client else { return }
         bootstrap = .checking
         if resetWatchdog { watchdog.reset() }
-        for action in actions { _ = try? await client.performSystemAction(action, runtimeKind: .appleContainer) }
+        for action in actions { _ = try? await client.performSystemAction(action, runtimeKind: kind) }
         await refreshSystem()
     }
 
@@ -901,7 +1024,7 @@ final class AppModel {
     var serviceLabel: String {
         switch bootstrap {
         case .ready: return "Running"
-        case .serviceStopped: return appleRuntimeAvailable ? "Stopped" : "Endpoint unavailable"
+        case .serviceStopped: return serviceControlRuntimeAvailable ? "Stopped" : "Endpoint unavailable"
         case .checking: return "Checking…"
         case .cliMissing: return "No CLI"
         case .unsupported(let v): return "v\(v)"

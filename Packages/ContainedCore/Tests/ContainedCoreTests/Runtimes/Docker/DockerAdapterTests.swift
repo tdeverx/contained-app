@@ -70,7 +70,7 @@ struct DockerAdapterTests {
 
     @Test func dockerSchemaProfileLivesWithRuntimeAdapter() throws {
         let profile = DockerRuntimeModule().schemaProfile()
-        let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .docker)
+        let definition = Core.Schema.Definition.containerRunEdit(runtimeProfile: profile)
         let pullPolicy = try #require(definition.descriptor(for: .imagePullPolicy))
         let rosetta = try #require(definition.descriptor(for: .securityRosetta))
 

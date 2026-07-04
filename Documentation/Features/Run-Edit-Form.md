@@ -60,6 +60,19 @@ keyboard shortcuts, and palette actions keep one routing model.
 
 These controls deliberately do not mirror the CLI one-to-one:
 
+The editor uses native grouped SwiftUI form sections split across Basics,
+Network, Storage, Options, and Advanced pages. Persistent guidance and
+validation belong in section footers; field-specific help stays on the row info
+button so it is available without crowding the form. The Run/Save action sits
+at the far right of the command preview so the submitted command is visually
+tied to the action. The form viewport is transparent; the grouped section
+backgrounds provide the visible structure.
+
+Row labels carry field state. A row turns red only when that specific field has
+an error or local path issue. A row turns blue when its value differs from the
+runtime/app default. Section headers use the same blue changed cue when any row
+in that section has non-default content.
+
 | UI control | CLI output | Notes |
 | --- | --- | --- |
 | Runtime picker | runtime adapter selection | Available runtimes publish the same generic schema paths instead of adding backend-specific forms. The picker is enabled when more than one runtime descriptor is available. |
@@ -70,10 +83,34 @@ These controls deliberately do not mirror the CLI one-to-one:
 | Registry scheme picker | `--scheme auto\|https\|http` | Empty means runtime default. |
 | Progress picker | `--progress auto\|none\|ansi\|plain\|color` | Empty means runtime default. |
 | Limit parallel downloads toggle + stepper | `--max-concurrent-downloads <n>` | Empty means runtime default. |
+| Storage group | `--volume <source>:<target>` | Each group can contain multiple host-folder paths. Turning on runtime-volume backing mounts one volume and links the group paths inside it. |
 | Disable DNS toggle | `--no-dns` | When enabled, DNS-specific rows are hidden and the command omits `--dns*` flags so the UI cannot express contradictory settings. |
 | Restart policy picker | `--label contained.restart=<policy>` | `container` has no native restart flag. Contained stores restart intent as a label and the app watchdog enforces it. |
 | Health check section | local app state | `container` has no native healthcheck flag. Contained stores and runs probes itself. |
 | Personalization section | local app state | Nickname, icon, tint, and card background are local-only and are not written as container labels. |
+
+## Storage groups
+
+Storage is edited as one native form section per group. By default, each path
+row is a normal host-folder mount with its own internal path and access mode. A
+group can also enable runtime-volume backing. In that mode, Contained mounts one
+runtime volume at a base internal path, mounts each host folder at a stable
+temporary path, then prepares symlinks inside the runtime volume before the main
+container starts.
+
+This is intended for workflows where the app's config directory needs Linux
+ownership semantics, but selected host folders should still appear under that
+config tree. A single storage group can have multiple paths, and each path has
+an explicit access mode:
+
+- **Read only** mounts the host folder with `:ro` and is the safer default for
+  media or library folders.
+- **Read/Write** lets the container create, move, or delete files in the linked
+  host folder.
+
+If the requested link path already exists as a real file or directory, Contained
+does not overwrite it silently. The run fails with a visible error so the user
+can rename, remove, or choose another link path.
 
 ## Free-form by design
 

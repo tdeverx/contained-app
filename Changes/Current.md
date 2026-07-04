@@ -5,18 +5,21 @@
 ### Fixed
 
 - Bundle the generated current release notes artifact into local app builds so in-app What's New matches the CI/Appcast release-note source.
+- Harden container recreate after stale runtime snapshots and reduce repeated optional-runtime endpoint errors in Activity.
 
 ### Runtime & Images
 
-- Added Docker CLI runtime support in `ContainedCore`, with Docker command builders, decoders, create/Compose translation, runtime descriptors, CLI discovery, and a first-class adapter beside Apple `container`.
-- Aggregated containers from reachable runtimes while routing lifecycle, logs, stats, terminal, files, edit, and health actions through each container's owning runtime.
-- Unified Images at the group level while exposing runtime-specific local tag availability and actions for Apple container and Docker image stores.
-- Added runtime-scoped settings sections and Docker CLI path overrides; Apple service, kernel, and DNS controls remain Apple-only, while Docker endpoint failures show retry/runtime guidance.
+- Added dormant Docker CLI adapter groundwork in `ContainedCore`, with Docker command builders, decoders, create/Compose translation, runtime descriptors, CLI discovery, and direct adapter tests kept out of the default app registry.
+- Kept Docker disabled in the default runtime registry so Contained discovers, probes, and offers Apple `container` only until a Docker provider model is chosen.
+- Added runtime-scoped resource routing and image/tag models so future runtimes can aggregate containers and expose runtime-specific local image availability through each resource's owning runtime.
+- Added runtime-scoped settings records; Apple service, kernel, and DNS controls remain Apple-only while dormant Docker path/endpoint UI stays hidden by default.
 - Kept V1 image storage runtime-owned while centralizing registry search, remote digest/update metadata, and normalized tag grouping across runtimes.
 - Scoped local image update comparisons to each runtime-owned tag so one runtime can be current while another has an update available for the same image reference.
 - Removed implicit runtime fallbacks so create, pull, build, load, push, registry, network, volume, logs, stats, terminal, and migration actions route through an explicit runtime or an existing resource owner.
-- Split registered runtime clients from ready runtime endpoints so Docker can remain usable when Apple container is stopped or unsupported, while Apple-only service controls stay explicitly Apple-scoped.
+- Split registered runtime clients from ready runtime endpoints while keeping Apple-only service controls explicitly Apple-scoped.
 - Hardened the Core runtime boundary with module-driven Apple container and Docker adapters, runtime-keyed CLI overrides/readiness, runtime-owned schema profiles, and static checks preventing concrete runtime behavior from leaking out of `Runtimes/**`.
+- Moved the built-in module registry into shared `Runtime` infrastructure, kept `Runtimes/**` for concrete adapters only, and made canonical schema fields runtime-neutral while adapter profiles own support state and tips.
+- Tightened the runtime cleanup pass by splitting Core runtime/Compose helpers, surfacing partial inventory failures, removing app-side Apple defaults from unowned flows, and recording typed app-database failures instead of crashing on corrupt records.
 - Replaced alert-based runtime picking for no-context Compose/image archive imports with an in-app runtime selection sheet that preselects only when one compatible runtime is available.
 - Moved migration visibility and runtime move progress into the app database/Core migration flow, retaining disappeared resources only when they carry Contained-owned value.
 - Fixed the container-card morph regression by keying measured card frames and expanded overlays by runtime-scoped container IDs.
@@ -42,6 +45,12 @@
 - Added colocated SwiftUI previews for design-system and UX primitives, removed the separate preview-only source directories, and documented that design previews live beside each element declaration.
 - Introduced package-internal `ContainedUI/Shared` helpers for repeated capsule, swatch, label, row, and surface-rendering anatomy while keeping app-facing calls on the public `UI.*` routes.
 - Centralized resource-card anatomy in `UI.Card.Scaffold`, with stable headers, sticky large widgets, body-hosted medium/small details, typed page controls, and packaged action/status routes.
+- Reworked Run/Edit storage into Storage Groups, where each group can hold multiple host/internal paths and can optionally be backed by one runtime volume with Contained-managed symlinks.
+- Reworked Run/Edit storage rows into one native form section per storage group, with labeled host folder, internal path, and explicit Read only/Read/Write access controls instead of a compact toggle.
+- Moved Run/Edit and Settings back onto native grouped SwiftUI forms and section footers, added a Run/Edit header page switcher, and moved Run/Save to the command-preview footer while preserving row-level info popovers.
+- Kept grouped form viewports transparent so only native section backgrounds carry the form surface.
+- Added form label state colors so field-specific errors render red and changed-from-default rows render blue.
+- Reworked the Volumes page into vertical runtime-volume and host-path mount card groups, with runtime-scoped inventory keys so same-named volumes from future runtimes remain distinct.
 - Reduced idle UI churn with one app-wide low-priority stats stream, narrower per-container metric invalidation, lazy long panels, deferred heavyweight expanded-card pages, cached style/tag lookups, and coalesced image refreshes.
 - Improved metric rendering with chronological sparkline windows, fixed CPU/memory percentage scales, raw network/disk throughput shapes, configurable CPU/memory normalization, and clearer sub-1% CPU/memory readouts.
 

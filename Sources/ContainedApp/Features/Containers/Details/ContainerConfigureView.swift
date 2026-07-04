@@ -30,13 +30,14 @@ struct ContainerConfigureView: View {
     @State private var loaded = false
     @State private var savingTemplate = false
     @State private var templateName = ""
+    @State private var page: ContainerFormPage = .basics
 
     init(mode: ContainerEditSheet.Mode, leading: Leading, onFinished: @escaping () -> Void) {
         self.mode = mode
         self.leading = leading
         self.onFinished = onFinished
         switch mode {
-        case .new(let prefill):      _spec = State(initialValue: prefill ?? ContainerFormState(runtimeKind: .appleContainer))
+        case .new(let prefill):      _spec = State(initialValue: prefill ?? ContainerFormState(runtimeKind: AppRuntimeIntent.placeholderKind))
         case .edit(let snapshot, _): _spec = State(initialValue: ContainerFormState(from: snapshot.configuration))
         }
     }
@@ -44,23 +45,16 @@ struct ContainerConfigureView: View {
     private var isEdit: Bool { if case .edit = mode { return true }; return false }
 
     var body: some View {
-        UI.Panel.Scaffold(width: UI.Panel.SheetSize.form.width) {
+        UI.Panel.Scaffold(width: UI.Panel.SheetSize.form.width, scrolls: false) {
             VStack(spacing: 0) {
                 header
                 Divider()
                 validationSummary
             }
         } content: {
-            ContainerSchemaForm(spec: $spec)
-                .padding(UI.Layout.Spacing.s)
+            ContainerSchemaForm(spec: $spec, page: page)
         } footer: {
-            if app.settings.revealCLI {
-                UI.Command.PreviewBar(command: app.previewCreateCommand(for: spec),
-                                  copyHelp: AppText.copyCommand,
-                                  copiedAccessibilityLabel: AppText.copied)
-                    .padding(UI.Layout.Spacing.s)
-                    .frame(maxWidth: .infinity)
-            }
+            commandFooter
         }
         .onAppear(perform: load)
         .confirmationDialog("Replace \(spec.name.isEmpty ? editID : spec.name)?",
@@ -81,28 +75,69 @@ struct ContainerConfigureView: View {
     private var header: some View {
         UI.Panel.Header(symbol: isEdit ? "slider.horizontal.3" : "play.fill",
                     title: isEdit ? "Edit container" : "Run a container",
-                    subtitle: isEdit ? "Replaces the existing container with your edits" : nil) {
+                    subtitle: page.subtitle) {
             HStack(spacing: UI.Layout.Spacing.s) {
-                UI.Action.Group(leadingAction)
-                if working {
-                    UI.Action.ProgressCapsule()
-                } else {
-                    UI.Action.Group([
-                        UI.Action.Item(systemName: "bookmark",
-                                     help: AppText.saveAsTemplate,
-                                     isEnabled: spec.isRunnable) {
-                            templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
-                            savingTemplate = true
-                        },
-                        UI.Action.Item(systemName: isEdit ? "checkmark" : "play.fill",
-                                     help: isEdit ? "Save" : "Create",
-                                     isEnabled: spec.isRunnable) {
-                            if isEdit { confirming = true } else { create() }
-                        }
-                    ])
-                    .opacity(spec.isRunnable ? 1 : 0.55)
-                }
+                UI.Action.Group(pageActions)
+                UI.Action.Group(utilityActions)
             }
+        }
+    }
+
+    private var pageActions: [UI.Action.Item] {
+        ContainerFormPage.allCases.map { item in
+            UI.Action.Item(systemName: item.systemImage,
+                           help: item.title,
+                           tint: page == item ? .accentColor : nil) {
+                page = item
+            }
+        }
+    }
+
+    private var utilityActions: [UI.Action.Item] {
+        [
+            UI.Action.Item(systemName: "bookmark",
+                           help: AppText.saveAsTemplate,
+                           isEnabled: spec.isRunnable && !working) {
+                templateName = spec.name.isEmpty ? Format.shortImage(spec.image) : spec.name
+                savingTemplate = true
+            },
+            leadingAction,
+        ]
+    }
+
+    @ViewBuilder
+    private var commandFooter: some View {
+        if app.settings.revealCLI {
+            UI.Command.PreviewBar(command: app.previewCreateCommand(for: spec),
+                                  copyHelp: AppText.copyCommand,
+                                  copiedAccessibilityLabel: AppText.copied) {
+                primaryCommandAction
+            }
+            .padding(UI.Layout.Spacing.s)
+            .frame(maxWidth: .infinity)
+        } else {
+            HStack {
+                Spacer()
+                primaryCommandAction
+            }
+            .padding(UI.Layout.Spacing.s)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private var primaryCommandAction: some View {
+        if working {
+            UI.Action.ProgressCapsule()
+        } else {
+            UI.Action.TextButton(title: isEdit ? AppText.string("common.save", defaultValue: "Save") : AppText.string("runSpec.run", defaultValue: "Run"),
+                                 systemName: isEdit ? "checkmark" : "play.fill",
+                                 help: isEdit ? AppText.string("runSpec.saveAndReplace", defaultValue: "Save and replace the container") : AppText.string("runSpec.runCommand", defaultValue: "Run this command"),
+                                 prominence: .prominent,
+                                 isEnabled: spec.isRunnable) {
+                if isEdit { confirming = true } else { create() }
+            }
+            .opacity(spec.isRunnable ? 1 : 0.55)
         }
     }
 
@@ -168,8 +203,8 @@ struct ContainerConfigureView: View {
     private func saveTemplate() {
         let name = templateName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
-        modelContext.insert(RecipeRecord(name: name, spec: spec))
         do {
+            modelContext.insert(try RecipeRecord.make(name: name, spec: spec))
             try modelContext.save()
             app.flash(AppText.savedTemplate(name))
         } catch {
@@ -188,15 +223,14 @@ struct ContainerConfigureView: View {
         loaded = true
         switch mode {
         case .new:
-            if spec.image.trimmingCharacters(in: .whitespaces).isEmpty,
-               spec.name.trimmingCharacters(in: .whitespaces).isEmpty,
-               let firstRuntime = app.availableRuntimeDescriptors.first?.kind {
-                spec.runtimeKind = firstRuntime
+            if spec.effectiveRuntimeKind == AppRuntimeIntent.placeholderKind {
+                spec.runtimeKind = app.preselectedRuntimeKind(current: spec.effectiveRuntimeKind, capability: .containers)
             }
         case .edit(let snapshot, _):
             // Pull the current style + healthcheck from the local stores so edits start from what's set.
             spec.personalization = app.containerStyle(for: snapshot)
             spec.healthCheck = app.healthChecks.check(for: snapshot.scopedID) ?? Core.Container.HealthCheck()
+            spec.applyLinkedVolumePaths(app.database.linkedVolumePaths(for: snapshot.scopedID))
         }
     }
 

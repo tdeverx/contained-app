@@ -162,7 +162,7 @@ final class UIState {
         if !panelNavigationEnabled {
             switch action {
             case .runContainer:
-                presentCreate(ContainerFormState(runtimeKind: .appleContainer))
+                presentCreate(ContainerFormState(runtimeKind: AppRuntimeIntent.placeholderKind))
                 return
             case .pullImage, .createVolume, .createNetwork, .activityHistory:
                 navigateForClassicFallback(action)
@@ -205,7 +205,7 @@ final class UIState {
         guard panelNavigationEnabled else {
             switch entry {
             case .menu, .chooser, .configure:
-                presentCreate(spec ?? ContainerFormState(runtimeKind: .appleContainer))
+                presentCreate(spec ?? ContainerFormState(runtimeKind: AppRuntimeIntent.placeholderKind))
             case .network:
                 navigate(to: .networks)
             case .volume:

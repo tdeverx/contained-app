@@ -12,11 +12,14 @@ struct MenuBarContent: View {
     private var store: ContainersStore { app.containers }
     private var stopped: [Core.Container.Snapshot] { store.snapshots.filter { $0.state != .running } }
     private var unreadActivityCount: Int { app.historyStore.unreadEventCount() }
+    private var statusRuntimeKind: Core.Runtime.Kind? {
+        app.serviceControlRuntimeKind ?? app.firstRuntimeKind(supporting: .systemStatus, readyOnly: false)
+    }
 
     private var cliLabel: String {
         switch app.bootstrap {
         case .ready:
-            return app.runtimeVersion(for: .appleContainer).map { "CLI v\($0)" } ?? "CLI ready"
+            return statusRuntimeKind.flatMap { app.runtimeVersion(for: $0) }.map { "CLI v\($0)" } ?? "CLI ready"
         case .checking:
             return "Checking CLI"
         case .cliMissing:
@@ -45,7 +48,7 @@ struct MenuBarContent: View {
             Menu("Service") {
                 statusItem
                 Divider()
-                if app.appleRuntimeAvailable {
+                if app.serviceControlRuntimeAvailable {
                     if app.serviceHealthy {
                         Button("Stop Service") { Task { await app.stopService() } }
                     } else {
@@ -53,7 +56,7 @@ struct MenuBarContent: View {
                     }
                     Button("Restart Service") { Task { await app.restartService() } }
                 } else {
-                    Button("Retry Docker Connection") { Task { await app.retryBootstrap() } }
+                    Button("Retry Runtime Connection") { Task { await app.retryBootstrap() } }
                 }
             }
 

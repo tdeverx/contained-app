@@ -5,8 +5,8 @@ Reusable visual building blocks for Contained and related macOS SwiftUI apps.
 ## Overview
 
 `ContainedUI` exposes a nested `UI.*` API for app-neutral cards, panels,
-actions, controls, toolbar controls, state views, chart widgets, materials, and
-tokens. The package receives strings from the host app and does not ship
+native form rows, actions, controls, toolbar controls, state views, chart
+widgets, materials, and tokens. The package receives strings from the host app and does not ship
 localized resources.
 
 Use contextual tokens first:
@@ -39,6 +39,7 @@ file in Xcode should show that element's canvas sample directly.
 
 - `UI.Card`
 - `UI.Panel`
+- `UI.Form.Grouped` plus rows, fields, toggles, info buttons, and error/changed label states
 - `UI.Action`
 - `UI.Control`
 - `UI.Toolbar`
@@ -66,6 +67,19 @@ UI.Panel.Scaffold(width: UI.Panel.Size.settings.width) {
         UI.Panel.Row(title: "Accent") {
             UI.Control.TintSelector(selection: $tint, labelForTint: label)
         }
+    }
+}
+```
+
+```swift
+UI.Form.Grouped {
+    Section("Runtime") {
+        UI.Form.Field(label: "Image", info: "The image reference to run.") {
+            TextField("nginx:latest", text: $image)
+        }
+        UI.Form.ToggleRow(title: "Run in background",
+                          isChanged: true,
+                          isOn: $detached)
     }
 }
 ```

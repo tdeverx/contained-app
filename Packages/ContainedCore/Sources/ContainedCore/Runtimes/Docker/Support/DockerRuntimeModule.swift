@@ -101,16 +101,35 @@ struct DockerRuntimeModule: Core.Runtime.Module {
         let disabled = supportByPath.filter { _, support in support.state == .disabled }
         let tips = Dictionary(uniqueKeysWithValues: fields.compactMap { field -> (Core.Field.Path, Core.Schema.FieldTipRef)? in
             guard supportByPath[field.path]?.state == .supported,
-                  let tip = field.tipRefs[.appleContainer] else { return nil }
-            return (field.path, Core.Schema.FieldTipRef(
-                key: tip.key.replacingOccurrences(of: "apple-container", with: "docker"),
-                defaultText: tip.defaultText
-            ))
+                  let tip = dockerTip(for: field) else { return nil }
+            return (field.path, tip)
         })
         return Core.Schema.RuntimeProfile(kind: descriptor.kind,
                                           supportedPaths: supported,
                                           disabledSupport: disabled,
                                           tips: tips)
+    }
+
+    private func dockerTip(for descriptor: Core.Schema.FieldDescriptor) -> Core.Schema.FieldTipRef? {
+        let key = "schema.tip.\(descriptor.path.rawValue).docker"
+        if descriptor.path == .runtimeKind {
+            return Core.Schema.FieldTipRef(key: key,
+                                           defaultText: "Selects Docker as the runtime used for previewing and running this container.")
+        }
+        if descriptor.path == .imageReference {
+            return Core.Schema.FieldTipRef(key: key,
+                                           defaultText: "The image Docker runs. If it is not local, Contained pulls it before running.")
+        }
+        if descriptor.path == .networkName {
+            return Core.Schema.FieldTipRef(key: key,
+                                           defaultText: "Maps to Docker networking. Host networking is projected as Docker's host network mode.")
+        }
+        if let alias = descriptor.sourceAliases.first(where: { $0.source == .dockerCLI }) {
+            return Core.Schema.FieldTipRef(key: key,
+                                           defaultText: "Maps to Docker CLI \(alias.name).")
+        }
+        return Core.Schema.FieldTipRef(key: key,
+                                       defaultText: "Supported by the Docker runtime.")
     }
 
     private func dockerSupport(for descriptor: Core.Schema.FieldDescriptor) -> Core.Schema.FieldSupport {

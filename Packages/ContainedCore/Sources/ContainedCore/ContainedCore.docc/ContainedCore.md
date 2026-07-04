@@ -7,12 +7,14 @@ interchange, metrics, and display-neutral errors for Contained.
 
 `ContainedCore` exposes a nested `Core.*` API, matching the `UI.*` and `UX.*`
 package style. App code talks to ``Core/Orchestrator``. Runtime adapters live
-inside Core, including Apple container and Docker CLI adapters, so
-the app does not create adapter clients or assemble backend argv. Shared Core
-consumes `Core.Runtime.Module` registrations; concrete descriptors, CLI lookup,
-readiness probing, command previews, terminal invocations, schema support
-profiles, Compose projection, and client creation live under
-`Runtimes/AppleContainer` or `Runtimes/Docker`.
+inside Core so the app does not create adapter clients or assemble backend argv.
+Apple container is registered by default; Docker CLI adapter groundwork exists
+under `Runtimes/Docker` but remains dormant until a provider model is chosen.
+Shared Core consumes `Core.Runtime.Module` registrations; concrete descriptors,
+CLI lookup, readiness probing, command previews, terminal invocations, schema
+support profiles, Compose projection, and client creation live under runtime
+adapter folders. The built-in registry lives in shared `Runtime` infrastructure,
+not inside a concrete adapter folder.
 
 Use Core for:
 

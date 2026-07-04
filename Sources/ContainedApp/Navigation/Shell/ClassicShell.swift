@@ -228,6 +228,9 @@ private struct NetworksPage: View {
                 ui.dispatch(.createNetwork)
             })
         } content: {
+            if let message = app.resourceInventoryErrors["networks"] {
+                UI.State.InlineStatus(message, isWorking: false)
+            }
             if sortedNetworks.isEmpty {
                 UI.State.Empty(AppText.string("network.empty", defaultValue: "No networks"),
                                  systemImage: "network",

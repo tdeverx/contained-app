@@ -58,7 +58,7 @@ struct CreationFlow: View {
         }
     }
     @State private var page: Page
-    @State private var spec = ContainerFormState(runtimeKind: .appleContainer)
+    @State private var spec = ContainerFormState(runtimeKind: AppRuntimeIntent.placeholderKind)
     @State private var initialSearchQuery = ""
     @State private var localImageQuery = ""
     @State private var composeText = ""
@@ -67,7 +67,7 @@ struct CreationFlow: View {
     @State private var networkName = ""
     @State private var networkSubnet = ""
     @State private var networkInternalOnly = false
-    @State private var resourceRuntimeKind = Core.Runtime.Kind.appleContainer
+    @State private var resourceRuntimeKind = AppRuntimeIntent.placeholderKind
     @State private var working = false
     @State private var configureToken = 0
     @State private var configureReturnPage: Page?
@@ -438,9 +438,7 @@ struct CreationFlow: View {
     }
 
     private func applyInitialRuntimeSelectionIfNeeded() {
-        if let firstRuntime = app.availableRuntimeDescriptors.first?.kind {
-            resourceRuntimeKind = firstRuntime
-        }
+        resourceRuntimeKind = app.preselectedRuntimeKind(current: resourceRuntimeKind, capability: .containers)
         guard editSnapshot == nil,
               spec.image.trimmingCharacters(in: .whitespaces).isEmpty,
               spec.name.trimmingCharacters(in: .whitespaces).isEmpty else { return }

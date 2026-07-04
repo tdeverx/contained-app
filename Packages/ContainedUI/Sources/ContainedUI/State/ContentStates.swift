@@ -121,10 +121,14 @@ struct Empty: View {
     }
 
     public var body: some View {
-        VStack(spacing: UI.Tokens.Space.s) {
+        CenteredStateLayout(spacing: UI.Tokens.Space.s,
+                            padding: padding,
+                            minHeight: minHeight,
+                            fillsHeight: false) {
             SwiftUI.Image(systemName: systemImage)
                 .font(.title2)
                 .foregroundStyle(tone.color)
+        } content: {
             Text(title)
                 .font(.callout.weight(.medium))
             if let description {
@@ -135,17 +139,9 @@ struct Empty: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: minHeight)
-        .padding(padding)
     }
 }
 
-// TODO(design-system): `UI.State.Empty`, `UI.State.Hero`, and `UI.State.Loading` all render centered
-// state stacks, but their action slots and sizing contracts differ today. If this area gets another
-// layout pass, consider a Shared centered-state scaffold and re-check current app call sites in:
-// `Sources/ContainedApp/Features/Containers/Card/ContainersGridView.swift`,
-// `Sources/ContainedApp/Features/Onboarding/BootstrapView.swift`, and
-// `Sources/ContainedApp/Features/Images/Registry/RegistryImageSearch.swift`.
 struct Hero<Actions: View>: View {
     public var systemImage: String
     public var title: String
@@ -163,19 +159,22 @@ struct Hero<Actions: View>: View {
     }
 
     public var body: some View {
-        VStack(spacing: UI.Tokens.Space.l) {
+        CenteredStateLayout(spacing: UI.Tokens.Space.l,
+                            padding: UI.Tokens.Space.xxl,
+                            minHeight: nil,
+                            fillsHeight: true) {
             SwiftUI.Image(systemName: systemImage)
                 .font(.system(size: UI.Tokens.IconSize.appIcon - UI.Tokens.Space.xs))
                 .foregroundStyle(.tint)
+        } content: {
             Text(title).font(.title2.weight(.semibold))
             Text(message)
                 .designSecondaryCallout()
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 420)
+        } actions: {
             actions()
         }
-        .padding(UI.Tokens.Space.xxl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -193,13 +192,51 @@ struct Loading: View {
     }
 
     public var body: some View {
-        VStack(spacing: UI.Tokens.Space.s) {
+        CenteredStateLayout(spacing: UI.Tokens.Space.s,
+                            padding: padding,
+                            minHeight: minHeight,
+                            fillsHeight: true) {
             ProgressView()
+        } content: {
             Text(title)
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct CenteredStateLayout<Graphic: View, Content: View, Actions: View>: View {
+    var spacing: CGFloat
+    var padding: CGFloat
+    var minHeight: CGFloat?
+    var fillsHeight: Bool
+    @ViewBuilder var graphic: () -> Graphic
+    @ViewBuilder var content: () -> Content
+    @ViewBuilder var actions: () -> Actions
+
+    init(spacing: CGFloat,
+         padding: CGFloat,
+         minHeight: CGFloat?,
+         fillsHeight: Bool,
+         @ViewBuilder graphic: @escaping () -> Graphic,
+         @ViewBuilder content: @escaping () -> Content,
+         @ViewBuilder actions: @escaping () -> Actions = { EmptyView() }) {
+        self.spacing = spacing
+        self.padding = padding
+        self.minHeight = minHeight
+        self.fillsHeight = fillsHeight
+        self.graphic = graphic
+        self.content = content
+        self.actions = actions
+    }
+
+    var body: some View {
+        VStack(spacing: spacing) {
+            graphic()
+            content()
+            actions()
+        }
+        .frame(maxWidth: .infinity, maxHeight: fillsHeight ? .infinity : nil)
         .frame(minHeight: minHeight)
         .padding(padding)
     }

@@ -4,8 +4,35 @@ import ContainedCore
 
 @MainActor
 final class AppDatabase {
+    enum Failure: LocalizedError, Equatable {
+        case fetch(model: String, detail: String)
+        case save(detail: String)
+        case encodeSetting(key: String, detail: String)
+        case decodeSetting(key: String, detail: String)
+        case encodeRecord(type: String, detail: String)
+        case decodeRecord(record: String, detail: String)
+
+        var errorDescription: String? {
+            switch self {
+            case .fetch(let model, let detail):
+                return "Unable to fetch \(model): \(detail)"
+            case .save(let detail):
+                return "Unable to save app database: \(detail)"
+            case .encodeSetting(let key, let detail):
+                return "Unable to encode app setting \(key): \(detail)"
+            case .decodeSetting(let key, let detail):
+                return "Unable to decode app setting \(key): \(detail)"
+            case .encodeRecord(let type, let detail):
+                return "Unable to encode app database value \(type): \(detail)"
+            case .decodeRecord(let record, let detail):
+                return "Unable to decode app database record \(record): \(detail)"
+            }
+        }
+    }
+
     let container: ModelContainer
     var context: ModelContext { container.mainContext }
+    private(set) var lastFailure: Failure?
 
     init(isStoredInMemoryOnly: Bool = false) {
         let schema = Schema(AppDatabaseSchemaV1.models)
@@ -23,7 +50,8 @@ final class AppDatabase {
         do {
             return try context.fetch(FetchDescriptor<T>())
         } catch {
-            fatalError("Unable to fetch \(T.self): \(error)")
+            recordFailure(.fetch(model: String(describing: T.self), detail: String(describing: error)))
+            return []
         }
     }
 
@@ -31,7 +59,7 @@ final class AppDatabase {
         do {
             try context.save()
         } catch {
-            fatalError("Unable to save app database: \(error)")
+            recordFailure(.save(detail: String(describing: error)))
         }
     }
 
@@ -42,7 +70,8 @@ final class AppDatabase {
         do {
             return try JSONDecoder().decode(T.self, from: record.valueData)
         } catch {
-            fatalError("Unable to decode app setting \(key): \(error)")
+            recordFailure(.decodeSetting(key: key, detail: String(describing: error)))
+            return fallback
         }
     }
 
@@ -51,7 +80,8 @@ final class AppDatabase {
         do {
             data = try JSONEncoder().encode(value)
         } catch {
-            fatalError("Unable to encode app setting \(key): \(error)")
+            recordFailure(.encodeSetting(key: key, detail: String(describing: error)))
+            return
         }
         if let record = fetch(AppSettingRecord.self).first(where: { $0.key == key }) {
             record.valueData = data
@@ -60,6 +90,10 @@ final class AppDatabase {
             context.insert(AppSettingRecord(key: key, valueData: data))
         }
         save()
+    }
+
+    func recordFailure(_ failure: Failure) {
+        lastFailure = failure
     }
 
     func deleteSetting(_ key: String) {

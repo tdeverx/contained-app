@@ -30,8 +30,7 @@ final class SettingsStore {
     /// Let images without their own style inherit the default card design edited in Settings.
     var imageDefaultStyleEnabled: Bool { didSet { persist(imageDefaultStyleEnabled, for: Keys.imageDefaultStyleEnabled) } }
     var keepInMenuBar: Bool { didSet { persist(keepInMenuBar, for: Keys.keepInMenuBar) } }
-    var cliPathOverride: String { didSet { database.setRuntimePathOverride(cliPathOverride, for: .appleContainer) } }
-    var dockerCLIPathOverride: String { didSet { database.setRuntimePathOverride(dockerCLIPathOverride, for: .docker) } }
+    private var runtimePathOverrides: [Core.Runtime.Kind: String]
     var refreshInterval: Double { didSet { persist(refreshInterval, for: Keys.refresh) } }
     var statsNormalizationMode: Core.Metrics.NormalizationMode {
         didSet { persist(statsNormalizationMode.rawValue, for: Keys.statsNormalizationMode) }
@@ -103,8 +102,9 @@ final class SettingsStore {
 
     init(database: AppDatabase = AppDatabase()) {
         self.database = database
-        _ = database.runtimeRecord(for: .appleContainer)
-        _ = database.runtimeRecord(for: .docker)
+        for descriptor in Core.Runtime.supportedDescriptors {
+            _ = database.runtimeRecord(for: descriptor.kind)
+        }
         accentTint = UI.Theme.Tint(rawValue: database.setting(Keys.tint, fallback: "")) ?? .multicolor
         appearance = UI.Theme.Appearance(rawValue: database.setting(Keys.appearance, fallback: "")) ?? .system
         density = UI.Card.Density(stored: database.setting(Keys.density, fallback: ""))
@@ -121,8 +121,9 @@ final class SettingsStore {
         showInfoTips = database.setting(Keys.showInfoTips, fallback: true)
         imageDefaultStyleEnabled = database.setting(Keys.imageDefaultStyleEnabled, fallback: true)
         keepInMenuBar = database.setting(Keys.keepInMenuBar, fallback: true)
-        cliPathOverride = database.runtimePathOverride(for: .appleContainer)
-        dockerCLIPathOverride = database.runtimePathOverride(for: .docker)
+        runtimePathOverrides = Dictionary(uniqueKeysWithValues: Core.Runtime.supportedDescriptors.map { descriptor in
+            (descriptor.kind, database.runtimePathOverride(for: descriptor.kind))
+        })
         refreshInterval = database.setting(Keys.refresh, fallback: 2.0)
         statsNormalizationMode = Core.Metrics.NormalizationMode(rawValue: database.setting(Keys.statsNormalizationMode, fallback: "")) ?? .container
         imageUpdateIntervalHours = database.setting(Keys.imageUpdateIntervalHours, fallback: 6)
@@ -173,8 +174,7 @@ final class SettingsStore {
                        showInfoTips: showInfoTips,
                        imageDefaultStyleEnabled: imageDefaultStyleEnabled,
                        keepInMenuBar: keepInMenuBar,
-                       cliPathOverride: cliPathOverride,
-                       dockerCLIPathOverride: dockerCLIPathOverride,
+                       runtimePathOverrides: backupRuntimePathOverrides,
                        refreshInterval: refreshInterval,
                        statsNormalizationMode: statsNormalizationMode,
                        imageUpdateIntervalHours: imageUpdateIntervalHours,
@@ -215,8 +215,9 @@ final class SettingsStore {
         showInfoTips = snapshot.showInfoTips
         imageDefaultStyleEnabled = snapshot.imageDefaultStyleEnabled
         keepInMenuBar = snapshot.keepInMenuBar
-        cliPathOverride = snapshot.cliPathOverride
-        dockerCLIPathOverride = snapshot.dockerCLIPathOverride
+        for (rawKind, path) in snapshot.runtimePathOverrides {
+            setRuntimePathOverride(path, for: Core.Runtime.Kind(rawValue: rawKind))
+        }
         refreshInterval = snapshot.refreshInterval
         statsNormalizationMode = snapshot.statsNormalizationMode
         imageUpdateIntervalHours = snapshot.imageUpdateIntervalHours
@@ -242,6 +243,20 @@ final class SettingsStore {
 
     private func persist<T: Codable>(_ value: T, for key: String) {
         database.setSetting(value, for: key)
+    }
+
+    func runtimePathOverride(for kind: Core.Runtime.Kind) -> String {
+        runtimePathOverrides[kind] ?? ""
+    }
+
+    func setRuntimePathOverride(_ path: String, for kind: Core.Runtime.Kind) {
+        guard runtimePathOverrides[kind] != path else { return }
+        runtimePathOverrides[kind] = path
+        database.setRuntimePathOverride(path, for: kind)
+    }
+
+    private var backupRuntimePathOverrides: [String: String] {
+        Dictionary(uniqueKeysWithValues: runtimePathOverrides.map { ($0.key.rawValue, $0.value) })
     }
 
     private static func decodeRawSet<T: RawRepresentable & Hashable>(_ type: T.Type,

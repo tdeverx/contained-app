@@ -7,7 +7,7 @@ Contained's app-facing backend boundary is `ContainedCore`.
 - `Core.Compose` owns Compose as a cross-runtime interchange format. Yams is internal to `Core.Compose.YAML`.
 - `Core.Container` owns canonical create/edit/import/export models.
 - `Core.Command` owns command previews, process execution, and host invocations.
-- Core-internal adapters (`Runtimes/AppleContainer` and `Runtimes/Docker`) translate canonical models to backend-specific behavior through `Core.Runtime.Module`.
+- Core-internal adapters translate canonical models to backend-specific behavior through `Core.Runtime.Module`. `Runtimes/AppleContainer` is registered by default; `Runtimes/Docker` is dormant groundwork and must not be added to the default registry until a Docker provider model is chosen.
 
 The app owns settings, routing, persistence, localization, Activity presentation,
 and user decisions. It does not create adapter clients, call Apple CLI locators,
@@ -16,10 +16,16 @@ or assemble backend argv.
 ## Adapter Shape
 
 Runtime adapters are folders inside `ContainedCore`, not standalone app
-dependencies. Apple container lives under `Runtimes/AppleContainer`; Docker
-lives under `Runtimes/Docker`. Future runtimes such as Podman, Lima-backed,
-remote, or other runtimes should be added as sibling adapter folders under Core
-and registered in the built-in runtime module registry.
+dependencies. Apple container lives under `Runtimes/AppleContainer`; dormant
+Docker groundwork lives under `Runtimes/Docker`. Future runtimes such as Podman,
+Lima-backed, remote, or other runtimes should be added as sibling adapter
+folders under Core and registered in the built-in runtime module registry only
+when they are ready to be app-discoverable.
+
+The shared registry lives in `Runtime/ModuleRegistry.swift`; `Runtimes/**`
+contains concrete adapter behavior only. Shared `Runtime/**` files define the
+module contract, descriptors, capabilities, readiness state, client protocols,
+configuration, unsupported-capability errors, and migration contracts.
 
 Each adapter module owns its descriptor, capability preset, CLI lookup, client
 creation, readiness probing, command previews, terminal invocation, schema
@@ -43,6 +49,11 @@ Bootstrap returns readiness for every registered module. A runtime can be
 `cliMissing`, `unsupported`, `endpointUnavailable`, or `ready`, so the app can
 present missing CLI, unsupported CLI, and stopped daemon/service states without
 guessing from a single global bootstrap value.
+
+Runtime inventory is aggregated per capability. If one runtime fails while
+another succeeds, Core returns the successful resources with typed partial
+failure details so the app can keep the grid usable and surface the degraded
+runtime instead of hiding the problem.
 
 ## Create, Import, Export, And Runtime Choice
 
@@ -73,6 +84,11 @@ from an existing resource's `runtimeKind`. Global prune/reclaim actions iterate
 every reachable runtime with the required capability. Existing container actions
 route through each resource's `runtimeKind`, so the container grid can aggregate
 Apple and Docker containers without app-side runtime switching.
+
+Runtime settings are keyed by `Core.Runtime.Kind` and rendered from descriptors
+and capabilities. Path overrides are runtime records. Service, kernel, DNS, and
+endpoint controls appear only when a descriptor advertises the matching runtime
+capability, so the app does not need a hardcoded active/default runtime.
 
 Images are unified at the group level by normalized reference or digest.
 Registry search, remote digest checks, and shared image metadata are app-wide,

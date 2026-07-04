@@ -10,7 +10,7 @@ struct ContainerRuntimeMigrationTests {
         let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
         let apple = MigrationAppleRunner()
         let docker = MigrationDockerRunner()
-        app.installRuntimeClientForTesting(.testing(runners: [.appleContainer: apple, .docker: docker]))
+        app.installRuntimeClientForTesting(appTestOrchestrator(runners: [.appleContainer: apple, .docker: docker]))
         app.migrationStabilizationTimeout = 0.2
         app.migrationPollInterval = 0.001
         app.healthChecks.setCheck(Core.Container.HealthCheck(command: ["true"], enabled: true),
@@ -38,7 +38,7 @@ struct ContainerRuntimeMigrationTests {
         let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
         let apple = MigrationAppleRunner()
         let docker = MigrationDockerRunner(createFails: true)
-        app.installRuntimeClientForTesting(.testing(runners: [.appleContainer: apple, .docker: docker]))
+        app.installRuntimeClientForTesting(appTestOrchestrator(runners: [.appleContainer: apple, .docker: docker]))
         app.migrationStabilizationTimeout = 0.05
         app.migrationPollInterval = 0.001
 
@@ -61,7 +61,7 @@ struct ContainerRuntimeMigrationTests {
         let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
         let apple = MigrationAppleRunner()
         let docker = MigrationDockerRunner(targetState: .stopped)
-        app.installRuntimeClientForTesting(.testing(runners: [.appleContainer: apple, .docker: docker]))
+        app.installRuntimeClientForTesting(appTestOrchestrator(runners: [.appleContainer: apple, .docker: docker]))
         app.migrationStabilizationTimeout = 0.02
         app.migrationPollInterval = 0.001
 

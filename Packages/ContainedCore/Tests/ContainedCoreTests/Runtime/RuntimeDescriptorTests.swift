@@ -4,6 +4,13 @@ import Testing
 
 @Suite("Runtime descriptor contracts")
 struct RuntimeDescriptorTests {
+    @Test func defaultRegistryKeepsDockerDormant() {
+        #expect(Core.Runtime.builtInModules.map(\.descriptor.kind) == [.appleContainer])
+        #expect(Core.Runtime.supportedDescriptors.map(\.kind) == [.appleContainer])
+        #expect(Core.Runtime.descriptor(for: .appleContainer) == .appleContainer)
+        #expect(Core.Runtime.descriptor(for: .docker) == nil)
+    }
+
     @Test func openRuntimeKindsCanAdvertiseCapabilities() throws {
         let descriptor = Core.Runtime.Descriptor(
             kind: Core.Runtime.Kind(rawValue: "future-runtime"),
@@ -102,9 +109,12 @@ struct RuntimeDescriptorTests {
             ] as [Core.Runtime.Kind: any RuntimeClient]
         )
 
-        let snapshots = try await orchestrator.listRuntimeContainers()
+        let inventory = try await orchestrator.containerInventory()
+        let snapshots = inventory.items
 
         #expect(snapshots.map { $0.scopedID } == ["apple-container::apple-web"])
+        #expect(inventory.failures.count == 1)
+        #expect(inventory.failures.first?.kind == .docker)
     }
 
     @Test func orchestratorTerminalInvocationRoutesByRuntimeKind() throws {
@@ -116,7 +126,11 @@ struct RuntimeDescriptorTests {
             runtimes: [
                 .appleContainer: UnavailableRuntime(descriptor: .appleContainer),
                 .docker: UnavailableRuntime(descriptor: .docker),
-            ] as [Core.Runtime.Kind: any RuntimeClient]
+            ] as [Core.Runtime.Kind: any RuntimeClient],
+            modules: [
+                .appleContainer: AppleContainerRuntimeModule(),
+                .docker: DockerRuntimeModule(),
+            ]
         )
 
         let docker = try orchestrator.terminalInvocation(containerID: "web",
@@ -152,6 +166,67 @@ struct RuntimeDescriptorTests {
         await #expect(throws: Core.Runtime.UnsupportedCapability.self) {
             _ = try await orchestrator.performSystemAction(.start, runtimeKind: .docker)
         }
+    }
+
+    @Test func recreateSkipsDeleteWhenOriginalIsAlreadyMissing() async throws {
+        let runtime = RecordingContainerRuntime(containers: [])
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        let result = try await orchestrator.recreateContainer(originalID: "missing",
+                                                              document: recreateDocument())
+
+        #expect(result.id == "created")
+        #expect(await runtime.deletedIDs.isEmpty)
+        #expect(await runtime.createdRequests.count == 1)
+    }
+
+    @Test func recreateTreatsRacingDeleteNotFoundAsAlreadyGone() async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "gone", image: "nginx:latest", runtimeKind: .appleContainer)],
+            deleteError: .nonZeroExit(code: 1,
+                                      stderr: "Error: container with ID gone not found",
+                                      command: "delete --force gone")
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        let result = try await orchestrator.recreateContainer(originalID: "gone",
+                                                              document: recreateDocument())
+
+        #expect(result.id == "created")
+        #expect(await runtime.deletedIDs == ["gone"])
+        #expect(await runtime.createdRequests.count == 1)
+    }
+
+    @Test func recreateStillSurfacesRealDeleteFailures() async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "blocked", image: "nginx:latest", runtimeKind: .appleContainer)],
+            deleteError: .nonZeroExit(code: 1,
+                                      stderr: "permission denied",
+                                      command: "delete --force blocked")
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        await #expect(throws: Core.Command.Error.self) {
+            _ = try await orchestrator.recreateContainer(originalID: "blocked",
+                                                         document: recreateDocument())
+        }
+        #expect(await runtime.createdRequests.isEmpty)
+    }
+
+    private func recreateDocument() -> Core.Schema.Document {
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "nginx:latest"
+        request.name = "created"
+        return Core.Schema.Document.containerCreate(from: request)
     }
 }
 
@@ -236,4 +311,42 @@ private struct UnavailableRuntime: RuntimeClient,
 
 private enum TestStubError: Error {
     case unused
+}
+
+private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient {
+    nonisolated let descriptor = Core.Runtime.Descriptor.appleContainer
+    var containers: [Core.Container.Snapshot]
+    var deleteError: Core.Command.Error?
+    var deletedIDs: [String] = []
+    var createdRequests: [Core.Container.CreateRequest] = []
+
+    init(containers: [Core.Container.Snapshot], deleteError: Core.Command.Error? = nil) {
+        self.containers = containers
+        self.deleteError = deleteError
+    }
+
+    func listContainers(all: Bool) async throws -> [Core.Container.Snapshot] { containers }
+    func stats(ids: [String]) async throws -> [Core.Metrics.ContainerStats] { [] }
+    nonisolated func streamStats(ids: [String]) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+    nonisolated func streamLogs(id: String, follow: Bool, tail: Int?, boot: Bool) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+    nonisolated func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
+        Core.Command.Preview(command: ["run", request.image])
+    }
+    func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
+        createdRequests.append(request)
+        return Core.Container.CreateResult(id: "created")
+    }
+    func runContainer(arguments: [String]) async throws -> Data { Data() }
+    func start(_ ids: [String]) async throws -> Data { Data() }
+    func stop(_ ids: [String]) async throws -> Data { Data() }
+    func deleteContainers(_ ids: [String], force: Bool) async throws -> Data {
+        deletedIDs.append(contentsOf: ids)
+        if let deleteError { throw deleteError }
+        return Data()
+    }
+    func pruneContainers() async throws -> Data { Data() }
 }

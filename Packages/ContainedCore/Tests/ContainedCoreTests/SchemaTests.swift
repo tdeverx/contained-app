@@ -5,7 +5,7 @@ import Testing
 @Suite("Container run/edit schema")
 struct SchemaTests {
     @Test func appleSchemaPublishesCurrentRunFieldAliases() throws {
-        let definition = Core.Schema.Definition.appleContainerCreate
+        let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .appleContainer)
         let paths = Set(definition.fields.map(\.path))
 
         let expectedPaths: [Core.Field.Path] = [
@@ -163,7 +163,7 @@ struct SchemaTests {
         document.set(.imageReference, .string("alpine"))
         document.set(.processCommand, .string("echo hello"))
 
-        let definition = Core.Schema.Definition.appleContainerCreate
+        let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .appleContainer)
         let migrated = document.migrated(to: definition)
         #expect(migrated.schemaVersion == definition.version)
         #expect(migrated.strings(.processCommand, in: definition) == ["echo", "hello"])
@@ -242,7 +242,7 @@ struct SchemaTests {
         let project = try Core.Compose.Parser.parse(yaml, projectName: "demo")
         let plan = AppleContainerCreateTranslator.composePlan(for: project, baseDirectory: nil)
         let item = try #require(plan.items.first)
-        let definition = Core.Schema.Definition.appleContainerCreate
+        let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .appleContainer)
 
         #expect(item.document.string(.imagePullPolicy, in: definition) == "always")
         #expect(item.document.strings(.networkExtraHosts, in: definition) == ["host.docker.internal:host-gateway"])
@@ -284,7 +284,7 @@ struct SchemaTests {
         document.set(.securityOptions, .stringList(["no-new-privileges"]))
         document.set(.composeSecrets, .stringList(["app_secret"]))
 
-        let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .docker,
+        let definition = Core.Schema.Definition.containerRunEdit(runtimeProfile: DockerRuntimeModule().schemaProfile(),
                                                                  operation: .containerCreate)
         let pullPolicy = try #require(definition.descriptor(for: .imagePullPolicy))
         let secrets = try #require(definition.descriptor(for: .composeSecrets))

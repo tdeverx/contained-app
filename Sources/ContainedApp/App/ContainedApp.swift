@@ -69,7 +69,7 @@ public struct ContainedApplication: App {
                     Button(app.serviceLabel) { }
                         .disabled(true)
                     Divider()
-                    if app.appleRuntimeAvailable {
+                    if app.serviceControlRuntimeAvailable {
                         if app.serviceHealthy {
                             Button("Stop Service") { Task { await app.stopService() } }
                         } else {
@@ -77,7 +77,7 @@ public struct ContainedApplication: App {
                         }
                         Button("Restart Service") { Task { await app.restartService() } }
                     } else {
-                        Button("Retry Docker Connection") { Task { await app.retryBootstrap() } }
+                        Button("Retry Runtime Connection") { Task { await app.retryBootstrap() } }
                     }
                 }
                 Divider()

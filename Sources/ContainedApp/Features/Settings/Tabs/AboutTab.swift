@@ -8,8 +8,8 @@ struct AboutTab: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        LazyVStack(spacing: UI.Layout.Spacing.l) {
-            UI.Panel.Section {
+        SettingsForm {
+            Section {
                 HStack(spacing: UI.Layout.Spacing.m) {
                     Image(systemName: "shippingbox.fill")
                         .resizable()
@@ -25,17 +25,17 @@ struct AboutTab: View {
                 }
             }
 
-            UI.Panel.Section(header: AppText.sectionSettingsRuntime) {
+            Section(AppText.sectionSettingsRuntime) {
                 ForEach(app.availableRuntimeDescriptors, id: \.kind) { descriptor in
-                    UI.Panel.Row(title: descriptor.displayName) {
+                    UI.Form.Row(title: descriptor.displayName) {
                         Text(app.runtimeVersion(for: descriptor.kind) ?? "—").designSecondaryValueStyle()
                     }
                 }
-                UI.Panel.Row(title: AppText.string("settings.about.apiServer", defaultValue: "API server")) { Text(app.systemStatus?.apiServerVersion ?? "—").designSecondaryValueStyle() }
+                UI.Form.Row(title: AppText.string("settings.about.apiServer", defaultValue: "API server")) { Text(app.systemStatus?.apiServerVersion ?? "—").designSecondaryValueStyle() }
             }
 
-            UI.Panel.Section {
-                UI.Panel.Row(title: AppText.string("settings.about.copyright", defaultValue: "Copyright")) { Text("© 2026 Contained").designSecondaryValueStyle() }
+            Section {
+                UI.Form.Row(title: AppText.string("settings.about.copyright", defaultValue: "Copyright")) { Text("© 2026 Contained").designSecondaryValueStyle() }
             }
         }
     }

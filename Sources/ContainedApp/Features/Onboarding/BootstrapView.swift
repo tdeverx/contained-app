@@ -31,7 +31,7 @@ struct BootstrapView: View {
     private var actions: some View {
         switch app.bootstrap {
         case .serviceStopped:
-            if app.appleRuntimeAvailable {
+            if app.serviceControlRuntimeAvailable {
                 UI.Action.TextButton(title: starting ? AppText.string("bootstrap.starting", defaultValue: "Starting...") : AppText.string("bootstrap.startService", defaultValue: "Start container service"),
                                        systemName: "play.circle",
                                        prominence: .prominent,
@@ -101,9 +101,9 @@ struct BootstrapView: View {
         case .cliMissing: return "Container CLI not found"
         case .unsupported(let v): return "Unsupported version (\(v))"
         case .serviceStopped:
-            return app.appleRuntimeAvailable
+            return app.serviceControlRuntimeAvailable
                 ? "Container service is stopped"
-                : "Docker endpoint is unavailable"
+                : "Runtime endpoint is unavailable"
         case .checking: return "Connecting…"
         case .ready: return "Ready"
         }
@@ -115,9 +115,9 @@ struct BootstrapView: View {
         case .unsupported:
             return "Contained targets container 1.0.x. Some features may not work with this version."
         case .serviceStopped:
-            return app.appleRuntimeAvailable
+            return app.serviceControlRuntimeAvailable
                 ? "Start the service to manage containers, images, and more."
-                : "Start Docker externally, then retry the connection."
+                : "Start the runtime provider externally, then retry the connection."
         case .checking:
             return "Talking to the container service."
         case .ready:

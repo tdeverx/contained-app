@@ -16,50 +16,58 @@ struct RuntimeTab: View {
     @State private var deletingDomain: String?
 
     var body: some View {
-        @Bindable var settings = app.settings
-        LazyVStack(spacing: UI.Layout.Spacing.l) {
-            UI.Panel.Section(header: AppText.string("settings.runtime.available", defaultValue: "Container runtimes"),
-                             footer: AppText.runtimeSubtitle) {
+        SettingsForm {
+            Section {
                 ForEach(app.supportedRuntimeDescriptors, id: \.kind) { descriptor in
                     let reachable = app.availableRuntimeDescriptors.contains { $0.kind == descriptor.kind }
-                    UI.Panel.Row(title: descriptor.displayName) {
+                    UI.Form.Row(title: descriptor.displayName) {
                         Text(reachable ? AppText.string("settings.runtime.reachable", defaultValue: "Reachable")
                              : AppText.string("settings.runtime.notReachable", defaultValue: "Not reachable"))
                             .designSecondaryValueStyle()
                     }
                 }
+            } header: {
+                Text(AppText.string("settings.runtime.available", defaultValue: "Container runtimes"))
+            } footer: {
+                Text(AppText.runtimeSubtitle)
             }
 
-            UI.Panel.Section(header: AppText.string("settings.runtime.cliPaths", defaultValue: "Runtime paths"),
-                             footer: AppText.string("settings.runtime.cliPaths.footer", defaultValue: "Path overrides are optional. Leave blank to use auto-detection; press Return after changing a path to reconnect.")) {
+            Section {
                 ForEach(app.supportedRuntimeDescriptors, id: \.kind) { descriptor in
                     runtimePathField(for: descriptor)
                 }
+            } header: {
+                Text(AppText.string("settings.runtime.cliPaths", defaultValue: "Runtime paths"))
+            } footer: {
+                Text(AppText.string("settings.runtime.cliPaths.footer", defaultValue: "Path overrides are optional. Leave blank to use auto-detection; press Return after changing a path to reconnect."))
             }
 
-            if app.appleRuntimeReady {
-                appleRuntimeControls
+            if let descriptor = managementRuntimeDescriptor {
+                managementRuntimeControls(for: descriptor)
             }
-            if app.supportedRuntimeDescriptors.contains(where: { $0.kind == .docker }) {
-                dockerRuntimeGuidance
+            ForEach(endpointGuidanceDescriptors, id: \.kind) { descriptor in
+                endpointGuidance(for: descriptor)
             }
 
             if let props = app.properties {
-                UI.Panel.Section(header: AppText.string("settings.runtime.resources", defaultValue: "Runtime resources"),
-                             footer: AppText.string("settings.runtime.resources.footer", defaultValue: "Read-only - machine resources are the denominator for machine-normalized stats. Defaults apply when a container or build doesn't specify its own resources.")) {
+                Section {
                     if let d = props.container {
-                        if let c = d.cpus { UI.Panel.Row(title: AppText.string("settings.runtime.defaultCPUs", defaultValue: "Default CPUs")) { Text("\(c)").designSecondaryValueStyle() } }
-                        if let m = d.memory { UI.Panel.Row(title: AppText.string("settings.runtime.defaultMemory", defaultValue: "Default memory")) { Text(m).designSecondaryValueStyle() } }
+                        if let c = d.cpus { UI.Form.Row(title: AppText.string("settings.runtime.defaultCPUs", defaultValue: "Default CPUs")) { Text("\(c)").designSecondaryValueStyle() } }
+                        if let m = d.memory { UI.Form.Row(title: AppText.string("settings.runtime.defaultMemory", defaultValue: "Default memory")) { Text(m).designSecondaryValueStyle() } }
                     }
                     if let machine = props.machine {
-                        if let c = machine.cpus { UI.Panel.Row(title: AppText.string("settings.runtime.machineCPUs", defaultValue: "Machine CPUs")) { Text("\(c)").designSecondaryValueStyle() } }
-                        if let m = machine.memory { UI.Panel.Row(title: AppText.string("settings.runtime.machineMemory", defaultValue: "Machine memory")) { Text(m).designSecondaryValueStyle() } }
+                        if let c = machine.cpus { UI.Form.Row(title: AppText.string("settings.runtime.machineCPUs", defaultValue: "Machine CPUs")) { Text("\(c)").designSecondaryValueStyle() } }
+                        if let m = machine.memory { UI.Form.Row(title: AppText.string("settings.runtime.machineMemory", defaultValue: "Machine memory")) { Text(m).designSecondaryValueStyle() } }
                     }
                     if let b = props.build {
-                        if let img = b.image { UI.Panel.Row(title: AppText.string("settings.runtime.builderImage", defaultValue: "Builder image")) { Text(img).designSecondaryValueStyle() } }
-                        if let r = b.rosetta { UI.Panel.Row(title: AppText.string("settings.runtime.builderRosetta", defaultValue: "Builder Rosetta")) { Text(r ? "On" : "Off").designSecondaryValueStyle() } }
+                        if let img = b.image { UI.Form.Row(title: AppText.string("settings.runtime.builderImage", defaultValue: "Builder image")) { Text(img).designSecondaryValueStyle() } }
+                        if let r = b.rosetta { UI.Form.Row(title: AppText.string("settings.runtime.builderRosetta", defaultValue: "Builder Rosetta")) { Text(r ? "On" : "Off").designSecondaryValueStyle() } }
                     }
-                    if let k = props.kernel, let path = k.binaryPath { UI.Panel.Row(title: AppText.string("settings.runtime.kernel", defaultValue: "Kernel")) { Text(path).designSecondaryValueStyle() } }
+                    if let k = props.kernel, let path = k.binaryPath { UI.Form.Row(title: AppText.string("settings.runtime.kernel", defaultValue: "Kernel")) { Text(path).designSecondaryValueStyle() } }
+                } header: {
+                    Text(AppText.string("settings.runtime.resources", defaultValue: "Runtime resources"))
+                } footer: {
+                    Text(AppText.string("settings.runtime.resources.footer", defaultValue: "Read-only - machine resources are the denominator for machine-normalized stats. Defaults apply when a container or build doesn't specify its own resources."))
                 }
             }
         }
@@ -72,54 +80,76 @@ struct RuntimeTab: View {
         .confirmationDialog("Delete DNS domain \(deletingDomain ?? "")?",
                             isPresented: deletingDomainBinding, presenting: deletingDomain) { domain in
             Button("Delete", role: .destructive) { Task { await deleteDNS(domain) } }
-        } message: { _ in Text("This may prompt for your administrator password (handled by the container CLI).") }
+        } message: { _ in Text("This may prompt for your administrator password (handled by the runtime CLI).") }
         .alert("New local DNS domain", isPresented: $addingDNS) {
             TextField("example.test", text: $newDomain)
             Button("Cancel", role: .cancel) { newDomain = "" }
             Button("Create") { Task { await addDNS() } }
         } message: {
-            Text("Creating a domain may prompt for your administrator password (handled by the container CLI).")
+            Text("Creating a domain may prompt for your administrator password (handled by the runtime CLI).")
+        }
+    }
+
+    private var managementRuntimeDescriptor: Core.Runtime.Descriptor? {
+        app.supportedRuntimeDescriptors.first(where: { descriptor in
+            app.runtimeIsReady(descriptor.kind) &&
+                (descriptor.supports(.kernelManagement) || descriptor.supports(.dnsManagement))
+        })
+    }
+
+    private var endpointGuidanceDescriptors: [Core.Runtime.Descriptor] {
+        app.supportedRuntimeDescriptors.filter { descriptor in
+            descriptor.supports(.systemStatus) && !descriptor.supports(.serviceControl)
         }
     }
 
     @ViewBuilder
-    private var appleRuntimeControls: some View {
-        UI.Panel.Section(header: AppText.string("settings.runtime.kernel", defaultValue: "Kernel"),
-                     footer: AppText.string("settings.runtime.kernel.footer", defaultValue: "Downloads and sets the recommended kernel as the default. May prompt for your administrator password - handled by the container CLI; Contained never sees it.")) {
-            UI.Panel.Row(title: AppText.string("settings.runtime.recommendedKernel", defaultValue: "Recommended kernel")) {
-                Button("Install…") { confirmingKernel = true }
+    private func managementRuntimeControls(for descriptor: Core.Runtime.Descriptor) -> some View {
+        if descriptor.supports(.kernelManagement) {
+            Section {
+                UI.Form.Row(title: AppText.string("settings.runtime.recommendedKernel", defaultValue: "Recommended kernel")) {
+                    Button("Install…") { confirmingKernel = true }
+                }
+                revealCLIHint("\(descriptor.executableName ?? descriptor.kind.rawValue) system kernel set --recommended")
+            } header: {
+                Text(AppText.string("settings.runtime.kernel", defaultValue: "Kernel"))
+            } footer: {
+                Text(AppText.string("settings.runtime.kernel.footer", defaultValue: "Downloads and sets the recommended kernel as the default. May prompt for your administrator password - handled by the runtime CLI; Contained never sees it."))
             }
-            revealCLIHint("container system kernel set --recommended")
         }
 
-        UI.Panel.Section(header: AppText.string("settings.runtime.localDNSDomains", defaultValue: "Local DNS domains"),
-                     footer: AppText.string("settings.runtime.localDNSDomains.footer", defaultValue: "Creating or deleting a domain may prompt for your administrator password - handled by the container CLI.")) {
-            if dnsDomains.isEmpty {
-                Text("No local DNS domains.")
-                    .designSecondaryValueStyle()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                ForEach(dnsDomains, id: \.self) { domain in
-                    UI.List.MetadataRow(systemImage: "network",
-                                      title: domain,
-                                      isMonospaced: true) {
-                        Button(role: .destructive) { deletingDomain = domain } label: {
-                            Image(systemName: "trash")
+        if descriptor.supports(.dnsManagement) {
+            Section {
+                if dnsDomains.isEmpty {
+                    Text("No local DNS domains.")
+                        .designSecondaryValueStyle()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    ForEach(dnsDomains, id: \.self) { domain in
+                        UI.List.MetadataRow(systemImage: "network",
+                                          title: domain,
+                                          isMonospaced: true) {
+                            Button(role: .destructive) { deletingDomain = domain } label: {
+                                Image(systemName: "trash")
+                            }
+                            .buttonStyle(.borderless)
                         }
-                        .buttonStyle(.borderless)
                     }
                 }
+                Button("Add Domain…") { newDomain = ""; addingDNS = true }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } header: {
+                Text(AppText.string("settings.runtime.localDNSDomains", defaultValue: "Local DNS domains"))
+            } footer: {
+                Text(AppText.string("settings.runtime.localDNSDomains.footer", defaultValue: "Creating or deleting a domain may prompt for your administrator password - handled by the runtime CLI."))
             }
-            Button("Add Domain…") { newDomain = ""; addingDNS = true }
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private var dockerRuntimeGuidance: some View {
-        UI.Panel.Section(header: AppText.string("settings.runtime.dockerEndpoint", defaultValue: "Docker endpoint"),
-                         footer: AppText.string("settings.runtime.dockerEndpoint.footer", defaultValue: "Contained talks to the Docker CLI and its configured endpoint. If Docker is not reachable, start Docker externally and retry.")) {
-            UI.Panel.Row(title: AppText.string("settings.runtime.endpointStatus", defaultValue: "Endpoint")) {
-                Text(app.availableRuntimeDescriptors.contains(where: { $0.kind == .docker }) ? AppText.string("settings.runtime.endpointReachable", defaultValue: "Reachable")
+    private func endpointGuidance(for descriptor: Core.Runtime.Descriptor) -> some View {
+        Section {
+            UI.Form.Row(title: AppText.string("settings.runtime.endpointStatus", defaultValue: "Endpoint")) {
+                Text(app.availableRuntimeDescriptors.contains(where: { $0.kind == descriptor.kind }) ? AppText.string("settings.runtime.endpointReachable", defaultValue: "Reachable")
                      : AppText.string("settings.runtime.endpointUnavailable", defaultValue: "Unavailable"))
                     .designSecondaryValueStyle()
             }
@@ -127,6 +157,10 @@ struct RuntimeTab: View {
                 Task { await app.retryBootstrap() }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        } header: {
+            Text("\(descriptor.displayName) endpoint")
+        } footer: {
+            Text(AppText.string("settings.runtime.endpoint.footer", defaultValue: "Contained talks to this runtime through its CLI and configured endpoint. If the endpoint is unavailable, make sure the provider is running and retry."))
         }
     }
 
@@ -147,62 +181,34 @@ struct RuntimeTab: View {
     }
 
     private func runtimePathField(for descriptor: Core.Runtime.Descriptor) -> some View {
-        UI.Panel.Field(label: runtimePathLabel(for: descriptor),
-                       info: runtimePathInfo(for: descriptor)) {
+        UI.Form.Field(label: runtimePathLabel(for: descriptor),
+                      info: runtimePathInfo(for: descriptor),
+                      isChanged: !app.settings.runtimePathOverride(for: descriptor.kind).isEmpty) {
             TextField("", text: runtimePathBinding(for: descriptor.kind),
                       prompt: Text(defaultPathPrompt(for: descriptor)))
-                .textFieldStyle(.roundedBorder)
                 .onSubmit { Task { await app.retryBootstrap() } }
         }
     }
 
     private func runtimePathLabel(for descriptor: Core.Runtime.Descriptor) -> String {
-        switch descriptor.kind {
-        case .appleContainer:
-            return AppText.string("settings.runtime.path.appleContainer", defaultValue: "Apple container CLI path")
-        case .docker:
-            return AppText.string("settings.runtime.path.docker", defaultValue: "Docker CLI path")
-        default:
-            return "\(descriptor.displayName) CLI path"
-        }
+        "\(descriptor.displayName) CLI path"
     }
 
     private func runtimePathInfo(for descriptor: Core.Runtime.Descriptor) -> String {
-        switch descriptor.kind {
-        case .appleContainer:
-            return AppText.string("settings.runtime.path.info.appleContainer",
-                                  defaultValue: "Override the auto-detected container binary location.")
-        case .docker:
-            return AppText.string("settings.runtime.path.info.docker",
-                                  defaultValue: "Override the auto-detected docker binary location.")
-        default:
-            let executable = descriptor.executableName ?? descriptor.displayName
-            return "Override the auto-detected \(executable) binary location."
-        }
+        let executable = descriptor.executableName ?? descriptor.displayName
+        return "Override the auto-detected \(executable) binary location."
     }
 
     private func runtimePathBinding(for kind: Core.Runtime.Kind) -> Binding<String> {
         Binding {
-            switch kind {
-            case .appleContainer: app.settings.cliPathOverride
-            case .docker: app.settings.dockerCLIPathOverride
-            default: ""
-            }
+            app.settings.runtimePathOverride(for: kind)
         } set: { value in
-            switch kind {
-            case .appleContainer: app.settings.cliPathOverride = value
-            case .docker: app.settings.dockerCLIPathOverride = value
-            default: break
-            }
+            app.settings.setRuntimePathOverride(value, for: kind)
         }
     }
 
     private func defaultPathPrompt(for descriptor: Core.Runtime.Descriptor) -> String {
-        switch descriptor.kind {
-        case .appleContainer: return "/usr/local/bin/container"
-        case .docker: return "/usr/local/bin/docker"
-        default: return descriptor.executableName.map { "/usr/local/bin/\($0)" } ?? ""
-        }
+        descriptor.executableName.map { "/usr/local/bin/\($0)" } ?? ""
     }
 
     private func loadRuntimeDetails(force: Bool = false) async {
@@ -212,33 +218,40 @@ struct RuntimeTab: View {
         } else {
             await app.loadPropertiesIfNeeded()
         }
-        if app.appleRuntimeReady {
-            await loadDNS()
+        if let descriptor = managementRuntimeDescriptor, descriptor.supports(.dnsManagement) {
+            await loadDNS(runtimeKind: descriptor.kind)
         }
     }
 
-    private func loadDNS() async {
-        guard app.appleRuntimeReady, let client = app.client else { return }
-        if let domains = try? await client.dnsDomains(runtimeKind: .appleContainer) { dnsDomains = domains }
+    private func loadDNS(runtimeKind: Core.Runtime.Kind) async {
+        guard app.runtimeIsReady(runtimeKind), let client = app.client else { return }
+        if let domains = try? await client.dnsDomains(runtimeKind: runtimeKind) { dnsDomains = domains }
     }
 
     private func installKernel() async {
-        guard app.appleRuntimeReady, let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.setRecommendedKernel(runtimeKind: .appleContainer) }) { app.flash(error) }
+        guard let descriptor = managementRuntimeDescriptor,
+              descriptor.supports(.kernelManagement),
+              let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.setRecommendedKernel(runtimeKind: descriptor.kind) }) { app.flash(error) }
         else { app.flash(AppText.recommendedKernelInstalled); await app.reloadProperties() }
     }
 
     private func addDNS() async {
         let domain = newDomain.trimmingCharacters(in: .whitespaces)
         newDomain = ""
-        guard app.appleRuntimeReady, !domain.isEmpty, let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.createDNSDomain(domain, runtimeKind: .appleContainer) }) { app.flash(error) }
-        else { await loadDNS() }
+        guard let descriptor = managementRuntimeDescriptor,
+              descriptor.supports(.dnsManagement),
+              !domain.isEmpty,
+              let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.createDNSDomain(domain, runtimeKind: descriptor.kind) }) { app.flash(error) }
+        else { await loadDNS(runtimeKind: descriptor.kind) }
     }
 
     private func deleteDNS(_ domain: String) async {
-        guard app.appleRuntimeReady, let client = app.client else { return }
-        if let error = await app.captured({ _ = try await client.deleteDNSDomain(domain, runtimeKind: .appleContainer) }) { app.flash(error) }
-        else { await loadDNS() }
+        guard let descriptor = managementRuntimeDescriptor,
+              descriptor.supports(.dnsManagement),
+              let client = app.client else { return }
+        if let error = await app.captured({ _ = try await client.deleteDNSDomain(domain, runtimeKind: descriptor.kind) }) { app.flash(error) }
+        else { await loadDNS(runtimeKind: descriptor.kind) }
     }
 }

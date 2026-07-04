@@ -8,57 +8,71 @@ struct AppearanceTab: View {
     @Bindable var settings: SettingsStore
 
     var body: some View {
-        LazyVStack(spacing: UI.Layout.Spacing.l) {
-            UI.Panel.Section(header: AppText.string("settings.appearance.theme", defaultValue: "Theme")) {
-                UI.Panel.Row(title: AppText.string("settings.appearance.appearance", defaultValue: "Appearance")) {
+        SettingsForm {
+            Section(AppText.string("settings.appearance.theme", defaultValue: "Theme")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.appearance", defaultValue: "Appearance"),
+                            isChanged: settings.appearance != .system) {
                     Picker("", selection: $settings.appearance) {
                         ForEach(UI.Theme.Appearance.allCases) { Text($0.localizedDisplayName).tag($0) }
                     }
                     .pickerStyle(.segmented).labelsHidden().fixedSize()
                 }
-                UI.Panel.Row(title: AppText.string("settings.appearance.accentTint", defaultValue: "Accent tint")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.accentTint", defaultValue: "Accent tint"),
+                            isChanged: settings.accentTint != .multicolor) {
                     UI.Control.TintSelector(selection: $settings.accentTint) { $0.localizedDisplayName }
                 }
             }
 
-            UI.Panel.Section(header: AppText.string("settings.appearance.layout", defaultValue: "Layout")) {
-                UI.Panel.Row(title: AppText.string("settings.appearance.cardSize", defaultValue: "Card size")) {
+            Section(AppText.string("settings.appearance.layout", defaultValue: "Layout")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.cardSize", defaultValue: "Card size"),
+                            isChanged: settings.density != UI.Card.Density(stored: "")) {
                     Picker("", selection: $settings.density) {
                         ForEach(UI.Card.Density.allCases) { Text($0.localizedDisplayName).tag($0) }
                     }
                     .pickerStyle(.segmented).labelsHidden().fixedSize()
                 }
-                UI.Panel.ToggleRow(title: AppText.string("settings.appearance.showInfoTips", defaultValue: "Show info tips"),
-                               isOn: $settings.showInfoTips)
+                UI.Form.ToggleRow(title: AppText.string("settings.appearance.showInfoTips", defaultValue: "Show info tips"),
+                                  isChanged: settings.showInfoTips != true,
+                                  isOn: $settings.showInfoTips)
             }
 
-            UI.Panel.Section(header: AppText.string("settings.appearance.materials", defaultValue: "Materials"),
-                         footer: AppText.string("settings.appearance.materials.footer", defaultValue: "Glass options use Liquid Glass. Other options use macOS vibrancy and follow the window background.")) {
-                UI.Panel.Row(title: AppText.string("settings.appearance.mainBackgroundMaterial", defaultValue: "Main background material"),
-                         info: AppText.string("settings.appearance.mainBackgroundMaterial.info", defaultValue: "Changes the material behind the main container grid.")) {
+            Section {
+                UI.Form.Row(title: AppText.string("settings.appearance.mainBackgroundMaterial", defaultValue: "Main background material"),
+                            info: AppText.string("settings.appearance.mainBackgroundMaterial.info", defaultValue: "Changes the material behind the main container grid."),
+                            isChanged: settings.windowMaterial != .fullScreenUI) {
                     materialMenu($settings.windowMaterial)
                 }
-                UI.Panel.Row(title: AppText.string("settings.appearance.panelSheetMaterial", defaultValue: "Panel & sheet material"),
-                         info: AppText.string("settings.appearance.panelSheetMaterial.info", defaultValue: "Changes floating panels, popovers, and sheets such as Settings and create/edit flows.")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.panelSheetMaterial", defaultValue: "Panel & sheet material"),
+                            info: AppText.string("settings.appearance.panelSheetMaterial.info", defaultValue: "Changes floating panels, popovers, and sheets such as Settings and create/edit flows."),
+                            isChanged: settings.modalMaterial != .sheet) {
                     materialMenu($settings.modalMaterial)
                 }
-                UI.Panel.Row(title: AppText.string("settings.appearance.cardMaterial", defaultValue: "Card material"),
-                         info: AppText.string("settings.appearance.cardMaterial.info", defaultValue: "Changes all cards, including compact cards and expanded detail cards.")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.cardMaterial", defaultValue: "Card material"),
+                            info: AppText.string("settings.appearance.cardMaterial.info", defaultValue: "Changes all cards, including compact cards and expanded detail cards."),
+                            isChanged: settings.cardMaterial != .glassRegular) {
                     materialMenu($settings.cardMaterial)
                 }
-                UI.Panel.Row(title: AppText.string("settings.appearance.buttonMaterial", defaultValue: "Button material"),
-                         info: AppText.string("settings.appearance.buttonMaterial.info", defaultValue: "Changes toolbar glass buttons and grouped icon controls.")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.buttonMaterial", defaultValue: "Button material"),
+                            info: AppText.string("settings.appearance.buttonMaterial.info", defaultValue: "Changes toolbar glass buttons and grouped icon controls."),
+                            isChanged: settings.buttonMaterial != .glassClear) {
                     materialMenu($settings.buttonMaterial)
                 }
+            } header: {
+                Text(AppText.string("settings.appearance.materials", defaultValue: "Materials"))
+            } footer: {
+                Text(AppText.string("settings.appearance.materials.footer", defaultValue: "Glass options use Liquid Glass. Other options use macOS vibrancy and follow the window background."))
             }
 
-            UI.Panel.Section(header: AppText.string("settings.appearance.buttonTint", defaultValue: "Button tint"),
-                         footer: AppText.string("settings.appearance.buttonTint.footer", defaultValue: "Button tint uses the same color layer model as card backgrounds, applied inside toolbar glass controls."),
-                         enabled: $settings.buttonTintEnabled) {
-                UI.Panel.Row(title: AppText.tint) {
+            Section {
+                UI.Form.ToggleRow(title: AppText.string("common.enabled", defaultValue: "Enabled"),
+                                  isChanged: settings.buttonTintEnabled != false,
+                                  isOn: $settings.buttonTintEnabled)
+                UI.Form.Row(title: AppText.tint,
+                            isChanged: settings.buttonTint != .multicolor) {
                     UI.Control.TintSelector(selection: $settings.buttonTint) { $0.localizedDisplayName }
                 }
-                UI.Panel.Row(title: AppText.string("settings.appearance.opacity", defaultValue: "Opacity")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.opacity", defaultValue: "Opacity"),
+                            isChanged: settings.buttonTintOpacity != 0.18) {
                     HStack(spacing: UI.Layout.Spacing.s) {
                         Slider(value: $settings.buttonTintOpacity, in: 0.05...0.6)
                             .frame(width: UI.Form.Width.compactSlider)
@@ -67,12 +81,14 @@ struct AppearanceTab: View {
                             .frame(width: UI.Form.Width.shortReadout)
                     }
                 }
-                UI.Panel.ToggleRow(title: AppText.string("settings.appearance.gradient", defaultValue: "Gradient"),
-                               isOn: $settings.buttonTintGradient)
+                UI.Form.ToggleRow(title: AppText.string("settings.appearance.gradient", defaultValue: "Gradient"),
+                                  isChanged: settings.buttonTintGradient != true,
+                                  isOn: $settings.buttonTintGradient)
                 if settings.buttonTintGradient {
                     UI.Control.GradientAngle(angle: $settings.buttonTintGradientAngle, title: AppText.direction)
                 }
-                UI.Panel.Row(title: AppText.string("settings.appearance.blendMode", defaultValue: "Blend mode")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.blendMode", defaultValue: "Blend mode"),
+                            isChanged: settings.buttonTintBlendMode != .softLight) {
                     Picker("", selection: $settings.buttonTintBlendMode) {
                         ForEach(UI.Theme.ColorBlendMode.allCases) { mode in
                             Text(mode.localizedDisplayName).tag(mode)
@@ -81,6 +97,10 @@ struct AppearanceTab: View {
                     .labelsHidden()
                     .fixedSize()
                 }
+            } header: {
+                Text(AppText.string("settings.appearance.buttonTint", defaultValue: "Button tint"))
+            } footer: {
+                Text(AppText.string("settings.appearance.buttonTint.footer", defaultValue: "Button tint uses the same color layer model as card backgrounds, applied inside toolbar glass controls."))
             }
 
             ImageDefaultStyleSection(settings: settings)
@@ -102,9 +122,10 @@ private struct ImageDefaultStyleSection: View {
     private var style: Personalization { app.personalization.defaultImageStyle }
 
     var body: some View {
-        UI.Panel.Section(header: AppText.string("settings.appearance.defaultImageCardStyle", defaultValue: "Default image card style"),
-                     footer: AppText.string("settings.appearance.defaultImageCardStyle.footer", defaultValue: "When on, image groups, image rows, and containers without their own style inherit this design. Specific image, image-group, tag, and container styles remain local overrides above this default."),
-                     enabled: $settings.imageDefaultStyleEnabled) {
+        Section {
+            UI.Form.ToggleRow(title: AppText.string("common.enabled", defaultValue: "Enabled"),
+                              isChanged: settings.imageDefaultStyleEnabled != true,
+                              isOn: $settings.imageDefaultStyleEnabled)
             HStack(spacing: UI.Layout.Spacing.m) {
                 UI.Card.IconChip(symbol: style.symbol, tint: style.color)
                 VStack(alignment: .leading, spacing: UI.Card.Spacing.compactText) {
@@ -114,22 +135,26 @@ private struct ImageDefaultStyleSection: View {
                 }
                 Spacer()
             }
-            UI.Panel.Row(title: AppText.string("settings.appearance.color", defaultValue: "Color")) {
+            UI.Form.Row(title: AppText.string("settings.appearance.color", defaultValue: "Color"),
+                        isChanged: style.tint != Personalization().tint) {
                 UI.Control.TintSelector(selection: styleBinding(\.tint)) { $0.localizedDisplayName }
             }
-            UI.Panel.ToggleRow(title: AppText.string("settings.appearance.customIcon", defaultValue: "Custom icon"),
-                           isOn: styleBinding(\.iconEnabled))
+            UI.Form.ToggleRow(title: AppText.string("settings.appearance.customIcon", defaultValue: "Custom icon"),
+                              isChanged: style.iconEnabled != Personalization().iconEnabled,
+                              isOn: styleBinding(\.iconEnabled))
             if style.iconEnabled {
-                UI.Panel.Row(title: AppText.string("settings.appearance.icon", defaultValue: "Icon")) {
+                UI.Form.Field(label: AppText.string("settings.appearance.icon", defaultValue: "Icon"),
+                              isChanged: style.icon != Personalization().icon) {
                     TextField("", text: styleBinding(\.icon), prompt: Text("SF Symbol, e.g. shippingbox.fill"))
-                        .textFieldStyle(.roundedBorder)
                         .frame(width: UI.Form.Width.tintColorHex)
                 }
             }
-            UI.Panel.ToggleRow(title: AppText.string("settings.appearance.colorCardBackground", defaultValue: "Color the card background"),
-                           isOn: styleBinding(\.fillBackground))
+            UI.Form.ToggleRow(title: AppText.string("settings.appearance.colorCardBackground", defaultValue: "Color the card background"),
+                              isChanged: style.fillBackground != Personalization().fillBackground,
+                              isOn: styleBinding(\.fillBackground))
             if style.fillBackground {
-                UI.Panel.Row(title: AppText.string("settings.appearance.opacity", defaultValue: "Opacity")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.opacity", defaultValue: "Opacity"),
+                            isChanged: style.backgroundOpacity != Personalization.defaultBackgroundOpacity) {
                     HStack(spacing: UI.Layout.Spacing.s) {
                         Slider(value: styleBinding(\.backgroundOpacity), in: 0.05...0.6)
                             .frame(width: UI.Form.Width.compactSlider)
@@ -138,12 +163,14 @@ private struct ImageDefaultStyleSection: View {
                             .frame(width: UI.Form.Width.shortReadout)
                     }
                 }
-                UI.Panel.ToggleRow(title: AppText.string("settings.appearance.gradient", defaultValue: "Gradient"),
-                               isOn: styleBinding(\.gradient))
+                UI.Form.ToggleRow(title: AppText.string("settings.appearance.gradient", defaultValue: "Gradient"),
+                                  isChanged: style.gradient != Personalization().gradient,
+                                  isOn: styleBinding(\.gradient))
                 if style.gradient {
                     UI.Control.GradientAngle(angle: styleBinding(\.gradientAngle), title: AppText.direction)
                 }
-                UI.Panel.Row(title: AppText.string("settings.appearance.blendMode", defaultValue: "Blend mode")) {
+                UI.Form.Row(title: AppText.string("settings.appearance.blendMode", defaultValue: "Blend mode"),
+                            isChanged: style.backgroundBlendMode != Personalization().backgroundBlendMode) {
                     Picker("", selection: styleBinding(\.backgroundBlendMode)) {
                         ForEach(UI.Theme.ColorBlendMode.allCases) { mode in
                             Text(mode.localizedDisplayName).tag(mode)
@@ -153,6 +180,10 @@ private struct ImageDefaultStyleSection: View {
                     .fixedSize()
                 }
             }
+        } header: {
+            Text(AppText.string("settings.appearance.defaultImageCardStyle", defaultValue: "Default image card style"))
+        } footer: {
+            Text(AppText.string("settings.appearance.defaultImageCardStyle.footer", defaultValue: "When on, image groups, image rows, and containers without their own style inherit this design. Specific image, image-group, tag, and container styles remain local overrides above this default."))
         }
     }
 

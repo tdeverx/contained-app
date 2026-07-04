@@ -203,6 +203,7 @@ struct FieldDescriptor: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var defaultValue: Core.Schema.Value
     public var isRequired: Bool
     public var options: [Core.Schema.ValueOption]
+    public var defaultTip: String?
     public var support: [Core.Runtime.Kind: Core.Schema.FieldSupport]
     public var tipRefs: [Core.Runtime.Kind: Core.Schema.FieldTipRef]
     public var sourceAliases: [Core.Schema.SourceAlias]
@@ -216,6 +217,7 @@ struct FieldDescriptor: Codable, Equatable, Hashable, Identifiable, Sendable {
                 defaultValue: Core.Schema.Value,
                 isRequired: Bool = false,
                 options: [Core.Schema.ValueOption] = [],
+                defaultTip: String? = nil,
                 support: [Core.Runtime.Kind: Core.Schema.FieldSupport] = [:],
                 tipRefs: [Core.Runtime.Kind: Core.Schema.FieldTipRef] = [:],
                 sourceAliases: [Core.Schema.SourceAlias] = [],
@@ -228,6 +230,7 @@ struct FieldDescriptor: Codable, Equatable, Hashable, Identifiable, Sendable {
         self.defaultValue = defaultValue
         self.isRequired = isRequired
         self.options = options
+        self.defaultTip = defaultTip
         self.support = support
         self.tipRefs = tipRefs
         self.sourceAliases = sourceAliases
@@ -276,6 +279,11 @@ struct RuntimeProfile: Equatable, Sendable {
             field.support[kind] = support(for: descriptor)
             if let tip = tips[descriptor.path] {
                 field.tipRefs[kind] = tip
+            } else if let defaultTip = descriptor.defaultTip {
+                field.tipRefs[kind] = Core.Schema.FieldTipRef(
+                    key: "schema.tip.\(descriptor.path.rawValue).\(kind.rawValue)",
+                    defaultText: defaultTip
+                )
             }
             return field
         }

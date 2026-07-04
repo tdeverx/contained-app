@@ -107,21 +107,21 @@ struct AppleContainerRuntimeModule: Core.Runtime.Module {
 
     func schemaProfile() -> Core.Schema.RuntimeProfile {
         let fields = Core.Schema.Definition.canonicalRunFields
+        let unsupported = Core.Schema.FieldSupport(
+            state: .disabled,
+            disabledReasonKey: "schema.disabled.appleContainer.unsupportedDockerCompose",
+            defaultDisabledReason: "Known from Docker CLI or Compose, not executable by Apple container."
+        )
         let supported = Set(fields.compactMap { field -> Core.Field.Path? in
-            field.support[descriptor.kind]?.state == .supported ? field.path : nil
+            field.section == .dockerCompose ? nil : field.path
         })
         let disabled = Dictionary(uniqueKeysWithValues: fields.compactMap { field -> (Core.Field.Path, Core.Schema.FieldSupport)? in
-            guard let support = field.support[descriptor.kind], support.state == .disabled else { return nil }
-            return (field.path, support)
-        })
-        let tips = Dictionary(uniqueKeysWithValues: fields.compactMap { field -> (Core.Field.Path, Core.Schema.FieldTipRef)? in
-            guard let tip = field.tipRefs[descriptor.kind] else { return nil }
-            return (field.path, tip)
+            guard field.section == .dockerCompose else { return nil }
+            return (field.path, unsupported)
         })
         return Core.Schema.RuntimeProfile(kind: descriptor.kind,
                                           supportedPaths: supported,
-                                          disabledSupport: disabled,
-                                          tips: tips)
+                                          disabledSupport: disabled)
     }
 }
 

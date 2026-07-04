@@ -19,6 +19,7 @@ enum SystemVolumeInventory {
     struct Entry: Identifiable {
         let id: String
         let kind: Kind
+        let runtimeKind: Core.Runtime.Kind
         let title: String
         let subtitle: String?
         let containers: [Core.Container.Snapshot]
@@ -29,18 +30,24 @@ enum SystemVolumeInventory {
 
     static func build(volumes: [Core.Volume.Resource], containers: [Core.Container.Snapshot]) -> [Entry] {
         let sortedVolumes = volumes.sorted {
-            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            if $0.runtimeKind != $1.runtimeKind {
+                return $0.runtimeKind.rawValue.localizedCaseInsensitiveCompare($1.runtimeKind.rawValue) == .orderedAscending
+            }
+            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
-        let namedResources = Dictionary(uniqueKeysWithValues: sortedVolumes.map { ($0.name, $0) })
+        let namedResources = Dictionary(uniqueKeysWithValues: sortedVolumes.map { ($0.scopedID, $0) })
         var byID: [String: Entry] = [:]
 
         for volume in sortedVolumes {
-            byID["named:\(volume.name)"] = Entry(
-                id: "named:\(volume.name)",
+            byID["named:\(volume.scopedID)"] = Entry(
+                id: "named:\(volume.scopedID)",
                 kind: .named,
+                runtimeKind: volume.runtimeKind,
                 title: volume.name,
                 subtitle: volumeSubtitle(volume),
-                containers: containersMounting(source: volume.name, in: containers),
+                containers: containersMounting(source: volume.name,
+                                               runtimeKind: volume.runtimeKind,
+                                               in: containers),
                 resource: volume,
                 source: volume.name,
                 destination: nil
@@ -83,6 +90,7 @@ enum SystemVolumeInventory {
         }
         return Entry(id: existing.id,
                      kind: existing.kind,
+                     runtimeKind: existing.runtimeKind,
                      title: existing.title,
                      subtitle: existing.subtitle,
                      containers: sortedContainers(containers),
@@ -105,8 +113,9 @@ enum SystemVolumeInventory {
         let type = mount.type?.lowercased()
 
         if let source, !source.isEmpty, isLocalPath(source, type: type) {
-            return Entry(id: "path:\(source):\(destination ?? "")",
+            return Entry(id: "path:\(snapshot.runtimeKind.rawValue):\(source):\(destination ?? "")",
                          kind: .localPath,
+                         runtimeKind: snapshot.runtimeKind,
                          title: source,
                          subtitle: typeLabel(type),
                          containers: [snapshot],
@@ -116,9 +125,11 @@ enum SystemVolumeInventory {
         }
 
         if let source, !source.isEmpty {
-            let resource = namedResources[source]
-            return Entry(id: "named:\(source)",
+            let scopedSource = snapshot.runtimeKind.scopedID(for: source)
+            let resource = namedResources[scopedSource]
+            return Entry(id: "named:\(scopedSource)",
                          kind: .named,
+                         runtimeKind: snapshot.runtimeKind,
                          title: source,
                          subtitle: resource.map(volumeSubtitle(_:)) ?? typeLabel(type),
                          containers: [snapshot],
@@ -131,6 +142,7 @@ enum SystemVolumeInventory {
         let title = destination ?? "anonymous mount"
         return Entry(id: "anon:\(snapshot.scopedID):\(title)",
                      kind: .anonymous,
+                     runtimeKind: snapshot.runtimeKind,
                      title: title,
                      subtitle: typeLabel(type),
                      containers: [snapshot],
@@ -153,8 +165,11 @@ enum SystemVolumeInventory {
         return type.uppercased()
     }
 
-    private static func containersMounting(source: String, in containers: [Core.Container.Snapshot]) -> [Core.Container.Snapshot] {
+    private static func containersMounting(source: String,
+                                           runtimeKind: Core.Runtime.Kind,
+                                           in containers: [Core.Container.Snapshot]) -> [Core.Container.Snapshot] {
         sortedContainers(containers.filter { snapshot in
+            snapshot.runtimeKind == runtimeKind &&
             snapshot.configuration.mounts.contains { $0.source == source }
         })
     }

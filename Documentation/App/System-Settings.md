@@ -10,19 +10,25 @@ image update status, and app/runtime actions. System content is shared between
 the classic sidebar page and toolbar morph panel when the experimental toolbar
 UI is enabled.
 
-Apple container exposes service lifecycle, kernel, and DNS controls. Docker is
-reached through the Docker CLI and its configured endpoint, so Contained shows
-retry/runtime guidance instead of trying to start Docker Desktop or another
-external daemon. Privileged kernel or DNS operations may trigger prompts handled
-by the CLI or macOS. Contained does not ask for or store administrator
-credentials.
+Runtime controls are rendered from descriptor capabilities. Apple container
+currently exposes service lifecycle, kernel, and DNS controls; future runtimes
+can expose their own endpoint or management sections without becoming a global
+default runtime. Docker adapter groundwork exists in Core but is dormant, so
+Docker runtime controls are not shown until Contained has a provider model that
+does not depend on Docker Desktop. Privileged kernel or DNS operations may
+trigger prompts handled by the CLI or macOS. Contained does not ask for or store
+administrator credentials.
 
 ## Settings tabs
+
+Settings tabs use native grouped SwiftUI forms inside the shared Settings panel.
+Editable rows use the same label-state rules as Run/Edit: red means that row has
+a specific issue, and blue means the setting differs from the shipped default.
 
 - General: app behavior, menu bar, CLI previews, metric normalization, info tips, and related defaults.
 - Appearance: tint, material, card, panel, and theme choices.
 - Data: backup/export/import and local state controls.
-- Runtime: runtime reachability, Apple `container` and Docker CLI path overrides, Apple-only service/kernel/DNS controls, and Docker endpoint guidance.
+- Runtime: runtime reachability, runtime path overrides, and capability-scoped service/kernel/DNS or endpoint controls.
 - Registries: registry login/logout and credential management.
 - Updates: app channel, Sparkle checks, release notes, and image update cadence.
 - Experimental: opt-in feature gates.

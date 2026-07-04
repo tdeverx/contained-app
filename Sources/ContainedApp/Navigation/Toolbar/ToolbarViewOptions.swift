@@ -197,7 +197,7 @@ struct ToolbarPageContextOptions: View {
     }
 
     private var serviceActions: [UI.Action.Item] {
-        guard app.appleRuntimeAvailable else {
+        guard app.serviceControlRuntimeAvailable else {
             return [
                 UI.Action.Item(systemName: "arrow.clockwise",
                                help: AppText.string("common.retry", defaultValue: "Retry")) {

@@ -1,6 +1,6 @@
 # Architecture
 
-Contained is a SwiftUI-native macOS app that wraps CLI-backed container runtimes. It shells out to public CLI commands, usually with structured output, and decodes typed models. Apple `container` and Docker CLI support live behind the same Core runtime boundary. There is no private API or daemon.
+Contained is a SwiftUI-native macOS app that wraps CLI-backed container runtimes. It shells out to public CLI commands, usually with structured output, and decodes typed models. Apple `container` support is registered by default; Docker adapter groundwork lives behind the same Core runtime boundary but remains dormant until a provider model is chosen. There is no private API or daemon.
 
 ```text
  SwiftUI Views  ──>  @Observable Stores  ──>  Core.Orchestrator  ──>  Core runtime adapters
@@ -11,7 +11,7 @@ Contained is a SwiftUI-native macOS app that wraps CLI-backed container runtimes
 
 ## Targets
 
-- **`ContainedCore`** — the single backend/orchestration package. It owns `Core.*` namespaces for runtime descriptors/capabilities, canonical container models, command previews, command execution, Compose import/export semantics, Apple `container` and Docker adapter internals, metrics, typed display-neutral errors, and future migration/export planning. It depends on Foundation and Yams only. No SwiftUI.
+- **`ContainedCore`** — the single backend/orchestration package. It owns `Core.*` namespaces for runtime descriptors/capabilities, canonical container models, command previews, command execution, Compose import/export semantics, Apple `container` adapter internals, dormant Docker adapter groundwork, metrics, typed display-neutral errors, and future migration/export planning. It depends on Foundation and Yams only. No SwiftUI.
 - **`ContainedUI`** — a local reusable Swift package for app-agnostic SwiftUI/AppKit visual primitives. It must not depend on stores, Sparkle, SwiftData, app routing, or feature modules.
 - **`ContainedUX`** — a local reusable Swift package for navigation and layout infrastructure that should not own app-specific routing. It currently owns toolbar safe-area policy/measurement primitives.
 - **`ContainedApp`** — the shared SwiftUI app implementation: views, `@Observable` stores, app-specific presentation mappings, localization, navigation, and the SwiftData history stack. Depends on `ContainedCore`, `ContainedUI`, `ContainedUX`, SwiftTerm, and Sparkle.
@@ -56,11 +56,11 @@ bundles, signing, notarization, and appcast scripts.
 ## Core Runtime Wrapper
 
 - **`Core.Orchestrator`** — the only backend object app stores own. It bootstraps available CLI-backed runtimes, exposes runtime descriptors, routes runtime-scoped calls, aggregates multi-runtime container and image inventory, and returns typed command invocations for host-owned UI integrations such as SwiftTerm.
-- **`Core.Runtime.Kind` / `Core.Runtime.Descriptor` / `Core.Runtime.Capability`** — open runtime identifiers and support metadata. Future runtimes register descriptors inside Core; the app reads capabilities instead of switching on backend names.
-- **`Core.Schema.Document`** — runtime-neutral run/edit/recreate fields published by Core. Documents carry the intended runtime per container, generic field paths, source aliases, tips, support state, provenance, and validation; Core conforms documents to the selected schema before projecting executable values into `Core.Container.CreateRequest` internally.
+- **`Core.Runtime.Kind` / `Core.Runtime.Descriptor` / `Core.Runtime.Capability`** — open runtime identifiers and support metadata. Future runtimes register descriptors inside Core's shared runtime registry; the app reads capabilities instead of switching on backend names.
+- **`Core.Schema.Document`** — runtime-neutral run/edit/recreate fields published by Core. Documents carry the intended runtime per container, generic field paths, source aliases, default semantic tips, runtime-profile support state, provenance, and validation; Core conforms documents to the selected schema before projecting executable values into `Core.Container.CreateRequest` internally.
 - **`Core.Compose`** — Core-level interchange semantics for Compose import/export. Yams is internal to `Core.Compose.YAML`; public APIs expose Core models and typed plans, never Yams types.
 - **`Runtimes/AppleContainer`** — Core-internal Apple adapter implementation. It owns CLI discovery, command execution, Apple create/import/default translation, command builders, and the Apple stats-table parser.
-- **`Runtimes/Docker`** — Core-internal Docker CLI-compatible adapter implementation. It owns Docker CLI discovery, command builders, decoders, create/Compose translation, image actions, and Docker endpoint readiness mapping.
+- **`Runtimes/Docker`** — Core-internal dormant Docker CLI-compatible adapter groundwork. It owns Docker CLI discovery, command builders, decoders, create/Compose translation, image actions, and Docker endpoint readiness mapping, but is not registered in the default runtime registry.
 - **`Core.Error.PackageError`** — display-neutral error metadata shared by reusable packages. It gives the app a package name, stable code, and context without forcing packages to own localized copy.
 
 ## Stores (app)

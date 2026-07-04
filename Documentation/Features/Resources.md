@@ -5,8 +5,10 @@ Resources cover volumes, networks, registries, templates, and activity history.
 ## Volumes
 
 Volumes can be browsed, created, attached during container runs, and
-deleted or pruned when appropriate. Volume styling is local app state and can be
-used for scan-friendly resource cards.
+deleted or pruned when appropriate. The page groups runtime-managed volumes and
+host-path or temporary mounts vertically so the source type stays obvious.
+Volume styling is local app state and can be used for scan-friendly resource
+cards.
 
 ## Networks
 

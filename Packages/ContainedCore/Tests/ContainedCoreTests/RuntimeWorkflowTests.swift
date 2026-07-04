@@ -162,9 +162,10 @@ struct RuntimeWorkflowTests {
         let project = try Core.Compose.Parser.parse(yaml, projectName: "demo")
         let apple = Core.Orchestrator.testing(runner: MockCommandRunner(result: .success(Data())),
                                                 runtimeKind: .appleContainer)
-        let docker = Core.Orchestrator.testing(runner: MockCommandRunner(result: .success(Data())),
-                                               cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
-                                               runtimeKind: .docker)
+        let dockerModule = DockerRuntimeModule()
+        let docker = Core.Orchestrator(cliURLs: [.docker: URL(fileURLWithPath: "/usr/local/bin/docker")],
+                                       runtimes: [.docker: dockerModule.makeClient(runner: MockCommandRunner(result: .success(Data())))] as [Core.Runtime.Kind: any RuntimeClient],
+                                       modules: [.docker: dockerModule])
 
         let appleDocument = try #require(apple.translateCompose(project,
                                                                 baseDirectory: nil,

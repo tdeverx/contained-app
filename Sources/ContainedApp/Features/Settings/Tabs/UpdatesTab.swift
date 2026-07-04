@@ -11,10 +11,10 @@ struct UpdatesTab: View {
 
     var body: some View {
         @Bindable var settings = app.settings
-        LazyVStack(spacing: UI.Layout.Spacing.l) {
-            UI.Panel.Section(header: AppText.sectionSettingsUpdates,
-                         footer: AppText.string("settings.updates.footer", defaultValue: "\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds.")) {
-                UI.Panel.Row(title: AppText.string("settings.updates.channel", defaultValue: "Update channel")) {
+        SettingsForm {
+            Section {
+                UI.Form.Row(title: AppText.string("settings.updates.channel", defaultValue: "Update channel"),
+                            isChanged: settings.updateChannel != .nightly) {
                     Menu(app.settings.updateChannel.displayName) {
                         ForEach(UpdateChannel.allCases) { channel in
                             Button {
@@ -31,12 +31,13 @@ struct UpdatesTab: View {
                     }
                     .fixedSize()
                 }
-                UI.Panel.ToggleRow(title: AppText.string("settings.updates.automaticallyCheck", defaultValue: "Automatically check for updates"),
-                               isOn: Binding(get: { settings.appUpdateChecksEnabled },
-                                             set: {
-                                                 settings.appUpdateChecksEnabled = $0
-                                                 app.updater.automaticallyChecks = $0
-                                             }))
+                UI.Form.ToggleRow(title: AppText.string("settings.updates.automaticallyCheck", defaultValue: "Automatically check for updates"),
+                                  isChanged: settings.appUpdateChecksEnabled != true,
+                                  isOn: Binding(get: { settings.appUpdateChecksEnabled },
+                                                set: {
+                                                    settings.appUpdateChecksEnabled = $0
+                                                    app.updater.automaticallyChecks = $0
+                                                }))
                 Button("Check for Updates…") { app.updater.checkForUpdates() }
                     .disabled(!app.updater.canCheckForUpdates)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -45,11 +46,15 @@ struct UpdatesTab: View {
                 Button(availableUpdateNotesLabel) { showingAvailableNotes = true }
                     .disabled(app.updater.availableReleaseNotesHTML == nil)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } header: {
+                Text(AppText.sectionSettingsUpdates)
+            } footer: {
+                Text(AppText.string("settings.updates.footer", defaultValue: "\(settings.updateChannel.footnote) Each channel has its own release feed; channels without a published build yet are dimmed and unselectable. Delivered via Sparkle once a signed build points at the feed; inert in development builds."))
             }
 
-            UI.Panel.Section(header: AppText.string("settings.updates.imageUpdates", defaultValue: "Image updates"),
-                         footer: AppText.string("settings.updates.imageUpdates.footer", defaultValue: "Controls the background registry digest check cadence. Manual checks are always available from Images, System, and the toolbar.")) {
-                UI.Panel.Row(title: AppText.string("settings.updates.checkImages", defaultValue: "Check images")) {
+            Section {
+                UI.Form.Row(title: AppText.string("settings.updates.checkImages", defaultValue: "Check images"),
+                            isChanged: settings.imageUpdateIntervalHours != 6) {
                     Picker("", selection: $settings.imageUpdateIntervalHours) {
                         Text("Every hour").tag(1)
                         Text("Every 3 hours").tag(3)
@@ -59,6 +64,10 @@ struct UpdatesTab: View {
                     }
                     .labelsHidden().fixedSize()
                 }
+            } header: {
+                Text(AppText.string("settings.updates.imageUpdates", defaultValue: "Image updates"))
+            } footer: {
+                Text(AppText.string("settings.updates.imageUpdates.footer", defaultValue: "Controls the background registry digest check cadence. Manual checks are always available from Images, System, and the toolbar."))
             }
         }
         .task { app.updater.refreshChannelAvailability() }

@@ -6,7 +6,7 @@ struct RuntimeSelectionSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     let request: UIState.RuntimeSelectionRequest
-    @State private var runtimeKind = Core.Runtime.Kind.appleContainer
+    @State private var runtimeKind = AppRuntimeIntent.placeholderKind
 
     var body: some View {
         UI.Panel.Scaffold(width: 420, scrolls: false) {
@@ -62,9 +62,7 @@ struct RuntimeSelectionSheet: View {
     }
 
     private func selectAvailableRuntimeIfNeeded() {
-        guard let first = runtimes.first,
-              !runtimes.contains(where: { $0.kind == runtimeKind }) else { return }
-        runtimeKind = first.kind
+        runtimeKind = app.preselectedRuntimeKind(current: runtimeKind, capability: request.requiredCapability)
     }
 
     private func cancel() {

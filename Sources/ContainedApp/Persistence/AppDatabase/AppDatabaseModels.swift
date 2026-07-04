@@ -49,6 +49,7 @@ final class ContainerRecord {
     var documentData: Data?
     var snapshotData: Data?
     var runtimeProjectionsData: Data?
+    var linkedVolumePathsData: Data?
     var isMissing: Bool
     var isHiddenDuringMigration: Bool
     var migrationStateRaw: String
@@ -65,6 +66,7 @@ final class ContainerRecord {
          documentData: Data? = nil,
          snapshotData: Data? = nil,
          runtimeProjectionsData: Data? = nil,
+         linkedVolumePathsData: Data? = nil,
          isMissing: Bool = false,
          isHiddenDuringMigration: Bool = false,
          migrationStateRaw: String = "none",
@@ -80,6 +82,7 @@ final class ContainerRecord {
         self.documentData = documentData
         self.snapshotData = snapshotData
         self.runtimeProjectionsData = runtimeProjectionsData
+        self.linkedVolumePathsData = linkedVolumePathsData
         self.isMissing = isMissing
         self.isHiddenDuringMigration = isHiddenDuringMigration
         self.migrationStateRaw = migrationStateRaw
@@ -107,7 +110,7 @@ final class RecipeRecord {
          documentData: Data,
          personalizationData: Data? = nil,
          healthCheckData: Data? = nil,
-         sourceRaw: String = "template") {
+         sourceRaw: String = "recipe") {
         self.id = id
         self.name = name
         self.createdAt = createdAt

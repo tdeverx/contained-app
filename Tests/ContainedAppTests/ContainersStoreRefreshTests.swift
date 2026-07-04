@@ -21,9 +21,9 @@ struct ContainersStoreRefreshTests {
     @Test func dockerRefreshScopesSnapshotsAndRoutesLifecycle() async throws {
         let runner = DockerRecordingRunner()
         let store = ContainersStore()
-        store.client = Core.Orchestrator.testing(runner: runner,
-                                                 cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
-                                                 runtimeKind: .docker)
+        store.client = appTestOrchestrator(runner: runner,
+                                           cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                           runtimeKind: .docker)
 
         await store.refresh()
         let snapshot = try #require(store.snapshots.first)

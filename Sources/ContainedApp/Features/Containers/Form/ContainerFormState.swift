@@ -12,6 +12,8 @@ struct ContainerFormState: Codable {
     var document: Core.Schema.Document
     var personalization = Personalization()
     var healthCheck = Core.Container.HealthCheck()
+    var linkedVolumePaths: [VolumeLinkedPath] = []
+    var storageGroups: [StorageGroup] = []
 
     init(document: Core.Schema.Document,
          healthCheck: Core.Container.HealthCheck? = nil) {
@@ -29,6 +31,32 @@ struct ContainerFormState: Codable {
         self.document = Core.Schema.Document.containerEdit(from: config)
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case document
+        case personalization
+        case healthCheck
+        case linkedVolumePaths
+        case storageGroups
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        document = try c.decode(Core.Schema.Document.self, forKey: .document)
+        personalization = try c.decodeIfPresent(Personalization.self, forKey: .personalization) ?? Personalization()
+        healthCheck = try c.decodeIfPresent(Core.Container.HealthCheck.self, forKey: .healthCheck) ?? Core.Container.HealthCheck()
+        linkedVolumePaths = try c.decodeIfPresent([VolumeLinkedPath].self, forKey: .linkedVolumePaths) ?? []
+        storageGroups = try c.decodeIfPresent([StorageGroup].self, forKey: .storageGroups) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(document, forKey: .document)
+        try c.encode(personalization, forKey: .personalization)
+        try c.encode(healthCheck, forKey: .healthCheck)
+        try c.encode(linkedVolumePaths, forKey: .linkedVolumePaths)
+        try c.encode(storageGroups, forKey: .storageGroups)
+    }
+
     var definition: Core.Schema.Definition {
         Core.Schema.Definition.containerRunEdit(runtimeKind: effectiveRuntimeKind, operation: document.operation)
     }
@@ -36,7 +64,7 @@ struct ContainerFormState: Codable {
     var runtimeKind: Core.Runtime.Kind? {
         get { document.runtimeKind }
         set {
-            document.runtimeKind = newValue ?? .appleContainer
+            document.runtimeKind = newValue ?? AppRuntimeIntent.placeholderKind
             document.set(.runtimeKind, .string(document.runtimeKind.rawValue))
         }
     }
@@ -131,6 +159,17 @@ struct ContainerFormState: Codable {
     var mounts: [String] {
         get { strings(.storageMounts) }
         set { set(.storageMounts, .stringList(newValue)) }
+    }
+
+    var storageGroupsForEditing: [StorageGroup] {
+        get {
+            storageGroups.isEmpty
+                ? StorageGroup.groups(from: volumes, linkedVolumePaths: linkedVolumePaths)
+                : storageGroups
+        }
+        set {
+            applyStorageGroups(newValue)
+        }
     }
 
     var sockets: [SocketMap] {
@@ -360,7 +399,7 @@ struct ContainerFormState: Codable {
     }
 
     var hasStorageOptions: Bool {
-        hasValues(in: [.storage])
+        hasValues(in: [.storage]) || !linkedVolumePaths.isEmpty || !storageGroups.isEmpty
     }
 
     var hasEnvironmentOptions: Bool {
@@ -414,5 +453,78 @@ struct ContainerFormState: Codable {
 
     private mutating func set(_ path: Core.Field.Path, _ value: Core.Schema.Value) {
         document.set(path, value)
+    }
+}
+
+extension ContainerFormState {
+    mutating func applyStorageGroups(_ groups: [StorageGroup]) {
+        storageGroups = groups
+        volumes = StorageGroup.volumeMounts(from: groups)
+        linkedVolumePaths = StorageGroup.linkedPaths(from: groups)
+    }
+
+    mutating func applyLinkedVolumePaths(_ links: [VolumeLinkedPath]) {
+        linkedVolumePaths = links.map { link in
+            guard let volume = parentVolume(for: link) else { return link }
+            return link.attached(to: volume)
+        }
+        storageGroups = StorageGroup.groups(from: volumes, linkedVolumePaths: linkedVolumePaths)
+    }
+
+    var linkedVolumePathsForPersistence: [VolumeLinkedPath] {
+        linkedVolumePaths.compactMap { link in
+            guard let volume = parentVolume(for: link) else { return nil }
+            return link.attached(to: volume)
+        }
+    }
+
+    func materializedDocumentForRun() -> Core.Schema.Document {
+        var materialized = document
+        var materializedVolumes = volumes
+        for link in linkedVolumePaths where link.isValid {
+            guard let parent = parentVolume(for: link),
+                  !link.resolvedLinkPath(in: parent).isEmpty else { continue }
+            appendUnique(link.hostMount(), to: &materializedVolumes)
+        }
+        materialized.set(.storageVolumes, .volumeList(materializedVolumes))
+        return materialized
+    }
+
+    func volumeLinkPlan() -> VolumeLinkPlan? {
+        var mountedVolumes: [Core.Container.VolumeMount] = []
+        var links: [(linkPath: String, targetPath: String)] = []
+        for link in linkedVolumePaths where link.isValid {
+            guard let parent = parentVolume(for: link) else { continue }
+            let resolvedLinkPath = link.resolvedLinkPath(in: parent)
+            guard !resolvedLinkPath.isEmpty else { continue }
+            var setupVolume = parent
+            setupVolume.readOnly = false
+            appendUnique(setupVolume, to: &mountedVolumes)
+            appendUnique(link.hostMount(), to: &mountedVolumes)
+            links.append((linkPath: resolvedLinkPath, targetPath: link.mountTarget))
+        }
+        guard !links.isEmpty else { return nil }
+        return VolumeLinkPlan(runtimeKind: effectiveRuntimeKind,
+                              image: image,
+                              platform: platform,
+                              os: imageOS,
+                              architecture: imageArchitecture,
+                              volumeMounts: mountedVolumes,
+                              links: links)
+    }
+
+    private func parentVolume(for link: VolumeLinkedPath) -> Core.Container.VolumeMount? {
+        volumes.first { $0.isValid && link.isAttached(to: $0) }
+    }
+
+    private func appendUnique(_ volume: Core.Container.VolumeMount,
+                              to volumes: inout [Core.Container.VolumeMount]) {
+        guard volume.isValid else { return }
+        guard !volumes.contains(where: { existing in
+            existing.source == volume.source &&
+            existing.target == volume.target &&
+            existing.readOnly == volume.readOnly
+        }) else { return }
+        volumes.append(volume)
     }
 }

@@ -10,7 +10,7 @@ struct RegistryLoginSheet: View {
     @State private var server = ""
     @State private var username = ""
     @State private var password = ""
-    @State private var runtimeKind = Core.Runtime.Kind.appleContainer
+    @State private var runtimeKind = AppRuntimeIntent.placeholderKind
     @State private var busy = false
     @State private var error: String?
 
@@ -26,7 +26,8 @@ struct RegistryLoginSheet: View {
                                                    help: AppText.logIn,
                                                    isEnabled: !server.trimmingCharacters(in: .whitespaces).isEmpty
                                                        && !username.trimmingCharacters(in: .whitespaces).isEmpty
-                                                       && !password.isEmpty) {
+                                                       && !password.isEmpty
+                                                       && registryRuntimes.contains(where: { $0.kind == runtimeKind })) {
                         submit()
                     })
                 }
@@ -74,13 +75,11 @@ struct RegistryLoginSheet: View {
     }
 
     private var registryRuntimes: [Core.Runtime.Descriptor] {
-        let runtimes = app.availableRuntimeDescriptors.filter { $0.supports(.registries) }
-        return runtimes.isEmpty ? app.availableRuntimeDescriptors : runtimes
+        app.runtimeDescriptors(supporting: .registries)
     }
 
     private func normalizeRuntimeSelection() {
-        guard let first = registryRuntimes.first, !registryRuntimes.contains(where: { $0.kind == runtimeKind }) else { return }
-        runtimeKind = first.kind
+        runtimeKind = app.preselectedRuntimeKind(current: runtimeKind, capability: .registries)
     }
 
     private func submit() {

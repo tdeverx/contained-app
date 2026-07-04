@@ -312,19 +312,4 @@ extension AppModel {
         return Core.Image.UpdateStatus()
     }
 
-    // MARK: Persistence
-
-    static func loadImageUpdates(defaults: UserDefaults = .standard) -> [String: Core.Image.UpdateStatus] {
-        [:]
-    }
-
-    static func saveImageUpdates(_ updates: [String: Core.Image.UpdateStatus], defaults: UserDefaults = .standard) {
-    }
-
-    static func loadLastImageUpdateSweep(defaults: UserDefaults = .standard) -> Date? {
-        nil
-    }
-
-    static func saveLastImageUpdateSweep(_ date: Date?, defaults: UserDefaults = .standard) {
-    }
 }

@@ -1,11 +1,5 @@
 import Foundation
 
-public extension Core.Schema.Definition {
-    static var appleContainerCreate: Core.Schema.Definition {
-        .containerRunEdit(runtimeKind: .appleContainer, operation: .containerCreate)
-    }
-}
-
 public extension Core.Schema.Document {
     static func containerCreate(runtimeKind: Core.Runtime.Kind) -> Core.Schema.Document {
         var document = Core.Schema.Document(operation: .containerCreate, runtimeKind: runtimeKind)

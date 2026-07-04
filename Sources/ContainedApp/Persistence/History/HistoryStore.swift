@@ -54,8 +54,14 @@ final class HistoryStore {
 
     /// Mark every recorded event as read (clears the toolbar unread badge).
     func markAllEventsRead() {
-        let unread = (try? context.fetch(FetchDescriptor<EventRecord>(
-            predicate: #Predicate { !$0.isRead }))) ?? []
+        let unread: [EventRecord]
+        do {
+            unread = try context.fetch(FetchDescriptor<EventRecord>(
+                predicate: #Predicate { !$0.isRead }))
+        } catch {
+            database.recordFailure(.fetch(model: "EventRecord", detail: String(describing: error)))
+            return
+        }
         guard !unread.isEmpty else { return }
         for event in unread { event.isRead = true }
         save()
@@ -63,7 +69,7 @@ final class HistoryStore {
 
     /// Delete every recorded event (keeps metric samples + templates). Backs the Activity "Clear" action.
     func clearEvents() {
-        try? context.delete(model: EventRecord.self)
+        delete(EventRecord.self)
         save()
     }
 
@@ -71,37 +77,46 @@ final class HistoryStore {
 
     func pruneOld(now: Date = Date()) {
         guard let cutoff = Calendar.current.date(byAdding: .day, value: -retentionDays, to: now) else { return }
-        try? context.delete(model: MetricSample.self, where: #Predicate { $0.timestamp < cutoff })
-        try? context.delete(model: EventRecord.self, where: #Predicate { $0.timestamp < cutoff })
+        do {
+            try context.delete(model: MetricSample.self, where: #Predicate { $0.timestamp < cutoff })
+            try context.delete(model: EventRecord.self, where: #Predicate { $0.timestamp < cutoff })
+        } catch {
+            database.recordFailure(.save(detail: "Unable to prune history: \(error)"))
+        }
         save()
     }
 
     /// Wipe all recorded metrics and events (Templates are preserved). Used by the "Clear history"
     /// action in Settings.
     func clearAll() {
-        try? context.delete(model: MetricSample.self)
-        try? context.delete(model: EventRecord.self)
+        delete(MetricSample.self)
+        delete(EventRecord.self)
         save()
     }
 
     func unreadEventCount() -> Int {
-        (try? context.fetchCount(FetchDescriptor<EventRecord>(
-            predicate: #Predicate { !$0.isRead }))) ?? 0
+        do {
+            return try context.fetchCount(FetchDescriptor<EventRecord>(
+                predicate: #Predicate { !$0.isRead }))
+        } catch {
+            database.recordFailure(.fetch(model: "EventRecord", detail: String(describing: error)))
+            return 0
+        }
     }
 
     func templatesSnapshot() -> [RecipeSnapshot] {
-        ((try? context.fetch(FetchDescriptor<RecipeRecord>())) ?? []).compactMap(RecipeSnapshot.init)
+        fetch(RecipeRecord.self).compactMap(RecipeSnapshot.init)
     }
 
     func historySnapshot() -> HistoryBackup {
-        let events = ((try? context.fetch(FetchDescriptor<EventRecord>())) ?? []).map(EventRecordSnapshot.init)
-        let metrics = ((try? context.fetch(FetchDescriptor<MetricSample>())) ?? []).map(MetricSampleSnapshot.init)
+        let events = fetch(EventRecord.self).map(EventRecordSnapshot.init)
+        let metrics = fetch(MetricSample.self).map(MetricSampleSnapshot.init)
         return HistoryBackup(events: events, metrics: metrics)
     }
 
     func applyTemplates(_ snapshots: [RecipeSnapshot], replace: Bool) {
         if replace {
-            try? context.delete(model: RecipeRecord.self)
+            delete(RecipeRecord.self)
         }
         for snapshot in snapshots {
             context.insert(RecipeRecord(snapshot: snapshot))
@@ -111,8 +126,8 @@ final class HistoryStore {
 
     func applyHistory(_ snapshot: HistoryBackup, replace: Bool) {
         if replace {
-            try? context.delete(model: EventRecord.self)
-            try? context.delete(model: MetricSample.self)
+            delete(EventRecord.self)
+            delete(MetricSample.self)
         }
         for event in snapshot.events { context.insert(EventRecord(snapshot: event)) }
         for metric in snapshot.metrics { context.insert(MetricSample(snapshot: metric)) }
@@ -120,9 +135,9 @@ final class HistoryStore {
     }
 
     func purgeOrphans(liveContainerIDs: Set<String>) -> (events: Int, metrics: Int) {
-        let events = ((try? context.fetch(FetchDescriptor<EventRecord>())) ?? [])
+        let events = fetch(EventRecord.self)
             .filter { $0.containerID.map { !liveContainerIDs.contains($0) } ?? false }
-        let metrics = ((try? context.fetch(FetchDescriptor<MetricSample>())) ?? [])
+        let metrics = fetch(MetricSample.self)
             .filter { !liveContainerIDs.contains($0.containerID) }
         for event in events { context.delete(event) }
         for metric in metrics { context.delete(metric) }
@@ -134,7 +149,24 @@ final class HistoryStore {
         do {
             try context.save()
         } catch {
-            fatalError("Unable to save history data: \(error)")
+            database.recordFailure(.save(detail: "Unable to save history data: \(error)"))
+        }
+    }
+
+    private func fetch<T: PersistentModel>(_ model: T.Type) -> [T] {
+        do {
+            return try context.fetch(FetchDescriptor<T>())
+        } catch {
+            database.recordFailure(.fetch(model: String(describing: T.self), detail: String(describing: error)))
+            return []
+        }
+    }
+
+    private func delete<T: PersistentModel>(_ model: T.Type) {
+        do {
+            try context.delete(model: T.self)
+        } catch {
+            database.recordFailure(.save(detail: "Unable to delete \(T.self): \(error)"))
         }
     }
 }

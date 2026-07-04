@@ -14,7 +14,7 @@ struct BuildWorkspaceView: View {
     @State private var platform = ""
     @State private var noCache = false
     @State private var buildArgs: [KeyValue] = []
-    @State private var runtimeKind = Core.Runtime.Kind.appleContainer
+    @State private var runtimeKind = AppRuntimeIntent.placeholderKind
     @State private var building = false
     @State private var choosingContext = false
     @State private var run = 0          // bump to restart the console
@@ -113,13 +113,13 @@ struct BuildWorkspaceView: View {
             UI.Panel.ToggleRow(title: AppText.string("build.noCache", defaultValue: "No cache"),
                            info: AppText.string("build.noCache.info", defaultValue: "Build every layer from scratch (--no-cache)."),
                            isOn: $noCache)
-            ForEach($buildArgs) { $arg in
+            ForEach(buildArgs) { arg in
                 UI.Panel.Field(label: AppText.string("build.arg", defaultValue: "Build arg")) {
                     HStack {
-                        TextField("KEY", text: $arg.key)
+                        TextField("KEY", text: buildArgBinding(id: arg.id, \.key, fallback: ""))
                             .textFieldStyle(.roundedBorder)
                         UI.State.StatusText("=")
-                        TextField("value", text: $arg.value)
+                        TextField("value", text: buildArgBinding(id: arg.id, \.value, fallback: ""))
                             .textFieldStyle(.roundedBorder)
                         UI.Action.Group(UI.Action.Item(systemName: "minus.circle.fill",
                                                        help: AppText.removeBuildArgument) {
@@ -189,14 +189,21 @@ struct BuildWorkspaceView: View {
     }
 
     private var buildRuntimes: [Core.Runtime.Descriptor] {
-        let runtimes = app.availableRuntimeDescriptors.filter { $0.supports(.imageBuild) }
-        return runtimes.isEmpty ? app.availableRuntimeDescriptors : runtimes
+        app.runtimeDescriptors(supporting: .imageBuild)
     }
 
     private func normalizeRuntimeSelection() {
-        guard let first = buildRuntimes.first else { return }
-        if !buildRuntimes.contains(where: { $0.kind == runtimeKind }) {
-            runtimeKind = first.kind
+        runtimeKind = app.preselectedRuntimeKind(current: runtimeKind, capability: .imageBuild)
+    }
+
+    private func buildArgBinding<Value>(id: KeyValue.ID,
+                                        _ keyPath: WritableKeyPath<KeyValue, Value>,
+                                        fallback: Value) -> Binding<Value> {
+        Binding {
+            buildArgs.first { $0.id == id }?[keyPath: keyPath] ?? fallback
+        } set: { newValue in
+            guard let index = buildArgs.firstIndex(where: { $0.id == id }) else { return }
+            buildArgs[index][keyPath: keyPath] = newValue
         }
     }
 }

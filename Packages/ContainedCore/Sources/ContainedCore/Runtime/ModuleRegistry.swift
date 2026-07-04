@@ -14,7 +14,6 @@ extension Core.Runtime {
     static var builtInModules: [any Core.Runtime.Module] {
         [
             AppleContainerRuntimeModule(),
-            DockerRuntimeModule(),
         ]
     }
 

@@ -22,8 +22,9 @@ struct SystemLogsSheet: View {
                 })
             }
             .padding(UI.Layout.Spacing.s)
-            if let client = app.client, app.appleRuntimeReady {
-                UI.Console.Stream(stream: { client.streamSystemLogs(follow: follow, last: 500, runtimeKind: .appleContainer) },
+            if let client = app.client,
+               let runtimeKind = app.firstRuntimeKind(supporting: .systemLogs) {
+                UI.Console.Stream(stream: { client.streamSystemLogs(follow: follow, last: 500, runtimeKind: runtimeKind) },
                               workingLabel: AppText.working,
                               completedLabel: AppText.completed,
                               lineCountLabel: AppText.lineCount,

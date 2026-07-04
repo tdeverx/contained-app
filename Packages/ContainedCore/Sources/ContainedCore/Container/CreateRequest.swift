@@ -71,9 +71,18 @@ struct VolumeMount: Codable, Equatable, Hashable, Sendable, Identifiable {
     }
 
     private enum CodingKeys: String, CodingKey {
+        case id
         case source
         case target
         case readOnly
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        source = try c.decode(String.self, forKey: .source)
+        target = try c.decode(String.self, forKey: .target)
+        readOnly = try c.decodeIfPresent(Bool.self, forKey: .readOnly) ?? false
     }
 }
 

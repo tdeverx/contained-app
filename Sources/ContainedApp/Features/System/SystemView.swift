@@ -167,7 +167,7 @@ struct SystemContent: View {
 
     @ViewBuilder
     private var runtimeControls: some View {
-        if app.appleRuntimeAvailable {
+        if app.serviceControlRuntimeAvailable {
             UI.Action.Group([
                 servicePowerAction,
                 UI.Action.Item(systemName: "arrow.clockwise",
@@ -228,10 +228,8 @@ struct SystemContent: View {
                                     containers: app.containers.snapshots)
     }
 
-    // MARK: Volumes (condensed rows — the rich per-volume I/O card moves to a detail view)
-
     private var volumesCard: some View {
-        card {
+        LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.m) {
             HStack {
                 Text(AppText.sectionVolumes).designHeadlineLabelStyle()
                 UI.Badge.Text(text: "\(volumeInventory.count)")
@@ -243,36 +241,137 @@ struct SystemContent: View {
                         ui.dispatch(.createVolume)
                 })
             }
+            if let message = app.resourceInventoryErrors["volumes"] {
+                UI.State.InlineStatus(message, isWorking: false)
+            }
             if volumeInventory.isEmpty {
-                UI.State.Empty(AppText.string("volume.inventory.empty", defaultValue: "No named volumes or container mounts found."),
-                                 systemImage: "externaldrive",
-                                 padding: UI.Layout.Spacing.xs)
+                card {
+                    UI.State.Empty(AppText.string("volume.inventory.empty", defaultValue: "No named volumes or container mounts found."),
+                                   systemImage: "externaldrive",
+                                   padding: UI.Layout.Spacing.xs)
+                }
             } else {
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(volumeInventory.enumerated()), id: \.element.id) { index, entry in
-                        if index > 0 { Divider() }
-                        volumeRow(entry)
+                LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.l) {
+                    volumeSection(title: AppText.string("volume.section.runtimeVolumes", defaultValue: "Runtime volumes"),
+                                  subtitle: AppText.string("volume.section.runtimeVolumes.subtitle", defaultValue: "Managed storage owned by the runtime."),
+                                  entries: runtimeVolumeEntries,
+                                  emptyTitle: AppText.string("volume.runtime.empty", defaultValue: "No runtime volumes"),
+                                  emptySymbol: "externaldrive")
+                    volumeSection(title: AppText.string("volume.section.pathMounts", defaultValue: "Host path mounts"),
+                                  subtitle: AppText.string("volume.section.pathMounts.subtitle", defaultValue: "Bind paths and temporary mounts discovered from containers."),
+                                  entries: hostPathVolumeEntries,
+                                  emptyTitle: AppText.string("volume.pathMounts.empty", defaultValue: "No host path mounts"),
+                                  emptySymbol: "folder")
+                }
+            }
+        }
+    }
+
+    private var runtimeVolumeEntries: [VolumeInventoryEntry] {
+        volumeInventory.filter { $0.kind == .named }
+    }
+
+    private var hostPathVolumeEntries: [VolumeInventoryEntry] {
+        volumeInventory.filter { $0.kind != .named }
+    }
+
+    private func volumeSection(title: String,
+                               subtitle: String,
+                               entries: [VolumeInventoryEntry],
+                               emptyTitle: String,
+                               emptySymbol: String) -> some View {
+        LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
+            HStack(spacing: UI.Layout.Spacing.s) {
+                Text(title).designSectionLabelStyle()
+                UI.Badge.Text(text: "\(entries.count)")
+            }
+            Text(subtitle)
+                .designSecondaryCaption()
+                .fixedSize(horizontal: false, vertical: true)
+            if entries.isEmpty {
+                UI.Surface.Content(elevated: elevated, minHeight: 132, alignment: .center) {
+                    UI.State.Empty(emptyTitle,
+                                   systemImage: emptySymbol,
+                                   padding: UI.Layout.Spacing.xs)
+                }
+            } else {
+                LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
+                    ForEach(entries) { entry in
+                        volumeEntryCard(entry)
                     }
                 }
             }
         }
     }
 
-    private func volumeRow(_ entry: VolumeInventoryEntry) -> some View {
-        UI.List.MetadataBadgeRow(systemImage: entry.kind.symbol,
-                               title: entry.title,
-                               badge: entry.kind.rawValue,
-                               subtitle: SystemVolumeInventory.rowSubtitle(entry),
-                               isMonospaced: true) {
-            if !entry.containers.isEmpty {
-                UI.Card.MetricText(text: "\(entry.containers.count)")
-                    .designSecondaryValueStyle()
-            }
+    private func volumeEntryCard(_ entry: VolumeInventoryEntry) -> some View {
+        UI.Card.Scaffold(size: .medium,
+                         elevated: elevated,
+                         title: entry.title,
+                         subtitle: volumeCardSubtitle(entry),
+                         titleStyle: entry.kind == .localPath ? .monospaced : .standard,
+                         subtitleStyle: .monospaced) {
+            UI.Card.IconChip(symbol: entry.kind.symbol,
+                             tint: volumeTint(entry),
+                             backgroundOpacity: UI.Card.Metric.iconBackgroundOpacity)
+        } titleAccessory: {
+            UI.Badge.Text(text: entry.kind.rawValue, font: .caption2.weight(.semibold))
+        } subtitleAccessory: {
+            EmptyView()
+        } headerAccessory: {
             UI.Control.RowMenu(accessibilityLabel: AppText.string("menu.volumeActions", defaultValue: "Volume actions")) {
                 volumeMenu(entry)
             }
+        } bodyContent: {
+            EmptyView()
+        } footerLeading: {
+            UI.Card.FooterMini {
+                UI.Symbol.Image(systemName: "shippingbox", size: .caption2)
+            } text: {
+                UI.Card.MetricText(text: volumeContainerCount(entry))
+                    .designSecondaryValueStyle()
+            }
+        } footerActions: {
+            if entry.resource != nil {
+                Button(role: .destructive) { deletingVolume = entry.resource } label: {
+                    UI.Card.FooterMini {
+                        UI.Symbol.Image(systemName: "trash", tone: .error, size: .body)
+                    } text: {
+                        EmptyView()
+                    }
+                }
+                .buttonStyle(.plain)
+                .help(AppText.delete)
+                .accessibilityLabel(AppText.delete)
+            }
+        } widget: {
+            EmptyView()
         }
         .contextMenu { volumeMenu(entry) }
+    }
+
+    private func volumeCardSubtitle(_ entry: VolumeInventoryEntry) -> String? {
+        var parts: [String] = []
+        parts.append(app.runtimeDescriptor(for: entry.runtimeKind)?.displayName ?? entry.runtimeKind.rawValue)
+        if let destination = entry.destination { parts.append(destination) }
+        if let subtitle = entry.subtitle { parts.append(subtitle) }
+        return parts.joined(separator: " · ")
+    }
+
+    private func volumeContainerCount(_ entry: VolumeInventoryEntry) -> String {
+        switch entry.containers.count {
+        case 0: return AppText.string("volume.containers.none", defaultValue: "No containers")
+        case 1: return AppText.string("volume.containers.one", defaultValue: "1 container")
+        default: return AppText.string("volume.containers.count", defaultValue: "\(entry.containers.count) containers")
+        }
+    }
+
+    private func volumeTint(_ entry: VolumeInventoryEntry) -> Color {
+        switch entry.kind {
+        case .named: return .accentColor
+        case .localPath: return .orange
+        case .anonymous: return .secondary
+        }
     }
 
     @ViewBuilder

@@ -55,9 +55,13 @@ struct CustomizeSheet: View {
             switch self {
             case .container(let snapshot): return snapshot
             case .image(let reference), .imageGroup(_, let reference), .imageTag(let reference, _):
-                return .placeholder(id: Format.shortImage(reference), image: reference, runtimeKind: .appleContainer)
+                return .placeholder(id: Format.shortImage(reference),
+                                    image: reference,
+                                    runtimeKind: AppRuntimeIntent.placeholderKind)
             case .volume(let name):
-                return .placeholder(id: name, image: "", runtimeKind: .appleContainer)
+                return .placeholder(id: name,
+                                    image: "",
+                                    runtimeKind: AppRuntimeIntent.placeholderKind)
             }
         }
     }

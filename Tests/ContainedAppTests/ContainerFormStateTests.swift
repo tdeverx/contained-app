@@ -119,6 +119,124 @@ struct ContainerFormStateTests {
         #expect(!args.contains { $0.hasPrefix("contained.tint") || $0.hasPrefix("contained.icon") })
     }
 
+    @Test func namedRuntimeVolumeArgv() throws {
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
+        spec.image = "ghcr.io/dictionarry-hub/profilarr:latest"
+        spec.volumes = [VolumeMap(source: "profilarr-config", target: "/config")]
+
+        #expect(subsequence(["--volume", "profilarr-config:/config"], in: try arguments(spec)))
+    }
+
+    @Test func linkedRuntimeVolumePathsMaterializeHostMountsAndPlan() throws {
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
+        spec.image = "ghcr.io/dictionarry-hub/profilarr:latest"
+        let volume = VolumeMap(source: "profilarr-config", target: "/config")
+        let readonlyID = try #require(UUID(uuidString: "11111111-1111-1111-1111-111111111111"))
+        let readwriteID = try #require(UUID(uuidString: "22222222-2222-2222-2222-222222222222"))
+        spec.volumes = [volume]
+        spec.linkedVolumePaths = [
+            VolumeLinkedPath(id: readonlyID,
+                             volume: volume,
+                             hostPath: "/Volumes/Vault/Media",
+                             linkPath: "media",
+                             readOnly: true),
+            VolumeLinkedPath(id: readwriteID,
+                             volume: volume,
+                             hostPath: "/Volumes/Vault/Downloads",
+                             linkPath: "/config/downloads",
+                             readOnly: false),
+        ]
+
+        let args = try arguments(spec)
+        #expect(subsequence(["--volume", "profilarr-config:/config"], in: args))
+        #expect(subsequence(["--volume", "/Volumes/Vault/Media:/run/contained-links/11111111-1111-1111-1111-111111111111:ro"], in: args))
+        #expect(subsequence(["--volume", "/Volumes/Vault/Downloads:/run/contained-links/22222222-2222-2222-2222-222222222222"], in: args))
+
+        let plan = try #require(spec.volumeLinkPlan())
+        #expect(plan.links.map(\.linkPath) == ["/config/media", "/config/downloads"])
+        #expect(plan.links.map(\.targetPath) == [
+            "/run/contained-links/11111111-1111-1111-1111-111111111111",
+            "/run/contained-links/22222222-2222-2222-2222-222222222222",
+        ])
+    }
+
+    @Test func linkedRuntimeVolumePathsReattachAfterVolumeIDsChange() throws {
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
+        spec.image = "example/app:latest"
+        let original = VolumeMap(source: "app-config", target: "/config")
+        let decodedAgain = VolumeMap(source: "app-config", target: "/config")
+        spec.volumes = [decodedAgain]
+        spec.linkedVolumePaths = [
+            VolumeLinkedPath(volume: original,
+                             hostPath: "/Volumes/Vault/Imports",
+                             linkPath: "imports")
+        ]
+
+        let args = try arguments(spec)
+
+        #expect(original.id != decodedAgain.id)
+        #expect(subsequence(["--volume", "app-config:/config"], in: args))
+        #expect(args.contains { $0 == "--volume" })
+        #expect(args.contains { $0.contains("/Volumes/Vault/Imports:/run/contained-links/") })
+        #expect(spec.volumeLinkPlan()?.links.map(\.linkPath) == ["/config/imports"])
+    }
+
+    @Test func linkedRuntimeVolumePathsRejectAbsolutePathsOutsideParentVolume() throws {
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
+        spec.image = "example/app:latest"
+        let volume = VolumeMap(source: "app-config", target: "/config")
+        spec.volumes = [volume]
+        spec.linkedVolumePaths = [
+            VolumeLinkedPath(volume: volume,
+                             hostPath: "/Volumes/Vault/Imports",
+                             linkPath: "/data/imports")
+        ]
+
+        let args = try arguments(spec)
+
+        #expect(subsequence(["--volume", "app-config:/config"], in: args))
+        #expect(!args.contains { $0.contains("/Volumes/Vault/Imports:/run/contained-links/") })
+        #expect(spec.volumeLinkPlan() == nil)
+    }
+
+    @Test func storageGroupsCompilePlainAndRuntimeVolumePaths() throws {
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
+        spec.image = "example/app:latest"
+        let readOnlyID = try #require(UUID(uuidString: "33333333-3333-3333-3333-333333333333"))
+        let readWriteID = try #require(UUID(uuidString: "44444444-4444-4444-4444-444444444444"))
+
+        spec.storageGroupsForEditing = [
+            StorageGroup(usesRuntimeVolume: false,
+                         paths: [
+                            StoragePath(hostPath: "/Volumes/Vault/Media",
+                                        internalPath: "/media",
+                                        readOnly: true)
+                         ]),
+            StorageGroup(volumeID: try #require(UUID(uuidString: "55555555-5555-5555-5555-555555555555")),
+                         usesRuntimeVolume: true,
+                         volumeName: "app-config",
+                         volumeTarget: "/config",
+                         paths: [
+                            StoragePath(id: readOnlyID,
+                                        hostPath: "/Volumes/Vault/Imports",
+                                        internalPath: "imports",
+                                        readOnly: true),
+                            StoragePath(id: readWriteID,
+                                        hostPath: "/Volumes/Vault/Downloads",
+                                        internalPath: "/config/downloads",
+                                        readOnly: false),
+                         ]),
+        ]
+
+        let args = try arguments(spec)
+
+        #expect(subsequence(["--volume", "/Volumes/Vault/Media:/media:ro"], in: args))
+        #expect(subsequence(["--volume", "app-config:/config"], in: args))
+        #expect(subsequence(["--volume", "/Volumes/Vault/Imports:/run/contained-links/33333333-3333-3333-3333-333333333333:ro"], in: args))
+        #expect(subsequence(["--volume", "/Volumes/Vault/Downloads:/run/contained-links/44444444-4444-4444-4444-444444444444"], in: args))
+        #expect(spec.volumeLinkPlan()?.links.map(\.linkPath) == ["/config/imports", "/config/downloads"])
+    }
+
     @Test func composeServiceMapping() throws {
         let yaml = """
         services:
@@ -163,7 +281,7 @@ struct ContainerFormStateTests {
         """
         let base = URL(filePath: "/Volumes/Vault/.Docker/compose", directoryHint: .isDirectory)
         let project = try! Core.Compose.parse(yaml, projectName: "demo")
-        let definition = Core.Schema.Definition.appleContainerCreate
+        let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .appleContainer)
         let resolved = try core.translateCompose(project, baseDirectory: base, runtimeKind: .appleContainer)
             .items
             .first?
@@ -340,11 +458,21 @@ struct ContainerFormStateTests {
     @Test func containerFormStateIsCodable() throws {
         var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = "redis:7"
+        let volume = VolumeMap(source: "redis-config", target: "/config")
         spec.ports = [PortMap(hostPort: "6379", containerPort: "6379", proto: "tcp")]
+        spec.volumes = [volume]
+        spec.linkedVolumePaths = [
+            VolumeLinkedPath(volume: volume,
+                             hostPath: "/Volumes/Vault/Redis",
+                             linkPath: "imports")
+        ]
         spec.capAdd = ["CAP_NET_RAW"]
         let data = try JSONEncoder().encode(spec)
         let decoded = try JSONDecoder().decode(ContainerFormState.self, from: data)
         #expect(try arguments(decoded) == (try arguments(spec)))
+        #expect(decoded.linkedVolumePaths.first?.volumeID == decoded.volumes.first?.id)
+        #expect(decoded.linkedVolumePaths.first?.volumeSource == "redis-config")
+        #expect(decoded.linkedVolumePaths.first?.volumeTarget == "/config")
     }
 
     @Test func editPrefillRestoresAdvancedContainerConfiguration() throws {
@@ -451,7 +579,7 @@ struct ContainerFormStateTests {
     }
 
     private func arguments(_ spec: ContainerFormState) throws -> [String] {
-        try core.previewCreateCommand(for: spec.document).command
+        try core.previewCreateCommand(for: spec.materializedDocumentForRun()).command
     }
 }
 

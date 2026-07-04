@@ -4,59 +4,187 @@ import ContainedUI
 import UniformTypeIdentifiers
 import ContainedCore
 
-/// The shared container Create/Edit form body: progressive-disclosure sections mapping the `run`
-/// flags. Reused by `ContainerEditSheet` for both new and edit modes. Built from the unified
-/// `UI.Panel.Section` glass-card primitives (not `Form`) so it lives inside the shared `UI.Panel.Scaffold`
-/// and measures/scrolls consistently. Field guidance is delivered through tappable `info.circle`
-/// popovers, not hover tooltips.
+/// The shared container Create/Edit form body: native grouped Form sections mapping the `run`
+/// flags. Reused by `ContainerEditSheet` for both new and edit modes. Field guidance stays available
+/// through tappable `info.circle` popovers that appear on row hover/focus.
 struct ContainerSchemaForm: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @Binding var spec: ContainerFormState
-    @State private var advancedExpanded: Bool
-    @State private var dockerComposeExpanded: Bool
+    let page: ContainerFormPage
 
-    init(spec: Binding<ContainerFormState>) {
+    init(spec: Binding<ContainerFormState>, page: ContainerFormPage) {
         self._spec = spec
-        let initial = spec.wrappedValue
-        self._advancedExpanded = State(initialValue: initial.hasAdvancedOptions)
-        self._dockerComposeExpanded = State(initialValue: initial.hasUnsupportedRuntimeValues)
+        self.page = page
     }
 
     var body: some View {
-        LazyVStack(spacing: UI.Layout.Spacing.l) {
-            Text(AppText.string("runSpec.importedValuesHint", defaultValue: "Blue sections contain explicit values from an import, edit, template, or manual change."))
-                .designSecondaryCaption()
-                .frame(maxWidth: .infinity, alignment: .leading)
-            UI.Panel.Section(header: AppText.string("runSpec.section.essentials", defaultValue: "Essentials"), highlighted: spec.hasGeneralOptions) { generalSection }
-            UI.Panel.Section(header: AppText.string("runSpec.section.resources", defaultValue: "Resources"), highlighted: spec.hasResourceOptions) { resourcesSection }
-            UI.Panel.Section(header: AppText.string("runSpec.section.networking", defaultValue: "Networking"), highlighted: spec.hasNetworkingOptions) {
-                portsSection
-                networkSection
-                socketsSection
-            }
-            UI.Panel.Section(header: AppText.string("runSpec.section.storage", defaultValue: "Storage"), highlighted: spec.hasStorageOptions) { volumesSection }
-            UI.Panel.Section(header: AppText.string("runSpec.section.environment", defaultValue: "Environment"), highlighted: spec.hasEnvironmentOptions) { environmentSection }
-            UI.Panel.Section(header: AppText.string("runSpec.section.appManaged", defaultValue: "App Managed"), highlighted: spec.hasAppManagedOptions) {
-                restartSection
-                healthSection
-            }
-            UI.Panel.Section(header: AppText.sectionSettingsAppearance, highlighted: spec.hasPersonalizationOptions) { personalizationSection }
-            advancedOptionsSection
-            dockerComposeSection
+        UI.Form.Grouped {
+            pageSections
         }
-        .onChange(of: spec.hasAdvancedOptions) { _, hasValues in if hasValues { advancedExpanded = true } }
-        .onChange(of: spec.hasUnsupportedRuntimeValues) { _, hasValues in if hasValues { dockerComposeExpanded = true } }
         .task(id: spec.normalizedImageReference) {
             guard !spec.image.trimmingCharacters(in: .whitespaces).isEmpty else { return }
             await app.refreshImagesIfNeeded()
         }
     }
 
+    @ViewBuilder
+    private var pageSections: some View {
+        switch page {
+        case .basics:
+            Section {
+                generalSection
+            } header: {
+                formSectionHeader(AppText.string("runSpec.section.essentials", defaultValue: "Essentials"), highlighted: spec.hasGeneralOptions)
+            }
+            Section {
+                resourcesSection
+            } header: {
+                formSectionHeader(AppText.string("runSpec.section.resources", defaultValue: "Resources"), highlighted: spec.hasResourceOptions)
+            }
+        case .network:
+            Section {
+                portsSection
+                networkSection
+                socketsSection
+            } header: {
+                formSectionHeader(AppText.string("runSpec.section.networking", defaultValue: "Networking"), highlighted: spec.hasNetworkingOptions)
+            }
+        case .storage:
+            storageSections
+        case .options:
+            Section {
+                environmentSection
+            } header: {
+                formSectionHeader(AppText.string("runSpec.section.environment", defaultValue: "Environment"), highlighted: spec.hasEnvironmentOptions)
+            }
+            Section {
+                restartSection
+                healthSection
+            } header: {
+                formSectionHeader(AppText.string("runSpec.section.appManaged", defaultValue: "App Managed"), highlighted: spec.hasAppManagedOptions)
+            }
+            Section {
+                personalizationSection
+            } header: {
+                formSectionHeader(AppText.sectionSettingsAppearance, highlighted: spec.hasPersonalizationOptions)
+            }
+        case .advanced:
+            advancedOptionsSection
+            dockerComposeSection
+        }
+    }
+
+    private func formSectionHeader(_ title: String, highlighted: Bool) -> some View {
+        HStack(spacing: UI.Layout.Spacing.xs) {
+            if highlighted {
+                Circle()
+                    .fill(Color.blue)
+                    .frame(width: 6, height: 6)
+            }
+            Text(title)
+                .foregroundStyle(highlighted ? Color.blue : Color.secondary)
+        }
+    }
+
+    private func storageGroupHeader(index: Int, group: StorageGroup, onRemove: @escaping () -> Void) -> some View {
+        HStack(spacing: UI.Layout.Spacing.s) {
+            formSectionHeader(storageGroupTitle(index: index, group: group), highlighted: storageGroupHasValues(group))
+            Spacer()
+            Button(role: .destructive, action: onRemove) {
+                Image(systemName: "minus.circle")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help(AppText.string("runSpec.removeStorageGroup", defaultValue: "Remove storage group"))
+        }
+    }
+
+    private func storageGroupTitle(index: Int, group: StorageGroup) -> String {
+        if group.usesRuntimeVolume {
+            let name = group.volumeName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !name.isEmpty { return name }
+        }
+        return "\(AppText.string("runSpec.storageGroup", defaultValue: "Storage Group")) \(index + 1)"
+    }
+
+    private func storageGroupFooter(_ group: StorageGroup) -> some View {
+        Text(group.usesRuntimeVolume
+            ? AppText.string("runSpec.storageGroup.runtimeVolume.footer", defaultValue: "Contained mounts this runtime volume, then links each host folder inside it before the container starts.")
+            : AppText.string("runSpec.storageGroup.bindMount.footer", defaultValue: "Each path is mounted directly from the host into the container."))
+            .foregroundStyle(.secondary)
+    }
+
+    private func storageGroupHasValues(_ group: StorageGroup) -> Bool {
+        group.usesRuntimeVolume ||
+        !group.volumeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        !group.volumeTarget.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        group.paths.contains { path in
+            !path.hostPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            !path.internalPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    private func formRow<Trailing: View>(title: String,
+                                         path: Core.Field.Path? = nil,
+                                         subtitle: String? = nil,
+                                         info: String? = nil,
+                                         error: String? = nil,
+                                         isChanged: Bool? = nil,
+                                         @ViewBuilder trailing: @escaping () -> Trailing) -> some View {
+        UI.Form.Row(title: title,
+                    subtitle: subtitle,
+                    info: info,
+                    error: error ?? path.flatMap(fieldError),
+                    isChanged: isChanged ?? path.map(fieldChanged) ?? false,
+                    trailing: trailing)
+    }
+
+    private func formField<Control: View>(label: String,
+                                          path: Core.Field.Path? = nil,
+                                          info: String? = nil,
+                                          error: String? = nil,
+                                          isChanged: Bool? = nil,
+                                          @ViewBuilder control: @escaping () -> Control) -> some View {
+        UI.Form.Field(label: label,
+                      info: info,
+                      error: error ?? path.flatMap(fieldError),
+                      isChanged: isChanged ?? path.map(fieldChanged) ?? false,
+                      control: control)
+    }
+
+    private func formToggleRow(title: String,
+                               path: Core.Field.Path? = nil,
+                               subtitle: String? = nil,
+                               info: String? = nil,
+                               error: String? = nil,
+                               isChanged: Bool? = nil,
+                               isOn: Binding<Bool>) -> some View {
+        UI.Form.ToggleRow(title: title,
+                          subtitle: subtitle,
+                          info: info,
+                          error: error ?? path.flatMap(fieldError),
+                          isChanged: isChanged ?? path.map(fieldChanged) ?? false,
+                          isOn: isOn)
+    }
+
+    private func fieldChanged(_ path: Core.Field.Path) -> Bool {
+        guard let field = spec.definition.descriptor(for: path) else { return false }
+        let value = spec.document.value(path, in: spec.definition) ?? field.defaultValue
+        return value != field.defaultValue
+    }
+
+    private func fieldError(_ path: Core.Field.Path) -> String? {
+        spec.validationIssues
+            .first { $0.field == path && $0.severity == .error }?
+            .localizedMessage()
+    }
+
     private var generalSection: some View {
         Group {
-            UI.Panel.Row(title: AppText.runtime,
-                     subtitle: app.runtimePickerIsEnabled ? AppText.runtimeSubtitle : app.runtimePickerDisabledReason) {
+            formRow(title: AppText.runtime,
+                    path: .runtimeKind,
+                    subtitle: app.runtimePickerIsEnabled ? AppText.runtimeSubtitle : app.runtimePickerDisabledReason) {
                 Picker("", selection: runtimeKindBinding) {
                     ForEach(app.availableRuntimeDescriptors, id: \.kind) { descriptor in
                         Text(descriptor.displayName).tag(descriptor.kind)
@@ -66,23 +194,24 @@ struct ContainerSchemaForm: View {
                 .fixedSize()
                 .disabled(!app.runtimePickerIsEnabled)
             }
-            UI.Panel.Field(label: AppText.string("runSpec.image", defaultValue: "Image"),
-                       info: fieldInfo(.imageReference),
-                       error: spec.image.trimmingCharacters(in: .whitespaces).isEmpty ? AppText.string("runSpec.image.required", defaultValue: "An image reference is required.") : nil) {
-                TextField("", text: $spec.image, prompt: Text("e.g. nginx:latest")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.image", defaultValue: "Image"),
+                      path: .imageReference,
+                      info: fieldInfo(.imageReference)) {
+                TextField("", text: $spec.image, prompt: Text("e.g. nginx:latest"))
             }
             if imageDefaults != nil {
-                UI.Panel.Row(title: AppText.string("runSpec.imageDefaults", defaultValue: "Image defaults"),
-                         subtitle: AppText.string("runSpec.imageDefaults.subtitle", defaultValue: "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config."),
-                         info: AppText.string("containerForm.imageDefaults.info", defaultValue: "Images can define default startup settings. Adopt copies those defaults into this form so you can see and edit them before running.")) {
+                formRow(title: AppText.string("runSpec.imageDefaults", defaultValue: "Image defaults"),
+                        subtitle: AppText.string("runSpec.imageDefaults.subtitle", defaultValue: "Fill empty command, entrypoint, user, working directory, and environment fields from the pulled image config."),
+                        info: AppText.string("containerForm.imageDefaults.info", defaultValue: "Images can define default startup settings. Adopt copies those defaults into this form so you can see and edit them before running.")) {
                     UI.Action.TextButton(title: AppText.string("runSpec.adopt", defaultValue: "Adopt"),
                                            systemName: "wand.and.stars") {
                         adoptImageDefaults()
                     }
                 }
             }
-            UI.Panel.Row(title: AppText.string("runSpec.platform", defaultValue: "Platform"),
-                     info: fieldInfo(.imagePlatform)) {
+            formRow(title: AppText.string("runSpec.platform", defaultValue: "Platform"),
+                    path: .imagePlatform,
+                    info: fieldInfo(.imagePlatform)) {
                 Picker("", selection: platformPresetBinding) {
                     Text("Default").tag("")
                     Text("Linux arm64").tag("linux/arm64")
@@ -93,48 +222,61 @@ struct ContainerSchemaForm: View {
                 .labelsHidden().fixedSize()
             }
             if platformPresetBinding.wrappedValue == "custom" {
-                UI.Panel.Field(label: AppText.string("runSpec.customPlatform", defaultValue: "Custom platform"),
-                           info: fieldInfo(.imagePlatform)) {
-                    TextField("", text: $spec.platform, prompt: Text("os/arch[/variant]")).textFieldStyle(.roundedBorder)
+                formField(label: AppText.string("runSpec.customPlatform", defaultValue: "Custom platform"),
+                          path: .imagePlatform,
+                          info: fieldInfo(.imagePlatform)) {
+                    TextField("", text: $spec.platform, prompt: Text("os/arch[/variant]"))
                 }
             }
-            UI.Panel.Field(label: fieldLabel(.imageOS, fallback: "Image OS"),
-                       info: fieldInfo(.imageOS)) {
-                TextField("", text: $spec.imageOS, prompt: Text("linux")).textFieldStyle(.roundedBorder)
+            formField(label: fieldLabel(.imageOS, fallback: "Image OS"),
+                      path: .imageOS,
+                      info: fieldInfo(.imageOS)) {
+                TextField("", text: $spec.imageOS, prompt: Text("linux"))
             }
-            UI.Panel.Field(label: fieldLabel(.imageArchitecture, fallback: "Image architecture"),
-                       info: fieldInfo(.imageArchitecture)) {
-                TextField("", text: $spec.imageArchitecture, prompt: Text("arm64")).textFieldStyle(.roundedBorder)
+            formField(label: fieldLabel(.imageArchitecture, fallback: "Image architecture"),
+                      path: .imageArchitecture,
+                      info: fieldInfo(.imageArchitecture)) {
+                TextField("", text: $spec.imageArchitecture, prompt: Text("arm64"))
             }
-            UI.Panel.Field(label: AppText.string("runSpec.name", defaultValue: "Name"),
-                       info: fieldInfo(.containerName)) {
-                TextField("", text: $spec.name, prompt: Text("optional")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.name", defaultValue: "Name"),
+                      path: .containerName,
+                      info: fieldInfo(.containerName)) {
+                TextField("", text: $spec.name, prompt: Text("optional"))
             }
-            UI.Panel.Field(label: AppText.string("runSpec.command", defaultValue: "Command"),
-                       info: fieldInfo(.processCommand)) {
-                TextField("", text: $spec.command, prompt: Text("override the default command (optional)")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.command", defaultValue: "Command"),
+                      path: .processCommand,
+                      info: fieldInfo(.processCommand)) {
+                TextField("", text: $spec.command, prompt: Text("override the default command (optional)"))
             }
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.detach", defaultValue: "Run in the background"),
-                           info: fieldInfo(.processDetach), isOn: $spec.detach)
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.removeWhenStopped", defaultValue: "Remove when stopped"),
-                           info: fieldInfo(.processRemoveOnExit), isOn: $spec.removeOnExit)
+            formToggleRow(title: AppText.string("runSpec.detach", defaultValue: "Run in the background"),
+                          path: .processDetach,
+                          info: fieldInfo(.processDetach),
+                          isOn: $spec.detach)
+            formToggleRow(title: AppText.string("runSpec.removeWhenStopped", defaultValue: "Remove when stopped"),
+                          path: .processRemoveOnExit,
+                          info: fieldInfo(.processRemoveOnExit),
+                          isOn: $spec.removeOnExit)
         }
     }
 
     private var resourcesSection: some View {
         Group {
-            UI.Panel.Row(title: AppText.string("runSpec.cpus", defaultValue: "CPUs"),
-                     info: fieldInfo(.resourcesCPULimit)) {
+            formRow(title: AppText.string("runSpec.cpus", defaultValue: "CPUs"),
+                    path: .resourcesCPULimit,
+                    info: fieldInfo(.resourcesCPULimit)) {
                 Picker("", selection: cpuBinding) {
                     Text("Default").tag(0)
                     ForEach(1...max(1, hostCPUs), id: \.self) { Text("\($0)").tag($0) }
                 }
                 .labelsHidden().fixedSize()
             }
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.limitMemory", defaultValue: "Limit memory"),
-                           info: fieldInfo(.resourcesMemoryLimit), isOn: memoryLimitBinding)
+            formToggleRow(title: AppText.string("runSpec.limitMemory", defaultValue: "Limit memory"),
+                          path: .resourcesMemoryLimit,
+                          info: fieldInfo(.resourcesMemoryLimit),
+                          isOn: memoryLimitBinding)
             if !spec.memory.isEmpty {
-                UI.Panel.Field(label: AppText.string("runSpec.memory", defaultValue: "Memory")) {
+                formField(label: AppText.string("runSpec.memory", defaultValue: "Memory"),
+                          path: .resourcesMemoryLimit) {
                     HStack(spacing: UI.Layout.Spacing.s) {
                         Slider(value: memoryGBBinding, in: 0.5...max(0.5, maxMemoryGB), step: 0.5)
                         Text(memoryReadout).monospacedDigit().frame(width: UI.Form.Width.memoryReadout)
@@ -205,12 +347,16 @@ struct ContainerSchemaForm: View {
 
     private var portsSection: some View {
         Group {
-            ForEach($spec.ports) { $port in
+            ForEach(spec.ports) { port in
                 HStack {
-                    TextField("Host", text: $port.hostPort).textFieldStyle(.roundedBorder).frame(width: UI.Form.Width.port)
+                    TextField("Host", text: elementBinding($spec.ports, id: port.id, \.hostPort, fallback: ""))
+
+                        .frame(width: UI.Form.Width.port)
                     UI.Symbol.Image(systemName: "arrow.right")
-                    TextField("Container", text: $port.containerPort).textFieldStyle(.roundedBorder).frame(width: UI.Form.Width.containerPort)
-                    Picker("", selection: $port.proto) { Text("tcp").tag("tcp"); Text("udp").tag("udp") }
+                    TextField("Container", text: elementBinding($spec.ports, id: port.id, \.containerPort, fallback: ""))
+
+                        .frame(width: UI.Form.Width.containerPort)
+                    Picker("", selection: elementBinding($spec.ports, id: port.id, \.proto, fallback: "tcp")) { Text("tcp").tag("tcp"); Text("udp").tag("udp") }
                         .labelsHidden().frame(width: UI.Form.Width.port)
                     Spacer()
                     removeButton { spec.ports.removeAll { $0.id == port.id } }
@@ -222,34 +368,41 @@ struct ContainerSchemaForm: View {
         }
     }
 
-    private var volumesSection: some View {
-        Group {
-            ForEach($spec.volumes) { $vol in
-                LazyVStack(spacing: UI.Layout.Spacing.xs) {
-                    HStack {
-                        sourcePicker(source: $vol.source)
-                        TextField("Source (host path or volume)", text: $vol.source).textFieldStyle(.roundedBorder)
-                        removeButton { spec.volumes.removeAll { $0.id == vol.id } }
-                    }
-                    HStack {
-                        TextField("Target (container path)", text: $vol.target).textFieldStyle(.roundedBorder)
-                        Toggle("RO", isOn: $vol.readOnly).labelsHidden().toggleStyle(.switch).controlSize(.mini)
-                    }
+    @ViewBuilder
+    private var storageSections: some View {
+        ForEach(Array(storageGroupsBinding.wrappedValue.enumerated()), id: \.element.id) { index, group in
+            Section {
+                StorageGroupEditor(runtimeKind: spec.effectiveRuntimeKind,
+                                   group: storageGroupBinding(id: group.id))
+            } header: {
+                storageGroupHeader(index: index, group: group) {
+                    var groups = storageGroupsBinding.wrappedValue
+                    groups.removeAll { $0.id == group.id }
+                    storageGroupsBinding.wrappedValue = groups
                 }
+            } footer: {
+                storageGroupFooter(group)
             }
-            addButton(AppText.string("runSpec.addVolume", defaultValue: "Add volume"), info: fieldInfo(.storageVolumes)) {
-                spec.volumes.append(VolumeMap())
+        }
+
+        Section {
+            addButton(AppText.string("runSpec.addStorageGroup", defaultValue: "Add storage group"), info: fieldInfo(.storageVolumes)) {
+                var groups = storageGroupsBinding.wrappedValue
+                groups.append(StorageGroup())
+                storageGroupsBinding.wrappedValue = groups
             }
         }
     }
 
     private var environmentSection: some View {
         Group {
-            ForEach($spec.env) { $variable in
+            ForEach(spec.env) { variable in
                 HStack {
-                    TextField("KEY", text: $variable.key).textFieldStyle(.roundedBorder)
+                    TextField("KEY", text: elementBinding($spec.env, id: variable.id, \.key, fallback: ""))
+
                     UI.State.StatusText("=")
-                    TextField("value", text: $variable.value).textFieldStyle(.roundedBorder)
+                    TextField("value", text: elementBinding($spec.env, id: variable.id, \.value, fallback: ""))
+
                     removeButton { spec.env.removeAll { $0.id == variable.id } }
                 }
             }
@@ -263,13 +416,15 @@ struct ContainerSchemaForm: View {
 
     private var socketsSection: some View {
         Group {
-            ForEach($spec.sockets) { $socket in
+            ForEach(spec.sockets) { socket in
                 LazyVStack(spacing: UI.Layout.Spacing.xs) {
                     HStack {
-                        TextField("Host socket path", text: $socket.hostPath).textFieldStyle(.roundedBorder)
+                        TextField("Host socket path", text: elementBinding($spec.sockets, id: socket.id, \.hostPath, fallback: ""))
+
                         removeButton { spec.sockets.removeAll { $0.id == socket.id } }
                     }
-                    TextField("Container socket path", text: $socket.containerPath).textFieldStyle(.roundedBorder)
+                    TextField("Container socket path", text: elementBinding($spec.sockets, id: socket.id, \.containerPath, fallback: ""))
+
                 }
             }
             addButton(AppText.string("runSpec.addSocket", defaultValue: "Add socket"), info: fieldInfo(.networkSockets)) {
@@ -280,11 +435,13 @@ struct ContainerSchemaForm: View {
 
     private var labelsSection: some View {
         Group {
-            ForEach($spec.labels) { $label in
+            ForEach(spec.labels) { label in
                 HStack {
-                    TextField("KEY", text: $label.key).textFieldStyle(.roundedBorder)
+                    TextField("KEY", text: elementBinding($spec.labels, id: label.id, \.key, fallback: ""))
+
                     UI.State.StatusText("=")
-                    TextField("value", text: $label.value).textFieldStyle(.roundedBorder)
+                    TextField("value", text: elementBinding($spec.labels, id: label.id, \.value, fallback: ""))
+
                     removeButton { spec.labels.removeAll { $0.id == label.id } }
                 }
             }
@@ -296,23 +453,28 @@ struct ContainerSchemaForm: View {
 
     private var personalizationSection: some View {
         Group {
-            UI.Panel.Field(label: AppText.string("runSpec.nickname", defaultValue: "Nickname"),
-                       info: AppText.string("containerForm.personalization.nickname.info", defaultValue: "A display name for the card only. It does not rename the real container.")) {
-                TextField("", text: $spec.personalization.nickname, prompt: Text("display name (optional)")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.nickname", defaultValue: "Nickname"),
+                      info: AppText.string("containerForm.personalization.nickname.info", defaultValue: "A display name for the card only. It does not rename the real container."),
+                      isChanged: spec.personalization.nickname != Personalization().nickname) {
+                TextField("", text: $spec.personalization.nickname, prompt: Text("display name (optional)"))
             }
-            UI.Panel.Field(label: AppText.string("runSpec.icon", defaultValue: "Icon"),
-                       info: AppText.string("containerForm.personalization.icon.info", defaultValue: "An SF Symbol name for the card icon, such as `shippingbox` or `bolt`.")) {
-                TextField("", text: $spec.personalization.icon, prompt: Text("SF Symbol, e.g. globe, bolt")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.icon", defaultValue: "Icon"),
+                      info: AppText.string("containerForm.personalization.icon.info", defaultValue: "An SF Symbol name for the card icon, such as `shippingbox` or `bolt`."),
+                      isChanged: spec.personalization.icon != Personalization().icon) {
+                TextField("", text: $spec.personalization.icon, prompt: Text("SF Symbol, e.g. globe, bolt"))
             }
-            UI.Panel.Row(title: AppText.string("runSpec.color", defaultValue: "Color"),
-                     info: AppText.string("containerForm.personalization.color.info", defaultValue: "Sets the card icon color. If background color is enabled, it also tints the glass card.")) {
+            formRow(title: AppText.string("runSpec.color", defaultValue: "Color"),
+                    info: AppText.string("containerForm.personalization.color.info", defaultValue: "Sets the card icon color. If background color is enabled, it also tints the glass card."),
+                    isChanged: spec.personalization.tint != Personalization().tint) {
                 UI.Control.TintSelector(selection: $spec.personalization.tint) { $0.localizedDisplayName }
             }
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.colorCardBackground", defaultValue: "Color the card background"),
-                           info: AppText.string("containerForm.personalization.colorCardBackground.info", defaultValue: "Adds a soft color wash behind the glass. Turn it off for clear glass with only a colored icon."),
-                           isOn: $spec.personalization.fillBackground)
+            formToggleRow(title: AppText.string("runSpec.colorCardBackground", defaultValue: "Color the card background"),
+                          info: AppText.string("containerForm.personalization.colorCardBackground.info", defaultValue: "Adds a soft color wash behind the glass. Turn it off for clear glass with only a colored icon."),
+                          isChanged: spec.personalization.fillBackground != Personalization().fillBackground,
+                          isOn: $spec.personalization.fillBackground)
             if spec.personalization.fillBackground {
-                UI.Panel.Field(label: AppText.string("runSpec.opacity", defaultValue: "Opacity")) {
+                formField(label: AppText.string("runSpec.opacity", defaultValue: "Opacity"),
+                          isChanged: spec.personalization.backgroundOpacity != Personalization.defaultBackgroundOpacity) {
                     HStack(spacing: UI.Layout.Spacing.s) {
                         Slider(value: $spec.personalization.backgroundOpacity, in: 0.05...0.6)
                         Text(Format.percent(spec.personalization.backgroundOpacity))
@@ -320,14 +482,16 @@ struct ContainerSchemaForm: View {
                             .frame(width: UI.Form.Width.shortReadout)
                     }
                 }
-                UI.Panel.ToggleRow(title: AppText.string("runSpec.gradient", defaultValue: "Gradient"),
-                               info: AppText.string("containerForm.personalization.gradient.info", defaultValue: "Blends the color across the card instead of using one flat wash."),
-                               isOn: $spec.personalization.gradient)
+                formToggleRow(title: AppText.string("runSpec.gradient", defaultValue: "Gradient"),
+                              info: AppText.string("containerForm.personalization.gradient.info", defaultValue: "Blends the color across the card instead of using one flat wash."),
+                              isChanged: spec.personalization.gradient != Personalization().gradient,
+                              isOn: $spec.personalization.gradient)
                 if spec.personalization.gradient {
                     UI.Control.GradientAngle(angle: $spec.personalization.gradientAngle, title: AppText.direction)
                 }
-                UI.Panel.Row(title: AppText.string("runSpec.blendMode", defaultValue: "Blend mode"),
-                         info: AppText.string("containerForm.personalization.blendMode.info", defaultValue: "Controls how the card color wash blends with the glass behind it.")) {
+                formRow(title: AppText.string("runSpec.blendMode", defaultValue: "Blend mode"),
+                        info: AppText.string("containerForm.personalization.blendMode.info", defaultValue: "Controls how the card color wash blends with the glass behind it."),
+                        isChanged: spec.personalization.backgroundBlendMode != Personalization().backgroundBlendMode) {
                     Picker("", selection: $spec.personalization.backgroundBlendMode) {
                         ForEach(UI.Theme.ColorBlendMode.allCases) { mode in
                             Text(mode.localizedDisplayName).tag(mode)
@@ -341,8 +505,9 @@ struct ContainerSchemaForm: View {
     }
 
     private var restartSection: some View {
-        UI.Panel.Row(title: AppText.string("runSpec.restartPolicy", defaultValue: "Restart policy"),
-                 info: AppText.string("containerForm.restartPolicy.info", defaultValue: "Contained restarts the container automatically based on this setting.")) {
+        formRow(title: AppText.string("runSpec.restartPolicy", defaultValue: "Restart policy"),
+                path: .lifecycleRestartPolicy,
+                info: AppText.string("containerForm.restartPolicy.info", defaultValue: "Contained restarts the container automatically based on this setting.")) {
             Picker("", selection: $spec.restart) {
                 ForEach(Core.Container.RestartPolicy.allCases) { Text($0.localizedDisplayName).tag($0) }
             }
@@ -352,13 +517,15 @@ struct ContainerSchemaForm: View {
 
     private var healthSection: some View {
         Group {
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.enableHealthcheck", defaultValue: "Enable healthcheck"),
-                           info: AppText.string("containerForm.healthcheck.enabled.info", defaultValue: "Contained probes the container on an interval (app-managed; the runtime has no native healthcheck)."),
-                           isOn: $spec.healthCheck.enabled)
+            formToggleRow(title: AppText.string("runSpec.enableHealthcheck", defaultValue: "Enable healthcheck"),
+                          info: AppText.string("containerForm.healthcheck.enabled.info", defaultValue: "Contained probes the container on an interval (app-managed; the runtime has no native healthcheck)."),
+                          isChanged: spec.healthCheck.enabled != Core.Container.HealthCheck().enabled,
+                          isOn: $spec.healthCheck.enabled)
             if spec.healthCheck.enabled {
-                UI.Panel.Field(label: AppText.string("runSpec.probeCommand", defaultValue: "Probe command"),
-                           info: AppText.string("containerForm.healthcheck.probeCommand.info", defaultValue: "Run inside the container via `sh -c`; a zero exit = healthy. Needs a shell in the image.")) {
-                    TextField("", text: healthCommandBinding, prompt: Text("curl -f http://localhost/ || exit 1")).textFieldStyle(.roundedBorder)
+                formField(label: AppText.string("runSpec.probeCommand", defaultValue: "Probe command"),
+                          info: AppText.string("containerForm.healthcheck.probeCommand.info", defaultValue: "Run inside the container via `sh -c`; a zero exit = healthy. Needs a shell in the image."),
+                          isChanged: spec.healthCheck.command != Core.Container.HealthCheck().command) {
+                    TextField("", text: healthCommandBinding, prompt: Text("curl -f http://localhost/ || exit 1"))
                 }
                 Stepper("Interval: \(spec.healthCheck.intervalSeconds)s",
                         value: $spec.healthCheck.intervalSeconds, in: 5...600, step: 5)
@@ -383,34 +550,43 @@ struct ContainerSchemaForm: View {
     @ViewBuilder
     private var runtimeSection: some View {
         Group {
-            UI.Panel.Field(label: AppText.string("runSpec.entrypoint", defaultValue: "Entrypoint"),
-                       info: fieldInfo(.processEntrypoint)) {
-                TextField("", text: $spec.entrypoint, prompt: Text("optional")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.entrypoint", defaultValue: "Entrypoint"),
+                      path: .processEntrypoint,
+                      info: fieldInfo(.processEntrypoint)) {
+                TextField("", text: $spec.entrypoint, prompt: Text("optional"))
             }
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.keepStdinOpen", defaultValue: "Keep stdin open"),
-                           info: fieldInfo(.processInteractive), isOn: $spec.interactive)
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.allocateTTY", defaultValue: "Allocate TTY"),
-                           info: fieldInfo(.processTTY), isOn: $spec.tty)
-            UI.Panel.Field(label: AppText.string("runSpec.workingDirectory", defaultValue: "Working directory"),
-                       info: fieldInfo(.processWorkingDirectory)) {
-                TextField("", text: $spec.workingDir, prompt: Text("optional, e.g. /app")).textFieldStyle(.roundedBorder)
+            formToggleRow(title: AppText.string("runSpec.keepStdinOpen", defaultValue: "Keep stdin open"),
+                          path: .processInteractive,
+                          info: fieldInfo(.processInteractive), isOn: $spec.interactive)
+            formToggleRow(title: AppText.string("runSpec.allocateTTY", defaultValue: "Allocate TTY"),
+                          path: .processTTY,
+                          info: fieldInfo(.processTTY), isOn: $spec.tty)
+            formField(label: AppText.string("runSpec.workingDirectory", defaultValue: "Working directory"),
+                      path: .processWorkingDirectory,
+                      info: fieldInfo(.processWorkingDirectory)) {
+                TextField("", text: $spec.workingDir, prompt: Text("optional, e.g. /app"))
             }
-            UI.Panel.Field(label: AppText.string("runSpec.user", defaultValue: "User"),
-                       info: fieldInfo(.processUser)) {
-                TextField("", text: $spec.user, prompt: Text("name | uid[:gid]")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.user", defaultValue: "User"),
+                      path: .processUser,
+                      info: fieldInfo(.processUser)) {
+                TextField("", text: $spec.user, prompt: Text("name | uid[:gid]"))
             }
-            UI.Panel.Field(label: AppText.string("runSpec.userID", defaultValue: "User ID"),
-                       info: "\(fieldInfo(.processUserID))\n\n\(fieldInfo(.processGroupID))") {
+            formField(label: AppText.string("runSpec.userID", defaultValue: "User ID"),
+                      info: "\(fieldInfo(.processUserID))\n\n\(fieldInfo(.processGroupID))",
+                      error: fieldError(.processUserID) ?? fieldError(.processGroupID),
+                      isChanged: fieldChanged(.processUserID) || fieldChanged(.processGroupID)) {
                 HStack {
-                    TextField("UID", text: $spec.uid).textFieldStyle(.roundedBorder).frame(width: UI.Form.Width.userID)
-                    TextField("GID", text: $spec.gid).textFieldStyle(.roundedBorder).frame(width: UI.Form.Width.userID)
+                    TextField("UID", text: $spec.uid).frame(width: UI.Form.Width.userID)
+                    TextField("GID", text: $spec.gid).frame(width: UI.Form.Width.userID)
                     Spacer()
                 }
             }
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.setSharedMemorySize", defaultValue: "Set shared memory size"),
-                           info: fieldInfo(.resourcesSharedMemorySize), isOn: shmLimitBinding)
+            formToggleRow(title: AppText.string("runSpec.setSharedMemorySize", defaultValue: "Set shared memory size"),
+                          path: .resourcesSharedMemorySize,
+                          info: fieldInfo(.resourcesSharedMemorySize), isOn: shmLimitBinding)
             if !spec.shmSize.isEmpty {
-                UI.Panel.Field(label: AppText.string("runSpec.sharedMemory", defaultValue: "Shared memory")) {
+                formField(label: AppText.string("runSpec.sharedMemory", defaultValue: "Shared memory"),
+                          path: .resourcesSharedMemorySize) {
                     HStack(spacing: UI.Layout.Spacing.s) {
                         Slider(value: shmGBBinding, in: 0.0625...max(0.0625, maxMemoryGB), step: 0.0625)
                         Text(memoryReadout(spec.shmSize, fallbackGB: 0.0625))
@@ -424,9 +600,10 @@ struct ContainerSchemaForm: View {
                        info: fieldInfo(.securityCapabilitiesAdd))
             stringList(AppText.string("runSpec.dropCapability", defaultValue: "Drop capability"), $spec.capDrop, prompt: "CAP_NET_RAW or ALL",
                        info: fieldInfo(.securityCapabilitiesDrop))
-            UI.Panel.Field(label: AppText.string("runSpec.containerIDFile", defaultValue: "Container ID file"),
-                       info: fieldInfo(.outputContainerIDFile)) {
-                TextField("", text: $spec.cidFile, prompt: Text("optional path")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.containerIDFile", defaultValue: "Container ID file"),
+                      path: .outputContainerIDFile,
+                      info: fieldInfo(.outputContainerIDFile)) {
+                TextField("", text: $spec.cidFile, prompt: Text("optional path"))
             }
             stringList(AppText.string("runSpec.addTmpfsMount", defaultValue: "Add tmpfs mount"), $spec.tmpfs, prompt: "/path",
                        info: fieldInfo(.storageTmpfs))
@@ -438,23 +615,29 @@ struct ContainerSchemaForm: View {
     @ViewBuilder
     private var securitySection: some View {
         Group {
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.readOnlyFilesystem", defaultValue: "Read-only filesystem"),
-                           info: fieldInfo(.securityReadOnlyRootFS), isOn: $spec.readOnly)
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.useInitProcess", defaultValue: "Use an init process"),
-                           info: fieldInfo(.securityUseInit), isOn: $spec.useInit)
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.rosetta", defaultValue: "Rosetta (x86 apps)"),
-                           info: fieldInfo(.securityRosetta), isOn: $spec.rosetta)
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.forwardSSHAgent", defaultValue: "Forward SSH agent"),
-                           info: fieldInfo(.securitySSHAgent), isOn: $spec.ssh)
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.exposeVirtualization", defaultValue: "Expose virtualization"),
-                           info: fieldInfo(.securityVirtualization), isOn: $spec.virtualization)
+            formToggleRow(title: AppText.string("runSpec.readOnlyFilesystem", defaultValue: "Read-only filesystem"),
+                          path: .securityReadOnlyRootFS,
+                          info: fieldInfo(.securityReadOnlyRootFS), isOn: $spec.readOnly)
+            formToggleRow(title: AppText.string("runSpec.useInitProcess", defaultValue: "Use an init process"),
+                          path: .securityUseInit,
+                          info: fieldInfo(.securityUseInit), isOn: $spec.useInit)
+            formToggleRow(title: AppText.string("runSpec.rosetta", defaultValue: "Rosetta (x86 apps)"),
+                          path: .securityRosetta,
+                          info: fieldInfo(.securityRosetta), isOn: $spec.rosetta)
+            formToggleRow(title: AppText.string("runSpec.forwardSSHAgent", defaultValue: "Forward SSH agent"),
+                          path: .securitySSHAgent,
+                          info: fieldInfo(.securitySSHAgent), isOn: $spec.ssh)
+            formToggleRow(title: AppText.string("runSpec.exposeVirtualization", defaultValue: "Expose virtualization"),
+                          path: .securityVirtualization,
+                          info: fieldInfo(.securityVirtualization), isOn: $spec.virtualization)
         }
     }
 
     @ViewBuilder
     private var networkSection: some View {
-        UI.Panel.Row(title: AppText.string("runSpec.network", defaultValue: "Network"),
-                 info: fieldInfo(.networkName)) {
+        formRow(title: AppText.string("runSpec.network", defaultValue: "Network"),
+                path: .networkName,
+                info: fieldInfo(.networkName)) {
             Menu(networkMenuTitle) {
                 Button {
                     spec.network = ""
@@ -477,7 +660,7 @@ struct ContainerSchemaForm: View {
                 }
             }
             .fixedSize()
-            TextField("", text: $spec.network, prompt: Text("custom network")).textFieldStyle(.roundedBorder)
+            TextField("", text: $spec.network, prompt: Text("custom network"))
                 .frame(width: UI.Form.Width.networkName)
         }
         .task { await app.refreshNetworks() }
@@ -486,20 +669,24 @@ struct ContainerSchemaForm: View {
     @ViewBuilder
     private var fetchSection: some View {
         Group {
-            UI.Panel.Field(label: AppText.string("runSpec.runtime", defaultValue: "Runtime"),
-                       info: fieldInfo(.runtimeHandler)) {
-                TextField("", text: $spec.runtime, prompt: Text("optional")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.runtime", defaultValue: "Runtime"),
+                      path: .runtimeHandler,
+                      info: fieldInfo(.runtimeHandler)) {
+                TextField("", text: $spec.runtime, prompt: Text("optional"))
             }
-            UI.Panel.Field(label: AppText.string("runSpec.initImage", defaultValue: "Init image"),
-                       info: fieldInfo(.imageInitReference)) {
-                TextField("", text: $spec.initImage, prompt: Text("optional image")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.initImage", defaultValue: "Init image"),
+                      path: .imageInitReference,
+                      info: fieldInfo(.imageInitReference)) {
+                TextField("", text: $spec.initImage, prompt: Text("optional image"))
             }
-            UI.Panel.Field(label: AppText.string("runSpec.kernel", defaultValue: "Kernel"),
-                       info: fieldInfo(.kernelPath)) {
-                TextField("", text: $spec.kernel, prompt: Text("optional path")).textFieldStyle(.roundedBorder)
+            formField(label: AppText.string("runSpec.kernel", defaultValue: "Kernel"),
+                      path: .kernelPath,
+                      info: fieldInfo(.kernelPath)) {
+                TextField("", text: $spec.kernel, prompt: Text("optional path"))
             }
-            UI.Panel.Row(title: AppText.string("runSpec.registryScheme", defaultValue: "Registry scheme"),
-                     info: fieldInfo(.registryScheme)) {
+            formRow(title: AppText.string("runSpec.registryScheme", defaultValue: "Registry scheme"),
+                    path: .registryScheme,
+                    info: fieldInfo(.registryScheme)) {
                 Picker("", selection: $spec.scheme) {
                     Text("Default").tag("")
                     Text("Auto").tag("auto")
@@ -508,8 +695,9 @@ struct ContainerSchemaForm: View {
                 }
                 .labelsHidden().fixedSize()
             }
-            UI.Panel.Row(title: AppText.string("runSpec.progress", defaultValue: "Progress"),
-                     info: fieldInfo(.progressMode)) {
+            formRow(title: AppText.string("runSpec.progress", defaultValue: "Progress"),
+                    path: .progressMode,
+                    info: fieldInfo(.progressMode)) {
                 Picker("", selection: $spec.progress) {
                     Text("Default").tag("")
                     Text("Auto").tag("auto")
@@ -520,8 +708,9 @@ struct ContainerSchemaForm: View {
                 }
                 .labelsHidden().fixedSize()
             }
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.limitParallelDownloads", defaultValue: "Limit parallel downloads"),
-                           info: fieldInfo(.imageMaxConcurrentDownloads), isOn: maxDownloadsBinding)
+            formToggleRow(title: AppText.string("runSpec.limitParallelDownloads", defaultValue: "Limit parallel downloads"),
+                          path: .imageMaxConcurrentDownloads,
+                          info: fieldInfo(.imageMaxConcurrentDownloads), isOn: maxDownloadsBinding)
             if !spec.maxConcurrentDownloads.isEmpty {
                 Stepper("Max downloads: \(maxConcurrentDownloadsBinding.wrappedValue)",
                         value: maxConcurrentDownloadsBinding, in: 1...16)
@@ -532,14 +721,16 @@ struct ContainerSchemaForm: View {
     @ViewBuilder
     private var dnsSection: some View {
         Group {
-            UI.Panel.ToggleRow(title: AppText.string("runSpec.disableDNS", defaultValue: "Disable DNS"),
-                           info: fieldInfo(.networkDNSDisabled), isOn: $spec.noDNS)
+            formToggleRow(title: AppText.string("runSpec.disableDNS", defaultValue: "Disable DNS"),
+                          path: .networkDNSDisabled,
+                          info: fieldInfo(.networkDNSDisabled), isOn: $spec.noDNS)
             if !spec.noDNS {
                 stringList(AppText.string("runSpec.addNameserver", defaultValue: "Add nameserver"), $spec.dns, prompt: "1.1.1.1",
                            info: fieldInfo(.networkDNSServers))
-                UI.Panel.Field(label: AppText.string("runSpec.searchDomain", defaultValue: "Search domain"),
-                           info: fieldInfo(.networkDNSDomain)) {
-                    TextField("", text: $spec.dnsDomain, prompt: Text("optional")).textFieldStyle(.roundedBorder)
+                formField(label: AppText.string("runSpec.searchDomain", defaultValue: "Search domain"),
+                          path: .networkDNSDomain,
+                          info: fieldInfo(.networkDNSDomain)) {
+                    TextField("", text: $spec.dnsDomain, prompt: Text("optional"))
                 }
                 stringList(AppText.string("runSpec.addSearchDomain", defaultValue: "Add search domain"), $spec.dnsSearch, prompt: "example.com",
                            info: fieldInfo(.networkDNSSearchDomains))
@@ -551,12 +742,7 @@ struct ContainerSchemaForm: View {
 
     @ViewBuilder
     private var advancedOptionsSection: some View {
-        // The header switch shows/hides the less-common run settings (Compose import and Edit flip it on
-        // automatically when advanced values are present).
-        UI.Panel.Section(header: AppText.string("runSpec.section.advancedOptions", defaultValue: "Advanced Options"),
-                     footer: AppText.string("runSpec.section.advancedOptions.footer", defaultValue: "Less-common run settings. Compose import and Edit reveal these automatically when advanced values are present."),
-                     highlighted: spec.hasAdvancedOptions,
-                     enabled: $advancedExpanded) {
+        Section {
             runtimeSection
             securitySection
             fetchSection
@@ -564,6 +750,11 @@ struct ContainerSchemaForm: View {
             stringList(AppText.string("runSpec.addMount", defaultValue: "Add mount"), $spec.mounts, prompt: "type=bind,source=/host,target=/container",
                        info: fieldInfo(.storageMounts))
             labelsSection
+        } header: {
+            formSectionHeader(AppText.string("runSpec.section.advancedOptions", defaultValue: "Advanced Options"), highlighted: spec.hasAdvancedOptions)
+        } footer: {
+            Text(.init(AppText.string("runSpec.section.advancedOptions.footer", defaultValue: "Less-common run settings. Compose import and Edit reveal these automatically when advanced values are present.")))
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -571,20 +762,23 @@ struct ContainerSchemaForm: View {
     private var dockerComposeSection: some View {
         let fields = unsupportedFields
         if !fields.isEmpty {
-            UI.Panel.Section(header: AppText.string("runSpec.section.dockerCompose", defaultValue: "Docker & Compose"),
-                         footer: AppText.string("runSpec.section.dockerCompose.footer", defaultValue: "Known Docker CLI and Compose fields preserved for future cores. Apple container cannot execute these values."),
-                         highlighted: spec.hasUnsupportedRuntimeValues,
-                         enabled: $dockerComposeExpanded) {
+            Section {
                 ForEach(fields) { field in
-                    UI.Panel.Field(label: fieldLabel(field),
-                               info: fieldInfo(field.path),
-                               error: field.support(for: spec.effectiveRuntimeKind).localizedDisabledReason()) {
+                    formField(label: fieldLabel(field),
+                              path: field.path,
+                              info: fieldInfo(field.path),
+                              error: field.support(for: spec.effectiveRuntimeKind).localizedDisabledReason()) {
                         Text(valueDescription(for: field))
                             .designSecondaryCallout()
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+            } header: {
+                formSectionHeader(AppText.string("runSpec.section.dockerCompose", defaultValue: "Docker & Compose"), highlighted: spec.hasUnsupportedRuntimeValues)
+            } footer: {
+                Text(.init(AppText.string("runSpec.section.dockerCompose.footer", defaultValue: "Known Docker CLI and Compose fields preserved for future runtimes. Apple container cannot execute these values.")))
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -625,9 +819,8 @@ struct ContainerSchemaForm: View {
     private func stringList(_ addTitle: String, _ list: Binding<[String]>, prompt: String, info: String) -> some View {
         ForEach(list.wrappedValue.indices, id: \.self) { idx in
             HStack {
-                TextField(prompt, text: Binding(get: { list.wrappedValue[idx] },
-                                                set: { list.wrappedValue[idx] = $0 }))
-                    .textFieldStyle(.roundedBorder)
+                TextField(prompt, text: stringListBinding(list, index: idx))
+
                 removeButton { list.wrappedValue.remove(at: idx) }
             }
         }
@@ -655,14 +848,54 @@ struct ContainerSchemaForm: View {
         }
     }
 
-    private func removeButton(action: @escaping () -> Void) -> some View {
-        UI.Action.Group(UI.Action.Item(systemName: "minus.circle.fill",
-                                       help: AppText.string("common.remove", defaultValue: "Remove"),
-                                       action: action))
+    private func elementBinding<Element: Identifiable, Value>(_ list: Binding<[Element]>,
+                                                              id: Element.ID,
+                                                              _ keyPath: WritableKeyPath<Element, Value>,
+                                                              fallback: Value) -> Binding<Value> where Element.ID: Equatable {
+        Binding {
+            list.wrappedValue.first { $0.id == id }?[keyPath: keyPath] ?? fallback
+        } set: { newValue in
+            guard let index = list.wrappedValue.firstIndex(where: { $0.id == id }) else { return }
+            list.wrappedValue[index][keyPath: keyPath] = newValue
+        }
     }
 
-    private func sourcePicker(source: Binding<String>) -> some View {
-        HostSourcePicker(source: source)
+    private func stringListBinding(_ list: Binding<[String]>, index: Int) -> Binding<String> {
+        Binding {
+            guard list.wrappedValue.indices.contains(index) else { return "" }
+            return list.wrappedValue[index]
+        } set: { newValue in
+            guard list.wrappedValue.indices.contains(index) else { return }
+            list.wrappedValue[index] = newValue
+        }
+    }
+
+    private func removeButton(action: @escaping () -> Void) -> some View {
+        Button(role: .destructive, action: action) {
+            Image(systemName: "minus.circle")
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .help(AppText.string("common.remove", defaultValue: "Remove"))
+    }
+
+    private var storageGroupsBinding: Binding<[StorageGroup]> {
+        Binding {
+            spec.storageGroupsForEditing
+        } set: { groups in
+            spec.storageGroupsForEditing = groups
+        }
+    }
+
+    private func storageGroupBinding(id: UUID) -> Binding<StorageGroup> {
+        Binding {
+            storageGroupsBinding.wrappedValue.first { $0.id == id } ?? StorageGroup(id: id)
+        } set: { updated in
+            var groups = storageGroupsBinding.wrappedValue
+            guard let index = groups.firstIndex(where: { $0.id == id }) else { return }
+            groups[index] = updated
+            storageGroupsBinding.wrappedValue = groups
+        }
     }
 
     private func fieldLabel(_ field: Core.Schema.FieldDescriptor) -> String {
@@ -720,52 +953,295 @@ struct ContainerSchemaForm: View {
     }
 }
 
-private struct HostSourcePicker: View {
+private enum StoragePathMode {
+    case bindMount
+    case volumeLink
+}
+
+private struct StorageGroupEditor: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @Binding var source: String
-    @State private var choosingHostSource = false
+    let runtimeKind: Core.Runtime.Kind
+    @Binding var group: StorageGroup
 
     var body: some View {
-        Menu {
-            Button {
-                choosingHostSource = true
-            } label: {
-                Label(AppText.string("runSpec.chooseFileOrFolder", defaultValue: "Choose File or Folder..."),
-                      systemImage: "folder")
+        Group {
+            UI.Form.ToggleRow(title: AppText.string("runSpec.storageGroup.useRuntimeVolume", defaultValue: "Use runtime volume"),
+                              info: AppText.string("containerForm.storageGroup.useRuntimeVolume.info",
+                                                   defaultValue: "Mounts one runtime-owned volume, then lets Contained place host-folder links inside it before the container starts."),
+                              isChanged: group.usesRuntimeVolume,
+                              isOn: usesRuntimeVolumeBinding)
+
+            if group.usesRuntimeVolume {
+                runtimeVolumeFields
             }
-            if !app.volumes.isEmpty {
-                Divider()
-                ForEach(app.volumes) { volume in
-                    Button {
-                        source = volume.name
-                    } label: {
-                        Label(volume.name, systemImage: source == volume.name ? "checkmark" : "externaldrive")
+
+            pathRows
+        }
+        .task(id: runtimeKind) { await app.refreshVolumes() }
+    }
+
+    private var runtimeVolumeFields: some View {
+        Group {
+            UI.Form.Field(label: AppText.string("runSpec.storageGroup.runtimeVolume", defaultValue: "Runtime volume"),
+                          error: group.volumeName.trimmedForVolumeLink.isEmpty ? AppText.string("runSpec.storageGroup.runtimeVolume.required", defaultValue: "Select or name a runtime volume.") : nil,
+                          isChanged: !group.volumeName.trimmedForVolumeLink.isEmpty) {
+                HStack(spacing: UI.Layout.Spacing.s) {
+                    Menu(runtimeVolumeMenuTitle) {
+                        if runtimeVolumes.isEmpty {
+                            Text(AppText.string("runSpec.noRuntimeVolumes", defaultValue: "No runtime volumes found"))
+                        } else {
+                            ForEach(runtimeVolumes) { volume in
+                                Button {
+                                    group.volumeName = volume.name
+                                } label: {
+                                    Label(volume.name, systemImage: group.volumeName == volume.name ? "checkmark" : "externaldrive")
+                                }
+                            }
+                        }
+                        Divider()
+                        Button {
+                            ui.dispatch(.createVolume)
+                        } label: {
+                            Label(AppText.string("runSpec.createNewVolume", defaultValue: "Create New Volume..."),
+                                  systemImage: "plus")
+                        }
                     }
+                    .fixedSize()
+                    TextField("Volume name", text: $group.volumeName)
                 }
             }
-            Divider()
-            Button {
-                ui.dispatch(.createVolume)
-            } label: {
-                Label(AppText.string("runSpec.createNewVolume", defaultValue: "Create New Volume..."),
-                      systemImage: "plus")
+
+            UI.Form.Field(label: AppText.string("runSpec.storageGroup.volumeMountPath", defaultValue: "Mounted at"),
+                          error: group.volumeTarget.trimmedForVolumeLink.isEmpty ? AppText.string("runSpec.storageGroup.volumeMountPath.required", defaultValue: "Choose where the runtime volume is mounted in the container.") : nil,
+                          isChanged: !group.volumeTarget.trimmedForVolumeLink.isEmpty) {
+                TextField("Volume path", text: $group.volumeTarget, prompt: Text("/config"))
             }
-        } label: {
-            Image(systemName: "folder.badge.gearshape")
         }
-        .buttonStyle(.borderless)
-        .help(AppText.string("runSpec.sourcePicker.help",
-                             defaultValue: "Choose a host path, existing volume, or create a new volume"))
-        .task { await app.refreshVolumes() }
-        .fileImporter(isPresented: $choosingHostSource,
-                      allowedContentTypes: [.item, .folder]) { result in
+    }
+
+    private var pathRows: some View {
+        Group {
+            if group.usesRuntimeVolume {
+                Text(AppText.string("runSpec.storageGroup.volumePathsHelp",
+                                    defaultValue: "Each path mounts a host folder temporarily and links it inside the runtime volume."))
+                    .designSecondaryCaption()
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            ForEach(Array(group.paths.enumerated()), id: \.element.id) { index, path in
+                StoragePathRow(title: "\(AppText.string("runSpec.storagePath", defaultValue: "Path")) \(index + 1)",
+                               mode: group.usesRuntimeVolume ? .volumeLink : .bindMount,
+                               volumeTarget: group.volumeTarget,
+                               path: storagePathBinding(id: path.id),
+                               onRemove: { group.paths.removeAll { $0.id == path.id } })
+            }
+
+            UI.Action.TextButton(title: AppText.string("runSpec.addStoragePath", defaultValue: "Add Path"),
+                                 systemName: "plus.circle") {
+                group.paths.append(StoragePath())
+            }
+        }
+    }
+
+    private var usesRuntimeVolumeBinding: Binding<Bool> {
+        Binding {
+            group.usesRuntimeVolume
+        } set: { enabled in
+            group.usesRuntimeVolume = enabled
+            if enabled {
+                if group.volumeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   runtimeVolumes.count == 1,
+                   let onlyVolume = runtimeVolumes.first {
+                    group.volumeName = onlyVolume.name
+                }
+                if group.volumeTarget.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    group.volumeTarget = "/config"
+                }
+            }
+            if group.paths.isEmpty {
+                group.paths.append(StoragePath())
+            }
+        }
+    }
+
+    private func storagePathBinding(id: UUID) -> Binding<StoragePath> {
+        Binding {
+            group.paths.first { $0.id == id } ?? StoragePath(id: id)
+        } set: { updated in
+            guard let index = group.paths.firstIndex(where: { $0.id == id }) else { return }
+            group.paths[index] = updated
+        }
+    }
+
+    private var runtimeVolumes: [Core.Volume.Resource] {
+        app.volumes
+            .filter { $0.runtimeKind == runtimeKind }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private var runtimeVolumeMenuTitle: String {
+        let trimmed = group.volumeName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty
+            ? AppText.string("runSpec.selectVolume", defaultValue: "Select Volume")
+            : trimmed
+    }
+
+}
+
+private struct StoragePathRow: View {
+    @Environment(AppModel.self) private var app
+    let title: String
+    let mode: StoragePathMode
+    let volumeTarget: String
+    @Binding var path: StoragePath
+    var onRemove: () -> Void
+    @State private var choosingHostPath = false
+
+    var body: some View {
+        Group {
+            UI.Form.Row(title: title) {
+                removeButton
+            }
+
+            UI.Form.Field(label: AppText.string("runSpec.storagePath.hostFolder", defaultValue: "Host folder"),
+                          error: hostPathError,
+                          isChanged: !path.hostPath.trimmedForVolumeLink.isEmpty) {
+                HStack(spacing: UI.Layout.Spacing.s) {
+                    UI.Action.Group(UI.Action.Item(systemName: "folder",
+                                                   title: AppText.string("runSpec.chooseFolder", defaultValue: "Choose Folder..."),
+                                                   help: AppText.string("runSpec.chooseFolder", defaultValue: "Choose Folder...")) {
+                        choosingHostPath = true
+                    })
+                    TextField("Host folder", text: $path.hostPath)
+                }
+            }
+
+            UI.Form.Field(label: internalPathLabel,
+                          error: internalPathError,
+                          isChanged: !path.internalPath.trimmedForVolumeLink.isEmpty) {
+                TextField(internalPathPrompt, text: $path.internalPath)
+            }
+
+            UI.Form.Row(title: AppText.string("runSpec.mountAccess", defaultValue: "Access"),
+                        subtitle: AppText.string("runSpec.storagePath.access.subtitle", defaultValue: "Controls whether the container can write to this host folder."),
+                        isChanged: path.readOnly != true) {
+                Picker("", selection: accessBinding) {
+                    Text(AppText.string("runSpec.access.readOnly", defaultValue: "Read only")).tag(true)
+                    Text(AppText.string("runSpec.access.readWrite", defaultValue: "Read/Write")).tag(false)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
+
+            if mode == .volumeLink && pathIsValid && !resolvedVolumeLinkPath.isEmpty {
+                Text("\(resolvedVolumeLinkPath) → \(temporaryMountTarget)")
+                    .designSecondaryMonospacedCaption()
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            } else if mode == .volumeLink && pathIsValid {
+                UI.State.InlineStatus(AppText.string("runSpec.linkedPaths.outsideVolume",
+                                                     defaultValue: "Link paths must stay inside the selected runtime volume."),
+                                      systemImage: "exclamationmark.triangle",
+                                      tone: .warning)
+            }
+        }
+        .fileImporter(isPresented: $choosingHostPath,
+                      allowedContentTypes: [.folder]) { result in
             switch result {
             case .success(let url):
-                source = url.path
+                path.hostPath = url.path
             case .failure(let error):
                 app.flash(error.appDisplayMessage)
             }
         }
+    }
+
+    private var accessBinding: Binding<Bool> {
+        Binding {
+            path.readOnly
+        } set: { newValue in
+            path.readOnly = newValue
+        }
+    }
+
+    private var hostPathError: String? {
+        if path.hostPath.trimmedForVolumeLink.isEmpty,
+           !path.internalPath.trimmedForVolumeLink.isEmpty {
+            return AppText.string("runSpec.storagePath.hostFolder.required", defaultValue: "Choose the host folder for this path.")
+        }
+        return nil
+    }
+
+    private var internalPathError: String? {
+        if path.internalPath.trimmedForVolumeLink.isEmpty,
+           !path.hostPath.trimmedForVolumeLink.isEmpty {
+            return AppText.string("runSpec.storagePath.internalPath.required", defaultValue: "Choose where this path appears in the container.")
+        }
+        if mode == .volumeLink,
+           !path.internalPath.trimmedForVolumeLink.isEmpty,
+           resolvedVolumeLinkPath.isEmpty {
+            return AppText.string("runSpec.linkedPaths.outsideVolume", defaultValue: "Link paths must stay inside the selected runtime volume.")
+        }
+        return nil
+    }
+
+    private var internalPathLabel: String {
+        switch mode {
+        case .bindMount:
+            AppText.string("runSpec.storagePath.internalPath", defaultValue: "Internal path")
+        case .volumeLink:
+            AppText.string("runSpec.storagePath.insideVolume", defaultValue: "Inside volume")
+        }
+    }
+
+    private var internalPathPrompt: String {
+        switch mode {
+        case .bindMount:
+            "/media"
+        case .volumeLink:
+            volumeTarget.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "media" : "\(volumeTarget)/media"
+        }
+    }
+
+    private var pathIsValid: Bool {
+        !path.hostPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !path.internalPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var temporaryMountTarget: String {
+        "/run/contained-links/\(path.id.uuidString.lowercased())"
+    }
+
+    private var resolvedVolumeLinkPath: String {
+        let trimmed = path.internalPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        let target = volumeTarget.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("/") {
+            return trimmed.isInsideStorageVolumeTarget(target) ? trimmed : ""
+        }
+        guard !target.isEmpty else { return "" }
+        return target.hasSuffix("/") ? target + trimmed : target + "/" + trimmed
+    }
+
+    private var removeButton: some View {
+        UI.Action.Group(UI.Action.Item(systemName: "minus.circle.fill",
+                                       help: AppText.string("common.remove", defaultValue: "Remove"),
+                                       action: onRemove))
+    }
+}
+
+private extension String {
+    var trimmedForVolumeLink: String {
+        trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func isInsideStorageVolumeTarget(_ target: String) -> Bool {
+        let trimmedTarget = target.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTarget.isEmpty else { return false }
+        if trimmedTarget == "/" { return hasPrefix("/") }
+        let prefix = trimmedTarget.hasSuffix("/") ? trimmedTarget : trimmedTarget + "/"
+        return self == trimmedTarget || hasPrefix(prefix)
     }
 }

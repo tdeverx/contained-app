@@ -6,8 +6,8 @@ extension AppDatabase {
         let seen = Set(snapshots.map(\.scopedID))
         for snapshot in snapshots {
             let document = Core.Schema.Document.containerEdit(from: snapshot.configuration)
-            let documentData = Self.encode(document)
-            let snapshotData = Self.encode(snapshot)
+            let documentData = encode(document)
+            let snapshotData = encode(snapshot)
             if let record = fetch(ContainerRecord.self).first(where: { $0.scopedID == snapshot.scopedID }) {
                 record.runtimeKindRaw = snapshot.runtimeKind.rawValue
                 record.runtimeID = snapshot.id
@@ -71,7 +71,7 @@ extension AppDatabase {
                 tag.runtimeKindRaw = image.runtimeKind.rawValue
                 tag.runtimeImageID = image.id
                 tag.digest = image.digest
-                tag.resourceData = Self.encode(image)
+                tag.resourceData = encode(image)
                 tag.isLocal = true
                 tag.isMissing = false
                 tag.missingSince = nil
@@ -84,7 +84,7 @@ extension AppDatabase {
                                               runtimeKindRaw: image.runtimeKind.rawValue,
                                               runtimeImageID: image.id,
                                               digest: image.digest,
-                                              resourceData: Self.encode(image),
+                                              resourceData: encode(image),
                                               lastSeenAt: observedAt,
                                               updatedAt: observedAt))
             }
@@ -98,7 +98,7 @@ extension AppDatabase {
     func updateImageStatuses(_ statuses: [String: Core.Image.UpdateStatus], observedAt: Date = Date()) {
         let seen = Set(statuses.keys)
         for (key, status) in statuses {
-            let data = Self.encode(status)
+            let data = encode(status)
             if let scoped = Core.Runtime.Kind.parseScopedID(key) {
                 if let tag = fetch(ImageTagRecord.self).first(where: { $0.scopedID == key }) {
                     tag.updateStatusData = data
@@ -146,7 +146,9 @@ extension AppDatabase {
             do {
                 status = try JSONDecoder().decode(Core.Image.UpdateStatus.self, from: data)
             } catch {
-                fatalError("Unable to decode image update status for \(record.identity): \(error)")
+                recordFailure(.decodeRecord(record: "image update status \(record.identity)",
+                                            detail: String(describing: error)))
+                continue
             }
             let value = status.state == .checking ? Core.Image.UpdateStatus() : status
             snapshot[record.identity] = value
@@ -158,7 +160,9 @@ extension AppDatabase {
             do {
                 status = try JSONDecoder().decode(Core.Image.UpdateStatus.self, from: data)
             } catch {
-                fatalError("Unable to decode image tag update status for \(tag.scopedID): \(error)")
+                recordFailure(.decodeRecord(record: "image tag update status \(tag.scopedID)",
+                                            detail: String(describing: error)))
+                continue
             }
             snapshot[tag.scopedID] = status.state == .checking ? Core.Image.UpdateStatus() : status
         }
@@ -169,13 +173,33 @@ extension AppDatabase {
         Set(fetch(ContainerRecord.self).filter(\.isHiddenDuringMigration).map(\.scopedID))
     }
 
+    func linkedVolumePaths(for scopedID: String) -> [VolumeLinkedPath] {
+        guard let data = fetch(ContainerRecord.self).first(where: { $0.scopedID == scopedID })?.linkedVolumePathsData else {
+            return []
+        }
+        do {
+            return try JSONDecoder().decode([VolumeLinkedPath].self, from: data)
+        } catch {
+            recordFailure(.decodeRecord(record: "linked volume paths \(scopedID)",
+                                        detail: String(describing: error)))
+            return []
+        }
+    }
+
+    func setLinkedVolumePaths(_ links: [VolumeLinkedPath], for scopedID: String, observedAt: Date = Date()) {
+        guard let record = fetch(ContainerRecord.self).first(where: { $0.scopedID == scopedID }) else { return }
+        record.linkedVolumePathsData = links.isEmpty ? nil : encode(links)
+        record.updatedAt = observedAt
+        save()
+    }
+
     func upsertVolumes(_ volumes: [Core.Volume.Resource], observedAt: Date = Date()) {
         let seen = Set(volumes.map(\.scopedID))
         for volume in volumes {
             if let record = fetch(VolumeRecord.self).first(where: { $0.scopedID == volume.scopedID }) {
                 record.runtimeKindRaw = volume.runtimeKind.rawValue
                 record.name = volume.name
-                record.resourceData = Self.encode(volume)
+                record.resourceData = encode(volume)
                 record.isMissing = false
                 record.missingSince = nil
                 record.lastSeenAt = observedAt
@@ -184,7 +208,7 @@ extension AppDatabase {
                 context.insert(VolumeRecord(scopedID: volume.scopedID,
                                             runtimeKindRaw: volume.runtimeKind.rawValue,
                                             name: volume.name,
-                                            resourceData: Self.encode(volume),
+                                            resourceData: encode(volume),
                                             lastSeenAt: observedAt,
                                             updatedAt: observedAt))
             }
@@ -207,7 +231,7 @@ extension AppDatabase {
             if let record = fetch(NetworkRecord.self).first(where: { $0.scopedID == network.scopedID }) {
                 record.runtimeKindRaw = network.runtimeKind.rawValue
                 record.name = network.name
-                record.resourceData = Self.encode(network)
+                record.resourceData = encode(network)
                 record.isMissing = false
                 record.missingSince = nil
                 record.lastSeenAt = observedAt
@@ -216,7 +240,7 @@ extension AppDatabase {
                 context.insert(NetworkRecord(scopedID: network.scopedID,
                                              runtimeKindRaw: network.runtimeKind.rawValue,
                                              name: network.name,
-                                             resourceData: Self.encode(network),
+                                             resourceData: encode(network),
                                              lastSeenAt: observedAt,
                                              updatedAt: observedAt))
             }
@@ -251,9 +275,9 @@ extension AppDatabase {
         record.displayName = source.displayName
         record.imageReference = source.image
         record.statusRaw = source.state.rawValue
-        record.documentData = Self.encode(sourceDocument)
-        record.snapshotData = Self.encode(source)
-        record.runtimeProjectionsData = Self.encode(projections)
+        record.documentData = encode(sourceDocument)
+        record.snapshotData = encode(source)
+        record.runtimeProjectionsData = encode(projections)
         record.isHiddenDuringMigration = true
         record.migrationStateRaw = "migrating:\(source.runtimeKind.rawValue):\(targetRuntimeKind.rawValue)"
         record.isMissing = false
@@ -306,9 +330,9 @@ extension AppDatabase {
         record.displayName = target.displayName
         record.imageReference = target.image
         record.statusRaw = target.state.rawValue
-        record.documentData = Self.encode(targetDocument)
-        record.snapshotData = Self.encode(target)
-        record.runtimeProjectionsData = Self.encode(projections)
+        record.documentData = encode(targetDocument)
+        record.snapshotData = encode(target)
+        record.runtimeProjectionsData = encode(projections)
         record.isMissing = false
         record.isHiddenDuringMigration = false
         record.migrationStateRaw = "none"
@@ -323,7 +347,9 @@ extension AppDatabase {
         do {
             return try JSONDecoder().decode([String: Core.Schema.Document].self, from: data)
         } catch {
-            fatalError("Unable to decode runtime projections for \(record.scopedID): \(error)")
+            recordFailure(.decodeRecord(record: "runtime projections \(record.scopedID)",
+                                        detail: String(describing: error)))
+            return [:]
         }
     }
 
@@ -331,15 +357,18 @@ extension AppDatabase {
         record.isHiddenDuringMigration ||
             record.migrationStateRaw != "none" ||
             record.runtimeProjectionsData != nil ||
+            record.linkedVolumePathsData != nil ||
             fetch(PersonalizationRecord.self).contains { $0.key == record.scopedID } ||
             fetch(HealthCheckRecord.self).contains { $0.containerScopedID == record.scopedID }
     }
 
-    private static func encode<T: Encodable>(_ value: T) -> Data {
+    private func encode<T: Encodable>(_ value: T) -> Data {
         do {
             return try JSONEncoder().encode(value)
         } catch {
-            fatalError("Unable to encode app database value \(T.self): \(error)")
+            recordFailure(.encodeRecord(type: String(describing: T.self),
+                                        detail: String(describing: error)))
+            return Data()
         }
     }
 }

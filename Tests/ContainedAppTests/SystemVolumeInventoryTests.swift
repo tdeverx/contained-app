@@ -35,7 +35,51 @@ struct SystemVolumeInventoryTests {
         #expect(SystemVolumeInventory.rowSubtitle(named)?.contains("/data") == true)
     }
 
-    private func decode<T: Decodable>(_ type: T.Type, from json: String) throws -> T {
-        try Core.Container.JSON.decode(type, from: Data(json.utf8), runtimeKind: .appleContainer)
+    @Test func sameNamedRuntimeVolumesStaySeparate() throws {
+        let appleVolume = Core.Volume.Resource(
+            configuration: Core.Volume.Configuration(name: "config", format: "ext4"),
+            runtimeKind: .appleContainer
+        )
+        let dockerVolume = Core.Volume.Resource(
+            configuration: Core.Volume.Configuration(name: "config", format: "ext4"),
+            runtimeKind: .docker
+        )
+        let appleSnapshot = try decode(Core.Container.Snapshot.self,
+                                       runtimeKind: .appleContainer,
+                                       from: mountedContainerJSON(id: "apple-web", source: "config"))
+        let dockerSnapshot = try decode(Core.Container.Snapshot.self,
+                                        runtimeKind: .docker,
+                                        from: mountedContainerJSON(id: "docker-web", source: "config"))
+
+        let entries = SystemVolumeInventory.build(volumes: [appleVolume, dockerVolume],
+                                                  containers: [appleSnapshot, dockerSnapshot])
+            .filter { $0.kind == .named && $0.title == "config" }
+
+        #expect(entries.count == 2)
+        #expect(entries.first { $0.runtimeKind == .appleContainer }?.containers.map(\.id) == ["apple-web"])
+        #expect(entries.first { $0.runtimeKind == .docker }?.containers.map(\.id) == ["docker-web"])
+    }
+
+    private func decode<T: Decodable>(_ type: T.Type,
+                                      runtimeKind: Core.Runtime.Kind = .appleContainer,
+                                      from json: String) throws -> T {
+        try Core.Container.JSON.decode(type, from: Data(json.utf8), runtimeKind: runtimeKind)
+    }
+
+    private func mountedContainerJSON(id: String, source: String) -> String {
+        """
+        {
+          "id": "\(id)",
+          "status": {"state": "running"},
+          "configuration": {
+            "id": "\(id)",
+            "image": {"reference": "nginx:latest"},
+            "initProcess": {},
+            "mounts": [
+              {"type": "volume", "source": "\(source)", "destination": "/config"}
+            ]
+          }
+        }
+        """
     }
 }

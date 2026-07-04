@@ -26,12 +26,58 @@ struct AppDatabaseTests {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let settings = SettingsStore(database: database)
 
-        settings.cliPathOverride = "/opt/container"
-        settings.dockerCLIPathOverride = "/opt/docker"
+        settings.setRuntimePathOverride("/opt/container", for: .appleContainer)
+        settings.setRuntimePathOverride("/opt/docker", for: .docker)
 
         let records = database.fetch(RuntimeRecord.self)
         #expect(records.first { $0.runtimeKindRaw == Core.Runtime.Kind.appleContainer.rawValue }?.cliPathOverride == "/opt/container")
         #expect(records.first { $0.runtimeKindRaw == Core.Runtime.Kind.docker.rawValue }?.cliPathOverride == "/opt/docker")
+        #expect(settings.runtimePathOverride(for: .docker) == "/opt/docker")
+    }
+
+    @Test func settingsBackupUsesRuntimeKeyedPathOverrides() throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let settings = SettingsStore(database: database)
+
+        settings.setRuntimePathOverride("/opt/container", for: .appleContainer)
+        settings.setRuntimePathOverride("/opt/docker", for: .docker)
+
+        let snapshot = settings.backupSnapshot()
+        #expect(snapshot.runtimePathOverrides[Core.Runtime.Kind.appleContainer.rawValue] == "/opt/container")
+        #expect(snapshot.runtimePathOverrides[Core.Runtime.Kind.docker.rawValue] == "/opt/docker")
+
+        let legacyJSON = """
+        {
+          "accentTint": "multicolor",
+          "appearance": "system",
+          "density": "medium",
+          "windowMaterial": "fullScreenUI",
+          "modalMaterial": "sheet",
+          "cardMaterial": "glassRegular",
+          "cliPathOverride": "/legacy/container",
+          "dockerCLIPathOverride": "/legacy/docker",
+          "refreshInterval": 2,
+          "imageUpdateIntervalHours": 6,
+          "imageUpdateChecksEnabled": true,
+          "appUpdateChecksEnabled": true,
+          "autoRestartEnabled": true,
+          "notifyOnCrash": true,
+          "revealCLI": true,
+          "historyRetentionDays": 7,
+          "loggingLevel": "important",
+          "enabledLogDestinations": ["activity"],
+          "enabledLogCategories": [],
+          "updateChannel": "nightly",
+          "commandPaletteEnabled": false,
+          "hubSearchEnabled": false,
+          "composeImportEnabled": false,
+          "imageBuildEnabled": false,
+          "experimentalToolbarUI": false
+        }
+        """
+        let decoded = try JSONDecoder().decode(SettingsBackup.self, from: Data(legacyJSON.utf8))
+        #expect(decoded.runtimePathOverrides[Core.Runtime.Kind.appleContainer.rawValue] == "/legacy/container")
+        #expect(decoded.runtimePathOverrides[Core.Runtime.Kind.docker.rawValue] == "/legacy/docker")
     }
 
     @Test func containerRefreshUpsertsRuntimeScopedRecords() async throws {
@@ -39,9 +85,9 @@ struct AppDatabaseTests {
         let runner = DockerRecordingRunner()
         let store = ContainersStore()
         store.database = database
-        store.client = Core.Orchestrator.testing(runner: runner,
-                                                 cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
-                                                 runtimeKind: .docker)
+        store.client = appTestOrchestrator(runner: runner,
+                                           cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                           runtimeKind: .docker)
 
         await store.refresh()
 
@@ -62,9 +108,9 @@ struct AppDatabaseTests {
         let runner = DockerRecordingRunner()
         let store = ContainersStore()
         store.database = database
-        store.client = Core.Orchestrator.testing(runner: runner,
-                                                 cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
-                                                 runtimeKind: .docker)
+        store.client = appTestOrchestrator(runner: runner,
+                                           cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                           runtimeKind: .docker)
 
         await store.refresh()
         let healthCheck = Core.Container.HealthCheck(command: ["true"], enabled: true)
@@ -78,6 +124,38 @@ struct AppDatabaseTests {
         #expect(record.scopedID == "docker::web")
         #expect(record.isMissing == true)
         #expect(record.missingSince != nil)
+    }
+
+    @Test func linkedVolumePathMetadataIsPersistedAndRetainsMissingContainer() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let runner = DockerRecordingRunner()
+        let store = ContainersStore()
+        store.database = database
+        store.client = appTestOrchestrator(runner: runner,
+                                           cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                           runtimeKind: .docker)
+
+        await store.refresh()
+        let volumeID = try #require(UUID(uuidString: "33333333-3333-3333-3333-333333333333"))
+        let links = [
+            VolumeLinkedPath(id: volumeID,
+                             volumeID: volumeID,
+                             volumeSource: "web-config",
+                             volumeTarget: "/config",
+                             hostPath: "/Volumes/Vault/Media",
+                             linkPath: "media",
+                             readOnly: true),
+        ]
+
+        database.setLinkedVolumePaths(links, for: "docker::web")
+        #expect(database.linkedVolumePaths(for: "docker::web") == links)
+
+        database.upsertContainers([])
+
+        let record = try #require(database.fetch(ContainerRecord.self).first)
+        #expect(record.scopedID == "docker::web")
+        #expect(record.isMissing == true)
+        #expect(database.linkedVolumePaths(for: "docker::web") == links)
     }
 
     @Test func imageMetadataIsSharedWhileTagsStayRuntimeScoped() {
@@ -121,10 +199,17 @@ struct AppDatabaseTests {
         #expect(database.fetch(ImageRecord.self).first?.updateStatusData == nil)
     }
 
+    @Test func defaultAppSupportedRuntimesKeepDockerDormant() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let app = AppModel(database: database)
+
+        #expect(app.supportedRuntimeDescriptors.map(\.kind) == [.appleContainer])
+    }
+
     @Test func readyRuntimeDescriptorsExcludeRegisteredButUnavailableRuntimes() {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let app = AppModel(database: database)
-        let orchestrator = Core.Orchestrator.testing(runners: [
+        let orchestrator = appTestOrchestrator(runners: [
             .appleContainer: NoopRunner(),
             .docker: NoopRunner(),
         ])
@@ -144,6 +229,92 @@ struct AppDatabaseTests {
         #expect(app.availableRuntimeDescriptors.map(\.kind) == [.docker])
         #expect(app.core(for: .appleContainer) == nil)
         #expect(app.core(for: .docker) != nil)
+    }
+
+    @Test func runtimeIntentRequiresSelectionWhenMultipleRuntimesMatch() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let app = AppModel(database: database)
+        let orchestrator = appTestOrchestrator(runners: [
+            .appleContainer: NoopRunner(),
+            .docker: NoopRunner(),
+        ])
+
+        app.installRuntimeClientForTesting(orchestrator,
+                                           readiness: [
+                                               Core.RuntimeReadiness(kind: .appleContainer,
+                                                                     cliURL: URL(fileURLWithPath: "/usr/bin/container"),
+                                                                     state: .ready),
+                                               Core.RuntimeReadiness(kind: .docker,
+                                                                     cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                                                     state: .ready),
+                                           ])
+
+        #expect(app.resolveRuntimeIntent(capability: .containers) == .needsSelection(app.availableRuntimeDescriptors))
+        #expect(app.resolveRuntimeIntent(selected: .docker, capability: .containers) == .resolved(.docker))
+    }
+
+    @Test func runtimeIntentPreselectsOnlyReachableRuntime() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let app = AppModel(database: database)
+        let orchestrator = appTestOrchestrator(runners: [
+            .appleContainer: NoopRunner(),
+            .docker: NoopRunner(),
+        ])
+
+        app.installRuntimeClientForTesting(orchestrator,
+                                           readiness: [
+                                               Core.RuntimeReadiness(kind: .appleContainer,
+                                                                     cliURL: URL(fileURLWithPath: "/usr/bin/container"),
+                                                                     state: .cliMissing),
+                                               Core.RuntimeReadiness(kind: .docker,
+                                                                     cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                                                     state: .ready),
+                                           ])
+
+        #expect(app.preselectedRuntimeKind(current: AppRuntimeIntent.placeholderKind, capability: .containers) == .docker)
+        #expect(app.resolveRuntimeIntent(capability: .containers) == .resolved(.docker))
+    }
+
+    @Test func legacyRecipeShapeIsNotDecodedAsLiveRecipe() {
+        let legacyJSON = """
+        {
+          "image": "nginx:latest",
+          "name": "web",
+          "ports": []
+        }
+        """
+        let recipe = RecipeRecord(name: "Legacy",
+                                  createdAt: Date(),
+                                  updatedAt: Date(),
+                                  documentData: Data(legacyJSON.utf8),
+                                  sourceRaw: "template")
+
+        #expect(recipe.spec == nil)
+        #expect(RecipeSnapshot(recipe) == nil)
+    }
+
+    @Test func corruptSettingRecordsSurfaceTypedDatabaseFailure() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        database.context.insert(AppSettingRecord(key: "corrupt", valueData: Data("not json".utf8)))
+
+        let value: Int = database.setting("corrupt", fallback: 42)
+
+        #expect(value == 42)
+        guard case .decodeSetting(let key, _) = database.lastFailure else {
+            Issue.record("Expected corrupt setting decode failure.")
+            return
+        }
+        #expect(key == "corrupt")
+    }
+
+    @Test func imageUpdatePersistenceStaysOutOfUserDefaults() throws {
+        let repoRoot = try repoRootURL()
+        let source = repoRoot.appending(path: "Sources/ContainedApp/App/AppModel+ImageUpdates.swift")
+        let contents = try String(contentsOf: source, encoding: .utf8)
+
+        #expect(!contents.contains("loadImageUpdates"))
+        #expect(!contents.contains("saveImageUpdates"))
+        #expect(!contents.contains("UserDefaults"))
     }
 
     private func image(reference: String,
@@ -166,6 +337,12 @@ struct AppDatabaseTests {
         }
         """
         return try! Core.Container.JSON.decode(Core.Image.Resource.self, from: Data(json.utf8))
+    }
+
+    private func repoRootURL() throws -> URL {
+        var url = URL(filePath: #filePath)
+        for _ in 0..<3 { url.deleteLastPathComponent() }
+        return url
     }
 }
 

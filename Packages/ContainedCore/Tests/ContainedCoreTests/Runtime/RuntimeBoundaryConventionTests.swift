@@ -49,6 +49,35 @@ struct RuntimeBoundaryConventionTests {
         #expect(violations.isEmpty, Comment(rawValue: violations.joined(separator: "\n")))
     }
 
+    @Test func runtimeRegistryLivesInSharedRuntimeInfrastructure() throws {
+        let packageRoot = try packageRootURL()
+        let runtimeRoot = packageRoot.appending(path: "Sources/ContainedCore/Runtime")
+        let runtimesRoot = packageRoot.appending(path: "Sources/ContainedCore/Runtimes")
+
+        #expect(FileManager.default.fileExists(atPath: runtimeRoot.appending(path: "ModuleRegistry.swift").path(percentEncoded: false)))
+
+        let misplacedFiles = try swiftFiles(under: runtimesRoot).filter { url in
+            url.deletingLastPathComponent() == runtimesRoot
+        }
+        #expect(misplacedFiles.isEmpty, Comment(rawValue: misplacedFiles.map(\.path).joined(separator: "\n")))
+    }
+
+    @Test func canonicalSchemaCatalogIsNotApplePrimary() throws {
+        let packageRoot = try packageRootURL()
+        let url = packageRoot.appending(path: "Sources/ContainedCore/Schema/ContainerFieldCatalog.swift")
+        let contents = try String(contentsOf: url, encoding: .utf8)
+        let forbidden = [
+            "appleContainerRunFields",
+            "appleTip",
+            "func apple(",
+            "support: [.appleContainer",
+            "defaultValue: .string(Core.Runtime.Kind.appleContainer.rawValue)",
+        ]
+        let violations = forbidden.filter { contents.contains($0) }
+
+        #expect(violations.isEmpty, Comment(rawValue: violations.joined(separator: "\n")))
+    }
+
     private func packageRootURL() throws -> URL {
         var url = URL(filePath: #filePath)
         for _ in 0..<4 { url.deleteLastPathComponent() }

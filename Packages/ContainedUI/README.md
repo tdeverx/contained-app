@@ -25,6 +25,7 @@ Use the nested `UI.*` surface from app and package examples:
 
 - `UI.Card.*` for card anatomy, page controls, metric chips, and card-local sections.
 - `UI.Panel.*` for panel scaffolds, title bars, fields, rows, and sheet title bars.
+- `UI.Form.Grouped` and `UI.Form.*` for transparent native grouped SwiftUI forms, rows, fields, toggles, label-adjacent info tips, and error/changed label states.
 - `UI.Action.*` for command groups, action items, selection bars, toggles, and progress capsules.
 - `UI.Control.*` for option tiles, input/content surfaces, search fields, menus, tint controls, and keyboard hints.
 - `UI.Toolbar.*` for toolbar slots and controls.
@@ -144,6 +145,22 @@ UI.Panel.Scaffold(width: UI.Panel.Size.settings.width) {
         }
     }
     .padding(UI.Panel.Padding.compact)
+}
+```
+
+## Form Example
+
+```swift
+UI.Form.Grouped {
+    Section("Runtime") {
+        UI.Form.Field(label: "Image", info: "The image reference to run.") {
+            TextField("nginx:latest", text: $image)
+        }
+        UI.Form.ToggleRow(title: "Run in background",
+                          info: "Runs the container detached.",
+                          isChanged: true,
+                          isOn: $detached)
+    }
 }
 ```
 

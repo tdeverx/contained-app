@@ -51,10 +51,11 @@ struct LocalTagGroup: Identifiable, Sendable, Hashable {
             let tags = Dictionary(grouping: sortedImages) { image in
                 "\(image.runtimeKind.rawValue)|\(Core.Registry.ImageReference.normalizedKey(image.reference))"
             }
-            .map { _, images in
-                Core.Image.LocalTag(reference: images.first?.reference ?? "",
-                                    runtimeKind: images.first?.runtimeKind ?? .appleContainer,
-                                    images: images)
+            .compactMap { _, images -> Core.Image.LocalTag? in
+                guard let first = images.first else { return nil }
+                return Core.Image.LocalTag(reference: first.reference,
+                                           runtimeKind: first.runtimeKind,
+                                           images: images)
             }
             .sorted { lhs, rhs in
                 if lhs.reference == rhs.reference {
@@ -64,7 +65,7 @@ struct LocalTagGroup: Identifiable, Sendable, Hashable {
             }
             let digest = sortedImages.compactMap(\.digest).first
             return Core.Image.LocalTagGroup(
-                id: digest ?? references.first.map(Core.Registry.ImageReference.normalizedKey) ?? UUID().uuidString,
+                id: digest ?? Core.Registry.ImageReference.normalizedKey(references[0]),
                 digest: digest,
                 references: references,
                 tags: tags,

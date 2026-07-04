@@ -141,7 +141,8 @@ final class ContainersStore {
     private func performRefresh() async {
         guard let client else { return }
         do {
-            let listedAll = try await client.listRuntimeContainers(all: true)
+            let inventory = try await client.containerInventory(all: true)
+            let listedAll = inventory.items
                 .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
             database?.upsertContainers(listedAll)
             let migratingIDs = database?.hiddenContainerScopedIDs() ?? []
@@ -152,7 +153,7 @@ final class ContainersStore {
             // Drop intentional-stop flags for containers that no longer exist, so the set can't grow
             // unbounded as containers are recreated/removed over a long session.
             intentionalStops.formIntersection(Set(snapshots.map(\.scopedID)))
-            errorMessage = nil
+            errorMessage = partialInventoryMessage(inventory.failures)
             pruneStatsForCurrentRunningSet()
         } catch let error as Core.Command.Error {
             errorMessage = error.appDisplayMessage
@@ -249,6 +250,13 @@ final class ContainersStore {
         }
     }
 
+    private func partialInventoryMessage(_ failures: [Core.Runtime.InventoryFailure]) -> String? {
+        guard !failures.isEmpty else { return nil }
+        let runtimes = failures.map(\.kind.rawValue).sorted().joined(separator: ", ")
+        return AppText.string("runtime.inventory.partialFailure",
+                              defaultValue: "Some runtimes could not refresh: \(runtimes).")
+    }
+
     private func snapshotLookupByStatsID() -> [String: Core.Container.Snapshot] {
         var lookup = Dictionary(snapshots.map { ($0.scopedID, $0) }, uniquingKeysWith: { current, _ in current })
         let byRuntimeID = Dictionary(grouping: snapshots, by: \.id)
@@ -304,7 +312,7 @@ final class ContainersStore {
                        severity: .info)
         diagnosticLogger.notice("Run started from creation flow")
         do {
-            let result = try await client.createContainer(spec.document)
+            let result = try await client.createContainer(spec.materializedDocumentForRun())
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
             logger?.record("Run finished in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
@@ -340,7 +348,7 @@ final class ContainersStore {
         logger?.record("Recreating \(runtimeID)", category: .lifecycle, containerID: trackingID)
         diagnosticLogger.notice("Recreate started for \(runtimeID, privacy: .public)")
         do {
-            _ = try await client.recreateContainer(originalID: runtimeID, document: spec.document)
+            _ = try await client.recreateContainer(originalID: runtimeID, document: spec.materializedDocumentForRun())
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
             logger?.record("Recreated \(runtimeID) in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
