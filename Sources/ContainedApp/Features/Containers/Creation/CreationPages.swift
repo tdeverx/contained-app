@@ -16,7 +16,9 @@ struct CreationNetworkFields: View {
         CreationResourceForm(symbol: "network",
                              title: networkName,
                              subtitle: networkSubtitle,
-                             command: previewCommand) {
+                             command: previewCommand,
+                             runtimeKind: runtimeKind,
+                             runtimes: runtimes) {
             UI.Panel.Section(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
                 CreationRuntimePickerRow(runtimeKind: $runtimeKind,
                                          runtimes: runtimes,
@@ -84,7 +86,9 @@ struct CreationVolumeFields: View {
         CreationResourceForm(symbol: "externaldrive",
                              title: volumeName,
                              subtitle: volumeSubtitle,
-                             command: previewCommand) {
+                             command: previewCommand,
+                             runtimeKind: runtimeKind,
+                             runtimes: runtimes) {
             UI.Panel.Section(header: AppText.string("creation.details", defaultValue: "Details"), highlighted: hasValues) {
                 CreationRuntimePickerRow(runtimeKind: $runtimeKind,
                                          runtimes: runtimes,
@@ -274,8 +278,15 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
     let title: String
     let subtitle: String
     let command: [String]
+    let runtimeKind: Core.Runtime.Kind
+    let runtimes: [Core.Runtime.Descriptor]
     @ViewBuilder var fields: () -> Fields
     @ViewBuilder var footer: () -> Footer
+
+    private var commandText: String {
+        let executable = runtimes.first { $0.kind == runtimeKind }?.executableName ?? runtimeKind.rawValue
+        return ([executable] + command).joined(separator: " ")
+    }
 
     var body: some View {
         LazyVStack(spacing: UI.Layout.Spacing.m) {
@@ -302,7 +313,7 @@ private struct CreationResourceForm<Fields: View, Footer: View>: View {
 
             fields()
 
-            UI.Command.PreviewBar(command: command,
+            UI.Command.PreviewBar(commandText: commandText,
                               copyHelp: AppText.copyCommand,
                               copiedAccessibilityLabel: AppText.copied)
                 .frame(maxWidth: .infinity)

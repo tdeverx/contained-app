@@ -436,6 +436,15 @@ final class AppModel {
             ?? []
     }
 
+    func commandPreviewText(arguments: [String], runtimeKind: Core.Runtime.Kind) -> String {
+        let executable = runtimeDescriptor(for: runtimeKind)?.executableName ?? runtimeKind.rawValue
+        return ([executable] + arguments).joined(separator: " ")
+    }
+
+    func previewCreateCommandText(for spec: ContainerFormState) -> String {
+        commandPreviewText(arguments: previewCreateCommand(for: spec), runtimeKind: spec.effectiveRuntimeKind)
+    }
+
     func imageDefaults(for spec: ContainerFormState) -> Core.Container.ImageDefaults? {
         guard let client = core(for: spec.effectiveRuntimeKind) else { return nil }
         return try? client.imageDefaults(for: spec.document,

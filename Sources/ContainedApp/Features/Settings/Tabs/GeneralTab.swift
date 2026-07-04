@@ -24,7 +24,7 @@ struct GeneralTab: View {
                                   isChanged: settings.notifyOnCrash != true,
                                   isOn: $settings.notifyOnCrash)
                 UI.Form.ToggleRow(title: AppText.string("settings.general.showRevealCLI", defaultValue: "Show Reveal CLI on actions"),
-                                  info: AppText.string("settings.general.showRevealCLI.info", defaultValue: "Shows the exact `container ...` command for important actions. Useful when you are learning the CLI or want to verify what will run."),
+                                  info: AppText.string("settings.general.showRevealCLI.info", defaultValue: "Shows the exact runtime CLI command for important actions. Useful when you are learning the CLI or want to verify what will run."),
                                   isChanged: settings.revealCLI != true,
                                   isOn: $settings.revealCLI)
             }

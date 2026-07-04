@@ -144,7 +144,7 @@ struct BuildWorkspaceView: View {
     private var commandSection: some View {
         UI.Panel.Section {
             HStack(spacing: UI.Layout.Spacing.s) {
-                UI.Command.PreviewBar(command: previewCommand,
+                UI.Command.PreviewBar(commandText: previewCommandText,
                                   copyHelp: AppText.copyCommand,
                                   copiedAccessibilityLabel: AppText.copied)
                     .frame(maxWidth: .infinity)
@@ -177,6 +177,10 @@ struct BuildWorkspaceView: View {
                                 buildArgs: argsDict, noCache: noCache,
                                 platform: platform.isEmpty ? nil : platform,
                                 runtimeKind: runtimeKind)
+    }
+
+    private var previewCommandText: String {
+        app.commandPreviewText(arguments: previewCommand, runtimeKind: runtimeKind)
     }
 
     private func startBuild() {

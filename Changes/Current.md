@@ -48,6 +48,7 @@
 - Reworked Run/Edit storage into Storage Groups, where each group can hold multiple host/internal paths and can optionally be backed by one runtime volume with Contained-managed symlinks.
 - Reworked Run/Edit storage rows into one native form section per storage group, with labeled host folder, internal path, and explicit Read only/Read/Write access controls instead of a compact toggle.
 - Moved Run/Edit and Settings back onto native grouped SwiftUI forms and section footers, added a Run/Edit header page switcher, and moved Run/Save to the command-preview footer while preserving row-level info popovers.
+- Made Reveal CLI command previews render from each selected runtime descriptor instead of hardcoding the Apple `container` executable in the reusable UI package.
 - Kept grouped form viewports transparent so only native section backgrounds carry the form surface.
 - Added form label state colors so field-specific errors render red and changed-from-default rows render blue.
 - Reworked the Volumes page into vertical runtime-volume and host-path mount card groups, with runtime-scoped inventory keys so same-named volumes from future runtimes remain distinct.

@@ -1,21 +1,19 @@
 import SwiftUI
 
-/// The signature "Reveal CLI" strip: shows the exact `container …` command an action will run,
+/// The signature "Reveal CLI" strip: shows the exact runtime command an action will run,
 /// copyable to the clipboard. Drives user trust and learning.
 public extension UI.Command {
     struct PreviewBar<Actions: View>: View {
-        public let command: [String]
+        public let commandText: String
         public var copyHelp: String
         public var copiedAccessibilityLabel: String
         @ViewBuilder public var actions: () -> Actions
 
-        private var rendered: String { (["container"] + command).joined(separator: " ") }
-
-        public init(command: [String],
+        public init(commandText: String,
                     copyHelp: String,
                     copiedAccessibilityLabel: String,
                     @ViewBuilder actions: @escaping () -> Actions) {
-            self.command = command
+            self.commandText = commandText
             self.copyHelp = copyHelp
             self.copiedAccessibilityLabel = copiedAccessibilityLabel
             self.actions = actions
@@ -26,14 +24,14 @@ public extension UI.Command {
                 Image(systemName: "terminal")
                     .foregroundStyle(.primary)
                 ScrollView(.horizontal, showsIndicators: false) {
-                    Text(rendered)
+                    Text(commandText)
                         .font(.system(.caption, design: .monospaced))
                         .textSelection(.enabled)
-                        .copyable([rendered])
+                        .copyable([commandText])
                         .lineLimit(1)
                 }
                 Spacer(minLength: UI.Tokens.Space.s)
-                UI.Copy.Icon(value: rendered, help: copyHelp)
+                UI.Copy.Icon(value: commandText, help: copyHelp)
                 actions()
             }
             .padding(.horizontal, UI.Tokens.Space.s)
@@ -44,10 +42,10 @@ public extension UI.Command {
 }
 
 public extension UI.Command.PreviewBar where Actions == EmptyView {
-    init(command: [String],
+    init(commandText: String,
          copyHelp: String,
          copiedAccessibilityLabel: String) {
-        self.init(command: command,
+        self.init(commandText: commandText,
                   copyHelp: copyHelp,
                   copiedAccessibilityLabel: copiedAccessibilityLabel) {
             EmptyView()
@@ -56,7 +54,7 @@ public extension UI.Command.PreviewBar where Actions == EmptyView {
 }
 
 #Preview("Command Preview Bar") {
-    UI.Command.PreviewBar(command: ["run", "--name", "preview-web", "nginx"],
+    UI.Command.PreviewBar(commandText: "container run --name preview-web nginx",
                           copyHelp: "Copy command",
                           copiedAccessibilityLabel: "Copied") {
         UI.Action.TextButton(title: "Run", systemName: "play.fill", prominence: .prominent) {}

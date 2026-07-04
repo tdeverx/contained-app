@@ -108,7 +108,7 @@ struct ContainerConfigureView: View {
     @ViewBuilder
     private var commandFooter: some View {
         if app.settings.revealCLI {
-            UI.Command.PreviewBar(command: app.previewCreateCommand(for: spec),
+            UI.Command.PreviewBar(commandText: app.previewCreateCommandText(for: spec),
                                   copyHelp: AppText.copyCommand,
                                   copiedAccessibilityLabel: AppText.copied) {
                 primaryCommandAction
