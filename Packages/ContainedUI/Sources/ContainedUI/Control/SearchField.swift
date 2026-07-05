@@ -21,7 +21,7 @@ struct SearchField: View {
     }
 
     public var body: some View {
-        UI.Control.InputCluster {
+        UI.Action.InputCluster {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
             TextField(prompt, text: $text)

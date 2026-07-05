@@ -1,45 +1,14 @@
 import SwiftUI
 import ContainedUI
-import ContainedCore
 
-/// Image row identity chip. If the image has a saved default style, this displays it and opens the
-/// same compact customization popover used by container cards.
-struct ImageStyleButton: View {
-    @Environment(AppModel.self) private var app
-
-    let reference: String
-    let style: Personalization
-    let target: CustomizeSheet.Target
-
-    @State private var hovering = false
-    @State private var showingCustomize = false
-
-    var body: some View {
-        Button { showingCustomize = true } label: {
-            UI.Card.IconChip(symbol: hovering ? "paintbrush.pointed.fill" : style.symbol,
-                                 tint: style.color)
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .help("Customize image style")
-        .accessibilityLabel(AppText.customizeImageStyleAccessibility(Format.shortImage(reference)))
-        .popover(isPresented: $showingCustomize, arrowEdge: .trailing) {
-            CustomizeSheet(target: target,
-                           presentation: .popover,
-                           initialStyle: style,
-                           initiallyOverridesInheritedStyle: target.hasOwnStyle(in: app))
-        }
-    }
-}
-
-/// A generic identity chip that opens the customize popover for any `CustomizeSheet.Target` (images,
-/// volumes, …). Mirrors `ImageStyleButton` but isn't image-specific.
+/// Identity chip that opens the customize popover for any `CustomizeSheet.Target`.
 struct CardStyleButton: View {
     @Environment(AppModel.self) private var app
 
     let style: Personalization
     let target: CustomizeSheet.Target
     var help = "Customize"
+    var accessibilityLabel: String?
 
     @State private var hovering = false
     @State private var showingCustomize = false
@@ -52,7 +21,7 @@ struct CardStyleButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help(help)
-        .accessibilityLabel(help)
+        .accessibilityLabel(accessibilityLabel ?? help)
         .popover(isPresented: $showingCustomize, arrowEdge: .trailing) {
             CustomizeSheet(target: target,
                            presentation: .popover,

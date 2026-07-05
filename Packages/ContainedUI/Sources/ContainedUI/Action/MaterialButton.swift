@@ -168,6 +168,8 @@ struct MaterialButton<Content: View>: View {
     var singleItem: Bool = false
     /// Set `false` for a static glass container (no hover treatment) — e.g. vanity toolbar chrome.
     var interactive: Bool = true
+    var material: UI.Theme.WindowMaterial?
+    var tintStyle: UI.Theme.ButtonTintStyle?
     @ViewBuilder var content: () -> Content
 
     init(spacing: CGFloat = 0,
@@ -175,18 +177,22 @@ struct MaterialButton<Content: View>: View {
          minWidth: CGFloat? = nil,
          singleItem: Bool = false,
          interactive: Bool = true,
+         material: UI.Theme.WindowMaterial? = nil,
+         tintStyle: UI.Theme.ButtonTintStyle? = nil,
          @ViewBuilder content: @escaping () -> Content) {
         self.spacing = spacing
         self.height = height
         self.minWidth = minWidth
         self.singleItem = singleItem
         self.interactive = interactive
+        self.material = material
+        self.tintStyle = tintStyle
         self.content = content
     }
 
     @State private var hovering = false
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.buttonTintStyle) private var tintStyle
+    @Environment(\.buttonTintStyle) private var environmentTintStyle
 
     var body: some View {
         let shape = Capsule(style: .continuous)
@@ -207,21 +213,23 @@ struct MaterialButton<Content: View>: View {
             .environment(\.materialButtonItemHoverEnabled, !singleItem && interactive)
             .onHover { if interactive { hovering = $0 } }
             .background { tintLayer(in: shape) }
-            .toolbarControlMaterial(in: shape)
+            .toolbarControlMaterial(in: shape, material: material)
             .animation(.spring(response: 0.18, dampingFraction: 0.82), value: hovering)
     }
 
     @ViewBuilder
     private func tintLayer(in shape: Capsule) -> some View {
-        if tintStyle.enabled {
+        let resolvedTintStyle = tintStyle ?? environmentTintStyle
+        if resolvedTintStyle.enabled {
             shape
-                .fill(tintFillStyle(tintStyle.tint.color))
-                .blendMode(tintStyle.blendMode.blendMode)
+                .fill(tintFillStyle(resolvedTintStyle.tint.color,
+                                    tintStyle: resolvedTintStyle))
+                .blendMode(resolvedTintStyle.blendMode.blendMode)
                 .clipShape(shape)
         }
     }
 
-    private func tintFillStyle(_ color: Color) -> AnyShapeStyle {
+    private func tintFillStyle(_ color: Color, tintStyle: UI.Theme.ButtonTintStyle) -> AnyShapeStyle {
         if tintStyle.gradient {
             let radians = tintStyle.gradientAngle * .pi / 180
             let dx = cos(radians) / 2

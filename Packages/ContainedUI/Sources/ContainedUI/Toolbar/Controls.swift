@@ -4,13 +4,19 @@ import SwiftUI
 /// toolbar proportions. Centralizing them here keeps the toolbar, creation tiles
 /// (`OptionTile`), and future band controls visually consistent.
 
-public extension UI.Control {
+public extension UI.Action {
 struct MenuButton<LabelContent: View, MenuContent: View>: View {
+    public var material: UI.Theme.WindowMaterial?
+    public var tintStyle: UI.Theme.ButtonTintStyle?
     @ViewBuilder public var menuContent: () -> MenuContent
     @ViewBuilder public var labelContent: () -> LabelContent
 
-    public init(@ViewBuilder menuContent: @escaping () -> MenuContent,
+    public init(material: UI.Theme.WindowMaterial? = nil,
+                tintStyle: UI.Theme.ButtonTintStyle? = nil,
+                @ViewBuilder menuContent: @escaping () -> MenuContent,
                 @ViewBuilder labelContent: @escaping () -> LabelContent) {
+        self.material = material
+        self.tintStyle = tintStyle
         self.menuContent = menuContent
         self.labelContent = labelContent
     }
@@ -19,7 +25,9 @@ struct MenuButton<LabelContent: View, MenuContent: View>: View {
         Menu {
             menuContent()
         } label: {
-            MaterialButton(singleItem: true) {
+            MaterialButton(singleItem: true,
+                           material: material,
+                           tintStyle: tintStyle) {
                 labelContent()
             }
         }
@@ -36,6 +44,8 @@ struct SearchField<Trailing: View>: View {
     @Binding public var text: String
     public var prompt: String
     public var clearSearchLabel: String
+    public var material: UI.Theme.WindowMaterial?
+    public var tintStyle: UI.Theme.ButtonTintStyle?
     public var focused: FocusState<Bool>.Binding
     public var onSubmit: () -> Void
     public var onClear: () -> Void
@@ -44,6 +54,8 @@ struct SearchField<Trailing: View>: View {
     public init(text: Binding<String>,
                 prompt: String,
                 clearSearchLabel: String,
+                material: UI.Theme.WindowMaterial? = nil,
+                tintStyle: UI.Theme.ButtonTintStyle? = nil,
                 focused: FocusState<Bool>.Binding,
                 onSubmit: @escaping () -> Void = {},
                 onClear: @escaping () -> Void,
@@ -51,6 +63,8 @@ struct SearchField<Trailing: View>: View {
         self._text = text
         self.prompt = prompt
         self.clearSearchLabel = clearSearchLabel
+        self.material = material
+        self.tintStyle = tintStyle
         self.focused = focused
         self.onSubmit = onSubmit
         self.onClear = onClear
@@ -58,7 +72,9 @@ struct SearchField<Trailing: View>: View {
     }
 
     public var body: some View {
-        MaterialButton(singleItem: true) {
+        MaterialButton(singleItem: true,
+                       material: material,
+                       tintStyle: tintStyle) {
             MaterialButtonInputItem {
                 Image(systemName: "magnifyingglass")
                     .font(.body)
@@ -91,18 +107,28 @@ struct SearchField<Trailing: View>: View {
 struct VanitySlot<Content: View>: View {
     public var minWidth: CGFloat
     public var interactive: Bool
+    public var material: UI.Theme.WindowMaterial?
+    public var tintStyle: UI.Theme.ButtonTintStyle?
     @ViewBuilder public var content: () -> Content
 
     public init(minWidth: CGFloat = UI.Tokens.Toolbar.trafficLightsWidth,
                 interactive: Bool = false,
+                material: UI.Theme.WindowMaterial? = nil,
+                tintStyle: UI.Theme.ButtonTintStyle? = nil,
                 @ViewBuilder content: @escaping () -> Content = { Color.clear }) {
         self.minWidth = minWidth
         self.interactive = interactive
+        self.material = material
+        self.tintStyle = tintStyle
         self.content = content
     }
 
     public var body: some View {
-        MaterialButton(minWidth: minWidth, singleItem: true, interactive: interactive) {
+        MaterialButton(minWidth: minWidth,
+                       singleItem: true,
+                       interactive: interactive,
+                       material: material,
+                       tintStyle: tintStyle) {
             content()
         }
         .fixedSize(horizontal: true, vertical: false)
@@ -112,19 +138,27 @@ struct VanitySlot<Content: View>: View {
 /// Package-owned toolbar button for custom status content.
 struct StatusButton<Content: View>: View {
     public var help: String
+    public var material: UI.Theme.WindowMaterial?
+    public var tintStyle: UI.Theme.ButtonTintStyle?
     public var action: () -> Void
     @ViewBuilder public var content: () -> Content
 
     public init(help: String,
+                material: UI.Theme.WindowMaterial? = nil,
+                tintStyle: UI.Theme.ButtonTintStyle? = nil,
                 action: @escaping () -> Void,
                 @ViewBuilder content: @escaping () -> Content) {
         self.help = help
+        self.material = material
+        self.tintStyle = tintStyle
         self.action = action
         self.content = content
     }
 
     public var body: some View {
-        MaterialButton(singleItem: true) {
+        MaterialButton(singleItem: true,
+                       material: material,
+                       tintStyle: tintStyle) {
             MaterialButtonItem(help: help, action: action) {
                 content()
             }
@@ -135,16 +169,24 @@ struct StatusButton<Content: View>: View {
 /// Package-owned glass shell for toolbar clusters that mix action items and status/menu items.
 struct ActionCluster<Content: View>: View {
     public var spacing: CGFloat
+    public var material: UI.Theme.WindowMaterial?
+    public var tintStyle: UI.Theme.ButtonTintStyle?
     @ViewBuilder public var content: () -> Content
 
     public init(spacing: CGFloat = 0,
+                material: UI.Theme.WindowMaterial? = nil,
+                tintStyle: UI.Theme.ButtonTintStyle? = nil,
                 @ViewBuilder content: @escaping () -> Content) {
         self.spacing = spacing
+        self.material = material
+        self.tintStyle = tintStyle
         self.content = content
     }
 
     public var body: some View {
-        MaterialButton(spacing: spacing) {
+        MaterialButton(spacing: spacing,
+                       material: material,
+                       tintStyle: tintStyle) {
             content()
         }
     }

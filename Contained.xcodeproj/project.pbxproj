@@ -18,6 +18,12 @@
 		0E2100010000000000000007 /* UpdaterControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000007 /* UpdaterControllerTests.swift */; };
 		0E2100010000000000000008 /* ContainedApp in Frameworks */ = {isa = PBXBuildFile; productRef = 0E20000B0000000000000001 /* ContainedApp */; };
 		0E2100010000000000000009 /* AppErrorPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000009 /* AppErrorPresentationTests.swift */; };
+		0E210001000000000000000A /* AppDatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000A /* AppDatabaseTests.swift */; };
+		0E210001000000000000000B /* AppKitBoundaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000B /* AppKitBoundaryTests.swift */; };
+		0E210001000000000000000C /* ContainerRuntimeMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000C /* ContainerRuntimeMigrationTests.swift */; };
+		0E210001000000000000000D /* DesignSystemBoundaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000D /* DesignSystemBoundaryTests.swift */; };
+		0E210001000000000000000E /* PreviewFixtureMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000E /* PreviewFixtureMappingTests.swift */; };
+		0E210001000000000000000F /* RuntimeTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000F /* RuntimeTestSupport.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,8 +35,8 @@
 		0E2000020000000000000006 /* Packages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Packages; sourceTree = "<group>"; };
 		0E2000020000000000000007 /* Xcode */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Xcode; sourceTree = "<group>"; };
 		0E2000020000000000000008 /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
-		0E2000020000000000000009 /* docs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = docs; sourceTree = "<group>"; };
-		0E200002000000000000000A /* scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = scripts; sourceTree = "<group>"; };
+		0E2000020000000000000009 /* Documentation */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Documentation; sourceTree = "<group>"; };
+		0E200002000000000000000A /* Scripts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Scripts; sourceTree = "<group>"; };
 		0E200002000000000000000B /* CHANGELOG.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHANGELOG.md; sourceTree = "<group>"; };
 		0E200002000000000000000C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		0E200002000000000000000D /* Contained.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Contained.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -43,6 +49,12 @@
 		0E2100020000000000000007 /* UpdaterControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterControllerTests.swift; sourceTree = "<group>"; };
 		0E2100020000000000000008 /* ContainedAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ContainedAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0E2100020000000000000009 /* AppErrorPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorPresentationTests.swift; sourceTree = "<group>"; };
+		0E210002000000000000000A /* AppDatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabaseTests.swift; sourceTree = "<group>"; };
+		0E210002000000000000000B /* AppKitBoundaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKitBoundaryTests.swift; sourceTree = "<group>"; };
+		0E210002000000000000000C /* ContainerRuntimeMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerRuntimeMigrationTests.swift; sourceTree = "<group>"; };
+		0E210002000000000000000D /* DesignSystemBoundaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemBoundaryTests.swift; sourceTree = "<group>"; };
+		0E210002000000000000000E /* PreviewFixtureMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewFixtureMappingTests.swift; sourceTree = "<group>"; };
+		0E210002000000000000000F /* RuntimeTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeTestSupport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,8 +88,8 @@
 				0E2000020000000000000006 /* Packages */,
 				0E2000020000000000000007 /* Xcode */,
 				0E2000020000000000000008 /* Resources */,
-				0E2000020000000000000009 /* docs */,
-				0E200002000000000000000A /* scripts */,
+				0E2000020000000000000009 /* Documentation */,
+				0E200002000000000000000A /* Scripts */,
 				0E200002000000000000000C /* README.md */,
 				0E200002000000000000000B /* CHANGELOG.md */,
 				0E2000040000000000000003 /* Products */,
@@ -106,10 +118,16 @@
 			isa = PBXGroup;
 			children = (
 				0E2100020000000000000009 /* AppErrorPresentationTests.swift */,
+				0E210002000000000000000A /* AppDatabaseTests.swift */,
+				0E210002000000000000000B /* AppKitBoundaryTests.swift */,
 				0E2100020000000000000001 /* AppLoggingTests.swift */,
+				0E210002000000000000000C /* ContainerRuntimeMigrationTests.swift */,
 				0E2100020000000000000002 /* ContainersStoreRefreshTests.swift */,
+				0E210002000000000000000D /* DesignSystemBoundaryTests.swift */,
 				0E2100020000000000000003 /* MigrationTests.swift */,
 				0E2100020000000000000004 /* PaletteSearchTests.swift */,
+				0E210002000000000000000E /* PreviewFixtureMappingTests.swift */,
+				0E210002000000000000000F /* RuntimeTestSupport.swift */,
 				0E2100020000000000000005 /* ContainerFormStateTests.swift */,
 				0E2100020000000000000006 /* SystemVolumeInventoryTests.swift */,
 				0E2100020000000000000007 /* UpdaterControllerTests.swift */,
@@ -231,10 +249,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				0E2100010000000000000009 /* AppErrorPresentationTests.swift in Sources */,
+				0E210001000000000000000A /* AppDatabaseTests.swift in Sources */,
+				0E210001000000000000000B /* AppKitBoundaryTests.swift in Sources */,
 				0E2100010000000000000001 /* AppLoggingTests.swift in Sources */,
+				0E210001000000000000000C /* ContainerRuntimeMigrationTests.swift in Sources */,
 				0E2100010000000000000002 /* ContainersStoreRefreshTests.swift in Sources */,
+				0E210001000000000000000D /* DesignSystemBoundaryTests.swift in Sources */,
 				0E2100010000000000000003 /* MigrationTests.swift in Sources */,
 				0E2100010000000000000004 /* PaletteSearchTests.swift in Sources */,
+				0E210001000000000000000E /* PreviewFixtureMappingTests.swift in Sources */,
+				0E210001000000000000000F /* RuntimeTestSupport.swift in Sources */,
 				0E2100010000000000000005 /* ContainerFormStateTests.swift in Sources */,
 				0E2100010000000000000006 /* SystemVolumeInventoryTests.swift in Sources */,
 				0E2100010000000000000007 /* UpdaterControllerTests.swift in Sources */,

@@ -12,7 +12,7 @@ struct ToolbarPageSwitcher: View {
     @Query private var templates: [RecipeRecord]
 
     var body: some View {
-        UI.Control.MenuButton {
+        UI.Action.MenuButton {
             ForEach(AppSectionGroup.allCases) { group in
                 let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
                     .filter { $0.group == group && ($0 != .build || app.settings.imageBuildEnabled) }
@@ -81,7 +81,7 @@ struct ToolbarViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return UI.Control.MenuButton {
+        return UI.Action.MenuButton {
             Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.grouping) {
                 ForEach(ContainerGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
@@ -255,7 +255,7 @@ struct ToolbarPageFilterOptions: View {
             NetworkViewOptions()
         case .activity:
             @Bindable var ui = ui
-            UI.Control.MenuButton {
+            UI.Action.MenuButton {
                 Picker(AppText.string("activity.filter", defaultValue: "Filter"), selection: $ui.activityFilter) {
                     Label(AppText.string("activity.filter.allEvents", defaultValue: "All events"), systemImage: "tray.full").tag(EventKind?.none)
                     Divider()
@@ -288,7 +288,7 @@ private struct ImageViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return UI.Control.MenuButton {
+        return UI.Action.MenuButton {
             Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.imageGrouping) {
                 ForEach(ImageGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
@@ -328,7 +328,7 @@ private struct TemplateViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return UI.Control.MenuButton {
+        return UI.Action.MenuButton {
             Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.templateGrouping) {
                 ForEach(TemplateGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
@@ -355,7 +355,7 @@ private struct NetworkViewOptions: View {
 
     var body: some View {
         @Bindable var ui = ui
-        return UI.Control.MenuButton {
+        return UI.Action.MenuButton {
             Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.networkGrouping) {
                 ForEach(NetworkGrouping.allCases) { grouping in
                     Label(grouping.title, systemImage: grouping.symbol).tag(grouping)

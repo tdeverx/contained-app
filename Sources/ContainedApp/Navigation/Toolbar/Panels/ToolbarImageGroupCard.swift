@@ -103,9 +103,10 @@ struct ToolbarImageGroupCard: View {
                             subtitle: repositoryOwner(group.primaryReference),
                             pages: imagePages) {
             if let image {
-                ImageStyleButton(reference: image.reference,
-                                 style: resolved,
-                                 target: .imageGroup(id: group.id, reference: group.primaryReference))
+                CardStyleButton(style: resolved,
+                                target: .imageGroup(id: group.id, reference: group.primaryReference),
+                                help: "Customize image style",
+                                accessibilityLabel: AppText.customizeImageStyleAccessibility(Format.shortImage(image.reference)))
             } else {
                 imageChip(resolved)
             }
@@ -485,9 +486,10 @@ struct ToolbarImageGroupCard: View {
                             title: Format.shortImage(reference),
                             subtitle: repositoryName(reference),
                             titleStyle: .monospaced) {
-            ImageStyleButton(reference: reference,
-                             style: style,
-                             target: .imageTag(reference: reference, groupID: group.id))
+            CardStyleButton(style: style,
+                            target: .imageTag(reference: reference, groupID: group.id),
+                            help: "Customize image style",
+                            accessibilityLabel: AppText.customizeImageStyleAccessibility(Format.shortImage(reference)))
         } titleAccessory: {
             EmptyView()
         } subtitleAccessory: {

@@ -201,15 +201,17 @@ private struct FloatingPanelMaterial: AnimatableModifier {
 
 private struct ToolbarControlMaterial<S: Shape>: ViewModifier {
     let shape: S
+    var material: UI.Theme.WindowMaterial?
     @Environment(\.buttonMaterial) private var buttonMaterial
 
     func body(content: Content) -> some View {
-        if let glass = buttonMaterial.glass {
+        let resolvedMaterial = material ?? buttonMaterial
+        if let glass = resolvedMaterial.glass {
             content.glassEffect(glass.interactive(), in: shape)
         } else {
             // A vibrancy material chosen for buttons — back the capsule with it and clip.
             content.background {
-                VisualEffectBackground(material: buttonMaterial, blendingMode: .withinWindow)
+                VisualEffectBackground(material: resolvedMaterial, blendingMode: .withinWindow)
                     .clipShape(shape)
             }
         }
@@ -225,8 +227,9 @@ public extension View {
     }
 
     /// Standard interactive glass used by toolbar buttons and collapsed toolbar search.
-    func toolbarControlMaterial<S: Shape>(in shape: S) -> some View {
-        modifier(ToolbarControlMaterial(shape: shape))
+    func toolbarControlMaterial<S: Shape>(in shape: S,
+                                          material: UI.Theme.WindowMaterial? = nil) -> some View {
+        modifier(ToolbarControlMaterial(shape: shape, material: material))
     }
 }
 

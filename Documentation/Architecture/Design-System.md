@@ -155,17 +155,18 @@ Use package-owned semantic controls for command chrome:
 
 - `UI.Action.Group` and `UI.Action.Items` for icon action groups
 - `UI.Action.Cluster` for mixed menu/action capsules
-- `UI.Control.InputCluster` for inline search/input lanes
+- `UI.Action.InputCluster` for inline search/input lanes
 - `UI.Action.TextButton` for labeled standard or prominent actions
 - `UI.Action.ToggleButton` for toggle buttons in toolbar or panel chrome
 - `UI.Action.SelectionBar` for floating selection bars
 - `UI.State.Banner` for transient bottom banners
-- `UI.Toolbar.SearchField`, `UI.Control.MenuButton`,
+- `UI.Action.MenuButton` for material-backed menu triggers outside toolbar slots
+- `UI.Toolbar.SearchField`,
   `UI.Toolbar.StatusButton`, `UI.Toolbar.ActionCluster`, and
   `UI.Toolbar.VanitySlot` for toolbar-specific slots
 
-Feature views cannot call the package-internal `material button internals`, `material button internalsItem`,
-`material button internalsInputItem`, `materialSurface`, or `materialCapsuleSurface` routes. They
+Feature views cannot call the package-internal `MaterialButton`, `MaterialButtonItem`,
+`MaterialButtonInputItem`, `materialSurface`, or `materialCapsuleSurface` routes. They
 also should not use `.buttonStyle(.glass/.glassProminent)` directly. If a view
 needs a new command shape, add a named design-system route and then consume it
 from the app.
@@ -252,7 +253,7 @@ Feature views should not call low-level surface modifiers, material button
 styles, or raw `UI.Tokens`; use named package routes such as
 `UI.Card.Scaffold`, `UI.Panel.Section`, `UI.Surface.Content`,
 `UI.Surface.Input`, `UI.Action.Group`, `UI.Action.Cluster`,
-`UI.Control.InputCluster`, `UI.Action.TextButton`, and `UI.Card.InsetSection`.
+`UI.Action.InputCluster`, `UI.Action.TextButton`, and `UI.Card.InsetSection`.
 If a new visual value appears, add or extend a contextual element token or
 package primitive before using it in the app.
 

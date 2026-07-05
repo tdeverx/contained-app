@@ -12,30 +12,40 @@ struct Group: View {
     public var minWidth: CGFloat?
     public var singleItem: Bool?
     public var interactive: Bool
+    public var material: UI.Theme.WindowMaterial?
+    public var tintStyle: UI.Theme.ButtonTintStyle?
 
     public init(_ actions: [UI.Action.Item],
                 spacing: CGFloat = 0,
                 height: CGFloat = UI.Tokens.Toolbar.buttonGroupHeight,
                 minWidth: CGFloat? = nil,
                 singleItem: Bool? = nil,
-                interactive: Bool = true) {
+                interactive: Bool = true,
+                material: UI.Theme.WindowMaterial? = nil,
+                tintStyle: UI.Theme.ButtonTintStyle? = nil) {
         self.actions = actions
         self.spacing = spacing
         self.height = height
         self.minWidth = minWidth
         self.singleItem = singleItem
         self.interactive = interactive
+        self.material = material
+        self.tintStyle = tintStyle
     }
 
     public init(_ action: UI.Action.Item,
                 height: CGFloat = UI.Tokens.Toolbar.buttonGroupHeight,
                 minWidth: CGFloat? = nil,
-                interactive: Bool = true) {
+                interactive: Bool = true,
+                material: UI.Theme.WindowMaterial? = nil,
+                tintStyle: UI.Theme.ButtonTintStyle? = nil) {
         self.init([action],
                   height: height,
                   minWidth: minWidth,
                   singleItem: true,
-                  interactive: interactive)
+                  interactive: interactive,
+                  material: material,
+                  tintStyle: tintStyle)
     }
 
     public var body: some View {
@@ -43,7 +53,9 @@ struct Group: View {
                        height: height,
                        minWidth: minWidth,
                        singleItem: singleItem ?? (actions.count == 1),
-                       interactive: interactive) {
+                       interactive: interactive,
+                       material: material,
+                       tintStyle: tintStyle) {
             UI.Action.Items(actions)
         }
     }
@@ -56,6 +68,8 @@ struct Cluster<Content: View>: View {
     public var minWidth: CGFloat?
     public var singleItem: Bool?
     public var interactive: Bool
+    public var material: UI.Theme.WindowMaterial?
+    public var tintStyle: UI.Theme.ButtonTintStyle?
     @ViewBuilder public var content: () -> Content
 
     public init(spacing: CGFloat = 0,
@@ -63,12 +77,16 @@ struct Cluster<Content: View>: View {
                 minWidth: CGFloat? = nil,
                 singleItem: Bool? = nil,
                 interactive: Bool = true,
+                material: UI.Theme.WindowMaterial? = nil,
+                tintStyle: UI.Theme.ButtonTintStyle? = nil,
                 @ViewBuilder content: @escaping () -> Content) {
         self.spacing = spacing
         self.height = height
         self.minWidth = minWidth
         self.singleItem = singleItem
         self.interactive = interactive
+        self.material = material
+        self.tintStyle = tintStyle
         self.content = content
     }
 
@@ -77,7 +95,9 @@ struct Cluster<Content: View>: View {
                        height: height,
                        minWidth: minWidth,
                        singleItem: singleItem ?? false,
-                       interactive: interactive) {
+                       interactive: interactive,
+                       material: material,
+                       tintStyle: tintStyle) {
             content()
         }
     }
@@ -100,7 +120,7 @@ struct Cluster<Content: View>: View {
             ])
         }
 
-        UI.Control.InputCluster {
+        UI.Action.InputCluster {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
             Text("Search field")
@@ -112,17 +132,25 @@ struct Cluster<Content: View>: View {
     .environment(\.buttonMaterial, .glassClear)
 }
 
-/// Package-owned input cluster for search fields and compact inline controls.
-public extension UI.Control {
+/// Package-owned material input cluster for search fields and compact inline controls.
+public extension UI.Action {
 struct InputCluster<Content: View>: View {
+    public var material: UI.Theme.WindowMaterial?
+    public var tintStyle: UI.Theme.ButtonTintStyle?
     @ViewBuilder public var content: () -> Content
 
-    public init(@ViewBuilder content: @escaping () -> Content) {
+    public init(material: UI.Theme.WindowMaterial? = nil,
+                tintStyle: UI.Theme.ButtonTintStyle? = nil,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.material = material
+        self.tintStyle = tintStyle
         self.content = content
     }
 
     public var body: some View {
-        MaterialButton(singleItem: true) {
+        MaterialButton(singleItem: true,
+                       material: material,
+                       tintStyle: tintStyle) {
             MaterialButtonInputItem {
                 content()
             }
