@@ -176,7 +176,8 @@ struct RuntimeDescriptorTests {
         )
 
         let result = try await orchestrator.recreateContainer(originalID: "missing",
-                                                              document: recreateDocument())
+                                                              replacement: recreateDocument(),
+                                                              rollback: recreateDocument(name: "missing"))
 
         #expect(result.id == "created")
         #expect(await runtime.deletedIDs.isEmpty)
@@ -196,7 +197,8 @@ struct RuntimeDescriptorTests {
         )
 
         let result = try await orchestrator.recreateContainer(originalID: "gone",
-                                                              document: recreateDocument())
+                                                              replacement: recreateDocument(),
+                                                              rollback: recreateDocument(name: "gone"))
 
         #expect(result.id == "created")
         #expect(await runtime.deletedIDs == ["gone"])
@@ -215,17 +217,116 @@ struct RuntimeDescriptorTests {
             runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
         )
 
-        await #expect(throws: Core.Command.Error.self) {
+        do {
             _ = try await orchestrator.recreateContainer(originalID: "blocked",
-                                                         document: recreateDocument())
+                                                         replacement: recreateDocument(),
+                                                         rollback: recreateDocument(name: "blocked"))
+            Issue.record("Expected recreate to fail")
+        } catch let error as Core.Container.RecreateFailure {
+            #expect(error.phase == .deleteOriginal)
+            #expect(error.recovery == .notNeeded)
         }
         #expect(await runtime.createdRequests.isEmpty)
     }
 
-    private func recreateDocument() -> Core.Schema.Document {
+    @Test func recreateValidatesRollbackBeforeDeletingOriginal() async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "web", image: "nginx:latest", runtimeKind: .appleContainer)]
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+        var invalidRollback = recreateDocument(name: "web")
+        invalidRollback.set(.imageReference, .string(""))
+
+        await #expect(throws: Core.Schema.ValidationError.self) {
+            _ = try await orchestrator.recreateContainer(originalID: "web",
+                                                         replacement: recreateDocument(),
+                                                         rollback: invalidRollback)
+        }
+        #expect(await runtime.stoppedIDs.isEmpty)
+        #expect(await runtime.deletedIDs.isEmpty)
+        #expect(await runtime.createdRequests.isEmpty)
+    }
+
+    @Test func recreateValidatesReplacementBeforeDeletingOriginal() async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "web", image: "nginx:latest", runtimeKind: .appleContainer)]
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+        var invalidReplacement = recreateDocument()
+        invalidReplacement.set(.imageReference, .string(""))
+
+        await #expect(throws: Core.Schema.ValidationError.self) {
+            _ = try await orchestrator.recreateContainer(originalID: "web",
+                                                         replacement: invalidReplacement,
+                                                         rollback: recreateDocument(name: "web"))
+        }
+        #expect(await runtime.stoppedIDs.isEmpty)
+        #expect(await runtime.deletedIDs.isEmpty)
+        #expect(await runtime.createdRequests.isEmpty)
+    }
+
+    @Test func recreateRestoresOriginalWhenReplacementCreationFails() async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "web", image: "nginx:stable", runtimeKind: .appleContainer)],
+            createErrors: [.nonZeroExit(code: 1, stderr: "replacement failed", command: "run replacement")]
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        do {
+            _ = try await orchestrator.recreateContainer(originalID: "web",
+                                                         replacement: recreateDocument(),
+                                                         rollback: recreateDocument(name: "web", image: "nginx:stable"))
+            Issue.record("Expected recreate to report the replacement failure")
+        } catch let error as Core.Container.RecreateFailure {
+            #expect(error.phase == .createReplacement)
+            #expect(error.recovery == .originalRestored)
+            #expect(error.primaryFailure.runtimeDetail == "replacement failed")
+        }
+        let requests = await runtime.createdRequests
+        #expect(requests.map(\.name) == ["created", "web"])
+    }
+
+    @Test func recreateReportsWhenReplacementAndRestorationFail() async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "web", image: "nginx:stable", runtimeKind: .appleContainer)],
+            createErrors: [
+                .nonZeroExit(code: 1, stderr: "replacement failed", command: "run replacement"),
+                .nonZeroExit(code: 2, stderr: "restore failed", command: "run original"),
+            ]
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        do {
+            _ = try await orchestrator.recreateContainer(originalID: "web",
+                                                         replacement: recreateDocument(),
+                                                         rollback: recreateDocument(name: "web", image: "nginx:stable"))
+            Issue.record("Expected recreate and restoration to fail")
+        } catch let error as Core.Container.RecreateFailure {
+            #expect(error.phase == .restoreOriginal)
+            #expect(error.recovery == .restoreFailed)
+            #expect(error.primaryFailure.runtimeDetail == "replacement failed")
+            #expect(error.recoveryFailure?.runtimeDetail == "restore failed")
+            #expect(error.packageErrorContext["phase"] == "restoreOriginal")
+            #expect(!error.packageErrorContext.values.contains { $0.contains("failed") })
+        }
+    }
+
+    private func recreateDocument(name: String = "created", image: String = "nginx:latest") -> Core.Schema.Document {
         var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
-        request.image = "nginx:latest"
-        request.name = "created"
+        request.image = image
+        request.name = name
         return Core.Schema.Document.containerCreate(from: request)
     }
 }
@@ -317,12 +418,17 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient {
     nonisolated let descriptor = Core.Runtime.Descriptor.appleContainer
     var containers: [Core.Container.Snapshot]
     var deleteError: Core.Command.Error?
+    var createErrors: [Core.Command.Error]
     var deletedIDs: [String] = []
+    var stoppedIDs: [String] = []
     var createdRequests: [Core.Container.CreateRequest] = []
 
-    init(containers: [Core.Container.Snapshot], deleteError: Core.Command.Error? = nil) {
+    init(containers: [Core.Container.Snapshot],
+         deleteError: Core.Command.Error? = nil,
+         createErrors: [Core.Command.Error] = []) {
         self.containers = containers
         self.deleteError = deleteError
+        self.createErrors = createErrors
     }
 
     func listContainers(all: Bool) async throws -> [Core.Container.Snapshot] { containers }
@@ -338,11 +444,15 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient {
     }
     func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
         createdRequests.append(request)
+        if !createErrors.isEmpty { throw createErrors.removeFirst() }
         return Core.Container.CreateResult(id: "created")
     }
     func runContainer(arguments: [String]) async throws -> Data { Data() }
     func start(_ ids: [String]) async throws -> Data { Data() }
-    func stop(_ ids: [String]) async throws -> Data { Data() }
+    func stop(_ ids: [String]) async throws -> Data {
+        stoppedIDs.append(contentsOf: ids)
+        return Data()
+    }
     func deleteContainers(_ ids: [String], force: Bool) async throws -> Data {
         deletedIDs.append(contentsOf: ids)
         if let deleteError { throw deleteError }

@@ -111,6 +111,24 @@ struct CommandTests {
         #expect(decoded.results.first?.pullReference == "nginx")
     }
 
+    @Test func registryPasswordsAreSentOnlyThroughStdin() async throws {
+        let runner = CapturingCommandRunner()
+        let password = "password-SENTINEL"
+
+        _ = try await AppleContainerClient(runner: runner)
+            .registryLogin(server: "ghcr.io", username: "octocat", password: password)
+        _ = try await DockerClient(runner: runner)
+            .registryLogin(server: "registry.example", username: "builder", password: password)
+
+        let invocations = await runner.invocations
+        #expect(invocations.count == 2)
+        for invocation in invocations {
+            #expect(!invocation.arguments.contains { $0.contains(password) })
+            #expect(invocation.arguments.contains("--password-stdin"))
+            #expect(invocation.stdin == Data(password.utf8))
+        }
+    }
+
     @Test func statsDeltaComputesCPUFraction() {
         let prev = Core.Metrics.ContainerStats(id: "x", cpuUsageUsec: 1_000_000, memoryUsageBytes: 100, memoryLimitBytes: 1000,
                                   blockReadBytes: 0, blockWriteBytes: 0, networkRxBytes: 0, networkTxBytes: 0, numProcesses: 1)
@@ -145,5 +163,26 @@ struct CommandTests {
         #expect(delta.netRxBytesPerSec == 500)
         #expect(delta.netTxBytesPerSec == 200)
         #expect(delta.numProcesses == 3)
+    }
+}
+
+private actor CapturingCommandRunner: Core.Command.Running {
+    struct Invocation: Sendable {
+        var arguments: [String]
+        var stdin: Data?
+    }
+
+    private(set) var invocations: [Invocation] = []
+
+    func run(_ arguments: [String],
+             stdin: Data?,
+             priority: Core.Command.ExecutionPriority) async throws -> Data {
+        invocations.append(Invocation(arguments: arguments, stdin: stdin))
+        return Data()
+    }
+
+    nonisolated func stream(_ arguments: [String],
+                            priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
     }
 }

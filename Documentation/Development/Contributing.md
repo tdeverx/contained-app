@@ -97,8 +97,9 @@ appcast.xml              Sparkle feed at the root of each release branch
   typed errors with stable codes/context, preferably `Core.Error.PackageError`.
   Map those failures through `AppErrorPresentation`/`AppText` in
   `Sources/ContainedApp` before showing toasts, inline errors, alerts, or Activity
-  entries. Preserve arbitrary backend stderr as runtime detail unless an adapter
-  can classify it as a known typed case.
+  entries. Preserve arbitrary backend stderr for immediate runtime-detail
+  presentation unless an adapter can classify it as a known typed case; durable
+  Activity and Console diagnostics must use allowlisted metadata instead.
 - **Package docs live with the package.** Keep package-local import/setup/examples in each `Packages/<PackageName>/README.md`, with DocC landing pages under each target's `.docc` catalog. Keep app-level architecture and workflow guidance under `Documentation/`.
 - **The wiki map lives in the repo.** GitHub's wiki is a separate repository. Keep maintained docs in `Documentation/` and package directories, then update `Documentation/Wiki/File-Map.md` and `Documentation/Wiki/_Sidebar.md` when a doc should appear in the wiki.
 - **Xcode opens the workspace.** `Contained.xcworkspace` points at the native `Contained.xcodeproj` and local package manifests. The Xcode target links the root package's `ContainedApp` product and builds/runs a real `Contained.app`; SwiftPM remains the release, CI, bundle, signing, notarization, and appcast source of truth.

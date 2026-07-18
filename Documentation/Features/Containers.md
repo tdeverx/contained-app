@@ -56,3 +56,10 @@ container's owning runtime, and records events in Activity/History.
 Container edit opens the same [Run / Edit Form](/Documentation/Features/Run-Edit-Form.md) used for new
 containers. Toolbar panel navigation opens it in the [Creation Workflow](/Documentation/Features/Creation-Workflow.md)
 morph; classic routing opens the same form state as a sheet.
+
+Runtime configuration is immutable, so saving an edit recreates the container.
+Contained validates the replacement and a snapshot-derived rollback recipe before
+deleting anything. If replacement creation then fails, Core automatically tries
+to restore the original container. A failed restoration keeps the original recipe
+in the app database for recovery; data that was not stored in volumes cannot be
+reconstructed.

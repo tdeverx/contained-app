@@ -64,6 +64,10 @@ jobs:
           swift test
           ./Scripts/check.sh generated
 
+      - name: Native Xcode tests
+        if: steps.changes.outputs.material == 'true'
+        run: xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug -destination 'platform=macOS' test
+
       - name: Bundle smoke validation
         if: steps.changes.outputs.material == 'true'
         run: |

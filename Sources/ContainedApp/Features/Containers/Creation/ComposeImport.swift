@@ -35,7 +35,7 @@ enum ComposeImport {
             let parsed = try Core.Compose.parse(text, projectName: projectName)
             guard let client = app.client else {
                 app.flash(AppText.containerRuntimeNotReady)
-                app.logger.record("Compose import \(parsed.name) could not start because no runtime is available",
+                app.logger.record("Compose import could not start because no runtime is available",
                                   category: .compose,
                                   severity: .warning)
                 return
@@ -68,18 +68,18 @@ enum ComposeImport {
             let specs = plan.items.map { ContainerFormState(document: $0.document, healthCheck: $0.healthCheck) }
             guard !specs.isEmpty else {
                 app.flash(AppText.composeNoServicesWithImages)
-                app.logger.record("Compose import \(parsed.name) had no services with images",
+                app.logger.record("Compose import had no services with images",
                                   category: .compose,
                                   severity: .warning)
                 return
             }
             if !plan.warnings.isEmpty {
                 app.flash(AppText.composeWarnings)
-                app.logger.record("Compose import \(parsed.name) produced \(plan.warnings.count) warning\(plan.warnings.count == 1 ? "" : "s")",
+                app.logger.record("Compose import produced \(plan.warnings.count) warning\(plan.warnings.count == 1 ? "" : "s")",
                                   category: .compose,
                                   severity: .warning)
             }
-            app.logger.record("Imported compose project \(parsed.name) with \(specs.count) service\(specs.count == 1 ? "" : "s")",
+            app.logger.record("Imported compose project with \(specs.count) service\(specs.count == 1 ? "" : "s")",
                               category: .compose)
             ui.beginPrefillQueue(specs, using: app)
         } catch {

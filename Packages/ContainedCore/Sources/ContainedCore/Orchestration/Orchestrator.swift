@@ -349,18 +349,34 @@ public extension Core {
         }
 
         @discardableResult private func recreateContainer(originalID: String,
-                                                         request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
-            let runtime = try requireRuntime(request.runtimeKind,
+                                                         replacement: Core.Container.CreateRequest,
+                                                         rollback: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
+            guard replacement.runtimeKind == rollback.runtimeKind else {
+                throw Core.Container.RecreateFailure(phase: .createReplacement,
+                                                     recovery: .notNeeded,
+                                                     primaryError: RecreatePreflightError.runtimeMismatch)
+            }
+            let runtime = try requireRuntime(replacement.runtimeKind,
                                              capability: .containers,
                                              as: (any RuntimeContainerClient).self)
-            return try await runtime.recreateContainer(originalID: originalID, request: request)
+            return try await runtime.recreateContainer(originalID: originalID,
+                                                       replacement: replacement,
+                                                       rollback: rollback)
         }
 
         @discardableResult public func recreateContainer(originalID: String,
-                                                         document: Core.Schema.Document) async throws -> Core.Container.CreateResult {
-            let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
-            let request = try document.validatedRequest(definition: definition)
-            return try await recreateContainer(originalID: originalID, request: request)
+                                                         replacement: Core.Schema.Document,
+                                                         rollback: Core.Schema.Document) async throws -> Core.Container.CreateResult {
+            let replacementDefinition = schemaDefinition(for: replacement.operation,
+                                                         runtimeKind: replacement.runtimeKind)
+            let rollbackDefinition = schemaDefinition(for: rollback.operation,
+                                                      runtimeKind: rollback.runtimeKind)
+            // Validate both documents before the runtime receives any destructive request.
+            let replacementRequest = try replacement.validatedRequest(definition: replacementDefinition)
+            let rollbackRequest = try rollback.validatedRequest(definition: rollbackDefinition)
+            return try await recreateContainer(originalID: originalID,
+                                               replacement: replacementRequest,
+                                               rollback: rollbackRequest)
         }
 
         public func translateCompose(_ project: Core.Compose.Project,
@@ -637,4 +653,8 @@ public extension Core {
                                      as: (any RuntimeNetworkClient).self).deleteNetworks(names)
         }
     }
+}
+
+private enum RecreatePreflightError: Error {
+    case runtimeMismatch
 }

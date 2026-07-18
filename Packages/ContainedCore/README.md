@@ -72,6 +72,21 @@ let preview = try core.previewCreateCommand(for: document)
 let command = preview.command
 ```
 
+Container edits supply both the requested replacement and a document derived
+from the current runtime configuration:
+
+```swift
+let result = try await core.recreateContainer(
+    originalID: snapshot.id,
+    replacement: editedDocument,
+    rollback: .containerEdit(from: snapshot.configuration)
+)
+```
+
+Core validates both documents before deletion. If replacement creation fails
+after the original was deleted, Core attempts the rollback and throws
+`Core.Container.RecreateFailure` with its phase and recovery state.
+
 ## Compose Example
 
 ```swift

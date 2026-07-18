@@ -158,7 +158,7 @@ extension AppModel {
                 switch aggregateUpdateStatus(statuses).state {
                 case .updateAvailable:
                     flash(AppText.imageUpdateAvailable(Format.shortImage(reference)))
-                    logger.record("Update available for \(Format.shortImage(reference))",
+                    logger.record("Image update available",
                                   category: .image,
                                   severity: .warning)
                 case .current:
@@ -174,7 +174,7 @@ extension AppModel {
                 imageUpdates[key] = .failed(localDigest: localDigest(for: reference, runtimeKind: runtimeKind), message: message)
             }
             if notify { flash(message) }
-            logger.recordFailure("Failed checking image update for \(Format.shortImage(reference))",
+            logger.recordFailure("Failed checking image update",
                                  error: error,
                                  category: .image,
                                  severity: .error)
@@ -189,7 +189,7 @@ extension AppModel {
         if ok {
             await checkImageUpdate(reference, runtimeKind: runtimeKind, notify: false)
             flash(AppText.updatedImage(Format.shortImage(reference)))
-            logger.record("Updated \(Format.shortImage(reference))", category: .image)
+            logger.record("Updated image", category: .image)
         }
         return ok
     }

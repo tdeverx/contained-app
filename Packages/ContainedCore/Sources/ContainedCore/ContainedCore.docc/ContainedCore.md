@@ -60,6 +60,18 @@ let core = Core.Orchestrator.testing(runner: PreviewRunner(),
 let preview = try core.previewCreateCommand(for: document)
 ```
 
+For an edit, pass the requested replacement and a rollback document derived
+from the live configuration. Both validate before mutation; a failed replacement
+automatically attempts restoration and reports `Core.Container.RecreateFailure`.
+
+```swift
+let result = try await core.recreateContainer(
+    originalID: snapshot.id,
+    replacement: editedDocument,
+    rollback: .containerEdit(from: snapshot.configuration)
+)
+```
+
 ## Fixtures
 
 ```swift

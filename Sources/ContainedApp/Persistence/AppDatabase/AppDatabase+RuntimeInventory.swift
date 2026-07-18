@@ -286,6 +286,57 @@ extension AppDatabase {
         save()
     }
 
+    /// Saves the live recipe before recreate deletes the runtime object. Reuse the projection
+    /// payload so a failed restoration remains recoverable without adding another persistence model.
+    func markContainerRecreateStarted(source: Core.Container.Snapshot,
+                                      sourceDocument: Core.Schema.Document,
+                                      observedAt: Date = Date()) {
+        let record: ContainerRecord
+        if let existing = fetch(ContainerRecord.self).first(where: { $0.scopedID == source.scopedID }) {
+            record = existing
+        } else {
+            record = ContainerRecord(scopedID: source.scopedID,
+                                     runtimeKindRaw: source.runtimeKind.rawValue,
+                                     runtimeID: source.id,
+                                     displayName: source.displayName,
+                                     imageReference: source.image,
+                                     statusRaw: source.state.rawValue)
+            context.insert(record)
+        }
+
+        var projections = runtimeProjections(from: record)
+        projections[source.runtimeKind.rawValue] = sourceDocument
+        record.documentData = encode(sourceDocument)
+        record.snapshotData = encode(source)
+        record.runtimeProjectionsData = encode(projections)
+        record.migrationStateRaw = "recreating"
+        record.isMissing = false
+        record.missingSince = nil
+        record.updatedAt = observedAt
+        save()
+    }
+
+    func completeContainerRecreate(sourceScopedID: String,
+                                   replacementScopedID: String,
+                                   observedAt: Date = Date()) {
+        guard let source = fetch(ContainerRecord.self).first(where: { $0.scopedID == sourceScopedID }) else { return }
+        if sourceScopedID == replacementScopedID {
+            source.migrationStateRaw = "none"
+            source.updatedAt = observedAt
+        } else {
+            context.delete(source)
+        }
+        save()
+    }
+
+    func markContainerRecreateFailed(scopedID: String,
+                                     observedAt: Date = Date()) {
+        guard let record = fetch(ContainerRecord.self).first(where: { $0.scopedID == scopedID }) else { return }
+        record.migrationStateRaw = "recreateFailed"
+        record.updatedAt = observedAt
+        save()
+    }
+
     func markContainerMigrationFailed(scopedID: String,
                                       message: String? = nil,
                                       observedAt: Date = Date()) {

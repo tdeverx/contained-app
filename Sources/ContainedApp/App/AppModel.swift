@@ -190,7 +190,7 @@ final class AppModel {
             let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             self.flash(AppText.restartedContainer(name, attempt: attempt))
-            self.logger.record("Restarted \(name) (attempt \(attempt))",
+            self.logger.record("Restarted container (attempt \(attempt))",
                                category: .health,
                                severity: .warning,
                                containerID: snapshot.scopedID)
@@ -200,7 +200,7 @@ final class AppModel {
             guard let self else { return }
             let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
-            self.logger.record("\(name) exited unexpectedly",
+            self.logger.record("Container exited unexpectedly",
                                category: .health,
                                severity: .warning,
                                containerID: snapshot.scopedID)
@@ -211,7 +211,7 @@ final class AppModel {
             let name = self.containerStyle(for: snapshot)
                 .displayName(fallback: snapshot.id)
             self.flash(AppText.containerUnhealthy(name))
-            self.logger.record("\(name) failed its healthcheck",
+            self.logger.record("Container failed its healthcheck",
                                category: .health,
                                severity: .warning,
                                containerID: snapshot.scopedID)
@@ -245,7 +245,7 @@ final class AppModel {
             let anyReady = runtimeReadiness.values.contains { $0.state == .ready }
             if !anyReady, let unsupported = runtimeReadiness.values.first(where: { $0.state == .unsupported }) {
                 bootstrap = .unsupported(version: unsupported.version ?? "")
-                logger.record("Unsupported container runtime CLI version \(unsupported.version ?? "unknown")", category: .system, severity: .error)
+                logger.record("Unsupported container runtime CLI version", category: .system, severity: .error)
                 return
             }
         }
@@ -526,7 +526,7 @@ final class AppModel {
                 await MainActor.run {
                     guard let self,
                           self.containerStatsStreamGeneration == generation else { return }
-                    self.diagnosticLogger.error("Stats stream failed: \(error.appDisplayMessage, privacy: .public)")
+                    self.diagnosticLogger.error("Stats stream failed: \(error.appDisplayMessage, privacy: .private(mask: .hash))")
                 }
             }
 
@@ -673,7 +673,7 @@ final class AppModel {
             if !spec.personalization.isDefault { personalization.setOverride(spec.personalization, for: scopedID) }
             healthChecks.setCheck(spec.healthCheck, for: scopedID)
             database.setLinkedVolumePaths(spec.linkedVolumePathsForPersistence, for: scopedID)
-            logger.record("Created \(newID)", category: .lifecycle, containerID: scopedID)
+            logger.record("Created container", category: .lifecycle, containerID: scopedID)
             flash(AppText.createdContainer(newID))
         }
         return newID
@@ -683,9 +683,12 @@ final class AppModel {
     /// deleting the current container so an unavailable image does not strand the edit flow.
     @discardableResult
     func recreateContainer(originalID: String, spec: ContainerFormState) async -> String? {
-        let originalSnapshot = containers.snapshots.first { $0.scopedID == originalID || $0.id == originalID }
-        let originalRuntimeID = originalSnapshot?.id ?? originalID
-        let originalScopedID = originalSnapshot?.scopedID ?? originalID
+        guard let originalSnapshot = containers.snapshots.first(where: { $0.scopedID == originalID || $0.id == originalID }) else {
+            flash(AppText.recreateOriginalUnavailable)
+            return nil
+        }
+        let originalRuntimeID = originalSnapshot.id
+        let originalScopedID = originalSnapshot.scopedID
         guard core(for: spec.effectiveRuntimeKind) != nil else {
             let error = Core.Runtime.UnsupportedCapability(kind: spec.effectiveRuntimeKind, capability: .containers)
             flash(error.appDisplayMessage)
@@ -710,10 +713,38 @@ final class AppModel {
                                  containerID: originalScopedID)
             return nil
         }
-        guard await containers.recreate(originalID: originalID, spec: spec) else { return nil }
+        let replacementDocument = spec.materializedDocumentForRun()
+        let rollbackDocument = Core.Schema.Document.containerEdit(from: originalSnapshot.configuration)
+        database.markContainerRecreateStarted(source: originalSnapshot, sourceDocument: rollbackDocument)
+        guard await containers.recreate(originalID: originalID,
+                                        replacement: replacementDocument,
+                                        rollback: rollbackDocument) else {
+            if let failure = containers.recreateFailure {
+                switch failure.recovery {
+                case .originalRestored:
+                    database.completeContainerRecreate(sourceScopedID: originalScopedID,
+                                                       replacementScopedID: originalScopedID)
+                case .restoreFailed:
+                    database.markContainerRecreateFailed(scopedID: originalScopedID)
+                case .notNeeded:
+                    if failure.phase == .deleteOriginal {
+                        database.completeContainerRecreate(sourceScopedID: originalScopedID,
+                                                           replacementScopedID: originalScopedID)
+                    } else {
+                        database.markContainerRecreateFailed(scopedID: originalScopedID)
+                    }
+                }
+                flash(failure.appDisplayMessage)
+            } else {
+                database.markContainerRecreateFailed(scopedID: originalScopedID)
+            }
+            return nil
+        }
         let newID = spec.name.isEmpty ? originalRuntimeID : spec.name
         let newScopedID = containers.snapshots.first { $0.id == newID && $0.runtimeKind == spec.effectiveRuntimeKind }?.scopedID
             ?? spec.effectiveRuntimeKind.scopedID(for: newID)
+        database.completeContainerRecreate(sourceScopedID: originalScopedID,
+                                           replacementScopedID: newScopedID)
         if newID != originalRuntimeID {
             personalization.clearOverride(id: originalScopedID)
             healthChecks.clear(id: originalScopedID)
@@ -726,7 +757,7 @@ final class AppModel {
         }
         healthChecks.setCheck(spec.healthCheck, for: newScopedID)
         database.setLinkedVolumePaths(spec.linkedVolumePathsForPersistence, for: newScopedID)
-        logger.record("Recreated \(newID)", category: .lifecycle, containerID: newScopedID)
+        logger.record("Recreated container", category: .lifecycle, containerID: newScopedID)
         return newID
     }
 
@@ -800,7 +831,7 @@ final class AppModel {
                                                targetRuntimeKind: targetRuntimeKind,
                                                sourceDocument: sourceDocument)
         await containers.refresh()
-        logger.record("Migrating \(source.displayName) from \(sourceRuntimeKind.rawValue) to \(targetRuntimeKind.rawValue)",
+        logger.record("Migrating container from \(sourceRuntimeKind.rawValue) to \(targetRuntimeKind.rawValue)",
                       category: .lifecycle,
                       containerID: sourceScopedID)
 
@@ -840,7 +871,7 @@ final class AppModel {
             await containers.refresh()
             let runtimeName = runtimeDescriptor(for: targetRuntimeKind)?.displayName ?? targetRuntimeKind.rawValue
             flash(AppText.string("container.migration.complete", defaultValue: "Container moved to \(runtimeName)."))
-            logger.record("Migrated \(source.displayName) to \(targetRuntimeKind.rawValue)",
+            logger.record("Migrated container to \(targetRuntimeKind.rawValue)",
                           category: .lifecycle,
                           containerID: target.scopedID)
             return true
@@ -864,7 +895,7 @@ final class AppModel {
         Task {
             if let error = await capturedError({ _ = try await client.loadImages(from: url.path, runtimeKind: runtimeKind) }) {
                 flash(error.appDisplayMessage)
-                logger.recordFailure("Failed loading image archive \(url.lastPathComponent)",
+                logger.recordFailure("Failed loading image archive",
                                      error: error,
                                      category: .image,
                                      severity: .error,
@@ -872,7 +903,7 @@ final class AppModel {
             } else {
                 await refreshImagesIfNeeded(force: true)
                 flash(AppText.loadedFile(url.lastPathComponent))
-                logger.record("Loaded image archive \(url.lastPathComponent)",
+                logger.record("Loaded image archive",
                               category: .image,
                               containerID: runtimeKind.scopedID(for: url.lastPathComponent))
             }
@@ -892,14 +923,14 @@ final class AppModel {
         }
         if let error {
             flash(error.appDisplayMessage)
-            logger.recordFailure("Failed creating volume \(name)",
+            logger.recordFailure("Failed creating volume",
                                  error: error,
                                  category: .system,
                                  severity: .error)
             return false
         }
         flash(AppText.createdVolume(name))
-        logger.record("Created volume \(name)", category: .system, containerID: runtimeKind.scopedID(for: name))
+        logger.record("Created volume", category: .system, containerID: runtimeKind.scopedID(for: name))
         return true
     }
 
@@ -918,14 +949,14 @@ final class AppModel {
         }
         if let error {
             flash(error.appDisplayMessage)
-            logger.recordFailure("Failed creating network \(name)",
+            logger.recordFailure("Failed creating network",
                                  error: error,
                                  category: .system,
                                  severity: .error)
             return false
         }
         flash(AppText.createdNetwork(name))
-        logger.record("Created network \(name)", category: .system, containerID: runtimeKind.scopedID(for: name))
+        logger.record("Created network", category: .system, containerID: runtimeKind.scopedID(for: name))
         return true
     }
 
@@ -952,11 +983,11 @@ final class AppModel {
                 if !trimmed.isEmpty { activity?.detail = trimmed }
             }
             await refreshImagesIfNeeded(force: true)
-            logger.record("Pulled \(Format.shortImage(reference))", category: .image)
+            logger.record("Pulled image", category: .image)
             return true
         } catch {
             flash(error.appDisplayMessage)
-            logger.recordFailure("Failed pulling \(Format.shortImage(reference))",
+            logger.recordFailure("Failed pulling image",
                                  error: error,
                                  category: .image,
                                  severity: .error)
@@ -986,7 +1017,6 @@ final class AppModel {
     /// Show a transient banner for ~4s.
     func flash(_ message: String) {
         banner = message
-        logger.record(message, category: .ui, severity: .warning)
         bannerClear?.cancel()
         bannerClear = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Self.bannerDuration))

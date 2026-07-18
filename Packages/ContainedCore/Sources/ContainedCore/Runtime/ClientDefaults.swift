@@ -30,21 +30,51 @@ extension RuntimeContainerClient {
     }
 
     @discardableResult func recreateContainer(originalID: String,
-                                             request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
+                                             replacement: Core.Container.CreateRequest,
+                                             rollback: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
         _ = try? await stop([originalID])
-        try await deleteContainerIfPresent(originalID, force: true)
-        return try await createContainer(request)
+        let deletedOriginal: Bool
+        do {
+            deletedOriginal = try await deleteContainerIfPresent(originalID, force: true)
+        } catch {
+            throw Core.Container.RecreateFailure(phase: .deleteOriginal,
+                                                 recovery: .notNeeded,
+                                                 primaryError: error)
+        }
+
+        do {
+            return try await createContainer(replacement)
+        } catch {
+            let replacementError = error
+            guard deletedOriginal else {
+                throw Core.Container.RecreateFailure(phase: .createReplacement,
+                                                     recovery: .notNeeded,
+                                                     primaryError: replacementError)
+            }
+            do {
+                _ = try await createContainer(rollback)
+            } catch {
+                throw Core.Container.RecreateFailure(phase: .restoreOriginal,
+                                                     recovery: .restoreFailed,
+                                                     primaryError: replacementError,
+                                                     recoveryError: error)
+            }
+            throw Core.Container.RecreateFailure(phase: .createReplacement,
+                                                 recovery: .originalRestored,
+                                                 primaryError: replacementError)
+        }
     }
 
-    private func deleteContainerIfPresent(_ id: String, force: Bool) async throws {
+    private func deleteContainerIfPresent(_ id: String, force: Bool) async throws -> Bool {
         if let current = try? await listContainers(all: true),
            !current.contains(where: { $0.id == id || $0.scopedID == id || $0.scopedID == descriptor.kind.scopedID(for: id) }) {
-            return
+            return false
         }
         do {
             _ = try await deleteContainers([id], force: force)
+            return true
         } catch let error as Core.Command.Error where error.isContainerNotFound {
-            return
+            return false
         }
     }
 }

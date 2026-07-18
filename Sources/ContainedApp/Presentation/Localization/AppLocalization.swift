@@ -131,6 +131,28 @@ enum AppText {
         string("error.compose.invalidWithReason", defaultValue: "Invalid compose file: \(reason)")
     }
 
+    static var recreateOriginalUnavailable: String {
+        string("error.recreate.originalUnavailable", defaultValue: "The original container is no longer available to recreate safely.")
+    }
+
+    static func recreateOriginalRestored(detail: String) -> String {
+        string(
+            "error.recreate.originalRestored",
+            defaultValue: "Couldn't apply the container changes. The original container was restored. \(detail)"
+        )
+    }
+
+    static func recreateRestoreFailed(replacementDetail: String, recoveryDetail: String) -> String {
+        string(
+            "error.recreate.restoreFailed",
+            defaultValue: "Couldn't create the replacement or restore the original. Its saved configuration was kept for recovery. Replacement: \(replacementDetail) Restore: \(recoveryDetail)"
+        )
+    }
+
+    static func recreateFailed(detail: String) -> String {
+        string("error.recreate.failed", defaultValue: "Couldn't recreate the container. \(detail)")
+    }
+
     static var reconnectTerminal: String {
         string("terminal.reconnectTerminal", defaultValue: "Reconnect terminal")
     }

@@ -67,7 +67,7 @@ module:
 
 - `schemaDefinition(for:runtimeKind:)` publishes canonical field definitions with the selected module's schema profile applied.
 - `previewCreateCommand(for:)` validates a schema document and returns the command preview for the selected runtime.
-- `createContainer(_:)` and `recreateContainer(originalID:document:)` create from schema documents.
+- `createContainer(_:)` and `recreateContainer(originalID:replacement:rollback:)` create from validated schema documents. Recreate validates both inputs before mutation and automatically restores the rollback document when replacement creation fails after deletion.
 - `translateCompose(_:baseDirectory:runtimeKind:)` turns parsed Compose projects into schema documents plus warnings and provenance.
 - `imageDefaults(for:in:)` lets the selected runtime provide image-specific defaults for the same schema fields.
 - `planMigration(_:to:)` and `coreSwitchPlan(for:source:to:)` describe runtime move planning. `migrateContainer(_:sourceDocument:targetRuntimeKind:healthCheck:stabilizationTimeout:pollInterval:onPullProgress:)` owns the typed execution sequence: stop the source runtime instance, ensure the target image, create the target from normalized config plus preserved projections, wait for health/running stabilization, and only then remove the source. The app records progress, owns styling/health metadata, and presents recovery.
@@ -116,6 +116,12 @@ folder. Public APIs expose Core models and typed plans, never Yams types.
 Core throws typed display-neutral errors with stable package codes/context. The
 app maps them through `AppErrorPresentation` and `AppText` before showing
 toasts, inline messages, alerts, or Activity history.
+
+Immediate error presentation may include runtime-provided stderr so the user can
+act on a failure. Durable Activity entries and macOS Console output use an
+allowlisted summary instead: stable package/error codes, recreate phase and
+recovery state, exit status, timings, and counts. Raw commands, stderr,
+environment values, paths, labels, and credentials are not persisted or logged.
 
 Core exposes typed `Core.Metrics.RuntimeStatsSnapshot` batches from
 `streamStats(ids:)`. Apple container currently provides live stats only as an

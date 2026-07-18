@@ -126,6 +126,35 @@ struct AppDatabaseTests {
         #expect(record.missingSince != nil)
     }
 
+    @Test func recreateRecoveryDocumentRetainsMissingContainerUntilResolved() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let runner = DockerRecordingRunner()
+        let store = ContainersStore()
+        store.database = database
+        store.client = appTestOrchestrator(runner: runner,
+                                           cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                           runtimeKind: .docker)
+
+        await store.refresh()
+        let source = try #require(store.snapshots.first)
+        let document = Core.Schema.Document.containerEdit(from: source.configuration)
+        database.markContainerRecreateStarted(source: source, sourceDocument: document)
+        database.upsertContainers([])
+
+        let retained = try #require(database.fetch(ContainerRecord.self).first)
+        #expect(retained.isMissing)
+        #expect(retained.migrationStateRaw == "recreating")
+        let projections = try JSONDecoder().decode(
+            [String: Core.Schema.Document].self,
+            from: try #require(retained.runtimeProjectionsData)
+        )
+        #expect(projections[Core.Runtime.Kind.docker.rawValue] == document)
+
+        database.markContainerRecreateFailed(scopedID: source.scopedID)
+        #expect(retained.migrationStateRaw == "recreateFailed")
+        #expect(retained.runtimeProjectionsData != nil)
+    }
+
     @Test func linkedVolumePathMetadataIsPersistedAndRetainsMissingContainer() async throws {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let runner = DockerRecordingRunner()

@@ -6,6 +6,8 @@ enum AppErrorPresentation {
         switch error {
         case let error as Core.Command.Error:
             return message(for: error)
+        case let error as Core.Container.RecreateFailure:
+            return message(for: error)
         case let error as Core.Runtime.UnsupportedCapability:
             return message(for: error)
         case let error as Core.Registry.ManifestError:
@@ -21,7 +23,7 @@ enum AppErrorPresentation {
 
     static func packageSummary(for error: Error) -> String? {
         guard let packageError = error as? Core.Error.PackageError else { return nil }
-        let context = packageError.packageErrorContext
+        let context = activityContext(for: error)
             .sorted { $0.key < $1.key }
             .map { "\($0.key)=\(compactContextValue($0.value))" }
             .joined(separator: ", ")
@@ -32,9 +34,33 @@ enum AppErrorPresentation {
     }
 
     static func activityMessage(_ prefix: String, error: Error) -> String {
-        let message = "\(prefix): \(message(for: error))"
-        guard let summary = packageSummary(for: error) else { return message }
-        return "\(message) [\(summary)]"
+        if let summary = packageSummary(for: error) {
+            return "\(prefix): \(summary)"
+        }
+        return "\(prefix): \(String(describing: type(of: error)))"
+    }
+
+    /// Only metadata that is safe to persist in Activity or copy into support bundles.
+    private static func activityContext(for error: Error) -> [String: String] {
+        switch error {
+        case let error as Core.Command.Error:
+            if case .nonZeroExit(let code, _, _) = error {
+                return ["exitCode": String(code)]
+            }
+            return [:]
+        case let error as Core.Container.RecreateFailure:
+            var context = [
+                "phase": error.phase.rawValue,
+                "recovery": error.recovery.rawValue,
+                "primaryCode": error.primaryFailure.code,
+            ]
+            if let recoveryFailure = error.recoveryFailure {
+                context["recoveryCode"] = recoveryFailure.code
+            }
+            return context
+        default:
+            return [:]
+        }
     }
 
     private static func compactContextValue(_ value: String) -> String {
@@ -66,6 +92,20 @@ enum AppErrorPresentation {
                 "error.command.launchFailed",
                 defaultValue: "Couldn't run the container CLI: \(underlying)"
             )
+        }
+    }
+
+    private static func message(for error: Core.Container.RecreateFailure) -> String {
+        switch error.recovery {
+        case .originalRestored:
+            return AppText.recreateOriginalRestored(detail: error.primaryFailure.runtimeDetail)
+        case .restoreFailed:
+            return AppText.recreateRestoreFailed(
+                replacementDetail: error.primaryFailure.runtimeDetail,
+                recoveryDetail: error.recoveryFailure?.runtimeDetail ?? ""
+            )
+        case .notNeeded:
+            return AppText.recreateFailed(detail: error.primaryFailure.runtimeDetail)
         }
     }
 

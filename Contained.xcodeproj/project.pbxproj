@@ -24,6 +24,8 @@
 		0E210001000000000000000D /* DesignSystemBoundaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000D /* DesignSystemBoundaryTests.swift */; };
 		0E210001000000000000000E /* PreviewFixtureMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000E /* PreviewFixtureMappingTests.swift */; };
 		0E210001000000000000000F /* RuntimeTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000F /* RuntimeTestSupport.swift */; };
+		0E2100010000000000000010 /* ContainedCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0E21000B0000000000000001 /* ContainedCore */; };
+		0E2100010000000000000011 /* ContainedCoreFixtures in Frameworks */ = {isa = PBXBuildFile; productRef = 0E21000B0000000000000002 /* ContainedCoreFixtures */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -71,6 +73,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				0E2100010000000000000008 /* ContainedApp in Frameworks */,
+				0E2100010000000000000010 /* ContainedCore in Frameworks */,
+				0E2100010000000000000011 /* ContainedCoreFixtures in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,6 +177,8 @@
 			name = ContainedAppTests;
 			packageProductDependencies = (
 				0E20000B0000000000000001 /* ContainedApp */,
+				0E21000B0000000000000001 /* ContainedCore */,
+				0E21000B0000000000000002 /* ContainedCoreFixtures */,
 			);
 			productName = ContainedAppTests;
 			productReference = 0E2100020000000000000008 /* ContainedAppTests.xctest */;
@@ -207,6 +213,7 @@
 			mainGroup = 0E2000040000000000000001;
 			packageReferences = (
 				0E20000A0000000000000001 /* XCLocalSwiftPackageReference "." */,
+				0E21000A0000000000000001 /* XCLocalSwiftPackageReference "Packages/ContainedCore" */,
 			);
 			productRefGroup = 0E2000040000000000000003 /* Products */;
 			projectDirPath = "";
@@ -424,6 +431,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = .;
 		};
+		0E21000A0000000000000001 /* XCLocalSwiftPackageReference "Packages/ContainedCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/ContainedCore;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -431,6 +442,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0E20000A0000000000000001 /* XCLocalSwiftPackageReference "." */;
 			productName = ContainedApp;
+		};
+		0E21000B0000000000000001 /* ContainedCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0E21000A0000000000000001 /* XCLocalSwiftPackageReference "Packages/ContainedCore" */;
+			productName = ContainedCore;
+		};
+		0E21000B0000000000000002 /* ContainedCoreFixtures */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0E21000A0000000000000001 /* XCLocalSwiftPackageReference "Packages/ContainedCore" */;
+			productName = ContainedCoreFixtures;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -52,6 +52,7 @@ final class ContainersStore {
     @ObservationIgnored
     private(set) var statsRevision = 0
     var errorMessage: String?
+    @ObservationIgnored private(set) var recreateFailure: Core.Container.RecreateFailure?
     var busyIDs: Set<String> = []
     @ObservationIgnored var logger: AppLogger?
     @ObservationIgnored weak var database: AppDatabase?
@@ -328,7 +329,7 @@ final class ContainersStore {
                                   error: error,
                                   category: .lifecycle,
                                   severity: .warning)
-            diagnosticLogger.error("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .public)")
+            diagnosticLogger.error("Run failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .private(mask: .hash))")
             return nil
         }
     }
@@ -336,8 +337,11 @@ final class ContainersStore {
     /// Recreate macro: tear down `originalID` and run `spec` in its place. Container config is
     /// immutable, so edits become a replacement run. Errors are surfaced for the caller to show.
     @discardableResult
-    func recreate(originalID: String, spec: ContainerFormState) async -> Bool {
+    func recreate(originalID: String,
+                  replacement: Core.Schema.Document,
+                  rollback: Core.Schema.Document) async -> Bool {
         guard let client else { return false }
+        recreateFailure = nil
         let original = snapshot(for: originalID)
         let trackingID = original?.scopedID ?? originalID
         let runtimeID = original?.id ?? originalID
@@ -345,20 +349,23 @@ final class ContainersStore {
         intentionalStops.insert(trackingID)   // don't let the watchdog fight the teardown
         defer { busyIDs.remove(trackingID) }
         let started = Date()
-        logger?.record("Recreating \(runtimeID)", category: .lifecycle, containerID: trackingID)
-        diagnosticLogger.notice("Recreate started for \(runtimeID, privacy: .public)")
+        logger?.record("Recreating container", category: .lifecycle, containerID: trackingID)
+        diagnosticLogger.notice("Recreate started for \(runtimeID, privacy: .private(mask: .hash))")
         do {
-            _ = try await client.recreateContainer(originalID: runtimeID, document: spec.materializedDocumentForRun())
+            _ = try await client.recreateContainer(originalID: runtimeID,
+                                                   replacement: replacement,
+                                                   rollback: rollback)
             await refresh()
             let elapsed = Date().timeIntervalSince(started)
-            logger?.record("Recreated \(runtimeID) in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
+            logger?.record("Recreated container in \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
                            category: .lifecycle,
                            severity: elapsed >= 1.5 ? .warning : .info,
                            containerID: trackingID)
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
-                                 "Recreated \(runtimeID, privacy: .public) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
+                                 "Recreated \(runtimeID, privacy: .private(mask: .hash)) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
             return true
         } catch {
+            recreateFailure = error as? Core.Container.RecreateFailure
             errorMessage = error.appDisplayMessage
             let elapsed = Date().timeIntervalSince(started)
             logger?.recordFailure("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s",
@@ -366,7 +373,7 @@ final class ContainersStore {
                                   category: .lifecycle,
                                   severity: .warning,
                                   containerID: trackingID)
-            diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .public)")
+            diagnosticLogger.error("Recreate failed after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .private(mask: .hash))")
             await refresh()
             return false
         }
@@ -383,8 +390,8 @@ final class ContainersStore {
         busyIDs.insert(id)
         defer { busyIDs.remove(id) }
         let started = Date()
-        logger?.record("\(verb) \(id)", category: .lifecycle, containerID: id)
-        diagnosticLogger.notice("\(verb) started for \(id, privacy: .public)")
+        logger?.record("\(verb) container", category: .lifecycle, containerID: id)
+        diagnosticLogger.notice("\(verb) started for \(id, privacy: .private(mask: .hash))")
         do {
             try await body(client)
             await refresh()
@@ -394,7 +401,7 @@ final class ContainersStore {
                            severity: elapsed >= 1.5 ? .warning : .info,
                            containerID: id)
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
-                                 "\(verb) finished for \(id, privacy: .public) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
+                                 "\(verb) finished for \(id, privacy: .private(mask: .hash)) in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s")
         } catch {
             errorMessage = error.appDisplayMessage
             let elapsed = Date().timeIntervalSince(started)
@@ -403,7 +410,7 @@ final class ContainersStore {
                                   category: .lifecycle,
                                   severity: .warning,
                                   containerID: id)
-            diagnosticLogger.error("\(verb) failed for \(id, privacy: .public) after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .public)")
+            diagnosticLogger.error("\(verb) failed for \(id, privacy: .private(mask: .hash)) after \(elapsed.formatted(.number.precision(.fractionLength(2))))s: \(error.appDisplayMessage, privacy: .private(mask: .hash))")
         }
     }
 }

@@ -24,7 +24,8 @@ typed errors with stable codes/context, usually by conforming to
 descriptions for those codes. The app maps errors through `AppErrorPresentation`
 and `AppText`, then decides whether to show a toast, inline error, alert, or
 Activity entry. Do not attempt to localize arbitrary backend stderr; preserve it
-as runtime-provided detail unless an adapter can map it to a known typed case.
+for immediate runtime-detail presentation unless an adapter can map it to a known
+typed case. Do not persist that detail in Activity or emit it publicly to Console.
 
 ## App Strings
 

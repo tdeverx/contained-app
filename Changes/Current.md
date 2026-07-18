@@ -6,6 +6,9 @@
 
 - Bundle the generated current release notes artifact into local app builds so in-app What's New matches the CI/Appcast release-note source.
 - Harden container recreate after stale runtime snapshots and reduce repeated optional-runtime endpoint errors in Activity.
+- Validate replacement and rollback recipes before destructive container edits, automatically restore the original after replacement failure, and retain its recipe when restoration also fails.
+- Link Core fixtures only into the native Xcode test target and run that suite in PR CI so the Xcode and SwiftPM package graphs cannot drift silently.
+- Keep raw CLI commands, stderr, paths, environment values, and credentials out of persistent Activity and public Console diagnostics while retaining runtime detail in immediate errors.
 
 ### Runtime & Images
 

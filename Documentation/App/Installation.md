@@ -12,7 +12,7 @@ Download the latest `Contained.dmg` from [Releases](https://github.com/tdeverx/c
 
 On first launch, the bootstrap screen checks for the `container` CLI and the runtime service, and helps you start it.
 
-> If the CLI isn't found, set its path in **Settings → General → Container CLI path**, or install it from the [container releases](https://github.com/apple/container).
+> If the CLI isn't found, set its path in **Settings → Runtime**, or install it from the [container releases](https://github.com/apple/container).
 
 ## Build from source
 

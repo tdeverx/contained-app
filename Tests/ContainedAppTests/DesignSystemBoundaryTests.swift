@@ -14,6 +14,9 @@ struct DesignSystemBoundaryTests {
     }
 
     private var repositoryRoot: URL {
-        URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        URL(filePath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
     }
 }

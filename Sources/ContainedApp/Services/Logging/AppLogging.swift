@@ -141,7 +141,7 @@ final class AppLogger {
         }
         if settings.enabledLogDestinations.contains(.console),
            let logger = osLoggers[category] {
-            logger.log(level: severity.osLogType, "\(message, privacy: .public)")
+            logger.log(level: severity.osLogType, "\(message, privacy: .private(mask: .hash))")
         }
     }
 
