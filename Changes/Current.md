@@ -1,6 +1,7 @@
-# Performance and verification
+# Faster, smoother navigation
 
-- Reduced idle UI work by avoiding unchanged runtime-inventory writes, stopping live stats while the Containers surface is hidden, and bounding historical chart rendering.
-- Removed SwiftData fetches from navigation chrome, moved Activity and container-history rows to bounded value projections, and made inventory serialization proportional to actual changes.
-- Moved grid filtering/grouping off the render path, replaced compact Swift Charts with a Canvas renderer, limited morph geometry reads to the selected card, and batched both log consoles into stable bounded blocks.
-- Kept SwiftPM and Xcode dependency pins aligned, expanded automated local-package coverage, and retained native Xcode result bundles in PR CI.
+- Made the experimental toolbar-first interface more responsive at idle and while moving between pages by removing persistent-data work from navigation controls.
+- Improved container-grid scrolling, grouping, resizing, and card transitions with lighter compact graphs and less layout work during rendering.
+- Made Activity, container History, and Logs faster to open and switch between by using bounded caches, cancellable history loads, and stable batched console updates.
+- Reduced background refresh overhead by skipping unchanged inventory writes and preparing only containers whose stored details actually changed.
+- Expanded SwiftPM and native Xcode coverage for these performance paths and documented repeatable Instruments checks for future regressions.
