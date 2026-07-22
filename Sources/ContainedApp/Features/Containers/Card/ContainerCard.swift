@@ -405,13 +405,11 @@ struct ContainerCard: View {
 }
 
 private struct DeferredContainerPage<Content: View>: View {
-    private let delay: Duration
     @ViewBuilder var content: () -> Content
 
     @State private var isReady = false
 
-    init(delay: Duration = .milliseconds(60), @ViewBuilder content: @escaping () -> Content) {
-        self.delay = delay
+    init(@ViewBuilder content: @escaping () -> Content) {
         self.content = content
     }
 
@@ -426,7 +424,7 @@ private struct DeferredContainerPage<Content: View>: View {
         }
         .task {
             isReady = false
-            try? await Task.sleep(for: delay)
+            await Task.yield()
             guard !Task.isCancelled else { return }
             isReady = true
         }

@@ -26,6 +26,8 @@
 		0E210001000000000000000F /* RuntimeTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000F /* RuntimeTestSupport.swift */; };
 		0E2100010000000000000010 /* ContainedCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0E21000B0000000000000001 /* ContainedCore */; };
 		0E2100010000000000000011 /* ContainedCoreFixtures in Frameworks */ = {isa = PBXBuildFile; productRef = 0E21000B0000000000000002 /* ContainedCoreFixtures */; };
+		0E2100010000000000000012 /* ContainerGridProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000012 /* ContainerGridProjectionTests.swift */; };
+		0E2100010000000000000013 /* HistoryPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000013 /* HistoryPerformanceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,6 +59,8 @@
 		0E210002000000000000000D /* DesignSystemBoundaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemBoundaryTests.swift; sourceTree = "<group>"; };
 		0E210002000000000000000E /* PreviewFixtureMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewFixtureMappingTests.swift; sourceTree = "<group>"; };
 		0E210002000000000000000F /* RuntimeTestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeTestSupport.swift; sourceTree = "<group>"; };
+		0E2100020000000000000012 /* ContainerGridProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerGridProjectionTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000013 /* HistoryPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPerformanceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,9 +130,11 @@
 				0E210002000000000000000B /* AppKitBoundaryTests.swift */,
 				0E2100020000000000000001 /* AppLoggingTests.swift */,
 				0E210002000000000000000C /* ContainerRuntimeMigrationTests.swift */,
+				0E2100020000000000000012 /* ContainerGridProjectionTests.swift */,
 				0E2100020000000000000002 /* ContainersStoreRefreshTests.swift */,
 				0E210002000000000000000D /* DesignSystemBoundaryTests.swift */,
 				0E2100020000000000000003 /* MigrationTests.swift */,
+				0E2100020000000000000013 /* HistoryPerformanceTests.swift */,
 				0E2100020000000000000004 /* PaletteSearchTests.swift */,
 				0E210002000000000000000E /* PreviewFixtureMappingTests.swift */,
 				0E210002000000000000000F /* RuntimeTestSupport.swift */,
@@ -260,9 +266,11 @@
 				0E210001000000000000000B /* AppKitBoundaryTests.swift in Sources */,
 				0E2100010000000000000001 /* AppLoggingTests.swift in Sources */,
 				0E210001000000000000000C /* ContainerRuntimeMigrationTests.swift in Sources */,
+				0E2100010000000000000012 /* ContainerGridProjectionTests.swift in Sources */,
 				0E2100010000000000000002 /* ContainersStoreRefreshTests.swift in Sources */,
 				0E210001000000000000000D /* DesignSystemBoundaryTests.swift in Sources */,
 				0E2100010000000000000003 /* MigrationTests.swift in Sources */,
+				0E2100010000000000000013 /* HistoryPerformanceTests.swift in Sources */,
 				0E2100010000000000000004 /* PaletteSearchTests.swift in Sources */,
 				0E210001000000000000000E /* PreviewFixtureMappingTests.swift in Sources */,
 				0E210001000000000000000F /* RuntimeTestSupport.swift in Sources */,

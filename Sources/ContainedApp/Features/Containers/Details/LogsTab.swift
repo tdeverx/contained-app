@@ -8,13 +8,11 @@ struct LogsTab: View {
     @Environment(AppModel.self) private var app
     let snapshot: Core.Container.Snapshot
 
-    @State private var lines: [String] = []
-    @State private var carry = ""
+    @State private var streamBuffer = UI.Console.StreamBuffer(capacity: 5_000)
     @State private var following = true
     @State private var streaming = false
     @State private var failed: String?
 
-    private let maxLines = 5000
     private let bottomID = "logs-bottom"
 
     var body: some View {
@@ -35,13 +33,13 @@ struct LogsTab: View {
                 UI.State.InlineStatus(AppText.string("logs.streaming", defaultValue: "streaming"), isWorking: true)
             }
             Spacer()
-            Text(AppText.lineCount(lines.count)).designSecondaryCaption().monospacedDigit()
-            UI.Copy.Icon(value: lines.joined(separator: "\n"), help: AppText.copyAll)
+            Text(AppText.lineCount(streamBuffer.output.lineCount)).designSecondaryCaption().monospacedDigit()
+            UI.Copy.Icon(value: streamBuffer.output.copyText, help: AppText.copyAll)
             UI.Action.Group(UI.Action.Item(systemName: "trash",
                                            help: AppText.clear,
                                            role: .destructive,
-                                           isEnabled: !lines.isEmpty) {
-                    lines.removeAll(); carry = ""
+                                           isEnabled: streamBuffer.output.lineCount > 0) {
+                    streamBuffer.clear()
             })
         }
     }
@@ -53,7 +51,7 @@ struct LogsTab: View {
                              systemImage: "exclamationmark.triangle",
                              description: failed,
                              tone: .error)
-        } else if lines.isEmpty {
+        } else if streamBuffer.output.lineCount == 0 {
             UI.State.Empty(streaming
                                 ? AppText.string("logs.waiting", defaultValue: "Waiting for output")
                                 : AppText.string("logs.empty", defaultValue: "No output"),
@@ -65,8 +63,8 @@ struct LogsTab: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.hairline) {
-                        ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                            Text(line.isEmpty ? " " : line)
+                        ForEach(streamBuffer.output.blocks) { block in
+                            Text(block.text.isEmpty ? " " : block.text)
                                 .designMonospacedCaption()
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -76,7 +74,7 @@ struct LogsTab: View {
                     .padding(UI.Layout.Spacing.s)
                 }
                 .scrollEdgeEffectStyle(.soft, for: .all)
-                .onChange(of: lines.count) { _, _ in
+                .onChange(of: streamBuffer.output.lineCount) { _, _ in
                     if following { proxy.scrollTo(bottomID, anchor: .bottom) }
                 }
             }
@@ -85,9 +83,9 @@ struct LogsTab: View {
 
     private func stream() async {
         guard let client = app.client else { return }
-        try? await Task.sleep(for: .milliseconds(140))
+        await Task.yield()
         guard !Task.isCancelled else { return }
-        lines.removeAll(); carry = ""; failed = nil
+        streamBuffer.clear(); failed = nil
         streaming = true
         defer { streaming = false }
         do {
@@ -95,23 +93,16 @@ struct LogsTab: View {
                                                      runtimeKind: snapshot.runtimeKind,
                                                      follow: true,
                                                      tail: 500) {
-                ingest(chunk)
+                streamBuffer.enqueue(chunk)
             }
             // Stream ended (process exited): flush any trailing partial line.
-            if !carry.isEmpty { lines.append(carry); carry = "" }
+            streamBuffer.finish()
         } catch is CancellationError {
             // Expected on tab/container switch — the child process is terminated for us.
+            streamBuffer.cancel()
         } catch {
+            streamBuffer.finish()
             failed = (error as? Core.Command.Error)?.appDisplayMessage ?? error.appDisplayMessage
         }
-    }
-
-    private func ingest(_ chunk: String) {
-        let combined = carry + chunk
-        guard let lastNewline = combined.lastIndex(of: "\n") else { carry = combined; return }
-        let complete = combined[..<lastNewline]
-        carry = String(combined[combined.index(after: lastNewline)...])
-        lines.append(contentsOf: complete.split(separator: "\n", omittingEmptySubsequences: false).map(String.init))
-        if lines.count > maxLines { lines.removeFirst(lines.count - maxLines) }
     }
 }

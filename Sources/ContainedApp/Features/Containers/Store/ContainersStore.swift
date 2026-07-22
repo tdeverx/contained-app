@@ -43,7 +43,12 @@ final class ContainerMetricsState {
 final class ContainersStore {
     private static let minimumStreamedStatsInterval: TimeInterval = 1
 
-    var snapshots: [Core.Container.Snapshot] = []
+    var snapshots: [Core.Container.Snapshot] = [] {
+        didSet {
+            if snapshots != oldValue { inventoryRevision &+= 1 }
+        }
+    }
+    private(set) var inventoryRevision = 0
     @ObservationIgnored
     var statsByID: [String: Core.Metrics.StatsDelta] = [:]
     /// Per-container, per-metric sparkline history.
@@ -59,6 +64,7 @@ final class ContainersStore {
     @ObservationIgnored var now: () -> Date = Date.init
     @ObservationIgnored private var metricsStates: [String: ContainerMetricsState] = [:]
     @ObservationIgnored private var statsNormalizationContext: Core.Metrics.NormalizationContext = .containerSpecific
+    @ObservationIgnored private var lastPersistedInventory: [Core.Container.Snapshot]?
 
     var client: Core.Orchestrator?
 
@@ -144,8 +150,19 @@ final class ContainersStore {
         do {
             let inventory = try await client.containerInventory(all: true)
             let listedAll = inventory.items
-                .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-            database?.upsertContainers(listedAll)
+                .sorted { lhs, rhs in
+                    let comparison = lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName)
+                    return comparison == .orderedSame ? lhs.scopedID < rhs.scopedID : comparison == .orderedAscending
+                }
+            if let database, listedAll != lastPersistedInventory {
+                let persistence = await database.upsertContainers(listedAll)
+                diagnosticLogger.debug("Inventory persistence listed=\(listedAll.count, privacy: .public) changed=\(persistence.inserted + persistence.updated, privacy: .public) encoded=\(persistence.encoded, privacy: .public) persisted=\(persistence.persisted, privacy: .public) skipped=\(persistence.unchanged, privacy: .public)")
+                if persistence.succeeded {
+                    lastPersistedInventory = listedAll
+                }
+            } else if database != nil {
+                diagnosticLogger.debug("Inventory persistence listed=\(listedAll.count, privacy: .public) changed=0 encoded=0 persisted=0 skipped=\(listedAll.count, privacy: .public)")
+            }
             let migratingIDs = database?.hiddenContainerScopedIDs() ?? []
             let listed = listedAll.filter { !migratingIDs.contains($0.scopedID) }
             // Only publish when the list actually changed: reassigning an identical array would

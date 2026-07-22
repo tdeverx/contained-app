@@ -1,36 +1,51 @@
 import Foundation
 import ContainedCore
 
+struct InventoryPersistenceResult: Equatable, Sendable {
+    var inserted = 0
+    var updated = 0
+    var missing = 0
+    var encoded = 0
+    var unchanged = 0
+    var succeeded = true
+
+    var persisted: Int { inserted + updated + missing }
+}
+
 extension AppDatabase {
-    func upsertContainers(_ snapshots: [Core.Container.Snapshot], observedAt: Date = Date()) {
+    func upsertContainers(_ snapshots: [Core.Container.Snapshot],
+                          observedAt: Date = Date()) async -> InventoryPersistenceResult {
+        let interval = PerformanceSignposts.inventory.beginInterval("InventoryPersistence")
+        defer { PerformanceSignposts.inventory.endInterval("InventoryPersistence", interval) }
+        containerInventoryPreparationCount &+= 1
         let seen = Set(snapshots.map(\.scopedID))
         let records = fetch(ContainerRecord.self)
         let recordsByID = Dictionary(records.map { ($0.scopedID, $0) }, uniquingKeysWith: { first, _ in first })
         let personalizedIDs = Set(fetch(PersonalizationRecord.self).map(\.key))
         let healthCheckedIDs = Set(fetch(HealthCheckRecord.self).map(\.containerScopedID))
+        let existing = Dictionary(uniqueKeysWithValues: recordsByID.map { id, record in
+            (id, ExistingContainerProjection(record))
+        })
+        let preparation = await Task.detached(priority: .utility) {
+            ContainerInventoryPreparer.prepare(snapshots: snapshots, existing: existing)
+        }.value
+        var result = preparation.result
+        containerInventoryEncodedCount &+= result.encoded
         var changed = false
-        for snapshot in snapshots {
-            let document = Core.Schema.Document.containerEdit(from: snapshot.configuration)
-            let documentData = encode(document)
-            let snapshotData = encode(snapshot)
+        for failure in preparation.failures {
+            recordFailure(.encodeRecord(type: failure.type, detail: failure.detail))
+            result.succeeded = false
+        }
+        for item in preparation.items {
+            let snapshot = item.snapshot
             if let record = recordsByID[snapshot.scopedID] {
-                guard record.runtimeKindRaw != snapshot.runtimeKind.rawValue ||
-                        record.runtimeID != snapshot.id ||
-                        record.displayName != snapshot.displayName ||
-                        record.imageReference != snapshot.image ||
-                        record.statusRaw != snapshot.state.rawValue ||
-                        !matches(record.documentData, document) ||
-                        !matches(record.snapshotData, snapshot) ||
-                        record.isMissing ||
-                        record.missingSince != nil
-                else { continue }
                 record.runtimeKindRaw = snapshot.runtimeKind.rawValue
                 record.runtimeID = snapshot.id
                 record.displayName = snapshot.displayName
                 record.imageReference = snapshot.image
                 record.statusRaw = snapshot.state.rawValue
-                record.documentData = documentData
-                record.snapshotData = snapshotData
+                if let documentData = item.documentData { record.documentData = documentData }
+                if let snapshotData = item.snapshotData { record.snapshotData = snapshotData }
                 record.isMissing = false
                 record.missingSince = nil
                 record.lastSeenAt = observedAt
@@ -43,8 +58,8 @@ extension AppDatabase {
                                                displayName: snapshot.displayName,
                                                imageReference: snapshot.image,
                                                statusRaw: snapshot.state.rawValue,
-                                               documentData: documentData,
-                                               snapshotData: snapshotData,
+                                               documentData: item.documentData,
+                                               snapshotData: item.snapshotData,
                                                lastSeenAt: observedAt,
                                                updatedAt: observedAt))
                 changed = true
@@ -61,8 +76,10 @@ extension AppDatabase {
                 context.delete(record)
             }
             changed = true
+            result.missing += 1
         }
-        if changed { save() }
+        if changed, !save() { result.succeeded = false }
+        return result
     }
 
     func upsertImages(_ images: [Core.Image.Resource], observedAt: Date = Date()) {
@@ -501,11 +518,100 @@ extension AppDatabase {
         }
     }
 
-    /// JSON object key ordering is not a semantic runtime change. Compare decoded values before
-    /// writing a snapshot so dictionary-backed schemas cannot turn an idle refresh into a database
-    /// transaction merely because their encoded byte order differed.
-    private func matches<T: Codable & Equatable>(_ data: Data?, _ expected: T) -> Bool {
-        guard let data, let decoded = try? JSONDecoder().decode(T.self, from: data) else { return false }
-        return decoded == expected
+}
+
+private struct ExistingContainerProjection: Sendable {
+    let runtimeKindRaw: String
+    let runtimeID: String
+    let displayName: String
+    let imageReference: String
+    let statusRaw: String
+    let documentData: Data?
+    let snapshotData: Data?
+    let isMissing: Bool
+    let missingSince: Date?
+
+    init(_ record: ContainerRecord) {
+        runtimeKindRaw = record.runtimeKindRaw
+        runtimeID = record.runtimeID
+        displayName = record.displayName
+        imageReference = record.imageReference
+        statusRaw = record.statusRaw
+        documentData = record.documentData
+        snapshotData = record.snapshotData
+        isMissing = record.isMissing
+        missingSince = record.missingSince
+    }
+}
+
+private struct PreparedContainerProjection: Sendable {
+    let snapshot: Core.Container.Snapshot
+    let documentData: Data?
+    let snapshotData: Data?
+}
+
+private struct ContainerEncodingFailure: Sendable {
+    let type: String
+    let detail: String
+}
+
+private struct ContainerInventoryPreparation: Sendable {
+    var items: [PreparedContainerProjection] = []
+    var failures: [ContainerEncodingFailure] = []
+    var result = InventoryPersistenceResult()
+}
+
+private enum ContainerInventoryPreparer {
+    static func prepare(snapshots: [Core.Container.Snapshot],
+                        existing: [String: ExistingContainerProjection]) -> ContainerInventoryPreparation {
+        var output = ContainerInventoryPreparation()
+        let decoder = JSONDecoder()
+        let encoder = JSONEncoder()
+
+        for snapshot in snapshots {
+            if let record = existing[snapshot.scopedID] {
+                let scalarFieldsMatch = record.runtimeKindRaw == snapshot.runtimeKind.rawValue &&
+                    record.runtimeID == snapshot.id &&
+                    record.displayName == snapshot.displayName &&
+                    record.imageReference == snapshot.image &&
+                    record.statusRaw == snapshot.state.rawValue
+                let snapshotMatches = record.snapshotData.flatMap {
+                    try? decoder.decode(Core.Container.Snapshot.self, from: $0)
+                } == snapshot
+
+                if scalarFieldsMatch && snapshotMatches && record.documentData != nil {
+                    if record.isMissing || record.missingSince != nil {
+                        output.items.append(PreparedContainerProjection(snapshot: snapshot,
+                                                                         documentData: nil,
+                                                                         snapshotData: nil))
+                        output.result.updated += 1
+                    } else {
+                        output.result.unchanged += 1
+                    }
+                    continue
+                }
+            }
+
+            do {
+                let document = Core.Schema.Document.containerEdit(from: snapshot.configuration)
+                let documentData = try encoder.encode(document)
+                let snapshotData = try encoder.encode(snapshot)
+                output.items.append(PreparedContainerProjection(snapshot: snapshot,
+                                                                 documentData: documentData,
+                                                                 snapshotData: snapshotData))
+                output.result.encoded += 1
+                if existing[snapshot.scopedID] == nil {
+                    output.result.inserted += 1
+                } else {
+                    output.result.updated += 1
+                }
+            } catch {
+                output.failures.append(ContainerEncodingFailure(
+                    type: "container inventory projection",
+                    detail: String(describing: error)
+                ))
+            }
+        }
+        return output
     }
 }

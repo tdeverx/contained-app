@@ -19,9 +19,9 @@ struct ContainersGridView: View {
     /// panel. A single spring on this flag owns the whole motion (no matchedGeometry to fight).
     @State private var expanded = false
     @State private var lifecycleFeedback = 0
-    /// Live frames of every visible grid card (in the "grid" coordinate space) so the promoted card
-    /// can start from the exact slot it was tapped in.
-    @State private var cardFrames: [String: CGRect] = [:]
+    @State private var pendingDetail: Core.Container.Snapshot?
+    @State private var detailSourceFrame: CGRect?
+    @State private var projectionState = ContainerGridProjectionState()
     @State private var selectedWidgetIndices: [String: Int] = [:]
 
     // Each network is a collapsible section of the containers attached to it.
@@ -32,131 +32,27 @@ struct ContainersGridView: View {
 
     private var store: ContainersStore { app.containers }
 
-    /// A bucket of containers under one heading. `resource` is set only for network grouping (so the
-    /// section keeps its network context menu); `symbol` drives the section header glyph.
-    private struct ContainerGroup: Identifiable {
-        let name: String
-        let symbol: String
-        let resource: Core.Network.Resource?
-        let containers: [Core.Container.Snapshot]
-        let isBuiltin: Bool
-        var id: String { name }
+    private var projectionInput: ContainerGridProjection.Input {
+        ContainerGridProjection.Input(snapshots: store.snapshots,
+                                      networks: app.networks,
+                                      grouping: ui.grouping,
+                                      sort: ui.sort,
+                                      runningOnly: ui.runningOnly,
+                                      search: ui.search.text)
     }
 
-    /// The network names a container is attached to (requested config ∪ runtime status).
-    private func networkNames(_ snapshot: Core.Container.Snapshot) -> [String] {
-        let names = snapshot.configuration.networks.map(\.network) + snapshot.status.networks.map(\.network)
-        return Array(Set(names)).sorted()
-    }
-
-    /// Containers bucketed according to the toolbar grouping choice, each bucket sorted by the chosen
-    /// sort. Network grouping keeps every known network as a section (empty ones included).
-    private var groups: [ContainerGroup] {
-        switch ui.grouping {
-        case .network: return networkGroups
-        case .volume:  return volumeGroups
-        case .image:   return imageGroups
-        case .flat:    return [ContainerGroup(name: "All containers", symbol: "square.grid.2x2",
-                                              resource: nil, containers: sorted(filtered), isBuiltin: false)]
-        }
-    }
-
-    private var networkGroups: [ContainerGroup] {
-        let byNetworkName = Dictionary(app.networks.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
-        let defaultName = app.networks.first { $0.isBuiltin }?.name ?? "default"
-
-        var buckets: [String: [Core.Container.Snapshot]] = [:]
-        for network in app.networks { buckets[network.name] = [] }
-        buckets[defaultName, default: []] = buckets[defaultName] ?? []
-
-        for snapshot in filtered {
-            let names = networkNames(snapshot)
-            if names.isEmpty {
-                buckets[defaultName, default: []].append(snapshot)
-            } else {
-                for name in names { buckets[name, default: []].append(snapshot) }
-            }
-        }
-
-        return buckets.keys.sorted { lhs, rhs in
-            if lhs == defaultName { return true }
-            if rhs == defaultName { return false }
-            return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
-        }.map { name in
-            ContainerGroup(name: name, symbol: "network", resource: byNetworkName[name],
-                           containers: sorted(buckets[name] ?? []),
-                           isBuiltin: byNetworkName[name]?.isBuiltin ?? true)
-        }
-    }
-
-    private var volumeGroups: [ContainerGroup] {
-        let noVolume = "No volume"
-        var buckets: [String: [Core.Container.Snapshot]] = [:]
-        for snapshot in filtered {
-            let volumes = Set(snapshot.configuration.mounts.compactMap { mount -> String? in
-                guard let source = mount.source, !source.isEmpty else { return nil }
-                return source
-            })
-            if volumes.isEmpty {
-                buckets[noVolume, default: []].append(snapshot)
-            } else {
-                for volume in volumes { buckets[volume, default: []].append(snapshot) }
-            }
-        }
-        return buckets.keys.sorted { lhs, rhs in
-            if lhs == noVolume { return false }
-            if rhs == noVolume { return true }
-            return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
-        }.map { name in
-            ContainerGroup(name: name, symbol: "externaldrive", resource: nil,
-                           containers: sorted(buckets[name] ?? []), isBuiltin: false)
-        }
-    }
-
-    private var imageGroups: [ContainerGroup] {
-        var buckets: [String: [Core.Container.Snapshot]] = [:]
-        for snapshot in filtered {
-            buckets[Format.shortImage(snapshot.image), default: []].append(snapshot)
-        }
-        return buckets.keys.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-            .map { name in
-                ContainerGroup(name: name, symbol: "shippingbox", resource: nil,
-                               containers: sorted(buckets[name] ?? []), isBuiltin: false)
-            }
-    }
-
-    /// Order a bucket of containers by the chosen sort.
-    private func sorted(_ containers: [Core.Container.Snapshot]) -> [Core.Container.Snapshot] {
-        switch ui.sort {
-        case .name:
-            return containers.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-        case .status:
-            return containers.sorted { lhs, rhs in
-                let lhsRunning = lhs.state == .running, rhsRunning = rhs.state == .running
-                if lhsRunning != rhsRunning { return lhsRunning }
-                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
-            }
-        case .image:
-            return containers.sorted { lhs, rhs in
-                let cmp = lhs.image.localizedCaseInsensitiveCompare(rhs.image)
-                if cmp != .orderedSame { return cmp == .orderedAscending }
-                return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
-            }
-        }
+    private var projectionKey: ContainerGridProjectionKey {
+        ContainerGridProjectionKey(inventoryRevision: store.inventoryRevision,
+                                   networksRevision: app.networksRevision,
+                                   grouping: ui.grouping,
+                                   sort: ui.sort,
+                                   runningOnly: ui.runningOnly,
+                                   search: ui.search.text)
     }
 
     private var columns: [GridItem] {
         return [GridItem(.adaptive(minimum: UI.Card.Grid.largeMin, maximum: UI.Card.Grid.largeMax),
                   spacing: UI.Layout.Spacing.m)]
-    }
-
-    private var filtered: [Core.Container.Snapshot] {
-        store.snapshots.filter { snapshot in
-            (!ui.runningOnly || snapshot.state == .running) &&
-            (ui.search.text.isEmpty
-                || snapshot.displayName.localizedCaseInsensitiveContains(ui.search.text)
-                || snapshot.image.localizedCaseInsensitiveContains(ui.search.text))
-        }
     }
 
     var body: some View {
@@ -174,7 +70,7 @@ struct ContainersGridView: View {
                             .contentShape(Rectangle())
                             .onTapGesture(count: 2) { zoomFrontWindow() }
                         LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.l) {
-                            ForEach(groups) { group in
+                            ForEach(projectionState.projection.groups) { group in
                                 groupSection(group)
                             }
                             Color.clear
@@ -197,7 +93,7 @@ struct ContainersGridView: View {
                     let target = cardDetailTarget.rect(origin: .zero,
                                                        in: viewport.size,
                                                        safeAreaManager: cardDetailSafeAreaManager)
-                    let source = cardFrames[detail.scopedID].flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
+                    let source = detailSourceFrame.flatMap { $0.isUsableForMorph ? $0 : nil } ?? target
                     UX.Morph.SingleSurface(source: source,
                                            target: target,
                                            progress: expanded ? 1 : 0) {
@@ -233,19 +129,27 @@ struct ContainersGridView: View {
             Button("Delete", role: .destructive) { Task { await deleteNetwork(network) } }
         } message: { _ in Text("This removes the network. Containers must be detached first.") }
         .refreshable { await store.refresh() }
+        .task(id: projectionKey) { await projectionState.update(projectionInput) }
         .sensoryFeedback(.success, trigger: lifecycleFeedback)
         // Report the in-page search count so the toolbar can escalate an empty search into the palette.
-        .onAppear { ui.search.pageResultCount = filtered.count }
-        .onChange(of: filtered.count) { _, count in ui.search.pageResultCount = count }
+        .onAppear { ui.search.pageResultCount = projectionState.projection.visibleCount }
+        .onChange(of: projectionState.projection.visibleCount) { _, count in ui.search.pageResultCount = count }
         .onChange(of: store.snapshots.map(\.scopedID)) { _, ids in
             selectedWidgetIndices = selectedWidgetIndices.filter { ids.contains($0.key) }
+            if let focusedID = detail?.scopedID ?? pendingDetail?.scopedID,
+               !ids.contains(focusedID) {
+                // The overlay remains usable if a refresh removes its source card, but its close
+                // animation must fall back to the centered target instead of a stale grid frame.
+                detailSourceFrame = nil
+                if pendingDetail != nil { pendingDetail = nil }
+            }
         }
     }
 
     // MARK: - Network sections
 
     @ViewBuilder
-    private func groupSection(_ group: ContainerGroup) -> some View {
+    private func groupSection(_ group: ContainerGridProjection.Group) -> some View {
         let collapsed = collapsedNetworks.contains(group.name)
         LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
             sectionHeader(group, collapsed: collapsed)
@@ -266,7 +170,7 @@ struct ContainersGridView: View {
         }
     }
 
-    private func sectionHeader(_ group: ContainerGroup, collapsed: Bool) -> some View {
+    private func sectionHeader(_ group: ContainerGridProjection.Group, collapsed: Bool) -> some View {
         HStack(spacing: UI.Layout.Spacing.s) {
             Button {
                 toggleCollapsed(group.name)
@@ -323,28 +227,37 @@ struct ContainersGridView: View {
     @ViewBuilder
     private func gridCard(_ snapshot: Core.Container.Snapshot) -> some View {
         let selected = detail?.scopedID == snapshot.scopedID
+        let measuresSource = selected || pendingDetail?.scopedID == snapshot.scopedID
         compactCard(snapshot)
             // Stays laid out (so the slot is reserved and its frame keeps publishing) but invisible
             // while the promoted overlay grows out of it — no second card to see double.
             .opacity(selected ? 0 : 1)
-            .allowsHitTesting(detail == nil)
+            .allowsHitTesting(detail == nil && pendingDetail == nil)
             .background {
-                GeometryReader { proxy in
-                    Color.clear
-                        .onAppear {
-                            updateCardFrame(proxy.frame(in: .named("grid")), for: snapshot.scopedID)
-                        }
-                        .onChange(of: proxy.frame(in: .named("grid"))) { _, frame in
-                            updateCardFrame(frame, for: snapshot.scopedID)
-                        }
+                if measuresSource {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear {
+                                updateDetailSource(proxy.frame(in: .named("grid")), snapshot: snapshot)
+                            }
+                            .onChange(of: proxy.frame(in: .named("grid"))) { _, frame in
+                                updateDetailSource(frame, snapshot: snapshot)
+                            }
+                    }
                 }
             }
     }
 
-    private func updateCardFrame(_ frame: CGRect, for id: String) {
+    private func updateDetailSource(_ frame: CGRect, snapshot: Core.Container.Snapshot) {
         guard frame.isUsableForMorph else { return }
-        guard cardFrames[id]?.isClose(to: frame) != true else { return }
-        cardFrames[id] = frame
+        if detailSourceFrame?.isClose(to: frame) != true { detailSourceFrame = frame }
+        guard detail == nil, pendingDetail?.scopedID == snapshot.scopedID else { return }
+        pendingDetail = nil
+        detail = snapshot
+        expanded = false
+        DispatchQueue.main.async {
+            withAnimation(detailSpring) { expanded = true }
+        }
     }
 
     private func compactCard(_ snapshot: Core.Container.Snapshot) -> some View {
@@ -438,18 +351,18 @@ struct ContainersGridView: View {
     }
 
     private func openDetail(_ snapshot: Core.Container.Snapshot) {
-        // Render the card at its slot first (expanded == false), then spring it open on the next
-        // runloop so the grow has a real starting frame to animate from.
-        detail = snapshot
+        guard detail == nil, pendingDetail == nil else { return }
+        // Attach geometry only to the tapped card. Its first measurement promotes the card into the
+        // overlay, eliminating continuous frame publication from every visible grid item.
+        pendingDetail = snapshot
+        detailSourceFrame = nil
         expanded = false
-        DispatchQueue.main.async {
-            withAnimation(detailSpring) { expanded = true }
-        }
     }
 
     private func closeDetail() {
         withAnimation(detailSpring) { expanded = false } completion: {
             detail = nil
+            detailSourceFrame = nil
         }
     }
 
@@ -531,6 +444,15 @@ struct ContainersGridView: View {
             }
         }
     }
+}
+
+private struct ContainerGridProjectionKey: Hashable {
+    let inventoryRevision: Int
+    let networksRevision: Int
+    let grouping: ContainerGrouping
+    let sort: ContainerSort
+    let runningOnly: Bool
+    let search: String
 }
 
 private struct ContainerCardMetricsRenderer: View {

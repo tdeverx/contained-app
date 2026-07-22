@@ -85,7 +85,7 @@ enum Scale: String, CaseIterable, Identifiable, Codable, Sendable {
     public var id: String { rawValue }
 }
 
-/// A compact Swift Charts renderer for card widgets. Byte/rate metrics can be normalized
+/// A compact asynchronous Canvas renderer for card widgets. Byte/rate metrics can be normalized
 /// independently, while pre-normalized fraction metrics can stay anchored to the 0...100% domain.
 struct Sparkline: View {
     private static let maximumPlottedSamples = 24
@@ -139,88 +139,60 @@ struct Sparkline: View {
     }
 
     private var chart: some View {
-        let primary = primaryPoints
-
-        return Chart {
+        let primary = SparklineGeometry.series(samples, scale: scale,
+                                               capacity: Self.maximumPlottedSamples)
+        let secondary = SparklineGeometry.series(comparisonSamples, scale: comparisonScale,
+                                                 capacity: Self.maximumPlottedSamples)
+        return Canvas(opaque: false, colorMode: .nonLinear, rendersAsynchronously: true) { context, size in
+            let primaryPoints = SparklineGeometry.points(primary, in: size,
+                                                         capacity: Self.maximumPlottedSamples)
+            let secondaryPoints = SparklineGeometry.points(secondary, in: size,
+                                                           capacity: Self.maximumPlottedSamples)
+            let stroke = StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
             switch style {
             case .area:
-                ForEach(primary) { point in
-                    AreaMark(x: .value("Sample", point.index), y: .value("Value", point.value))
-                        .foregroundStyle(areaFillStyle)
-                        .interpolationMethod(interpolation.method)
-                    LineMark(x: .value("Sample", point.index), y: .value("Value", point.value))
-                        .foregroundStyle(color)
-                        .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
-                        .interpolationMethod(interpolation.method)
+                var area = SparklineGeometry.path(primaryPoints, interpolation: interpolation)
+                if let first = primaryPoints.first, let last = primaryPoints.last {
+                    area.addLine(to: CGPoint(x: last.x, y: size.height))
+                    area.addLine(to: CGPoint(x: first.x, y: size.height))
+                    area.closeSubpath()
+                    if areaUsesGradient {
+                        context.fill(area, with: .linearGradient(
+                            Gradient(colors: [color.opacity(0.25), color.opacity(0.02)]),
+                            startPoint: .zero,
+                            endPoint: CGPoint(x: 0, y: size.height)
+                        ))
+                    } else {
+                        context.fill(area, with: .color(color.opacity(0.22)))
+                    }
                 }
+                context.stroke(SparklineGeometry.path(primaryPoints, interpolation: interpolation),
+                               with: .color(color), style: stroke)
             case .line:
-                ForEach(primary) { point in
-                    LineMark(x: .value("Sample", point.index), y: .value("Value", point.value))
-                        .foregroundStyle(color)
-                        .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
-                        .interpolationMethod(interpolation.method)
-                }
+                context.stroke(SparklineGeometry.path(primaryPoints, interpolation: interpolation),
+                               with: .color(color), style: stroke)
             case .bar:
-                ForEach(primary) { point in
-                    BarMark(x: .value("Sample", point.index), y: .value("Value", point.value), width: .fixed(barWidth))
-                        .clipShape(Capsule())
-                        .foregroundStyle(color.opacity(0.76).gradient)
-                }
+                SparklineGeometry.drawBars(primaryPoints, bottom: size.height, width: barWidth,
+                                           color: color.opacity(0.76), in: &context)
             case .points:
-                ForEach(primary) { point in
-                    PointMark(x: .value("Sample", point.index), y: .value("Value", point.value))
-                        .foregroundStyle(color)
-                        .symbolSize(pointSize)
-                }
+                SparklineGeometry.drawPoints(primaryPoints, area: pointSize, color: color, in: &context)
             case .multiLine:
-                let secondary = secondaryPoints
-                ForEach(primary) { point in
-                    LineMark(x: .value("Sample", point.index), y: .value("Value", point.value), series: .value("Metric", "Primary"))
-                        .foregroundStyle(color)
-                        .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
-                        .interpolationMethod(interpolation.method)
-                }
-                ForEach(secondary) { point in
-                    LineMark(x: .value("Sample", point.index), y: .value("Value", point.value), series: .value("Metric", "Secondary"))
-                        .foregroundStyle(color.opacity(0.55))
-                        .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round, dash: [3, 3]))
-                        .interpolationMethod(interpolation.method)
-                }
+                context.stroke(SparklineGeometry.path(primaryPoints, interpolation: interpolation),
+                               with: .color(color), style: stroke)
+                context.stroke(SparklineGeometry.path(secondaryPoints, interpolation: interpolation),
+                               with: .color(color.opacity(0.55)),
+                               style: StrokeStyle(lineWidth: lineWidth, lineCap: .round,
+                                                  lineJoin: .round, dash: [3, 3]))
             case .range:
-                let ranges = rangePoints(primary: primary, secondary: secondaryPoints)
-                ForEach(ranges) { point in
-                    BarMark(x: .value("Sample", point.index),
-                            yStart: .value("Low", point.low),
-                            yEnd: .value("High", point.high),
-                            width: .fixed(barWidth))
-                    .clipShape(Capsule())
-                    .foregroundStyle(color.opacity(0.72).gradient)
-                }
+                SparklineGeometry.drawRanges(primaryPoints, secondaryPoints,
+                                             width: barWidth, color: color.opacity(0.72), in: &context)
             case .scatter:
-                let secondary = secondaryPoints
-                ForEach(primary) { point in
-                    PointMark(x: .value("Sample", point.index), y: .value("Value", point.value))
-                        .foregroundStyle(color)
-                        .symbolSize(pointSize)
-                }
-                ForEach(secondary) { point in
-                    PointMark(x: .value("Sample", point.index), y: .value("Value", point.value))
-                        .foregroundStyle(color.opacity(0.55))
-                        .symbolSize(pointSize * 0.7)
-                }
+                SparklineGeometry.drawPoints(primaryPoints, area: pointSize, color: color, in: &context)
+                SparklineGeometry.drawPoints(secondaryPoints, area: pointSize * 0.7,
+                                             color: color.opacity(0.55), in: &context)
             }
         }
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
-        .chartLegend(.hidden)
-        .chartXScale(domain: 0...(Self.maximumPlottedSamples - 1))
-        .chartYScale(domain: 0...1)
-        .chartPlotStyle { plot in
-            plot.background(.clear)
-        }
-        .transaction { transaction in
-            transaction.animation = nil
-        }
+        .transaction { $0.animation = nil }
         .allowsHitTesting(false)
     }
 
@@ -230,48 +202,6 @@ struct Sparkline: View {
             path.move(to: CGPoint(x: 0, y: size.height - lineWidth))
             path.addLine(to: CGPoint(x: size.width, y: size.height - lineWidth))
             context.stroke(path, with: .color(color.opacity(0.35)), lineWidth: lineWidth)
-        }
-    }
-
-    private var areaFillStyle: AnyShapeStyle {
-        if areaUsesGradient {
-            return AnyShapeStyle(
-                LinearGradient(colors: [color.opacity(0.25), color.opacity(0.02)],
-                               startPoint: .top,
-                               endPoint: .bottom)
-            )
-        }
-        return AnyShapeStyle(color.opacity(0.22))
-    }
-
-    private var primaryPoints: [ChartPoint] {
-        chartPoints(for: samples, scale: scale)
-    }
-
-    private var secondaryPoints: [ChartPoint] {
-        chartPoints(for: comparisonSamples, scale: comparisonScale)
-    }
-
-    private func rangePoints(primary: [ChartPoint], secondary: [ChartPoint]) -> [ChartRangePoint] {
-        let count = min(primary.count, secondary.count)
-        guard count > 0 else { return [] }
-        let primaryTail = Array(primary.suffix(count))
-        let secondaryTail = Array(secondary.suffix(count))
-        return primaryTail.indices.map { index in
-            let first = primaryTail[index]
-            let second = secondaryTail[index]
-            return ChartRangePoint(index: first.index,
-                                   low: min(first.value, second.value),
-                                   high: max(first.value, second.value))
-        }
-    }
-
-    private func chartPoints(for values: [Double], scale: UI.Chart.Scale) -> [ChartPoint] {
-        let plotted = plottedSamples(values)
-        let startIndex = Self.maximumPlottedSamples - plotted.count
-        let scaled = SparklineSeriesScaling.scaled(plotted, mode: scale)
-        return scaled.enumerated().map { offset, value in
-            ChartPoint(index: startIndex + offset, value: value)
         }
     }
 
@@ -326,29 +256,114 @@ enum SparklineSeriesScaling {
     }
 }
 
-private struct ChartPoint: Identifiable {
+struct SparklineSeriesPoint: Equatable, Sendable {
     let index: Int
     let value: Double
-    var id: Int { index }
 }
 
-private struct ChartRangePoint: Identifiable {
-    let index: Int
-    let low: Double
-    let high: Double
-    var id: Int { index }
-}
+enum SparklineGeometry {
+    static func series(_ values: [Double], scale: UI.Chart.Scale,
+                       capacity: Int) -> [SparklineSeriesPoint] {
+        let latest = values.suffix(capacity).map(SparklineSeriesScaling.sanitizedSample)
+        let scaled = SparklineSeriesScaling.scaled(latest, mode: scale)
+        let start = capacity - scaled.count
+        return scaled.enumerated().map { SparklineSeriesPoint(index: start + $0.offset, value: $0.element) }
+    }
 
-private extension UI.Chart.Interpolation {
-    var method: InterpolationMethod {
-        switch self {
-        case .linear: return .linear
-        case .catmullRom: return .monotone
-        case .cardinal: return .cardinal
-        case .monotone: return .monotone
-        case .stepStart: return .stepStart
-        case .stepCenter: return .stepCenter
-        case .stepEnd: return .stepEnd
+    static func points(_ series: [SparklineSeriesPoint], in size: CGSize,
+                       capacity: Int) -> [CGPoint] {
+        let divisor = CGFloat(max(capacity - 1, 1))
+        return series.map { point in
+            CGPoint(x: CGFloat(point.index) / divisor * size.width,
+                    y: (1 - CGFloat(min(max(point.value, 0), 1))) * size.height)
+        }
+    }
+
+    static func path(_ points: [CGPoint], interpolation: UI.Chart.Interpolation) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        guard points.count > 1 else { return path }
+
+        switch interpolation {
+        case .linear:
+            for point in points.dropFirst() { path.addLine(to: point) }
+        case .stepStart:
+            for index in 1..<points.count {
+                let previous = points[index - 1]
+                let current = points[index]
+                path.addLine(to: CGPoint(x: current.x, y: previous.y))
+                path.addLine(to: current)
+            }
+        case .stepCenter:
+            for index in 1..<points.count {
+                let previous = points[index - 1]
+                let current = points[index]
+                let middle = (previous.x + current.x) / 2
+                path.addLine(to: CGPoint(x: middle, y: previous.y))
+                path.addLine(to: CGPoint(x: middle, y: current.y))
+                path.addLine(to: current)
+            }
+        case .stepEnd:
+            for index in 1..<points.count {
+                let previous = points[index - 1]
+                let current = points[index]
+                path.addLine(to: CGPoint(x: previous.x, y: current.y))
+                path.addLine(to: current)
+            }
+        case .catmullRom, .cardinal, .monotone:
+            let tension: CGFloat = interpolation == .cardinal ? 0.34 : 0.22
+            for index in 1..<points.count {
+                let p0 = points[max(0, index - 2)]
+                let p1 = points[index - 1]
+                let p2 = points[index]
+                let p3 = points[min(points.count - 1, index + 1)]
+                var c1 = CGPoint(x: p1.x + (p2.x - p0.x) * tension,
+                                 y: p1.y + (p2.y - p0.y) * tension)
+                var c2 = CGPoint(x: p2.x - (p3.x - p1.x) * tension,
+                                 y: p2.y - (p3.y - p1.y) * tension)
+                if interpolation == .monotone {
+                    let low = min(p1.y, p2.y)
+                    let high = max(p1.y, p2.y)
+                    c1.y = min(max(c1.y, low), high)
+                    c2.y = min(max(c2.y, low), high)
+                }
+                path.addCurve(to: p2, control1: c1, control2: c2)
+            }
+        }
+        return path
+    }
+
+    static func drawBars(_ points: [CGPoint], bottom: CGFloat, width: CGFloat,
+                         color: Color, in context: inout GraphicsContext) {
+        for point in points {
+            let rect = CGRect(x: point.x - width / 2, y: point.y,
+                              width: width, height: max(bottom - point.y, 0.5))
+            context.fill(Path(roundedRect: rect, cornerRadius: width / 2), with: .color(color))
+        }
+    }
+
+    static func drawPoints(_ points: [CGPoint], area: CGFloat, color: Color,
+                           in context: inout GraphicsContext) {
+        let diameter = max(sqrt(max(area, 1)), 1)
+        for point in points {
+            let rect = CGRect(x: point.x - diameter / 2, y: point.y - diameter / 2,
+                              width: diameter, height: diameter)
+            context.fill(Path(ellipseIn: rect), with: .color(color))
+        }
+    }
+
+    static func drawRanges(_ primary: [CGPoint], _ secondary: [CGPoint], width: CGFloat,
+                           color: Color, in context: inout GraphicsContext) {
+        let count = min(primary.count, secondary.count)
+        guard count > 0 else { return }
+        let first = primary.suffix(count)
+        let second = secondary.suffix(count)
+        for (lhs, rhs) in zip(first, second) {
+            let top = min(lhs.y, rhs.y)
+            let rect = CGRect(x: lhs.x - width / 2, y: top,
+                              width: width, height: max(abs(lhs.y - rhs.y), 0.5))
+            context.fill(Path(roundedRect: rect, cornerRadius: width / 2), with: .color(color))
         }
     }
 }

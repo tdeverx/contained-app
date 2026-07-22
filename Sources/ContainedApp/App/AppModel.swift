@@ -47,7 +47,12 @@ final class AppModel {
 
     // Resource caches shared by toolbar panels, creation pages, and the container grid.
     private(set) var volumes: [Core.Volume.Resource] = []
-    private(set) var networks: [Core.Network.Resource] = []
+    private(set) var networks: [Core.Network.Resource] = [] {
+        didSet {
+            if networks != oldValue { networksRevision &+= 1 }
+        }
+    }
+    private(set) var networksRevision = 0
     private(set) var registries: [Core.Registry.Login] = []
     private(set) var properties: Core.System.Properties?
     private(set) var resourceInventoryErrors: [String: String] = [:]
@@ -623,7 +628,7 @@ final class AppModel {
         guard let client, bootstrap == .ready else { return }
         do {
             let inventory = try await client.networkInventory()
-            networks = inventory.items
+            if networks != inventory.items { networks = inventory.items }
             database.upsertNetworks(inventory.items)
             setResourceInventoryError(partialInventoryMessage(inventory.failures), for: "networks")
         } catch {

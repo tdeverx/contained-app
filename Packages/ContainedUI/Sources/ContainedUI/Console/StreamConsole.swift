@@ -15,10 +15,8 @@ public extension UI.Console {
 
         enum RunState: Equatable { case running, done, failed(String) }
 
-        @State private var lines: [String] = []
-        @State private var carry = ""
+        @State private var streamBuffer = UI.Console.StreamBuffer(capacity: 8_000)
         @State private var state: RunState = .running
-        private let maxLines = 8000
         private let bottomID = "console-bottom"
 
         public init(stream: @escaping () -> AsyncThrowingStream<String, Error>,
@@ -44,8 +42,8 @@ public extension UI.Console {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 1) {
-                            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                                Text(line.isEmpty ? " " : line)
+                            ForEach(streamBuffer.output.blocks) { block in
+                                Text(block.text.isEmpty ? " " : block.text)
                                     .font(.system(.caption, design: .monospaced))
                                     .textSelection(.enabled)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -55,7 +53,7 @@ public extension UI.Console {
                         .padding(UI.Tokens.Space.s)
                     }
                     .scrollEdgeEffectStyle(.soft, for: .all)
-                    .onChange(of: lines.count) { _, _ in proxy.scrollTo(bottomID, anchor: .bottom) }
+                    .onChange(of: streamBuffer.output.lineCount) { _, _ in proxy.scrollTo(bottomID, anchor: .bottom) }
                 }
                 .padding(UI.Tokens.Space.s)
                 .background(.black.opacity(0.22),
@@ -79,8 +77,8 @@ public extension UI.Console {
                     Text(message).foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer()
-                Text(lineCountLabel(lines.count)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                UI.Copy.Icon(value: lines.joined(separator: "\n"), help: copyLogHelp)
+                Text(lineCountLabel(streamBuffer.output.lineCount)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                UI.Copy.Icon(value: streamBuffer.output.copyText, help: copyLogHelp)
             }
             .font(.callout)
             .padding(UI.Tokens.Space.s)
@@ -88,25 +86,18 @@ public extension UI.Console {
 
         private func consume() async {
             do {
-                for try await chunk in stream() { ingest(chunk) }
-                if !carry.isEmpty { lines.append(carry); carry = "" }
+                for try await chunk in stream() { streamBuffer.enqueue(chunk) }
+                streamBuffer.finish()
                 state = .done
                 onComplete(true)
             } catch is CancellationError {
                 // View dismissed mid-stream; nothing to report.
+                streamBuffer.cancel()
             } catch {
-                if !carry.isEmpty { lines.append(carry); carry = "" }
+                streamBuffer.finish()
                 state = .failed(failureLabel(error))
                 onComplete(false)
             }
-        }
-
-        private func ingest(_ chunk: String) {
-            let combined = carry + chunk
-            guard let lastNewline = combined.lastIndex(of: "\n") else { carry = combined; return }
-            carry = String(combined[combined.index(after: lastNewline)...])
-            lines.append(contentsOf: combined[..<lastNewline].split(separator: "\n", omittingEmptySubsequences: false).map(String.init))
-            if lines.count > maxLines { lines.removeFirst(lines.count - maxLines) }
         }
     }
 }

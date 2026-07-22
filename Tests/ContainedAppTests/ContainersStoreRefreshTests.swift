@@ -18,6 +18,24 @@ struct ContainersStoreRefreshTests {
         #expect(store.statsRevision == 0)
     }
 
+    @Test func identicalRefreshSkipsInventoryPersistenceEntirely() async {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let runner = RecordingRunner()
+        let store = ContainersStore()
+        store.database = database
+        store.client = Core.Orchestrator.testing(runner: runner,
+                                                 runtimeKind: .appleContainer)
+
+        await store.refresh()
+        let preparations = database.containerInventoryPreparationCount
+        let encodings = database.containerInventoryEncodedCount
+        await store.refresh()
+
+        #expect(preparations == 1)
+        #expect(database.containerInventoryPreparationCount == preparations)
+        #expect(database.containerInventoryEncodedCount == encodings)
+    }
+
     @Test func dockerRefreshScopesSnapshotsAndRoutesLifecycle() async throws {
         let runner = DockerRecordingRunner()
         let store = ContainersStore()

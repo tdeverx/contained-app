@@ -99,7 +99,7 @@ struct AppDatabaseTests {
         #expect(record.snapshotData != nil)
         #expect(record.documentData != nil)
 
-        database.upsertContainers([])
+        _ = await database.upsertContainers([])
         #expect(database.fetch(ContainerRecord.self).isEmpty)
     }
 
@@ -117,9 +117,46 @@ struct AppDatabaseTests {
         let original = try #require(database.fetch(ContainerRecord.self).first)
         let initialUpdatedAt = original.updatedAt
 
-        database.upsertContainers([snapshot], observedAt: initialUpdatedAt.addingTimeInterval(60))
+        let result = await database.upsertContainers([snapshot], observedAt: initialUpdatedAt.addingTimeInterval(60))
 
         #expect(try #require(database.fetch(ContainerRecord.self).first).updatedAt == initialUpdatedAt)
+        #expect(result.unchanged == 1)
+        #expect(result.encoded == 0)
+        #expect(result.persisted == 0)
+    }
+
+    @Test func changedInventoryEncodesOnlyChangedContainersAndReusesMissingPayloads() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let first = Core.Container.Snapshot.placeholder(id: "first", image: "example/first:latest",
+                                                        runtimeKind: .appleContainer)
+        let second = Core.Container.Snapshot.placeholder(id: "second", image: "example/second:latest",
+                                                         runtimeKind: .appleContainer)
+        let initial = await database.upsertContainers([first, second])
+        #expect(initial.encoded == 2)
+
+        let stoppedFirst = Core.Container.Snapshot.placeholder(id: "first", image: "example/first:latest",
+                                                               state: .stopped,
+                                                               runtimeKind: .appleContainer)
+        let changed = await database.upsertContainers([stoppedFirst, second])
+        #expect(changed.encoded == 1)
+        #expect(changed.updated == 1)
+        #expect(changed.unchanged == 1)
+
+        let record = try #require(database.fetch(ContainerRecord.self)
+            .first { $0.scopedID == second.scopedID })
+        let documentData = record.documentData
+        let snapshotData = record.snapshotData
+        record.isMissing = true
+        record.missingSince = Date()
+        database.save()
+
+        let restored = await database.upsertContainers([stoppedFirst, second])
+        #expect(restored.encoded == 0)
+        #expect(restored.updated == 1)
+        #expect(restored.unchanged == 1)
+        #expect(record.documentData == documentData)
+        #expect(record.snapshotData == snapshotData)
+        #expect(record.isMissing == false)
     }
 
     @Test func missingContainerWithAppOwnedMetadataIsRetained() async throws {
@@ -137,7 +174,7 @@ struct AppDatabaseTests {
         database.context.insert(HealthCheckRecord(containerScopedID: "docker::web", valueData: data))
         database.save()
 
-        database.upsertContainers([])
+        _ = await database.upsertContainers([])
 
         let record = try #require(database.fetch(ContainerRecord.self).first)
         #expect(record.scopedID == "docker::web")
@@ -158,7 +195,7 @@ struct AppDatabaseTests {
         let source = try #require(store.snapshots.first)
         let document = Core.Schema.Document.containerEdit(from: source.configuration)
         database.markContainerRecreateStarted(source: source, sourceDocument: document)
-        database.upsertContainers([])
+        _ = await database.upsertContainers([])
 
         let retained = try #require(database.fetch(ContainerRecord.self).first)
         #expect(retained.isMissing)
@@ -198,7 +235,7 @@ struct AppDatabaseTests {
         database.setLinkedVolumePaths(links, for: "docker::web")
         #expect(database.linkedVolumePaths(for: "docker::web") == links)
 
-        database.upsertContainers([])
+        _ = await database.upsertContainers([])
 
         let record = try #require(database.fetch(ContainerRecord.self).first)
         #expect(record.scopedID == "docker::web")

@@ -1,4 +1,5 @@
 import Testing
+import CoreGraphics
 @testable import ContainedUI
 
 @Suite("Live sparkline scaling")
@@ -36,5 +37,30 @@ struct SparklineScalingTests {
 
         #expect(scaled[0] == 0.5)
         #expect(scaled[1] == 1)
+    }
+
+    @Test func canvasGeometryCapsAndBoundsEveryInterpolation() {
+        let values = (0..<80).map { Double($0 % 13) }
+        let series = SparklineGeometry.series(values, scale: .normalized, capacity: 24)
+        let points = SparklineGeometry.points(series, in: CGSize(width: 240, height: 60), capacity: 24)
+
+        #expect(series.count == 24)
+        #expect(points.allSatisfy { $0.x.isFinite && $0.y.isFinite })
+        #expect(points.allSatisfy { (0...240).contains($0.x) && (0...60).contains($0.y) })
+        for interpolation in UI.Chart.Interpolation.allCases {
+            let bounds = SparklineGeometry.path(points, interpolation: interpolation).boundingRect
+            #expect(bounds.origin.x.isFinite)
+            #expect(bounds.origin.y.isFinite)
+            #expect(bounds.width.isFinite)
+            #expect(bounds.height.isFinite)
+        }
+    }
+
+    @Test func secondarySeriesRemainRightAligned() {
+        let primary = SparklineGeometry.series([1, 2, 3], scale: .normalized, capacity: 24)
+        let secondary = SparklineGeometry.series([4, 5], scale: .normalized, capacity: 24)
+
+        #expect(primary.map(\.index) == [21, 22, 23])
+        #expect(secondary.map(\.index) == [22, 23])
     }
 }

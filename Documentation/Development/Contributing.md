@@ -137,6 +137,25 @@ xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Deb
 ./Scripts/package.sh app debug && open Contained.app # smoke-test the screens you touched
 ```
 
+### Reproducing UI performance traces
+
+Use a packaged Debug app, the same runtime inventory, window size, and feature flags for both runs.
+In Instruments, record the **Time Profiler** and **Hangs** templates for these fixed scenarios:
+
+- Toolbar-first and classic idle for 45 seconds.
+- Container grid scroll for 20 seconds, card open/close morphs for 25 seconds, then resize and regroup.
+- Activity navigation for 25 seconds and repeated History, Stats, and Logs switches for 30 seconds.
+- A ten-loop navigation/log soak followed by one idle minute.
+
+The trace is acceptable when idle, grid, morph, Activity, and detail switching report zero potential
+hangs; no app-owned main-thread Activity interval exceeds 100 ms; compact cards contain no Swift
+Charts mark construction; unchanged refreshes emit no inventory preparation/application work; and
+console publication stays at or below ten batches per second. After the soak, settled RSS should
+return within 10% of its pre-loop baseline and remain level during the idle minute. Use the static
+`performance.activity`, `performance.grid`, `performance.inventory`, and `performance.console`
+signpost categories to isolate app-owned work. Keep `.trace` and other profiling artifacts outside
+the repository.
+
 ## Good first contributions
 
 - Work through a row of the **1.0 Polish Checklist** in the [README](https://github.com/tdeverx/contained-app/blob/main/README.md) for one screen (states, a11y, copy, layout).

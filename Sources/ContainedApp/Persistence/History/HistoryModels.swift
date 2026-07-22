@@ -63,7 +63,7 @@ final class EventRecord {
     var kind: EventKind { EventKind(rawValue: kindRaw) ?? .alert }
 }
 
-struct EventRecordSnapshot: Codable, Equatable {
+struct EventRecordSnapshot: Codable, Equatable, Sendable {
     var timestamp: Date
     var containerID: String?
     var kindRaw: String
@@ -75,6 +75,37 @@ struct EventRecordSnapshot: Codable, Equatable {
         kindRaw = record.kindRaw
         message = record.message
     }
+}
+
+/// Lightweight, stable activity data for rendering outside SwiftData's observation graph.
+/// Mutations are routed back through `HistoryStore` using the persistent identifier.
+struct ActivityEvent: Identifiable, Equatable, Sendable {
+    let id: PersistentIdentifier
+    let timestamp: Date
+    let containerID: String?
+    let kind: EventKind
+    let message: String
+    var isRead: Bool
+
+    init(_ record: EventRecord) {
+        id = record.persistentModelID
+        timestamp = record.timestamp
+        containerID = record.containerID
+        kind = record.kind
+        message = record.message
+        isRead = record.isRead
+    }
+}
+
+struct ActivitySummary: Equatable, Sendable {
+    var totalEvents = 0
+    var unreadEvents = 0
+    var templateCount = 0
+}
+
+struct ContainerHistorySnapshot: Equatable, Sendable {
+    var metrics: [MetricSampleSnapshot] = []
+    var events: [ActivityEvent] = []
 }
 
 /// A persisted point-in-time resource sample for a container — the basis of the long-term graphs
@@ -115,7 +146,7 @@ final class MetricSample {
     }
 }
 
-struct MetricSampleSnapshot: Codable, Equatable {
+struct MetricSampleSnapshot: Codable, Equatable, Sendable {
     var timestamp: Date
     var containerID: String
     var cpuFraction: Double

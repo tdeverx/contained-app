@@ -40,8 +40,8 @@ struct ToolbarSettingsPanel: View {
 /// The toolbar Templates panel — saved run configurations as flat glass cards (the same treatment as
 /// the Images panel). "Use" prefills the create form; cards can be deleted.
 struct ToolbarTemplatesPanel: View {
+    @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecipeRecord.createdAt, order: .reverse) private var saved: [RecipeRecord]
     var showClose = true
     var onClose: () -> Void
@@ -203,12 +203,7 @@ struct ToolbarTemplatesPanel: View {
     }
 
     private func delete(_ template: RecipeRecord) {
-        modelContext.delete(template)
-        do {
-            try modelContext.save()
-        } catch {
-            assertionFailure("Unable to delete recipe: \(error)")
-        }
+        app.historyStore.deleteTemplate(template)
     }
 
     private func templateImageTitle(_ template: RecipeRecord) -> String {

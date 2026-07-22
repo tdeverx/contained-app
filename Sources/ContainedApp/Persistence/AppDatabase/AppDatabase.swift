@@ -33,6 +33,8 @@ final class AppDatabase {
     let container: ModelContainer
     var context: ModelContext { container.mainContext }
     private(set) var lastFailure: Failure?
+    var containerInventoryPreparationCount = 0
+    var containerInventoryEncodedCount = 0
 
     init(isStoredInMemoryOnly: Bool = false) {
         let schema = Schema(AppDatabaseSchemaV1.models)
@@ -55,11 +57,14 @@ final class AppDatabase {
         }
     }
 
-    func save() {
+    @discardableResult
+    func save() -> Bool {
         do {
             try context.save()
+            return true
         } catch {
             recordFailure(.save(detail: String(describing: error)))
+            return false
         }
     }
 

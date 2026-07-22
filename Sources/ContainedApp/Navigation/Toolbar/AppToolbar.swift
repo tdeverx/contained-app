@@ -1,7 +1,6 @@
 import SwiftUI
 import ContainedUX
 import ContainedUI
-import SwiftData
 import ContainedCore
 
 /// The app-wide, custom (non-native) toolbar that lives in the title-bar band of the hidden-title-bar
@@ -479,14 +478,13 @@ struct AppToolbar: View {
 }
 
 /// The Activity bell in the bottom toolbar cluster. Filled + accent-tinted when there are unread
-/// events; plain otherwise. Owns its own `@Query` so the badge updates live as events land.
+/// events; plain otherwise. Reads the cached aggregate so idle toolbar rendering never fetches rows.
 private struct ActivityToolbarButton: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @Query(filter: #Predicate<EventRecord> { !$0.isRead }) private var unread: [EventRecord]
 
     var body: some View {
-        let count = unread.count
+        let count = app.historyStore.activitySummary.unreadEvents
         let hasUnread = count > 0
         return UI.Action.Items([
             UI.Action.Item(systemName: hasUnread ? "bell.fill" : "bell",

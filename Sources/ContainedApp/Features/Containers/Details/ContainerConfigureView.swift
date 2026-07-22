@@ -1,7 +1,6 @@
 import SwiftUI
 import ContainedUX
 import ContainedUI
-import SwiftData
 import ContainedCore
 
 /// The container create/edit form body — hosted by the paged `CreationFlow` and classic sheets.
@@ -18,7 +17,6 @@ struct ContainerConfigureView: View {
 
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @Environment(\.modelContext) private var modelContext
 
     let mode: ContainerEditSheet.Mode
     let leading: Leading
@@ -204,8 +202,7 @@ struct ContainerConfigureView: View {
         let name = templateName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
         do {
-            modelContext.insert(try RecipeRecord.make(name: name, spec: spec))
-            try modelContext.save()
+            app.historyStore.insertTemplate(try RecipeRecord.make(name: name, spec: spec))
             app.flash(AppText.savedTemplate(name))
         } catch {
             app.flash(error.appDisplayMessage)

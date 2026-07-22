@@ -1,6 +1,5 @@
 import SwiftUI
 import ContainedUI
-import SwiftData
 import ContainedCore
 
 /// The toolbar page switcher. In the experimental toolbar shell it complements the sidebar, and when
@@ -8,8 +7,6 @@ import ContainedCore
 struct ToolbarPageSwitcher: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    @Query private var events: [EventRecord]
-    @Query private var templates: [RecipeRecord]
 
     var body: some View {
         UI.Action.MenuButton {
@@ -61,10 +58,12 @@ struct ToolbarPageSwitcher: View {
         case .system:
             return app.serviceLabel
         case .templates:
-            return "\(templates.count) saved"
+            let count = app.historyStore.activitySummary.templateCount
+            return "\(count) saved"
         case .activity:
-            let unread = events.lazy.filter { !$0.isRead }.count
-            let base = "\(events.count) event\(events.count == 1 ? "" : "s")"
+            let summary = app.historyStore.activitySummary
+            let unread = summary.unreadEvents
+            let base = "\(summary.totalEvents) event\(summary.totalEvents == 1 ? "" : "s")"
             return unread > 0 ? "\(base) · \(unread) unread" : base
         case .settings:
             return "Preferences"

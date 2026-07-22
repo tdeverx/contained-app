@@ -11,7 +11,7 @@ struct MenuBarContent: View {
 
     private var store: ContainersStore { app.containers }
     private var stopped: [Core.Container.Snapshot] { store.snapshots.filter { $0.state != .running } }
-    private var unreadActivityCount: Int { app.historyStore.unreadEventCount() }
+    private var unreadActivityCount: Int { app.historyStore.activitySummary.unreadEvents }
     private var statusRuntimeKind: Core.Runtime.Kind? {
         app.serviceControlRuntimeKind ?? app.firstRuntimeKind(supporting: .systemStatus, readyOnly: false)
     }
