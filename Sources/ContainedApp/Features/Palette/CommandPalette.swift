@@ -32,7 +32,6 @@ enum PaletteScope: Hashable {
 
 /// One command-palette entry: a titled, icon'd action.
 struct PaletteItem: Identifiable {
-    let id = UUID()
     let title: String
     let subtitle: String?
     var keywords: [String] = []
@@ -45,6 +44,10 @@ struct PaletteItem: Identifiable {
     let icon: String
     let tint: Color
     let action: () -> Void
+
+    /// Palette content is rebuilt as live runtime state changes. A semantic identity keeps SwiftUI
+    /// from treating every keystroke as a completely new result list and resetting row state.
+    var id: String { "\(kind.rawValue)|\(title)|\(subtitle ?? "")|\(icon)" }
 
     /// Every available command: toolbar-panel navigation, creation, global maintenance, settings,
     /// and resource-specific lifecycle. Add newly exposed app functionality in the section matching

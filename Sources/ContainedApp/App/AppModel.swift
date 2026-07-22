@@ -51,20 +51,17 @@ final class AppModel {
     private(set) var registries: [Core.Registry.Login] = []
     private(set) var properties: Core.System.Properties?
     private(set) var resourceInventoryErrors: [String: String] = [:]
-    // `images`/`imagesError`/`imageUpdates` are written by both this file and the image-update sweep
-    // in `AppModel+ImageUpdates.swift`, so their setters can't be `private(set)`.
-    var images: [Core.Image.Resource] = [] {
-        didSet {
-            imageGroupsCache = nil
-            imageGroupIDByReferenceCache.removeAll(keepingCapacity: true)
-            database.upsertImages(images)
-        }
-    }
+    // Image inventories are updated through the no-op-safe methods below. This keeps polling from
+    // invalidating every consumer when the runtime returns the same inventory.
+    private(set) var images: [Core.Image.Resource] = []
     @ObservationIgnored var imageGroupsCache: [Core.Image.LocalTagGroup]?
     @ObservationIgnored var imageGroupIDByReferenceCache: [String: String] = [:]
     var imagesError: String?
     var imageUpdates: [String: Core.Image.UpdateStatus] = [:] {
-        didSet { database.updateImageStatuses(imageUpdates) }
+        didSet {
+            guard imageUpdates != oldValue else { return }
+            database.updateImageStatuses(imageUpdates)
+        }
     }
     /// Transient watchdog/crash banner text (auto-cleared).
     var banner: String?
@@ -222,6 +219,14 @@ final class AppModel {
         }
     }
 
+    func setImages(_ images: [Core.Image.Resource]) {
+        guard images != self.images else { return }
+        self.images = images
+        imageGroupsCache = nil
+        imageGroupIDByReferenceCache.removeAll(keepingCapacity: true)
+        database.upsertImages(images)
+    }
+
     func bootstrapIfNeeded() async {
         logger.record("Checking container runtime CLI", category: .system, severity: .debug)
         let configuration = Core.Configuration(runtimes: Dictionary(uniqueKeysWithValues: supportedRuntimeDescriptors.map { descriptor in
@@ -275,7 +280,13 @@ final class AppModel {
     func setContainerStatsVisible(_ visible: Bool) {
         guard containerStatsVisible != visible else { return }
         containerStatsVisible = visible
-        if visible { coordinator.wake() }
+        if visible {
+            coordinator.wake()
+        } else {
+            // A stats stream is continuous work, not a cache. Keeping it alive while every
+            // consumer is hidden made the app spend most of its idle time diffing metrics.
+            stopContainerStatsStream()
+        }
     }
 
     func setStatsNormalizationMode(_ mode: Core.Metrics.NormalizationMode) {
@@ -357,7 +368,7 @@ final class AppModel {
             await refreshDiskUsage()
         }
         await containers.refresh()
-        if hasReadyRuntime || !containers.running.isEmpty {
+        if containerStatsVisible && (hasReadyRuntime || !containers.running.isEmpty) {
             updateContainerStatsStream()
         } else {
             stopContainerStatsStream()
@@ -411,7 +422,7 @@ final class AppModel {
         let started = Date()
         do {
             let inventory = try await client.imageInventory()
-            images = inventory.items
+            setImages(inventory.items)
             imagesError = partialInventoryMessage(inventory.failures)
         } catch {
             imagesError = error.appDisplayMessage
@@ -485,6 +496,10 @@ final class AppModel {
     }
 
     private func updateContainerStatsStream() {
+        guard containerStatsVisible else {
+            stopContainerStatsStream()
+            return
+        }
         guard let client else {
             stopContainerStatsStream()
             return

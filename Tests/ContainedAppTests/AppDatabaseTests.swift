@@ -103,6 +103,25 @@ struct AppDatabaseTests {
         #expect(database.fetch(ContainerRecord.self).isEmpty)
     }
 
+    @Test func unchangedRuntimeInventoryDoesNotRewriteRecords() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let runner = DockerRecordingRunner()
+        let store = ContainersStore()
+        store.database = database
+        store.client = appTestOrchestrator(runner: runner,
+                                           cliURL: URL(fileURLWithPath: "/usr/local/bin/docker"),
+                                           runtimeKind: .docker)
+
+        await store.refresh()
+        let snapshot = try #require(store.snapshots.first)
+        let original = try #require(database.fetch(ContainerRecord.self).first)
+        let initialUpdatedAt = original.updatedAt
+
+        database.upsertContainers([snapshot], observedAt: initialUpdatedAt.addingTimeInterval(60))
+
+        #expect(try #require(database.fetch(ContainerRecord.self).first).updatedAt == initialUpdatedAt)
+    }
+
     @Test func missingContainerWithAppOwnedMetadataIsRetained() async throws {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let runner = DockerRecordingRunner()
@@ -206,10 +225,10 @@ struct AppDatabaseTests {
     @Test func imageUpdateStatusIsRuntimeScopedAtTagLevel() {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let app = AppModel(database: database)
-        app.images = [
+        app.setImages([
             image(reference: "nginx:latest", id: "sha256:1", digest: "sha256:old", runtimeKind: .appleContainer),
             image(reference: "docker.io/library/nginx:latest", id: "sha256:2", digest: "sha256:new", runtimeKind: .docker),
-        ]
+        ])
 
         let appleKey = app.imageUpdateKey("nginx:latest", runtimeKind: .appleContainer)
         let dockerKey = app.imageUpdateKey("nginx:latest", runtimeKind: .docker)

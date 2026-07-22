@@ -4,11 +4,26 @@ import ContainedCore
 extension AppDatabase {
     func upsertContainers(_ snapshots: [Core.Container.Snapshot], observedAt: Date = Date()) {
         let seen = Set(snapshots.map(\.scopedID))
+        let records = fetch(ContainerRecord.self)
+        let recordsByID = Dictionary(uniqueKeysWithValues: records.map { ($0.scopedID, $0) })
+        let personalizedIDs = Set(fetch(PersonalizationRecord.self).map(\.key))
+        let healthCheckedIDs = Set(fetch(HealthCheckRecord.self).map(\.containerScopedID))
+        var changed = false
         for snapshot in snapshots {
             let document = Core.Schema.Document.containerEdit(from: snapshot.configuration)
             let documentData = encode(document)
             let snapshotData = encode(snapshot)
-            if let record = fetch(ContainerRecord.self).first(where: { $0.scopedID == snapshot.scopedID }) {
+            if let record = recordsByID[snapshot.scopedID] {
+                guard record.runtimeKindRaw != snapshot.runtimeKind.rawValue ||
+                        record.runtimeID != snapshot.id ||
+                        record.displayName != snapshot.displayName ||
+                        record.imageReference != snapshot.image ||
+                        record.statusRaw != snapshot.state.rawValue ||
+                        !matches(record.documentData, document) ||
+                        !matches(record.snapshotData, snapshot) ||
+                        record.isMissing ||
+                        record.missingSince != nil
+                else { continue }
                 record.runtimeKindRaw = snapshot.runtimeKind.rawValue
                 record.runtimeID = snapshot.id
                 record.displayName = snapshot.displayName
@@ -20,6 +35,7 @@ extension AppDatabase {
                 record.missingSince = nil
                 record.lastSeenAt = observedAt
                 record.updatedAt = observedAt
+                changed = true
             } else {
                 context.insert(ContainerRecord(scopedID: snapshot.scopedID,
                                                runtimeKindRaw: snapshot.runtimeKind.rawValue,
@@ -31,52 +47,74 @@ extension AppDatabase {
                                                snapshotData: snapshotData,
                                                lastSeenAt: observedAt,
                                                updatedAt: observedAt))
+                changed = true
             }
         }
-        for record in fetch(ContainerRecord.self) where !seen.contains(record.scopedID) && !record.isMissing {
-            if shouldRetainMissingContainer(record) {
+        for record in records where !seen.contains(record.scopedID) && !record.isMissing {
+            if shouldRetainMissingContainer(record,
+                                            personalizedIDs: personalizedIDs,
+                                            healthCheckedIDs: healthCheckedIDs) {
                 record.isMissing = true
                 record.missingSince = observedAt
                 record.updatedAt = observedAt
             } else {
                 context.delete(record)
             }
+            changed = true
         }
-        save()
+        if changed { save() }
     }
 
     func upsertImages(_ images: [Core.Image.Resource], observedAt: Date = Date()) {
         let groups = Core.Image.LocalTagGroup.groups(for: images)
+        let imageRecords = fetch(ImageRecord.self)
+        let tagRecords = fetch(ImageTagRecord.self)
+        let imagesByIdentity = Dictionary(uniqueKeysWithValues: imageRecords.map { ($0.identity, $0) })
+        let tagsByID = Dictionary(uniqueKeysWithValues: tagRecords.map { ($0.scopedID, $0) })
         var seenTags: Set<String> = []
+        var changed = false
         for group in groups {
             let identity = group.id
-            if let record = fetch(ImageRecord.self).first(where: { $0.identity == identity }) {
+            if let record = imagesByIdentity[identity] {
+                guard record.primaryReference != group.primaryReference || record.digest != group.digest else { continue }
                 record.primaryReference = group.primaryReference
                 record.digest = group.digest
                 record.updatedAt = observedAt
+                changed = true
             } else {
                 context.insert(ImageRecord(identity: identity,
                                            primaryReference: group.primaryReference,
                                            digest: group.digest,
                                            updatedAt: observedAt))
+                changed = true
             }
         }
         for image in images {
             let identity = image.digest ?? Core.Registry.ImageReference.normalizedKey(image.reference)
             let tagID = image.runtimeKind.scopedID(for: Core.Registry.ImageReference.normalizedKey(image.reference))
             seenTags.insert(tagID)
-            if let tag = fetch(ImageTagRecord.self).first(where: { $0.scopedID == tagID }) {
+            let resourceData = encode(image)
+            if let tag = tagsByID[tagID] {
+                guard tag.imageIdentity != identity ||
+                        tag.reference != image.reference ||
+                        tag.runtimeKindRaw != image.runtimeKind.rawValue ||
+                        tag.runtimeImageID != image.id ||
+                        tag.digest != image.digest ||
+                        tag.resourceData != resourceData ||
+                        !tag.isLocal || tag.isMissing || tag.missingSince != nil
+                else { continue }
                 tag.imageIdentity = identity
                 tag.reference = image.reference
                 tag.runtimeKindRaw = image.runtimeKind.rawValue
                 tag.runtimeImageID = image.id
                 tag.digest = image.digest
-                tag.resourceData = encode(image)
+                tag.resourceData = resourceData
                 tag.isLocal = true
                 tag.isMissing = false
                 tag.missingSince = nil
                 tag.lastSeenAt = observedAt
                 tag.updatedAt = observedAt
+                changed = true
             } else {
                 context.insert(ImageTagRecord(scopedID: tagID,
                                               imageIdentity: identity,
@@ -84,26 +122,35 @@ extension AppDatabase {
                                               runtimeKindRaw: image.runtimeKind.rawValue,
                                               runtimeImageID: image.id,
                                               digest: image.digest,
-                                              resourceData: encode(image),
+                                              resourceData: resourceData,
                                               lastSeenAt: observedAt,
                                               updatedAt: observedAt))
+                changed = true
             }
         }
-        for tag in fetch(ImageTagRecord.self) where !seenTags.contains(tag.scopedID) && !tag.isMissing {
+        for tag in tagRecords where !seenTags.contains(tag.scopedID) && !tag.isMissing {
             context.delete(tag)
+            changed = true
         }
-        save()
+        if changed { save() }
     }
 
     func updateImageStatuses(_ statuses: [String: Core.Image.UpdateStatus], observedAt: Date = Date()) {
         let seen = Set(statuses.keys)
+        let imageRecords = fetch(ImageRecord.self)
+        let tagRecords = fetch(ImageTagRecord.self)
+        let imagesByIdentity = Dictionary(uniqueKeysWithValues: imageRecords.map { ($0.identity, $0) })
+        let tagsByID = Dictionary(uniqueKeysWithValues: tagRecords.map { ($0.scopedID, $0) })
+        var changed = false
         for (key, status) in statuses {
             let data = encode(status)
             if let scoped = Core.Runtime.Kind.parseScopedID(key) {
-                if let tag = fetch(ImageTagRecord.self).first(where: { $0.scopedID == key }) {
+                if let tag = tagsByID[key] {
+                    guard tag.updateStatusData != data else { continue }
                     tag.updateStatusData = data
                     tag.lastCheckedAt = observedAt
                     tag.updatedAt = observedAt
+                    changed = true
                 } else {
                     context.insert(ImageTagRecord(scopedID: key,
                                                   imageIdentity: scoped.id,
@@ -114,28 +161,35 @@ extension AppDatabase {
                                                   isLocal: false,
                                                   lastCheckedAt: observedAt,
                                                   updatedAt: observedAt))
+                    changed = true
                 }
-            } else if let image = fetch(ImageRecord.self).first(where: { $0.identity == key || Core.Registry.ImageReference.normalizedKey($0.primaryReference) == key }) {
+            } else if let image = imagesByIdentity[key]
+                        ?? imageRecords.first(where: { Core.Registry.ImageReference.normalizedKey($0.primaryReference) == key }) {
+                guard image.updateStatusData != data else { continue }
                 image.updateStatusData = data
                 image.lastCheckedAt = observedAt
                 image.updatedAt = observedAt
+                changed = true
             } else {
                 context.insert(ImageRecord(identity: key,
                                            primaryReference: key,
                                            updateStatusData: data,
                                            lastCheckedAt: observedAt,
                                            updatedAt: observedAt))
+                changed = true
             }
         }
-        for image in fetch(ImageRecord.self) where !seen.contains(image.identity) && !seen.contains(Core.Registry.ImageReference.normalizedKey(image.primaryReference)) {
+        for image in imageRecords where image.updateStatusData != nil && !seen.contains(image.identity) && !seen.contains(Core.Registry.ImageReference.normalizedKey(image.primaryReference)) {
             image.updateStatusData = nil
             image.updatedAt = observedAt
+            changed = true
         }
-        for tag in fetch(ImageTagRecord.self) where tag.updateStatusData != nil && !seen.contains(tag.scopedID) {
+        for tag in tagRecords where tag.updateStatusData != nil && !seen.contains(tag.scopedID) {
             tag.updateStatusData = nil
             tag.updatedAt = observedAt
+            changed = true
         }
-        save()
+        if changed { save() }
     }
 
     func imageStatusesSnapshot() -> [String: Core.Image.UpdateStatus] {
@@ -195,25 +249,35 @@ extension AppDatabase {
 
     func upsertVolumes(_ volumes: [Core.Volume.Resource], observedAt: Date = Date()) {
         let seen = Set(volumes.map(\.scopedID))
+        let records = fetch(VolumeRecord.self)
+        let recordsByID = Dictionary(uniqueKeysWithValues: records.map { ($0.scopedID, $0) })
+        var changed = false
         for volume in volumes {
-            if let record = fetch(VolumeRecord.self).first(where: { $0.scopedID == volume.scopedID }) {
+            let resourceData = encode(volume)
+            if let record = recordsByID[volume.scopedID] {
+                guard record.runtimeKindRaw != volume.runtimeKind.rawValue ||
+                        record.name != volume.name || record.resourceData != resourceData ||
+                        record.isMissing || record.missingSince != nil
+                else { continue }
                 record.runtimeKindRaw = volume.runtimeKind.rawValue
                 record.name = volume.name
-                record.resourceData = encode(volume)
+                record.resourceData = resourceData
                 record.isMissing = false
                 record.missingSince = nil
                 record.lastSeenAt = observedAt
                 record.updatedAt = observedAt
+                changed = true
             } else {
                 context.insert(VolumeRecord(scopedID: volume.scopedID,
                                             runtimeKindRaw: volume.runtimeKind.rawValue,
                                             name: volume.name,
-                                            resourceData: encode(volume),
+                                            resourceData: resourceData,
                                             lastSeenAt: observedAt,
                                             updatedAt: observedAt))
+                changed = true
             }
         }
-        for record in fetch(VolumeRecord.self) where !seen.contains(record.scopedID) && !record.isMissing {
+        for record in records where !seen.contains(record.scopedID) && !record.isMissing {
             if record.personalizationData != nil {
                 record.isMissing = true
                 record.missingSince = observedAt
@@ -221,34 +285,46 @@ extension AppDatabase {
             } else {
                 context.delete(record)
             }
+            changed = true
         }
-        save()
+        if changed { save() }
     }
 
     func upsertNetworks(_ networks: [Core.Network.Resource], observedAt: Date = Date()) {
         let seen = Set(networks.map(\.scopedID))
+        let records = fetch(NetworkRecord.self)
+        let recordsByID = Dictionary(uniqueKeysWithValues: records.map { ($0.scopedID, $0) })
+        var changed = false
         for network in networks {
-            if let record = fetch(NetworkRecord.self).first(where: { $0.scopedID == network.scopedID }) {
+            let resourceData = encode(network)
+            if let record = recordsByID[network.scopedID] {
+                guard record.runtimeKindRaw != network.runtimeKind.rawValue ||
+                        record.name != network.name || record.resourceData != resourceData ||
+                        record.isMissing || record.missingSince != nil
+                else { continue }
                 record.runtimeKindRaw = network.runtimeKind.rawValue
                 record.name = network.name
-                record.resourceData = encode(network)
+                record.resourceData = resourceData
                 record.isMissing = false
                 record.missingSince = nil
                 record.lastSeenAt = observedAt
                 record.updatedAt = observedAt
+                changed = true
             } else {
                 context.insert(NetworkRecord(scopedID: network.scopedID,
                                              runtimeKindRaw: network.runtimeKind.rawValue,
                                              name: network.name,
-                                             resourceData: encode(network),
+                                             resourceData: resourceData,
                                              lastSeenAt: observedAt,
                                              updatedAt: observedAt))
+                changed = true
             }
         }
-        for record in fetch(NetworkRecord.self) where !seen.contains(record.scopedID) && !record.isMissing {
+        for record in records where !seen.contains(record.scopedID) && !record.isMissing {
             context.delete(record)
+            changed = true
         }
-        save()
+        if changed { save() }
     }
 
     func markContainerMigrationStarted(source: Core.Container.Snapshot,
@@ -404,13 +480,15 @@ extension AppDatabase {
         }
     }
 
-    private func shouldRetainMissingContainer(_ record: ContainerRecord) -> Bool {
+    private func shouldRetainMissingContainer(_ record: ContainerRecord,
+                                              personalizedIDs: Set<String>,
+                                              healthCheckedIDs: Set<String>) -> Bool {
         record.isHiddenDuringMigration ||
             record.migrationStateRaw != "none" ||
             record.runtimeProjectionsData != nil ||
             record.linkedVolumePathsData != nil ||
-            fetch(PersonalizationRecord.self).contains { $0.key == record.scopedID } ||
-            fetch(HealthCheckRecord.self).contains { $0.containerScopedID == record.scopedID }
+            personalizedIDs.contains(record.scopedID) ||
+            healthCheckedIDs.contains(record.scopedID)
     }
 
     private func encode<T: Encodable>(_ value: T) -> Data {
@@ -421,5 +499,13 @@ extension AppDatabase {
                                         detail: String(describing: error)))
             return Data()
         }
+    }
+
+    /// JSON object key ordering is not a semantic runtime change. Compare decoded values before
+    /// writing a snapshot so dictionary-backed schemas cannot turn an idle refresh into a database
+    /// transaction merely because their encoded byte order differed.
+    private func matches<T: Codable & Equatable>(_ data: Data?, _ expected: T) -> Bool {
+        guard let data, let decoded = try? JSONDecoder().decode(T.self, from: data) else { return false }
+        return decoded == expected
     }
 }

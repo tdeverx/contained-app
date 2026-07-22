@@ -142,7 +142,9 @@ struct ContainerCard: View {
                      title: name,
                      subtitle: Format.shortImage(snapshot.image),
                      subtitleStyle: .monospaced,
-                     pages: cardPages) {
+                     // Compact cards never expose page controls. Keeping this nil also avoids
+                     // constructing all detail-page buttons for every card in a large grid.
+                     pages: isExpanded ? cardPages : nil) {
             iconChip
         } titleAccessory: {
             EmptyView()

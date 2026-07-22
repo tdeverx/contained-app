@@ -146,6 +146,7 @@ private struct ContainerHistoryWindow: View {
 }
 
 struct HistoryChartPoint: Identifiable, Equatable {
+    static let maximumRenderedPoints = 600
     let id: Int
     let timestamp: Date
     let cpuPercent: Double
@@ -164,7 +165,7 @@ struct HistoryChartPoint: Identifiable, Equatable {
         let cpuLimit = normalization.cpuLimit(for: snapshot)
         let memoryLimit = normalization.memoryLimitBytes(for: snapshot, fallback: memoryFallbackBytes)
 
-        return samples.enumerated().map { index, sample in
+        return downsample(samples).enumerated().map { index, sample in
             let cpu = sanitized(sample.cpuFraction) / cpuLimit
             let memory = memoryLimit > 0 ? sanitized(sample.memoryBytes) / Double(memoryLimit) : 0
             return HistoryChartPoint(id: index,
@@ -173,6 +174,31 @@ struct HistoryChartPoint: Identifiable, Equatable {
                                      memoryPercent: percent(memory),
                                      netRxKBPerSec: sanitized(sample.netRxBytesPerSec) / 1024,
                                      netTxKBPerSec: sanitized(sample.netTxBytesPerSec) / 1024)
+        }
+    }
+
+    /// Charts become needlessly expensive when a week of one-minute samples produces ten thousand
+    /// marks. Aggregate adjacent samples to a bounded, time-ordered series before creating marks;
+    /// the full-resolution history remains in SwiftData for future ranges and exports.
+    static func downsample(_ samples: [MetricSampleSnapshot],
+                           maximumPoints: Int = maximumRenderedPoints) -> [MetricSampleSnapshot] {
+        guard maximumPoints > 0, samples.count > maximumPoints else { return samples }
+        let bucketSize = Double(samples.count) / Double(maximumPoints)
+        return (0..<maximumPoints).compactMap { bucket in
+            let lower = Int((Double(bucket) * bucketSize).rounded(.down))
+            let upper = min(Int((Double(bucket + 1) * bucketSize).rounded(.down)), samples.count)
+            guard lower < upper else { return nil }
+            let window = samples[lower..<upper]
+            let count = Double(window.count)
+            let timestamp = window.reduce(0.0) { $0 + $1.timestamp.timeIntervalSinceReferenceDate } / count
+            return MetricSampleSnapshot(timestamp: Date(timeIntervalSinceReferenceDate: timestamp),
+                                        containerID: window.first!.containerID,
+                                        cpuFraction: window.reduce(0) { $0 + $1.cpuFraction } / count,
+                                        memoryBytes: window.reduce(0) { $0 + $1.memoryBytes } / count,
+                                        netRxBytesPerSec: window.reduce(0) { $0 + $1.netRxBytesPerSec } / count,
+                                        netTxBytesPerSec: window.reduce(0) { $0 + $1.netTxBytesPerSec } / count,
+                                        diskReadBytesPerSec: window.reduce(0) { $0 + $1.diskReadBytesPerSec } / count,
+                                        diskWriteBytesPerSec: window.reduce(0) { $0 + $1.diskWriteBytesPerSec } / count)
         }
     }
 

@@ -68,7 +68,7 @@ bundles, signing, notarization, and appcast scripts.
 
 - **`AppModel`** — root state: bootstraps `Core.Orchestrator`, owns feature stores, tracks bootstrap status, wires logging/updating, and runs the per-tick coordination. Focused extensions own image/resource style lookup, image-update sweeps, and configuration import/export.
 - **`ContainersStore`** — the container list, live stats deltas, streamed stats conversion, and lifecycle actions against `Core.Orchestrator`.
-- **`RefreshCoordinator`** — adaptive polling for service/list refreshes. Stats are maintained app-wide by one utility-priority runtime stats stream for the running containers, so normal refreshes and lifecycle actions relist containers without forcing vanity stats.
+- **`RefreshCoordinator`** — adaptive polling for service/list refreshes. Stats are maintained by one utility-priority runtime stream only while the Containers surface is visible; hiding it cancels the stream rather than spending idle CPU on invisible charts. Normal refreshes and lifecycle actions relist containers without forcing vanity stats.
 - **`RestartWatchdog`** — app-managed restart policy (`container` has no native `--restart`); diffs states each tick and re-issues `start` with backoff.
 - **`HealthMonitor`** — app-managed healthchecks: interval-gated `exec` probes with consecutive-failure tracking.
 - **`HistoryStore`** — SwiftData stack for the persistent event log + metric samples (the "rewind" timeline) with bounded retention.

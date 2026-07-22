@@ -195,35 +195,27 @@ final class ContainersStore {
         let rawInterval = lastStreamedStatsDate.map { observedAt.timeIntervalSince($0) }
         let interval = max(rawInterval ?? Self.minimumStreamedStatsInterval, Self.minimumStreamedStatsInterval)
         let snapshotsByID = snapshotLookupByStatsID()
-        var nextStats = statsByID
-        var nextHistory = historyByID
         for sample in samples {
             let delta = Core.Metrics.StatsDelta.from(snapshot: sample,
                                         previous: lastStreamedStats[sample.id],
                                         interval: interval)
-            record(delta, snapshot: snapshotsByID[sample.id], stats: &nextStats, history: &nextHistory)
-            metricsStates[sample.id]?.update(stats: delta, historyByMetric: nextHistory[sample.id] ?? [:])
+            // These dictionaries are observation-ignored. Mutate only the affected container
+            // instead of copying every running container's chart history for each stream frame.
+            statsByID[delta.id] = delta
+            var metrics = historyByID[delta.id] ?? [:]
+            for metric in Core.Metrics.GraphMetric.allCases {
+                var buffer = metrics[metric] ?? UI.Chart.SampleBuffer()
+                buffer.append(metric.value(from: delta,
+                                           snapshot: snapshotsByID[delta.id],
+                                           normalization: statsNormalizationContext))
+                metrics[metric] = buffer
+            }
+            historyByID[delta.id] = metrics
+            metricsStates[delta.id]?.update(stats: delta, historyByMetric: metrics)
             lastStreamedStats[sample.id] = sample
         }
-
-        if nextStats != statsByID { statsByID = nextStats }
-        if nextHistory != historyByID { historyByID = nextHistory }
         lastStreamedStatsDate = observedAt
         statsRevision &+= 1
-    }
-
-    private func record(_ delta: Core.Metrics.StatsDelta,
-                        snapshot: Core.Container.Snapshot?,
-                        stats: inout [String: Core.Metrics.StatsDelta],
-                        history: inout [String: [Core.Metrics.GraphMetric: UI.Chart.SampleBuffer]]) {
-        stats[delta.id] = delta
-        var metrics = history[delta.id] ?? [:]
-        for metric in Core.Metrics.GraphMetric.allCases {
-            var buffer = metrics[metric] ?? UI.Chart.SampleBuffer()
-            buffer.append(metric.value(from: delta, snapshot: snapshot, normalization: statsNormalizationContext))
-            metrics[metric] = buffer
-        }
-        history[delta.id] = metrics
     }
 
     private func rebuildDisplayHistories() {

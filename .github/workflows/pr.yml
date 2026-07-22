@@ -60,13 +60,20 @@ jobs:
         if: steps.changes.outputs.material == 'true'
         run: |
           set -euo pipefail
-          swift build -c release
-          swift test
+          ./Scripts/check.sh swift
           ./Scripts/check.sh generated
 
       - name: Native Xcode tests
         if: steps.changes.outputs.material == 'true'
-        run: xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug -destination 'platform=macOS' test
+        run: xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug -destination 'platform=macOS' -resultBundlePath Contained.xcresult test
+
+      - name: Upload native test results
+        if: always() && steps.changes.outputs.material == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-test-results
+          path: Contained.xcresult
+          if-no-files-found: warn
 
       - name: Bundle smoke validation
         if: steps.changes.outputs.material == 'true'

@@ -125,6 +125,24 @@ struct MetricSampleSnapshot: Codable, Equatable {
     var diskReadBytesPerSec: Double
     var diskWriteBytesPerSec: Double
 
+    init(timestamp: Date,
+         containerID: String,
+         cpuFraction: Double,
+         memoryBytes: Double,
+         netRxBytesPerSec: Double,
+         netTxBytesPerSec: Double,
+         diskReadBytesPerSec: Double,
+         diskWriteBytesPerSec: Double) {
+        self.timestamp = timestamp
+        self.containerID = containerID
+        self.cpuFraction = cpuFraction
+        self.memoryBytes = memoryBytes
+        self.netRxBytesPerSec = netRxBytesPerSec
+        self.netTxBytesPerSec = netTxBytesPerSec
+        self.diskReadBytesPerSec = diskReadBytesPerSec
+        self.diskWriteBytesPerSec = diskWriteBytesPerSec
+    }
+
     init(_ sample: MetricSample) {
         timestamp = sample.timestamp
         containerID = sample.containerID

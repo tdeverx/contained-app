@@ -289,6 +289,29 @@ struct ContainersStoreRefreshTests {
         #expect(machinePoints.map { $0.memoryPercent } == [25, 50])
     }
 
+    @Test func historyChartDownsamplingBoundsRenderedMarks() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        var samples: [MetricSampleSnapshot] = []
+        for offset in 0..<1_201 {
+            let value = Double(offset)
+            let sample = MetricSampleSnapshot(timestamp: start.addingTimeInterval(value),
+                                              containerID: "web",
+                                              cpuFraction: value,
+                                              memoryBytes: value,
+                                              netRxBytesPerSec: value,
+                                              netTxBytesPerSec: value,
+                                              diskReadBytesPerSec: value,
+                                              diskWriteBytesPerSec: value)
+            samples.append(sample)
+        }
+
+        let downsampled = HistoryChartPoint.downsample(samples, maximumPoints: 120)
+
+        #expect(downsampled.count == 120)
+        #expect(downsampled.first!.timestamp >= samples.first!.timestamp)
+        #expect(downsampled.last!.timestamp <= samples.last!.timestamp)
+    }
+
     @Test func changingStatsNormalizationRebuildsDisplayHistories() {
         let store = ContainersStore()
         let start = Date(timeIntervalSinceReferenceDate: 1_000)

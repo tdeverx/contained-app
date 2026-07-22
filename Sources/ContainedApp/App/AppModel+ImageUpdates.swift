@@ -201,7 +201,7 @@ extension AppModel {
         if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < imageUpdateInterval { return }
         if images.isEmpty, let client {
             do {
-                images = try await client.runtimeImages()
+                setImages(try await client.runtimeImages())
                 imagesError = nil
             } catch let error as Core.Command.Error {
                 imagesError = error.appDisplayMessage

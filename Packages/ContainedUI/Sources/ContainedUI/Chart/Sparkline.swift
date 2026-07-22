@@ -140,8 +140,6 @@ struct Sparkline: View {
 
     private var chart: some View {
         let primary = primaryPoints
-        let secondary = secondaryPoints
-        let ranges = rangePoints(primary: primary, secondary: secondary)
 
         return Chart {
             switch style {
@@ -175,6 +173,7 @@ struct Sparkline: View {
                         .symbolSize(pointSize)
                 }
             case .multiLine:
+                let secondary = secondaryPoints
                 ForEach(primary) { point in
                     LineMark(x: .value("Sample", point.index), y: .value("Value", point.value), series: .value("Metric", "Primary"))
                         .foregroundStyle(color)
@@ -188,6 +187,7 @@ struct Sparkline: View {
                         .interpolationMethod(interpolation.method)
                 }
             case .range:
+                let ranges = rangePoints(primary: primary, secondary: secondaryPoints)
                 ForEach(ranges) { point in
                     BarMark(x: .value("Sample", point.index),
                             yStart: .value("Low", point.low),
@@ -197,6 +197,7 @@ struct Sparkline: View {
                     .foregroundStyle(color.opacity(0.72).gradient)
                 }
             case .scatter:
+                let secondary = secondaryPoints
                 ForEach(primary) { point in
                     PointMark(x: .value("Sample", point.index), y: .value("Value", point.value))
                         .foregroundStyle(color)
@@ -275,7 +276,10 @@ struct Sparkline: View {
     }
 
     private func plottedSamples(_ values: [Double]) -> [Double] {
-        SparklineSeriesScaling.paddedWindow(values, capacity: Self.maximumPlottedSamples)
+        // Keep the chart empty until there is data. Padding belongs to a renderer that needs a
+        // fixed sample window; doing it here made a brand-new card build a 24-mark chart instead
+        // of the inexpensive baseline placeholder.
+        values.suffix(Self.maximumPlottedSamples).map(SparklineSeriesScaling.sanitizedSample)
     }
 }
 }
@@ -316,7 +320,7 @@ enum SparklineSeriesScaling {
         return max(robustHigh * 1.35, minimumCeiling)
     }
 
-    private static func sanitizedSample(_ value: Double) -> Double {
+    static func sanitizedSample(_ value: Double) -> Double {
         guard value.isFinite, value > 0 else { return 0 }
         return value
     }

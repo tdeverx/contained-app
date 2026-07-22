@@ -128,3 +128,8 @@ Core exposes typed `Core.Metrics.RuntimeStatsSnapshot` batches from
 ANSI table stream, so the Apple adapter parses that table internally. Future
 adapters should publish the same snapshot shape from their own native source
 without leaking transport details into the app.
+
+The app keeps only the short live sparkline window in memory. Its persistent
+history views aggregate long ranges to a bounded number of chart marks before
+rendering, so retained metric history does not turn a week-long timeline into
+thousands of simultaneous Swift Charts marks.

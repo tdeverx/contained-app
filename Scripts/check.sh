@@ -90,8 +90,11 @@ generated_checks() {
 }
 
 swift_checks() {
-  swift build
+  swift build -c release
   swift test
+  for package in Packages/ContainedCore Packages/ContainedUI Packages/ContainedUX; do
+    swift test --package-path "$package"
+  done
 }
 
 require_release_note_check() {
@@ -153,6 +156,16 @@ repo_checks() {
   echo "▸ Checking bundled changelog sync..."
   cmp -s CHANGELOG.md Sources/ContainedApp/Resources/CHANGELOG.md \
     || fail "Bundled changelog is out of sync. Run ./Scripts/package.sh app debug and commit the synced resource."
+
+  echo "▸ Checking Swift package resolution parity..."
+  local root_resolution="Package.resolved"
+  local workspace_resolution="Contained.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+  local project_resolution="Contained.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+  [ -f "$root_resolution" ] || fail "missing $root_resolution"
+  [ -f "$workspace_resolution" ] || fail "missing $workspace_resolution"
+  [ ! -e "$project_resolution" ] || fail "remove redundant $project_resolution; Contained.xcworkspace is the supported Xcode entry point"
+  diff -u <(sed '/"originHash"/d' "$root_resolution") <(sed '/"originHash"/d' "$workspace_resolution") \
+    || fail "root and Xcode workspace Package.resolved pins differ"
 
   echo "▸ Checking shell script syntax..."
   bash -n Scripts/*.sh
