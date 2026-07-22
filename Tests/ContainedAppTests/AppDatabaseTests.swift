@@ -247,6 +247,26 @@ struct AppDatabaseTests {
         #expect(database.fetch(ImageRecord.self).first?.updateStatusData == nil)
     }
 
+    @Test func duplicateLegacyImageTagRecordsDoNotPreventLaunch() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let key = "apple-container::docker.io/library/nginx:latest"
+        database.context.insert(ImageTagRecord(scopedID: key,
+                                              imageIdentity: "nginx",
+                                              reference: "nginx:latest",
+                                              runtimeKindRaw: Core.Runtime.Kind.appleContainer.rawValue,
+                                              runtimeImageID: "first"))
+        database.context.insert(ImageTagRecord(scopedID: key,
+                                              imageIdentity: "nginx",
+                                              reference: "nginx:latest",
+                                              runtimeKindRaw: Core.Runtime.Kind.appleContainer.rawValue,
+                                              runtimeImageID: "second"))
+        database.save()
+
+        database.updateImageStatuses([key: .resolved(localDigest: "sha256:old", remoteDigest: "sha256:new")])
+
+        #expect(database.fetch(ImageTagRecord.self).contains { $0.updateStatusData != nil })
+    }
+
     @Test func defaultAppSupportedRuntimesKeepDockerDormant() {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let app = AppModel(database: database)

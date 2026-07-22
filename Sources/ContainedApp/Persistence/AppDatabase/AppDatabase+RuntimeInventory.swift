@@ -5,7 +5,7 @@ extension AppDatabase {
     func upsertContainers(_ snapshots: [Core.Container.Snapshot], observedAt: Date = Date()) {
         let seen = Set(snapshots.map(\.scopedID))
         let records = fetch(ContainerRecord.self)
-        let recordsByID = Dictionary(uniqueKeysWithValues: records.map { ($0.scopedID, $0) })
+        let recordsByID = Dictionary(records.map { ($0.scopedID, $0) }, uniquingKeysWith: { first, _ in first })
         let personalizedIDs = Set(fetch(PersonalizationRecord.self).map(\.key))
         let healthCheckedIDs = Set(fetch(HealthCheckRecord.self).map(\.containerScopedID))
         var changed = false
@@ -69,8 +69,8 @@ extension AppDatabase {
         let groups = Core.Image.LocalTagGroup.groups(for: images)
         let imageRecords = fetch(ImageRecord.self)
         let tagRecords = fetch(ImageTagRecord.self)
-        let imagesByIdentity = Dictionary(uniqueKeysWithValues: imageRecords.map { ($0.identity, $0) })
-        let tagsByID = Dictionary(uniqueKeysWithValues: tagRecords.map { ($0.scopedID, $0) })
+        let imagesByIdentity = Dictionary(imageRecords.map { ($0.identity, $0) }, uniquingKeysWith: { first, _ in first })
+        let tagsByID = Dictionary(tagRecords.map { ($0.scopedID, $0) }, uniquingKeysWith: { first, _ in first })
         var seenTags: Set<String> = []
         var changed = false
         for group in groups {
@@ -139,8 +139,8 @@ extension AppDatabase {
         let seen = Set(statuses.keys)
         let imageRecords = fetch(ImageRecord.self)
         let tagRecords = fetch(ImageTagRecord.self)
-        let imagesByIdentity = Dictionary(uniqueKeysWithValues: imageRecords.map { ($0.identity, $0) })
-        let tagsByID = Dictionary(uniqueKeysWithValues: tagRecords.map { ($0.scopedID, $0) })
+        let imagesByIdentity = Dictionary(imageRecords.map { ($0.identity, $0) }, uniquingKeysWith: { first, _ in first })
+        let tagsByID = Dictionary(tagRecords.map { ($0.scopedID, $0) }, uniquingKeysWith: { first, _ in first })
         var changed = false
         for (key, status) in statuses {
             let data = encode(status)
@@ -250,7 +250,7 @@ extension AppDatabase {
     func upsertVolumes(_ volumes: [Core.Volume.Resource], observedAt: Date = Date()) {
         let seen = Set(volumes.map(\.scopedID))
         let records = fetch(VolumeRecord.self)
-        let recordsByID = Dictionary(uniqueKeysWithValues: records.map { ($0.scopedID, $0) })
+        let recordsByID = Dictionary(records.map { ($0.scopedID, $0) }, uniquingKeysWith: { first, _ in first })
         var changed = false
         for volume in volumes {
             let resourceData = encode(volume)
@@ -293,7 +293,7 @@ extension AppDatabase {
     func upsertNetworks(_ networks: [Core.Network.Resource], observedAt: Date = Date()) {
         let seen = Set(networks.map(\.scopedID))
         let records = fetch(NetworkRecord.self)
-        let recordsByID = Dictionary(uniqueKeysWithValues: records.map { ($0.scopedID, $0) })
+        let recordsByID = Dictionary(records.map { ($0.scopedID, $0) }, uniquingKeysWith: { first, _ in first })
         var changed = false
         for network in networks {
             let resourceData = encode(network)
