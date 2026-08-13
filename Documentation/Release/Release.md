@@ -97,9 +97,11 @@ Then:
 
 ## Nightly (CI)
 
-`.github/workflows/nightly.yml` builds the latest green `nightly` on every push (newest commit wins via `concurrency: cancel-in-progress`), ad-hoc signs, refreshes the rolling **nightly** pre-release with the new DMG, regenerates the nightly appcast item, preserves promoted beta/stable items already in the feed, and commits root `appcast.xml` to the `nightly` branch. It skips appcast signing when `SPARKLE_ED_PRIVATE_KEY` is absent.
+`.github/workflows/nightly.yml` builds the latest green `nightly` on every push (newest commit wins via `concurrency: cancel-in-progress`), ad-hoc signs, publishes a versioned **nightly** pre-release with the new DMG, regenerates the nightly appcast item with that permanent release URL, preserves promoted beta/stable items already in the feed, and commits root `appcast.xml` to the `nightly` branch. It skips appcast signing when `SPARKLE_ED_PRIVATE_KEY` is absent. Historical nightly releases remain available for manual rollback and regression testing; Sparkle advertises only the newest nightly item.
 
-`.github/workflows/beta.yml` and `.github/workflows/stable.yml` build promoted branches, retain the build number for the matching nightly commit when available, write their own branch appcast, and merge the promoted appcast item into the nightly feed. They upsert GitHub release assets on reruns so a retry refreshes the same tag instead of failing on an existing release. All workflows ask `Scripts/package.sh version` for the build number.
+`.github/workflows/beta.yml` and `.github/workflows/stable.yml` build promoted branches, retain the build number for the matching nightly commit when available, write their own branch appcast, and merge the promoted appcast item into the nightly feed. Published release tags and assets are immutable. On a workflow retry, the existing asset is downloaded and verified before appcast generation instead of being replaced. All workflows ask `Scripts/package.sh version` for the build number.
+
+GitHub release immutability must remain enabled for the repository. GitHub CLI creates a draft internally while uploading assets and publishes only after the upload succeeds; publication locks the tag and assets and creates the release attestation used by workflow retries.
 
 After appcast generation, workflows validate the branch feed before committing it. Beta and Stable workflows validate the promoted nightly feed inside the scratch nightly worktree before pushing the appcast-only `[skip ci]` commit.
 

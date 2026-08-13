@@ -109,14 +109,17 @@ jobs:
         run: |
           set -euo pipefail
           tag="v${VERSION}"
+          asset="Contained-${VERSION}.dmg"
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" updates/*.dmg --clobber
-            gh release edit "$tag" \
-              --prerelease --title "Beta (${VERSION})" \
-              --notes-file updates/github-release-notes.md
+            target="$(gh release view "$tag" --json targetCommitish --jq .targetCommitish)"
+            [ "$target" = "$GITHUB_SHA" ] || { echo "Release $tag belongs to $target, not $GITHUB_SHA" >&2; exit 1; }
+            gh release download "$tag" --pattern "$asset" --dir updates --clobber
+            gh release verify "$tag"
+            gh release verify-asset "$tag" "updates/$asset"
           else
-            gh release create "$tag" updates/*.dmg \
-              --prerelease --title "Beta (${VERSION})" \
+            gh release create "$tag" "updates/$asset" \
+              --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title "Beta (${VERSION})" \
               --notes-file updates/github-release-notes.md
           fi
 

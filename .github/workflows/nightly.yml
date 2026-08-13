@@ -1,9 +1,9 @@
 name: Nightly
 
-# Builds the latest `nightly` branch, ad-hoc signs, packages a DMG, and refreshes the rolling
-# `nightly-latest` release. The Sparkle feed (appcast.xml at this branch's repo root) is then
-# regenerated for the new DMG and committed back to `nightly`. Promoted beta/stable items are kept
-# in this feed too, so Nightly users can receive those builds without changing channels.
+# Builds the latest `nightly` branch, ad-hoc signs, packages a DMG, and publishes an immutable
+# versioned pre-release. The Sparkle feed (appcast.xml at this branch's repo root) is then regenerated
+# for the new DMG and committed back to `nightly`. Promoted beta/stable items are kept in this feed
+# too, so Nightly users can receive those builds without changing channels.
 #
 # No Apple Developer ID / notarization (no paid account). First launch of an unsigned build needs
 # right-click ▸ Open. Only secret: SPARKLE_ED_PRIVATE_KEY (DMG still ships without it).
@@ -92,13 +92,23 @@ jobs:
             echo
             echo "⚠️ Unsigned build — first launch: right-click the app ▸ **Open** (or \`xattr -dr com.apple.quarantine /Applications/Contained.app\`)."
           } > updates/github-release-notes.md
-      - name: Publish rolling nightly-latest release
+      - name: Publish immutable nightly release
         run: |
           set -euo pipefail
-          gh release delete nightly-latest --yes --cleanup-tag || true
-          gh release create nightly-latest updates/*.dmg \
-            --prerelease --title "Nightly (${VERSION})" \
-            --notes-file updates/github-release-notes.md
+          tag="v${VERSION}"
+          asset="Contained-${VERSION}.dmg"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            target="$(gh release view "$tag" --json targetCommitish --jq .targetCommitish)"
+            [ "$target" = "$GITHUB_SHA" ] || { echo "Release $tag belongs to $target, not $GITHUB_SHA" >&2; exit 1; }
+            gh release download "$tag" --pattern "$asset" --dir updates --clobber
+            gh release verify "$tag"
+            gh release verify-asset "$tag" "updates/$asset"
+          else
+            gh release create "$tag" "updates/$asset" \
+              --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title "Nightly (${VERSION})" \
+              --notes-file updates/github-release-notes.md
+          fi
 
       - name: Update Sparkle feed (nightly branch appcast.xml)
         if: env.SPARKLE_ED_PRIVATE_KEY != ''
@@ -110,7 +120,7 @@ jobs:
           BIN=".build/artifacts/sparkle/Sparkle/bin"
           [ -x "$BIN/generate_appcast" ] || BIN="$(dirname "$(find .build -type f -name generate_appcast | head -1)")"
           ED_KEY_FILE="$KEYFILE" \
-            DOWNLOAD_PREFIX="https://github.com/tdeverx/contained-app/releases/download/nightly-latest/" \
+            DOWNLOAD_PREFIX="https://github.com/tdeverx/contained-app/releases/download/v${VERSION}/" \
             ./Scripts/appcast.sh generate "$BIN" updates
           [ -s "$PREVIOUS_APPCAST" ] && ./Scripts/appcast.sh promote --non-nightly-only "$PREVIOUS_APPCAST" appcast.xml
           CHANNEL=nightly ./Scripts/appcast.sh validate appcast.xml
