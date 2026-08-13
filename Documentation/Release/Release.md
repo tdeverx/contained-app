@@ -73,7 +73,7 @@ VERSION="$VERSION" BUILD="$BUILD" ./Scripts/package.sh smoke Contained.app
 CHANNEL="$CHANNEL" ./Scripts/appcast.sh validate appcast.xml
 ```
 
-`Scripts/check.sh generated` catches tracked files rewritten by build/generation steps. `Scripts/package.sh smoke` checks the bundle executable, Info.plist version/build values, bundled changelog, Sparkle.framework, and code signature. `Scripts/appcast.sh validate` checks XML structure, numeric Sparkle build numbers, short versions, enclosure URLs, release notes, and channel shape; the nightly channel intentionally allows Stable/Beta/Nightly items because it is the superset feed.
+`Scripts/check.sh generated` catches tracked files rewritten by build/generation steps. `Scripts/package.sh smoke` checks the bundle executable, Info.plist version/build values, required SwiftPM resource bundles, bundled changelog, Sparkle.framework, and code signature. `Scripts/appcast.sh validate` checks XML structure, numeric Sparkle build numbers, short versions, enclosure URLs, release notes, and channel shape; the nightly channel intentionally allows Stable/Beta/Nightly items because it is the superset feed.
 
 ## One-time setup
 

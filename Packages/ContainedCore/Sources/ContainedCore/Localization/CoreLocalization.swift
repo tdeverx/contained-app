@@ -1,7 +1,24 @@
 import Foundation
 
+private final class CoreLocalizationBundleToken: NSObject {}
+
 public extension Core {
     enum Localization {
+        private static let resourceBundle: Bundle? = {
+            let bundleName = "ContainedCore_ContainedCore.bundle"
+            let hosts = [Bundle.main, Bundle(for: CoreLocalizationBundleToken.self)]
+                + Bundle.allBundles
+                + Bundle.allFrameworks
+            let candidates: [URL?] = hosts.flatMap { host -> [URL?] in
+                [
+                    host.resourceURL?.appendingPathComponent(bundleName),
+                    host.bundleURL.appendingPathComponent(bundleName),
+                    host.bundleURL.deletingLastPathComponent().appendingPathComponent(bundleName),
+                ]
+            }
+            return candidates.compactMap { $0 }.lazy.compactMap(Bundle.init(url:)).first
+        }()
+
         public struct Entry: Sendable, Hashable {
             public var key: String
             public var defaultValue: String
@@ -22,7 +39,8 @@ public extension Core {
                                   resolver: Resolver? = nil) -> String {
             let entry = Entry(key: key, defaultValue: defaultValue, table: table)
             if let resolved = resolver?(entry) { return resolved }
-            let localized = Bundle.module.localizedString(forKey: key, value: defaultValue, table: table)
+            guard let resourceBundle else { return defaultValue }
+            let localized = resourceBundle.localizedString(forKey: key, value: defaultValue, table: table)
             return localized == key ? defaultValue : localized
         }
     }

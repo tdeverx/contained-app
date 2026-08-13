@@ -11,6 +11,12 @@ fail() {
   exit 1
 }
 
+required_resource_bundles=(
+  "Contained_ContainedApp.bundle"
+  "ContainedCore_ContainedCore.bundle"
+  "SwiftTerm_SwiftTerm.bundle"
+)
+
 usage() {
   cat >&2 <<'USAGE'
 Usage:
@@ -171,12 +177,10 @@ build_app() {
     install_name_tool -add_rpath "@executable_path/../Frameworks" "$app/Contents/MacOS/Contained" 2>/dev/null || true
   fi
 
-  for bundle_name in Contained_ContainedApp.bundle Contained_Contained.bundle; do
+  for bundle_name in "${required_resource_bundles[@]}"; do
     local bundle_res="$build_products/$bundle_name"
-    if [ -d "$bundle_res" ]; then
-      cp -R "$bundle_res" "$app/Contents/Resources/" || true
-      break
-    fi
+    [ -d "$bundle_res" ] || fail "Required SwiftPM resource bundle '$bundle_name' was not built"
+    cp -R "$bundle_res" "$app/Contents/Resources/"
   done
 
   echo "▸ Generating bundled release notes..."
@@ -225,15 +229,13 @@ smoke_bundle() {
   [ -f "$plist" ] || fail "Info.plist is missing"
   [ -x "$binary" ] || fail "Executable '$binary' is missing or not executable"
 
-  local resource_changelog=""
-  for bundle_name in Contained_ContainedApp.bundle Contained_Contained.bundle; do
-    local candidate="$app/Contents/Resources/$bundle_name/CHANGELOG.md"
-    if [ -f "$candidate" ]; then
-      resource_changelog="$candidate"
-      break
-    fi
+  for bundle_name in "${required_resource_bundles[@]}"; do
+    [ -d "$app/Contents/Resources/$bundle_name" ] \
+      || fail "Required SwiftPM resource bundle '$bundle_name' is missing"
   done
-  [ -n "$resource_changelog" ] || fail "Bundled CHANGELOG.md resource is missing"
+
+  local resource_changelog="$app/Contents/Resources/Contained_ContainedApp.bundle/CHANGELOG.md"
+  [ -f "$resource_changelog" ] || fail "Bundled CHANGELOG.md resource is missing"
   [ -s "$current_release_notes" ] || fail "CurrentReleaseNotes.md resource is missing or empty"
   [ -d "$sparkle_framework" ] || fail "Sparkle.framework is missing from the bundle"
 
