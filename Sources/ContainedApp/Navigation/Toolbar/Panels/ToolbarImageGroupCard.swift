@@ -104,7 +104,7 @@ struct ToolbarImageGroupCard: View {
                             pages: imagePages) {
             if let image {
                 CardStyleButton(style: resolved,
-                                target: .imageGroup(id: group.id, reference: group.primaryReference),
+                                target: .imageGroup(group),
                                 help: "Customize image style",
                                 accessibilityLabel: AppText.customizeImageStyleAccessibility(Format.shortImage(image.reference)))
             } else {

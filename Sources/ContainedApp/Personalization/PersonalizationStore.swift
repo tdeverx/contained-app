@@ -18,13 +18,20 @@ final class PersonalizationStore {
         static let volumeStyles = "personalizationVolumeStyles"
         static let defaultImageStyle = "personalizationDefaultImageStyle"
     }
+    private static let imageReferencePrefix = "image-ref:"
+    private static let imageGroupReferencePrefix = "image-group-ref:"
+    private static let legacyImageGroupPrefix = "image-group:"
 
     init(database: AppDatabase = AppDatabase()) {
         self.database = database
         overrides = Self.load(database, Keys.overrides)
-        imageDefaults = Self.load(database, Keys.imageDefaults)
+        let loadedImageDefaults = Self.load(database, Keys.imageDefaults)
+        imageDefaults = Self.migratedImageDefaults(loadedImageDefaults, database: database)
         volumeStyles = Self.load(database, Keys.volumeStyles)
         defaultImageStyle = Self.loadStyle(database, Keys.defaultImageStyle) ?? Personalization()
+        if imageDefaults != loadedImageDefaults {
+            Self.persist(database, Keys.imageDefaults, imageDefaults)
+        }
     }
 
     func backupSnapshot() -> PersonalizationBackup {
@@ -35,13 +42,14 @@ final class PersonalizationStore {
     }
 
     func applyBackup(_ snapshot: PersonalizationBackup, replace: Bool) {
+        let importedImageDefaults = Self.migratedImageDefaults(snapshot.imageDefaults, database: database)
         if replace {
             overrides = snapshot.overrides
-            imageDefaults = snapshot.imageDefaults
+            imageDefaults = importedImageDefaults
             volumeStyles = snapshot.volumeStyles
         } else {
             overrides.merge(snapshot.overrides) { _, imported in imported }
-            imageDefaults.merge(snapshot.imageDefaults) { _, imported in imported }
+            imageDefaults.merge(importedImageDefaults) { _, imported in imported }
             volumeStyles.merge(snapshot.volumeStyles) { _, imported in imported }
         }
         defaultImageStyle = snapshot.defaultImageStyle
@@ -53,9 +61,17 @@ final class PersonalizationStore {
 
     func purgeOrphans(liveContainerIDs: Set<String>, liveImageRefs: Set<String>) -> Int {
         let before = overrides.count + imageDefaults.count + volumeStyles.count
+        let normalizedLiveImageRefs = Set(liveImageRefs.map(Core.Registry.ImageReference.normalizedKey))
         overrides = overrides.filter { liveContainerIDs.contains($0.key) }
         imageDefaults = imageDefaults.filter { key, _ in
-            key.hasPrefix("image-group:") || liveImageRefs.contains(key)
+            if key.hasPrefix(Self.legacyImageGroupPrefix) { return true }
+            if let reference = Self.reference(from: key, prefix: Self.imageReferencePrefix) {
+                return normalizedLiveImageRefs.contains(reference)
+            }
+            if let reference = Self.reference(from: key, prefix: Self.imageGroupReferencePrefix) {
+                return normalizedLiveImageRefs.contains(reference)
+            }
+            return normalizedLiveImageRefs.contains(Core.Registry.ImageReference.normalizedKey(key))
         }
         persist(Keys.overrides, overrides)
         persist(Keys.imageDefaults, imageDefaults)
@@ -98,9 +114,9 @@ final class PersonalizationStore {
     /// Resolve a container's effective style: per-container override -> image default -> fallback.
     func resolved(id: String,
                   image: String,
-                  groupID: String? = nil,
+                  group: Core.Image.LocalTagGroup? = nil,
                   fallback: Personalization = Personalization()) -> Personalization {
-        Self.meaningful(overrides[id]) ?? imageDefault(for: image, groupID: groupID) ?? fallback
+        Self.meaningful(overrides[id]) ?? imageDefault(for: image, group: group) ?? fallback
     }
 
     // MARK: Per-container overrides
@@ -123,44 +139,73 @@ final class PersonalizationStore {
 
     // MARK: Image-level defaults
 
-    func imageDefault(for image: String) -> Personalization? { Self.meaningful(imageDefaults[image]) }
-
-    func imageDefault(for image: String, groupID: String?) -> Personalization? {
-        Self.meaningful(imageDefaults[image]) ?? groupID.flatMap { Self.meaningful(imageDefaults[Self.imageGroupKey($0)]) }
+    func imageDefault(for image: String) -> Personalization? {
+        Self.meaningful(imageDefaults[Self.imageReferenceKey(image)])
     }
 
-    func imageGroupDefault(for groupID: String) -> Personalization? { Self.meaningful(imageDefaults[Self.imageGroupKey(groupID)]) }
+    func imageDefault(for image: String, group: Core.Image.LocalTagGroup?) -> Personalization? {
+        imageDefault(for: image) ?? group.flatMap(imageGroupDefault(for:))
+    }
+
+    func imageGroupDefault(for group: Core.Image.LocalTagGroup) -> Personalization? {
+        for key in Self.imageGroupReferenceKeys(group.references) {
+            if let style = Self.meaningful(imageDefaults[key]) { return style }
+        }
+        return imageGroupDefault(forLegacyID: group.id)
+    }
+
+    func imageGroupDefault(forLegacyID groupID: String) -> Personalization? {
+        Self.meaningful(imageDefaults[Self.legacyImageGroupKey(groupID)])
+    }
 
     func setImageDefault(_ personalization: Personalization, for image: String) {
         if personalization.isDefault {
             clearImageDefault(for: image)
             return
         }
-        imageDefaults[image] = personalization.normalizedForPersistence()
+        imageDefaults[Self.imageReferenceKey(image)] = personalization.normalizedForPersistence()
         persist(Keys.imageDefaults, imageDefaults)
     }
 
-    func setImageGroupDefault(_ personalization: Personalization, for groupID: String) {
+    func setImageGroupDefault(_ personalization: Personalization, for group: Core.Image.LocalTagGroup) {
         if personalization.isDefault {
-            clearImageGroupDefault(for: groupID)
+            clearImageGroupDefault(for: group)
             return
         }
-        imageDefaults[Self.imageGroupKey(groupID)] = personalization.normalizedForPersistence()
+        let style = personalization.normalizedForPersistence()
+        for key in Self.imageGroupReferenceKeys(group.references) {
+            imageDefaults[key] = style
+        }
+        imageDefaults[Self.legacyImageGroupKey(group.id)] = nil
         persist(Keys.imageDefaults, imageDefaults)
     }
 
     func clearImageDefault(for image: String) {
-        imageDefaults[image] = nil
+        imageDefaults[Self.imageReferenceKey(image)] = nil
         persist(Keys.imageDefaults, imageDefaults)
     }
 
-    func clearImageGroupDefault(for groupID: String) {
-        imageDefaults[Self.imageGroupKey(groupID)] = nil
+    func clearImageGroupDefault(for group: Core.Image.LocalTagGroup) {
+        for key in Self.imageGroupReferenceKeys(group.references) {
+            imageDefaults[key] = nil
+        }
+        imageDefaults[Self.legacyImageGroupKey(group.id)] = nil
         persist(Keys.imageDefaults, imageDefaults)
     }
 
-    static func imageGroupKey(_ groupID: String) -> String {
-        "image-group:\(groupID)"
+    /// Move digest-keyed group styles onto the group's logical references before inventory changes.
+    func stabilizeImageGroupDefaults(for groups: [Core.Image.LocalTagGroup]) {
+        var changed = false
+        for group in groups {
+            guard let style = imageGroupDefault(for: group) else { continue }
+            for key in Self.imageGroupReferenceKeys(group.references) where imageDefaults[key] == nil {
+                imageDefaults[key] = style
+                changed = true
+            }
+            let legacyKey = Self.legacyImageGroupKey(group.id)
+            if imageDefaults.removeValue(forKey: legacyKey) != nil { changed = true }
+        }
+        if changed { persist(Keys.imageDefaults, imageDefaults) }
     }
 
     // MARK: App-wide image default
@@ -241,6 +286,62 @@ final class PersonalizationStore {
 
     private func persist(_ key: String, _ value: [String: Personalization]) {
         Self.persist(database, key, value)
+    }
+
+    private static func migratedImageDefaults(_ values: [String: Personalization],
+                                              database: AppDatabase) -> [String: Personalization] {
+        let recordsByIdentity = Dictionary(database.fetch(ImageRecord.self).map { ($0.identity, $0) },
+                                           uniquingKeysWith: { first, _ in first })
+        let ordered = values.sorted { lhs, rhs in
+            let lhsCanonical = isCanonicalImageKey(lhs.key)
+            let rhsCanonical = isCanonicalImageKey(rhs.key)
+            if lhsCanonical != rhsCanonical { return lhsCanonical }
+            return lhs.key < rhs.key
+        }
+        var migrated: [String: Personalization] = [:]
+        for (key, style) in ordered {
+            let targetKey: String
+            if let reference = reference(from: key, prefix: imageReferencePrefix) {
+                targetKey = imageReferenceKey(reference)
+            } else if let reference = reference(from: key, prefix: imageGroupReferencePrefix) {
+                targetKey = imageGroupReferenceKey(reference)
+            } else if let identity = reference(from: key, prefix: legacyImageGroupPrefix) {
+                guard let reference = recordsByIdentity[identity]?.primaryReference else {
+                    migrated[key] = migrated[key] ?? style
+                    continue
+                }
+                targetKey = imageGroupReferenceKey(reference)
+            } else {
+                targetKey = imageReferenceKey(key)
+            }
+            migrated[targetKey] = migrated[targetKey] ?? style
+        }
+        return migrated
+    }
+
+    private static func isCanonicalImageKey(_ key: String) -> Bool {
+        key.hasPrefix(imageReferencePrefix) || key.hasPrefix(imageGroupReferencePrefix)
+    }
+
+    private static func imageReferenceKey(_ reference: String) -> String {
+        imageReferencePrefix + Core.Registry.ImageReference.normalizedKey(reference)
+    }
+
+    private static func imageGroupReferenceKey(_ reference: String) -> String {
+        imageGroupReferencePrefix + Core.Registry.ImageReference.normalizedKey(reference)
+    }
+
+    private static func imageGroupReferenceKeys(_ references: [String]) -> [String] {
+        Array(Set(references.map(imageGroupReferenceKey))).sorted()
+    }
+
+    private static func legacyImageGroupKey(_ groupID: String) -> String {
+        legacyImageGroupPrefix + groupID
+    }
+
+    private static func reference(from key: String, prefix: String) -> String? {
+        guard key.hasPrefix(prefix) else { return nil }
+        return String(key.dropFirst(prefix.count))
     }
 }
 

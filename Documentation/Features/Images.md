@@ -11,6 +11,11 @@ where that tag exists locally. For example, Docker `nginx:latest` and Apple
 container `nginx:latest` share registry/update metadata but remain separate
 runtime-owned local tags.
 
+Image and image-group customization is stored against normalized logical
+references rather than content digests. Pulling a newer image therefore keeps
+the existing icon, tint, name, and card appearance even though the underlying
+digest changes.
+
 Common actions:
 
 - run image

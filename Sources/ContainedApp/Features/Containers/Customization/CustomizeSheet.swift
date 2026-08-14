@@ -13,7 +13,7 @@ struct CustomizeSheet: View {
     enum Target: Identifiable, Hashable {
         case container(Core.Container.Snapshot)
         case image(reference: String)
-        case imageGroup(id: String, reference: String)
+        case imageGroup(Core.Image.LocalTagGroup)
         case imageTag(reference: String, groupID: String?)
         case volume(name: String)
 
@@ -21,7 +21,7 @@ struct CustomizeSheet: View {
             switch self {
             case .container(let snapshot): return "container:\(snapshot.scopedID)"
             case .image(let reference): return "image:\(reference)"
-            case .imageGroup(let id, _): return "image-group:\(id)"
+            case .imageGroup(let group): return "image-group:\(group.id)"
             case .imageTag(let reference, let groupID): return "image-tag:\(groupID ?? "none"):\(reference)"
             case .volume(let name): return "volume:\(name)"
             }
@@ -31,7 +31,7 @@ struct CustomizeSheet: View {
             switch self {
             case .container(let snapshot): return snapshot.image
             case .image(let reference): return reference
-            case .imageGroup(_, let reference): return reference
+            case .imageGroup(let group): return group.primaryReference
             case .imageTag(let reference, _): return reference
             case .volume(let name): return name
             }
@@ -54,9 +54,13 @@ struct CustomizeSheet: View {
         var previewSnapshot: Core.Container.Snapshot {
             switch self {
             case .container(let snapshot): return snapshot
-            case .image(let reference), .imageGroup(_, let reference), .imageTag(let reference, _):
+            case .image(let reference), .imageTag(let reference, _):
                 return .placeholder(id: Format.shortImage(reference),
                                     image: reference,
+                                    runtimeKind: AppRuntimeIntent.placeholderKind)
+            case .imageGroup(let group):
+                return .placeholder(id: Format.shortImage(group.primaryReference),
+                                    image: group.primaryReference,
                                     runtimeKind: AppRuntimeIntent.placeholderKind)
             case .volume(let name):
                 return .placeholder(id: name,
@@ -332,8 +336,8 @@ struct CustomizeSheet: View {
         switch target {
         case .image(let reference), .imageTag(let reference, _):
             return app.personalization.imageDefault(for: reference) != nil
-        case .imageGroup(let id, _):
-            return app.personalization.imageGroupDefault(for: id) != nil
+        case .imageGroup(let group):
+            return app.personalization.imageGroupDefault(for: group) != nil
         case .container(let snapshot):
             return app.personalization.hasOverride(id: snapshot.scopedID)
         case .volume(let name):
@@ -369,8 +373,8 @@ struct CustomizeSheet: View {
             let own = app.personalization.imageDefault(for: reference)
             overridesInheritedStyle = own != nil
             style = own ?? inheritedStyle()
-        case .imageGroup(let id, _):
-            let own = app.personalization.imageGroupDefault(for: id)
+        case .imageGroup(let group):
+            let own = app.personalization.imageGroupDefault(for: group)
             overridesInheritedStyle = own != nil
             style = own ?? inheritedStyle()
         case .volume(let name):
@@ -395,11 +399,11 @@ struct CustomizeSheet: View {
             } else {
                 app.personalization.clearImageDefault(for: reference)
             }
-        case .imageGroup(let id, _):
+        case .imageGroup(let group):
             if overridesInheritedStyle {
-                app.personalization.setImageGroupDefault(style, for: id)
+                app.personalization.setImageGroupDefault(style, for: group)
             } else {
-                app.personalization.clearImageGroupDefault(for: id)
+                app.personalization.clearImageGroupDefault(for: group)
             }
         case .container(let snapshot):
             if overridesInheritedStyle {
@@ -417,8 +421,8 @@ struct CustomizeSheet: View {
         switch target {
         case .image(let reference), .imageTag(let reference, _):
             app.personalization.clearImageDefault(for: reference)
-        case .imageGroup(let id, _):
-            app.personalization.clearImageGroupDefault(for: id)
+        case .imageGroup(let group):
+            app.personalization.clearImageGroupDefault(for: group)
         case .container(let snapshot):
             app.personalization.clearOverride(id: snapshot.scopedID)
         case .volume(let name):
@@ -454,8 +458,8 @@ struct CustomizeSheet: View {
             return app.personalization.hasOverride(id: snapshot.scopedID) ? app.containerStyle(for: snapshot) : inheritedStyle()
         case .image(let reference), .imageTag(let reference, _):
             return app.personalization.imageDefault(for: reference) ?? inheritedStyle()
-        case .imageGroup(let id, _):
-            return app.personalization.imageGroupDefault(for: id) ?? inheritedStyle()
+        case .imageGroup(let group):
+            return app.personalization.imageGroupDefault(for: group) ?? inheritedStyle()
         case .volume:
             return inheritedStyle()
         }

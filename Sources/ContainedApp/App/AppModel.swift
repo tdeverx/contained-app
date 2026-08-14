@@ -240,6 +240,7 @@ final class AppModel {
 
     func setImages(_ images: [Core.Image.Resource]) {
         guard images != self.images else { return }
+        personalization.stabilizeImageGroupDefaults(for: localImageGroups())
         self.images = images
         imageGroupsCache = nil
         imageGroupIDByReferenceCache.removeAll(keepingCapacity: true)

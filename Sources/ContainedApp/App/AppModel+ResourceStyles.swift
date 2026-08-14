@@ -16,17 +16,19 @@ extension AppModel {
     }
 
     func imageStyle(for reference: String) -> Personalization {
-        let groupID = imageGroupID(containing: reference)
-        return personalization.imageDefault(for: reference, groupID: groupID) ?? defaultImageStyle
+        personalization.imageDefault(for: reference, group: localImageGroup(containing: reference)) ?? defaultImageStyle
     }
 
     func imageGroupStyle(for group: Core.Image.LocalTagGroup) -> Personalization {
-        personalization.imageGroupDefault(for: group.id) ?? defaultImageStyle
+        personalization.imageGroupDefault(for: group) ?? defaultImageStyle
     }
 
     /// The group's style by id, used where only the id is known, such as a tag resolving its parent.
     func imageGroupStyle(forID id: String) -> Personalization {
-        personalization.imageGroupDefault(for: id) ?? defaultImageStyle
+        if let group = localImageGroup(id: id) {
+            return personalization.imageGroupDefault(for: group) ?? defaultImageStyle
+        }
+        return personalization.imageGroupDefault(forLegacyID: id) ?? defaultImageStyle
     }
 
     func volumeStyle(for name: String) -> Personalization {
@@ -36,10 +38,9 @@ extension AppModel {
     }
 
     func containerStyle(for snapshot: Core.Container.Snapshot) -> Personalization {
-        let groupID = imageGroupID(containing: snapshot.image)
         return personalization.resolved(id: snapshot.scopedID,
                                         image: snapshot.image,
-                                        groupID: groupID,
+                                        group: localImageGroup(containing: snapshot.image),
                                         fallback: defaultImageStyle)
     }
 
@@ -80,16 +81,21 @@ extension AppModel {
         return result
     }
 
-    private func imageGroupID(containing reference: String) -> String? {
-        if let cached = imageGroupIDByReferenceCache[reference] {
-            return cached
+    func localImageGroup(id: String) -> Core.Image.LocalTagGroup? {
+        localImageGroups().first { $0.id == id }
+    }
+
+    func localImageGroup(containing reference: String) -> Core.Image.LocalTagGroup? {
+        let referenceKey = Core.Registry.ImageReference.normalizedKey(reference)
+        if let cached = imageGroupIDByReferenceCache[referenceKey] {
+            return localImageGroup(id: cached)
         }
 
         for group in localImageGroups() {
             for groupReference in group.references {
-                imageGroupIDByReferenceCache[groupReference] = group.id
+                imageGroupIDByReferenceCache[Core.Registry.ImageReference.normalizedKey(groupReference)] = group.id
             }
         }
-        return imageGroupIDByReferenceCache[reference]
+        return imageGroupIDByReferenceCache[referenceKey].flatMap(localImageGroup(id:))
     }
 }

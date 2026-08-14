@@ -39,8 +39,8 @@ private extension CustomizeSheet.Target {
             return app.personalization.hasOverride(id: snapshot.scopedID)
         case .image(let reference), .imageTag(let reference, _):
             return app.personalization.imageDefault(for: reference) != nil
-        case .imageGroup(let id, _):
-            return app.personalization.imageGroupDefault(for: id) != nil
+        case .imageGroup(let group):
+            return app.personalization.imageGroupDefault(for: group) != nil
         case .volume:
             return true
         }
