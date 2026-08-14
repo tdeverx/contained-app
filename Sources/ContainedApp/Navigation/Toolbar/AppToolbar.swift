@@ -235,7 +235,7 @@ struct AppToolbar: View {
                                           originFrame: usableToolbarImageSource ?? .zero,
                                           target: .anchored(size: toolbarImageDetailSize,
                                                             safeArea: toolbarMorphSafeArea(for: .updates),
-                                                            margin: 16),
+                                                            margin: 0),
                                           backdropStyle: .dim,
                                           showsBackdrop: true,
                                           closeRequestToken: toolbarImageCloseRequestToken,

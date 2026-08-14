@@ -3,14 +3,29 @@ import SwiftUI
 public extension UI.List {
 struct Stack<Content: View>: View {
     public var spacing: CGFloat
-    public var padding: CGFloat
+    public var padding: EdgeInsets
     @ViewBuilder public var content: () -> Content
 
     public init(spacing: CGFloat = UI.Tokens.Space.s,
                 padding: CGFloat = UI.Tokens.Space.s,
                 @ViewBuilder content: @escaping () -> Content) {
         self.spacing = spacing
-        self.padding = padding
+        self.padding = EdgeInsets(top: padding,
+                                  leading: padding,
+                                  bottom: padding,
+                                  trailing: padding)
+        self.content = content
+    }
+
+    public init(spacing: CGFloat = UI.Tokens.Space.s,
+                horizontalPadding: CGFloat,
+                verticalPadding: CGFloat,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.spacing = spacing
+        self.padding = EdgeInsets(top: verticalPadding,
+                                  leading: horizontalPadding,
+                                  bottom: verticalPadding,
+                                  trailing: horizontalPadding)
         self.content = content
     }
 

@@ -12,6 +12,13 @@ struct ToolbarUpdatesPanel: View {
     var onOpenImage: (Core.Image.LocalTagGroup, CGRect) -> Void
     var onClose: () -> Void
     @State private var imageFrames: [Core.Image.LocalTagGroup.ID: CGRect] = [:]
+    @State private var settledUpdateStates: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState] = [:]
+
+    private var liveUpdateStates: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState] {
+        app.localImageGroups().reduce(into: [:]) { states, group in
+            states[group.id] = app.imageUpdateStatus(for: group.primaryReference).state
+        }
+    }
 
     private var imageGroups: [Core.Image.LocalTagGroup] {
         sortedImageGroups(app.localImageGroups().filter(matchesFilter))
@@ -34,7 +41,7 @@ struct ToolbarUpdatesPanel: View {
 
     private var updateCount: Int {
         app.localImageGroups().filter {
-            app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable
+            effectiveUpdateState(for: $0) == .updateAvailable
         }.count
     }
 
@@ -61,6 +68,12 @@ struct ToolbarUpdatesPanel: View {
                 }
             }
             .padding(UI.Layout.Spacing.s)
+        }
+        .onAppear {
+            rememberSettledUpdateStates(liveUpdateStates)
+        }
+        .onChange(of: liveUpdateStates) { _, states in
+            rememberSettledUpdateStates(states)
         }
         .task { await app.refreshImagesIfNeeded() }
     }
@@ -173,12 +186,11 @@ struct ToolbarUpdatesPanel: View {
     }
 
     private func imageRank(_ group: Core.Image.LocalTagGroup) -> Int {
-        switch app.imageUpdateStatus(for: group.primaryReference).state {
+        switch effectiveUpdateState(for: group) {
         case .updateAvailable: return 0
         case .error: return 1
-        case .checking: return 2
-        case .unknown: return 3
-        case .current: return 4
+        case .checking, .unknown: return 2
+        case .current: return 3
         }
     }
 
@@ -203,9 +215,9 @@ struct ToolbarUpdatesPanel: View {
         case .all:
             return true
         case .updates:
-            return app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable
+            return effectiveUpdateState(for: group) == .updateAvailable
         case .errors:
-            return app.imageUpdateStatus(for: group.primaryReference).state == .error
+            return effectiveUpdateState(for: group) == .error
         }
     }
 
@@ -215,11 +227,10 @@ struct ToolbarUpdatesPanel: View {
     }
 
     private func statusTitle(_ group: Core.Image.LocalTagGroup) -> String {
-        switch app.imageUpdateStatus(for: group.primaryReference).state {
+        switch effectiveUpdateState(for: group) {
         case .updateAvailable: return "Updates available"
         case .error: return "Errors"
-        case .checking: return "Checking"
-        case .unknown: return "Unknown"
+        case .checking, .unknown: return "Unknown"
         case .current: return "Current"
         }
     }
@@ -228,10 +239,26 @@ struct ToolbarUpdatesPanel: View {
         switch title {
         case "Updates available": return 0
         case "Errors": return 1
-        case "Checking": return 2
-        case "Unknown": return 3
-        default: return 4
+        case "Unknown": return 2
+        default: return 3
         }
+    }
+
+    private func effectiveUpdateState(for group: Core.Image.LocalTagGroup) -> Core.Image.UpdateState {
+        let liveState = app.imageUpdateStatus(for: group.primaryReference).state
+        guard liveState == .checking else { return liveState }
+        return settledUpdateStates[group.id] ?? .unknown
+    }
+
+    private func rememberSettledUpdateStates(
+        _ states: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState]
+    ) {
+        var settled = settledUpdateStates.filter { states[$0.key] != nil }
+        for (id, state) in states where state != .checking {
+            settled[id] = state
+        }
+        guard settled != settledUpdateStates else { return }
+        settledUpdateStates = settled
     }
 
 }

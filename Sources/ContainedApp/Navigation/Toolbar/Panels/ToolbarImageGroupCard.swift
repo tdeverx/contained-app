@@ -107,6 +107,8 @@ struct ToolbarImageGroupCard: View {
                             onTap: onTap,
                             title: resolved.displayName(fallback: repositoryTitle(group.primaryReference)),
                             subtitle: repositoryOwner(group.primaryReference),
+                            titleStyle: .monospaced,
+                            subtitleStyle: .monospaced,
                             pages: isExpanded ? imagePages : nil) {
             if let image {
                 CardStyleButton(style: resolved,
@@ -160,7 +162,7 @@ struct ToolbarImageGroupCard: View {
         let image = group.images.first { $0.reference == reference } ?? primaryImage(group)
         let variant = image?.variants.first(where: \.isRunnable) ?? image?.variants.first
         let history = variant?.config?.history ?? []
-        return imagePageBody(title: AppText.string("image.history", defaultValue: "History"), subtitle: Format.shortImage(reference)) {
+        return imagePageBody(title: AppText.string("image.history", defaultValue: "History"), subtitle: reference) {
             if history.isEmpty {
                 UI.State.Empty(AppText.string("image.history.empty", defaultValue: "No history"),
                                  systemImage: "clock",
@@ -190,7 +192,7 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func tagPage(_ source: String) -> some View {
-        imagePageBody(title: AppText.addTag, subtitle: Format.shortImage(source)) {
+        imagePageBody(title: AppText.addTag, subtitle: source) {
             UI.Card.InsetSection {
                 UI.Panel.Field(label: AppText.string("image.tag.source", defaultValue: "Source")) {
                     Text(Format.shortImage(source)).designSecondaryValueStyle()
@@ -215,7 +217,7 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func pushPage(_ reference: String) -> some View {
-        imagePageBody(title: AppText.string("image.pushImage", defaultValue: "Push image"), subtitle: Format.shortImage(reference)) {
+        imagePageBody(title: AppText.string("image.pushImage", defaultValue: "Push image"), subtitle: reference) {
             if pushStartedReference == reference,
                let client = app.client,
                let runtimeKind = pushRuntimeKind(for: reference) {
@@ -460,17 +462,12 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func tagList(_ group: Core.Image.LocalTagGroup) -> some View {
-        VStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
-            Text("Tags")
-                .designHeadlineLabelStyle()
-                .padding(.leading, UI.Layout.Spacing.xs)
-            VStack(spacing: UI.Layout.Spacing.s) {
-                ForEach(group.tags) { tag in
-                    tagRow(tag, in: group)
-                        .frame(maxWidth: .infinity)
-                }
+        UI.List.Stack(horizontalPadding: UI.Layout.Spacing.s,
+                      verticalPadding: 0) {
+            ForEach(group.tags) { tag in
+                tagRow(tag, in: group)
+                    .frame(maxWidth: .infinity)
             }
-            .padding(UI.Layout.Spacing.s)
         }
     }
 
@@ -484,9 +481,11 @@ struct ToolbarImageGroupCard: View {
                             gradientAngle: style.gradientAngle,
                             blendMode: style.backgroundBlendMode,
                             elevated: false,
-                            title: app.imageDisplayName(for: reference),
-                            subtitle: repositoryName(reference),
-                            titleStyle: .monospaced) {
+                            persistentFooterActions: AnyView(tagFooterActions(tag)),
+                            title: app.imageTagDisplayName(for: reference),
+                            subtitle: reference,
+                            titleStyle: .monospaced,
+                            subtitleStyle: .monospaced) {
             CardStyleButton(style: style,
                             target: .imageTag(reference: reference, groupID: group.id),
                             help: "Customize image style",
@@ -506,16 +505,22 @@ struct ToolbarImageGroupCard: View {
                 UI.Card.MetricText(text: app.runtimeDescriptor(for: tag.runtimeKind)?.displayName ?? tag.runtimeKind.rawValue)
             }
         } footerActions: {
-            footerAction("play", help: AppText.run) {
-                ui.runImage(reference, runtimeKind: tag.runtimeKind)
-                if isExpanded { onClose() }
-            }
-            UI.Copy.Icon(value: reference, help: AppText.copyReference)
-            footerAction("trash", help: AppText.deleteTag, role: .destructive) { deletingTag = tag }
+            EmptyView()
         } widget: {
             EmptyView()
         }
         .contextMenu { tagMenu(tag, in: group) }
+    }
+
+    @ViewBuilder
+    private func tagFooterActions(_ tag: Core.Image.LocalTag) -> some View {
+        let reference = tag.reference
+        footerAction("play", help: AppText.run) {
+            ui.runImage(reference, runtimeKind: tag.runtimeKind)
+            if isExpanded { onClose() }
+        }
+        UI.Copy.Icon(value: reference, help: AppText.copyReference)
+        footerAction("trash", help: AppText.deleteTag, role: .destructive) { deletingTag = tag }
     }
 
     /// Right-click actions for a single tag — mirrors the footer buttons so the row is consistent with
@@ -601,14 +606,6 @@ struct ToolbarImageGroupCard: View {
         case .checking: return .info
         case .unknown: return .neutral
         }
-    }
-
-    private func repositoryName(_ reference: String) -> String {
-        let parsed = Core.Registry.ImageReference.parse(reference)
-        if parsed.registry == "registry-1.docker.io", parsed.repository.hasPrefix("library/") {
-            return String(parsed.repository.dropFirst("library/".count))
-        }
-        return parsed.repository
     }
 
     private func repositoryTitle(_ reference: String) -> String {

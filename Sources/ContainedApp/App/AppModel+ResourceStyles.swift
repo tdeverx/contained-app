@@ -58,6 +58,14 @@ extension AppModel {
         return "\(repository)\(separator)\(tagNickname ?? parsed.reference)"
     }
 
+    /// A tag card represents the tag itself, not the repository. Keep its user nickname scoped to
+    /// the tag and fall back to the parsed tag/digest value; the full reference belongs underneath.
+    func imageTagDisplayName(for reference: String) -> String {
+        let savedNickname = personalization.imageDefault(for: reference)?.nickname
+        let nickname = savedNickname.flatMap(Self.nonEmptyNickname)
+        return nickname ?? Core.Registry.ImageReference.parse(reference).reference
+    }
+
     func imageGroupDisplayName(for group: Core.Image.LocalTagGroup) -> String? {
         let savedNickname = personalization.imageGroupDefault(for: group)?.nickname
         return savedNickname.flatMap(Self.nonEmptyNickname)

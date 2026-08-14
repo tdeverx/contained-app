@@ -17,7 +17,7 @@ public struct ContainedApplication: App {
                 .environment(app)
                 .environment(ui)
                 .modelContainer(app.historyStore.container)
-                .frame(minWidth: 720, minHeight: 480)
+                .frame(minWidth: 720, minHeight: 300)
                 .toolbar {
                     ToolbarItem(placement: .automatic) {
                         Color.clear
@@ -27,7 +27,7 @@ public struct ContainedApplication: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 1200, height: 800)
+        .defaultSize(width: 1280, height: 800)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About Contained") {

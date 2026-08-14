@@ -1,0 +1,1 @@
+- Refined image and container cards with clearer tag typography, stable update-check ordering, shared grid elevation, smoother expanded-card shadows, tighter responsive sizing, and more flexible window dimensions.

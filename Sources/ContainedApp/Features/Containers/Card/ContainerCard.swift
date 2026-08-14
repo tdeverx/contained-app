@@ -145,6 +145,7 @@ struct ContainerCard: View {
                      gradient: styleForDisplay.gradient,
                      gradientAngle: styleForDisplay.gradientAngle,
                      blendMode: styleForDisplay.backgroundBlendMode,
+                     elevated: isExpanded && controlsVisible,
                      onTap: onTap,
                      persistentFooterActions: persistentFooterActions,
                      title: name,

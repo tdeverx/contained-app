@@ -80,6 +80,7 @@ struct ContainersGridView: View {
                                     gridCard(snapshot)
                                 }
                             }
+                            .modifier(UI.Card.Grid.Elevation())
                             Color.clear
                                 .frame(height: UI.Toolbar.Size.band + UI.Card.Grid.toolbarClearanceAdjustment)
                         }

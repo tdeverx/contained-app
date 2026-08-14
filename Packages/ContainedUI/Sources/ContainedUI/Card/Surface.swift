@@ -181,6 +181,8 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
             }
             .animation(.spring(response: 0.42, dampingFraction: 0.86), value: isExpanded)
             .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.86),
+                       value: elevated)
+            .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.86),
                        value: usesExpandedRadius)
             .animation(.spring(response: 0.42, dampingFraction: 0.86), value: cornerRadiusOverride)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: compactContentIsMuted)
@@ -342,12 +344,11 @@ private struct CardMaterialSurface: ViewModifier {
         content
             .clipShape(shape)
             .background {
-                if shadow {
-                    ExteriorShadow(cornerRadius: cornerRadius,
-                                   color: shadowColor,
-                                   radius: shadowRadius,
-                                   y: shadowY)
-                }
+                ExteriorShadow(cornerRadius: cornerRadius,
+                               color: shadowColor,
+                               radius: shadowRadius,
+                               y: shadowY)
+                    .opacity(shadow ? 1 : 0)
             }
             .background {
                 ZStack {

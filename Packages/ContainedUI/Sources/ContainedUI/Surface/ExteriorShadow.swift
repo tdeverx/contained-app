@@ -29,6 +29,22 @@ struct ExteriorShadow: View {
     }
 }
 
+public extension UI.Card.Grid {
+    /// Elevates a collection of cards as one rendered layer so card shadows cannot draw over
+    /// neighboring cards. Individual cards in the collection should disable their own elevation.
+    struct Elevation: ViewModifier {
+        public init() {}
+
+        public func body(content: Content) -> some View {
+            content
+                .compositingGroup()
+                .shadow(color: UI.Theme.Material.elevatedSurfaceShadow,
+                        radius: UI.Theme.Material.elevatedSurfaceShadowRadius,
+                        y: UI.Theme.Material.elevatedSurfaceShadowY)
+        }
+    }
+}
+
 #Preview("Exterior Shadow") {
     ZStack {
         ExteriorShadow(cornerRadius: UI.Tokens.Radius.card,

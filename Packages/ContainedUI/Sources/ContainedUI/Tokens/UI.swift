@@ -64,7 +64,7 @@ enum Tokens {
         public static let compactMax: CGFloat = 400
         public static let largeMin: CGFloat = 240
         public static let largeMax: CGFloat = 520
-        public static let largePreferred: CGFloat = 320
+        public static let largePreferred: CGFloat = 300
     }
 
     /// Canonical sheet dimensions — expose through `UI.Panel.SheetSize` for app and UX use. Replaces ad-hoc

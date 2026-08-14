@@ -136,9 +136,11 @@ struct PaletteResultCard: View {
                             blendMode: style.backgroundBlendMode,
                             elevated: false,
                             onTap: action,
-                            title: app.imageDisplayName(for: reference),
-                            subtitle: repositoryTitle(reference),
-                            titleStyle: .monospaced) {
+                            persistentFooterActions: AnyView(accessory),
+                            title: app.imageTagDisplayName(for: reference),
+                            subtitle: reference,
+                            titleStyle: .monospaced,
+                            subtitleStyle: .monospaced) {
             UI.Card.IconChip(symbol: "tag",
                                  tint: style.color,
                                  backgroundOpacity: selected
@@ -162,7 +164,7 @@ struct PaletteResultCard: View {
                     .designSecondaryValueStyle()
             }
         } footerActions: {
-            accessory
+            EmptyView()
         } widget: {
             EmptyView()
         }
@@ -279,11 +281,6 @@ struct PaletteResultCard: View {
             Text(reason)
                 .designTertiaryCaption()
         }
-    }
-
-    private func repositoryTitle(_ reference: String) -> String {
-        let parsed = Core.Registry.ImageReference.parse(reference)
-        return parsed.repository.split(separator: "/").map(String.init).last ?? parsed.repository
     }
 
     private func imageUpdateText(_ status: Core.Image.UpdateStatus) -> String {
