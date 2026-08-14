@@ -50,6 +50,23 @@ extension AppModel {
             ?? Core.Image.UpdateStatus()
     }
 
+    /// Combine registry state with the immutable image identity captured when a container was
+    /// created. A successful pull makes the registry status current, but leaves the old container
+    /// pointing at its previous identity until it is recreated.
+    func containerImageUpdateState(for snapshot: Core.Container.Snapshot) -> Core.Image.ContainerUpdateState {
+        let referenceKey = imageUpdateKey(snapshot.image)
+        let localImage = images.first {
+            $0.runtimeKind == snapshot.runtimeKind && imageUpdateKey($0.reference) == referenceKey
+        }
+        let localIdentities = [localImage?.id, localImage?.digest]
+            .compactMap { $0 }
+        return Core.Image.ContainerUpdateState.resolve(
+            containerIdentity: snapshot.configuration.image.descriptor?.digest,
+            localIdentities: localIdentities,
+            trackedStatus: imageUpdateStatus(for: snapshot.image, runtimeKind: snapshot.runtimeKind)
+        )
+    }
+
     /// The normalized dictionary key for a reference, so `nginx` and `docker.io/library/nginx:latest`
     /// map to the same tracked status.
     func imageUpdateKey(_ reference: String) -> String {
@@ -192,6 +209,49 @@ extension AppModel {
             logger.record("Updated image", category: .image)
         }
         return ok
+    }
+
+    /// Recreate one container from the image currently behind its tag. If the registry check still
+    /// reports a newer remote image, pull it first. Local presentation, health, linked-volume paths,
+    /// rollback configuration, and the container's prior running/stopped state are preserved.
+    @discardableResult
+    func rebuildContainer(_ requestedSnapshot: Core.Container.Snapshot) async -> Bool {
+        guard let snapshot = containers.snapshots.first(where: {
+            $0.scopedID == requestedSnapshot.scopedID
+        }) else {
+            flash(AppText.recreateOriginalUnavailable)
+            return false
+        }
+
+        let updateState = containerImageUpdateState(for: snapshot)
+        if updateState.needsPull,
+           !(await pullImageUpdate(snapshot.image, runtimeKind: snapshot.runtimeKind)) {
+            return false
+        }
+
+        var spec = ContainerFormState(from: snapshot.configuration)
+        spec.personalization = containerStyle(for: snapshot)
+        spec.healthCheck = healthChecks.check(for: snapshot.scopedID) ?? Core.Container.HealthCheck()
+        spec.applyLinkedVolumePaths(database.linkedVolumePaths(for: snapshot.scopedID))
+
+        let shouldRemainStopped = snapshot.state != .running
+        guard let replacementID = await recreateContainer(originalID: snapshot.scopedID, spec: spec) else {
+            if shouldRemainStopped,
+               containers.recreateFailure?.recovery == .originalRestored {
+                await containers.stop(snapshot.scopedID)
+            }
+            return false
+        }
+
+        if shouldRemainStopped {
+            await containers.stop(snapshot.runtimeKind.scopedID(for: replacementID))
+        }
+        if updateState.requiresUpdate {
+            flash(AppText.updatedContainer(Format.shortImage(snapshot.image)))
+        } else {
+            flash(AppText.rebuiltContainer(containerStyle(for: snapshot).displayName(fallback: snapshot.id)))
+        }
+        return true
     }
 
     /// Background entry point (from `tick()`): run a silent sweep only when the throttle window has

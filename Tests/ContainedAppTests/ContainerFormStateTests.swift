@@ -492,7 +492,12 @@ struct ContainerFormStateTests {
               "terminal": true
             },
             "resources": { "cpus": 2, "memoryInBytes": 536870912 },
-            "labels": { "team": "infra", "contained.restart": "always" },
+            "labels": {
+              "team": "infra",
+              "contained.restart": "always",
+              "contained.stack": "demo",
+              "contained.private": "discard"
+            },
             "publishedPorts": [
               { "hostAddress": "127.0.0.1", "hostPort": 18080, "containerPort": 8080, "proto": "tcp" }
             ],
@@ -546,6 +551,8 @@ struct ContainerFormStateTests {
         #expect(spec.ports.first?.spec == "127.0.0.1:18080:8080")
         #expect(spec.sockets.first?.spec == "/tmp/app.sock:/run/app.sock")
         #expect(spec.labels.contains { $0.key == "team" && $0.value == "infra" })
+        #expect(spec.labels.contains { $0.key == "contained.stack" && $0.value == "demo" })
+        #expect(!spec.labels.contains { $0.key == "contained.private" })
         #expect(spec.restart == .always)
         #expect(spec.readOnly && spec.useInit && spec.rosetta && spec.ssh && spec.virtualization)
     }

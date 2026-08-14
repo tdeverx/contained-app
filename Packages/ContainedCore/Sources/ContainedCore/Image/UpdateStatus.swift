@@ -9,6 +9,43 @@ enum UpdateState: String, Sendable, Codable, Equatable {
     case error
 }
 
+/// Whether a container's immutable image identity still matches the image currently behind its tag.
+enum ContainerUpdateState: String, Sendable, Codable, Equatable {
+    case unknown
+    case current
+    case updateAvailable
+    case updateReady
+
+    public var requiresUpdate: Bool {
+        self == .updateAvailable || self == .updateReady
+    }
+
+    public var needsPull: Bool { self == .updateAvailable }
+
+    /// Resolve remote availability before the local identity comparison. When another remote update
+    /// exists after a previous pull, applying should pull that newest image before recreating.
+    public static func resolve(containerIdentity: String?,
+                               localIdentities: [String],
+                               trackedStatus: Core.Image.UpdateStatus) -> Core.Image.ContainerUpdateState {
+        if trackedStatus.state == .updateAvailable { return .updateAvailable }
+        guard let containerIdentity,
+              !containerIdentity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !localIdentities.isEmpty else {
+            return .unknown
+        }
+        let containerKey = normalizedContentIdentity(containerIdentity)
+        let matchesCurrentImage = localIdentities.contains {
+            normalizedContentIdentity($0) == containerKey
+        }
+        return matchesCurrentImage ? .current : .updateReady
+    }
+
+    private static func normalizedContentIdentity(_ value: String) -> String {
+        let key = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return key.hasPrefix("sha256:") ? String(key.dropFirst("sha256:".count)) : key
+    }
+}
+
 struct UpdateStatus: Sendable, Codable, Equatable {
     public var state: Core.Image.UpdateState
     public var localDigest: String?

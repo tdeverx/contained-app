@@ -42,6 +42,40 @@ enum AppText {
     static var stop: String { string("common.stop", defaultValue: "Stop") }
     static var restart: String { string("common.restart", defaultValue: "Restart") }
     static var working: String { string("common.working", defaultValue: "Working...") }
+    static var rebuildContainer: String {
+        string("container.rebuild", defaultValue: "Rebuild Container")
+    }
+    static var rebuildContainerAction: String {
+        string("container.rebuild.action", defaultValue: "Rebuild Container…")
+    }
+    static var updateContainer: String {
+        string("container.update", defaultValue: "Update Container")
+    }
+    static var updateContainerAction: String {
+        string("container.update.action", defaultValue: "Update Container…")
+    }
+    static var rebuildContainerConfirmation: String {
+        string("container.rebuild.confirmation", defaultValue: "Contained will replace this container from its current image. Volumes, configuration, local style, health settings, and its running or stopped state are preserved. Data not stored in volumes is lost.")
+    }
+    static var updateContainerConfirmation: String {
+        string("container.update.confirmation", defaultValue: "Contained will pull the latest image if needed, then replace this container. Volumes, configuration, local style, health settings, and its running or stopped state are preserved. Data not stored in volumes is lost.")
+    }
+
+    static func rebuildContainerTitle(_ name: String) -> String {
+        dynamicString("container.rebuild.title", defaultValue: "Rebuild \(name)?")
+    }
+
+    static func updateContainerTitle(_ name: String) -> String {
+        dynamicString("container.update.title", defaultValue: "Update \(name)?")
+    }
+
+    static func rebuiltContainer(_ name: String) -> String {
+        dynamicString("container.rebuild.completed", defaultValue: "Rebuilt \(name)")
+    }
+
+    static func updatedContainer(_ image: String) -> String {
+        dynamicString("container.update.completed", defaultValue: "Updated \(image)")
+    }
 
     static var addBuildArgument: String { string("build.addBuildArgument", defaultValue: "Add build argument") }
     static var buildImage: String { string("build.buildImage", defaultValue: "Build image") }

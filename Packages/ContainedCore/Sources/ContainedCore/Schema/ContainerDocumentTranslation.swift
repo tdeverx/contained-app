@@ -148,7 +148,7 @@ public extension Core.Schema.Document {
                                            value: String(entry[entry.index(after: eq)...]))
         }
         request.labels = configuration.labels
-            .filter { !$0.key.hasPrefix("contained.") }
+            .filter { !$0.key.hasPrefix("contained.") || $0.key == "contained.stack" }
             .sorted { $0.key < $1.key }
             .map { Core.Container.KeyValue(key: $0.key, value: $0.value) }
         request.restart = Core.Container.RestartPolicy(label: configuration.labels["contained.restart"])

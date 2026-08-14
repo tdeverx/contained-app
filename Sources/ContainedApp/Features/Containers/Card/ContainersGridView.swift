@@ -12,12 +12,21 @@ struct ContainersGridView: View {
         let placement: ContainerGridCardPlacement
     }
 
+    private struct RebuildRequest: Identifiable {
+        let snapshot: Core.Container.Snapshot
+        let updateState: Core.Image.ContainerUpdateState
+
+        var id: String { snapshot.scopedID }
+        var isUpdate: Bool { updateState.requiresUpdate }
+    }
+
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
     @Environment(\.morphSafeAreaManager) private var safeAreaManager
 
     @State private var detail: DetailSource?
     @State private var deleting: Core.Container.Snapshot?
+    @State private var rebuilding: RebuildRequest?
     @State private var selecting = false
     @State private var selection: Set<String> = []
     /// Drives the in-place grow: false = card sits in its grid slot, true = promoted to the centered
@@ -126,6 +135,18 @@ struct ContainersGridView: View {
             Button("Cancel", role: .cancel) { deleting = nil }
         } message: {
             Text("This removes the container. This can't be undone.")
+        }
+        .confirmationDialog(
+            rebuildConfirmationTitle,
+            isPresented: Binding(get: { rebuilding != nil }, set: { if !$0 { rebuilding = nil } }),
+            presenting: rebuilding
+        ) { request in
+            Button(request.isUpdate ? AppText.updateContainer : AppText.rebuildContainer, role: .destructive) {
+                applyRebuild(request)
+            }
+            Button("Cancel", role: .cancel) { rebuilding = nil }
+        } message: { request in
+            Text(request.isUpdate ? AppText.updateContainerConfirmation : AppText.rebuildContainerConfirmation)
         }
         // Network-level actions.
         .task { await app.refreshNetworks() }
@@ -295,6 +316,7 @@ struct ContainersGridView: View {
         let style = app.containerStyle(for: snapshot)
         let key = snapshot.scopedID
         let hasStyleOverride = app.personalization.hasOverride(id: key)
+        let imageUpdateState = app.containerImageUpdateState(for: snapshot)
         return ContainerCardMetricsRenderer(
             metrics: store.metricsState(for: key),
             snapshot: snapshot,
@@ -304,8 +326,7 @@ struct ContainersGridView: View {
             statsNormalization: app.statsNormalizationContext,
             selectedWidgetIndex: selectedWidgetBinding(for: key),
             isBusy: store.busyIDs.contains(key),
-            hasImageUpdate: app.imageUpdateStatus(for: snapshot.image,
-                                                  runtimeKind: snapshot.runtimeKind).state == .updateAvailable,
+            imageUpdateState: imageUpdateState,
             isExpanded: isExpanded,
             cornerRadiusOverride: cornerRadiusOverride,
             controlsVisible: controlsVisible,
@@ -314,7 +335,7 @@ struct ContainersGridView: View {
             onStop: { lifecycleAction { await store.stop(key) } },
             onRestart: { lifecycleAction { await store.restart(key) } },
             onEdit: { ui.openCreationPanel(editing: snapshot) },
-            onUpdate: { updateContainer(snapshot) },
+            onRebuild: { rebuilding = RebuildRequest(snapshot: snapshot, updateState: imageUpdateState) },
             onDelete: { deleting = snapshot },
             onClose: closeDetail,
             onSelectMultiple: { beginSelecting(key) },
@@ -428,10 +449,23 @@ struct ContainersGridView: View {
         }
     }
 
-    private func updateContainer(_ snapshot: Core.Container.Snapshot) {
+    private var rebuildConfirmationTitle: String {
+        guard let rebuilding else { return AppText.rebuildContainer }
+        let name = app.containerStyle(for: rebuilding.snapshot)
+            .displayName(fallback: rebuilding.snapshot.id)
+        return rebuilding.isUpdate
+            ? AppText.updateContainerTitle(name)
+            : AppText.rebuildContainerTitle(name)
+    }
+
+    private func applyRebuild(_ request: RebuildRequest) {
+        rebuilding = nil
+        if detail?.snapshot.scopedID == request.snapshot.scopedID {
+            closeDetail()
+        }
         Task {
-            if await app.pullImageUpdate(snapshot.image, runtimeKind: snapshot.runtimeKind) {
-                ui.openCreationPanel(editing: snapshot)
+            if await app.rebuildContainer(request.snapshot) {
+                lifecycleFeedback &+= 1
             }
         }
     }
@@ -478,7 +512,7 @@ private struct ContainerCardMetricsRenderer: View {
     let statsNormalization: Core.Metrics.NormalizationContext
     let selectedWidgetIndex: Binding<Int>
     let isBusy: Bool
-    let hasImageUpdate: Bool
+    let imageUpdateState: Core.Image.ContainerUpdateState
     let isExpanded: Bool
     let cornerRadiusOverride: CGFloat?
     let controlsVisible: Bool
@@ -487,7 +521,7 @@ private struct ContainerCardMetricsRenderer: View {
     let onStop: () -> Void
     let onRestart: () -> Void
     let onEdit: () -> Void
-    let onUpdate: () -> Void
+    let onRebuild: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
     let onSelectMultiple: () -> Void
@@ -507,7 +541,7 @@ private struct ContainerCardMetricsRenderer: View {
             statsNormalization: statsNormalization,
             histories: metrics.historyByMetric,
             isBusy: isBusy,
-            hasImageUpdate: hasImageUpdate,
+            imageUpdateState: imageUpdateState,
             isExpanded: isExpanded,
             cornerRadiusOverride: cornerRadiusOverride,
             controlsVisible: controlsVisible,
@@ -516,7 +550,7 @@ private struct ContainerCardMetricsRenderer: View {
             onStop: onStop,
             onRestart: onRestart,
             onEdit: onEdit,
-            onUpdate: onUpdate,
+            onRebuild: onRebuild,
             onDelete: onDelete,
             onClose: onClose,
             onSelectMultiple: onSelectMultiple,

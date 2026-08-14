@@ -141,6 +141,7 @@ struct DecodingTests {
         [
           {
             "Id": "0123456789abcdef",
+            "Image": "sha256:image-content-id",
             "Name": "/web",
             "Created": "2026-07-03T09:30:00Z",
             "Platform": "linux/arm64/v8",
@@ -195,6 +196,7 @@ struct DecodingTests {
         #expect(snapshot.scopedID == "docker::web")
         #expect(snapshot.state == .running)
         #expect(snapshot.image == "nginx:latest")
+        #expect(snapshot.configuration.image.descriptor?.digest == "sha256:image-content-id")
         #expect(snapshot.configuration.runtimeKind == .docker)
         #expect(snapshot.configuration.initProcess.arguments == ["nginx", "-g", "daemon off;"])
         #expect(snapshot.configuration.initProcess.environment == ["FOO=bar"])

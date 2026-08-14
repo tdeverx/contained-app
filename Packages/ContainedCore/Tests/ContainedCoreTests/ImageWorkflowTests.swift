@@ -34,6 +34,34 @@ struct ImageWorkflowTests {
         #expect(failed.message == "boom")
     }
 
+    @Test func containerUpdateStateDistinguishesRemoteAndPulledUpdates() {
+        let current = Core.Image.UpdateStatus.resolved(localDigest: "sha256:current",
+                                                       remoteDigest: "sha256:current")
+        let available = Core.Image.UpdateStatus.resolved(localDigest: "sha256:current",
+                                                         remoteDigest: "sha256:new")
+
+        #expect(Core.Image.ContainerUpdateState.resolve(
+            containerIdentity: "sha256:current",
+            localIdentities: ["current"],
+            trackedStatus: current
+        ) == .current)
+        #expect(Core.Image.ContainerUpdateState.resolve(
+            containerIdentity: "sha256:current",
+            localIdentities: ["sha256:new"],
+            trackedStatus: current
+        ) == .updateReady)
+        #expect(Core.Image.ContainerUpdateState.resolve(
+            containerIdentity: "sha256:current",
+            localIdentities: ["sha256:current"],
+            trackedStatus: available
+        ) == .updateAvailable)
+        #expect(Core.Image.ContainerUpdateState.resolve(
+            containerIdentity: nil,
+            localIdentities: ["sha256:current"],
+            trackedStatus: current
+        ) == .unknown)
+    }
+
     @Test func localTagGroupingUsesDigest() throws {
         let json = """
         [

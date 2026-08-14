@@ -26,6 +26,7 @@ enum DockerJSON {
 
 struct DockerContainerInspect: Decodable {
     var id: String
+    var imageID: String?
     var name: String?
     var config: Config
     var state: State?
@@ -37,6 +38,7 @@ struct DockerContainerInspect: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case id = "Id"
+        case imageID = "Image"
         case name = "Name"
         case config = "Config"
         case state = "State"
@@ -161,7 +163,12 @@ struct DockerContainerInspect: Decodable {
                           startedDate: parsedStartedDate()),
             configuration: .init(runtimeKind: Core.Runtime.Kind.docker,
                                  id: name.isEmpty ? shortID : name,
-                                 image: .init(reference: reference),
+                                 image: .init(
+                                    reference: reference,
+                                    descriptor: nilIfEmpty(imageID).map {
+                                        Core.Container.Descriptor(digest: $0, mediaType: nil, size: nil)
+                                    }
+                                 ),
                                  initProcess: .init(executable: command.first,
                                                     arguments: command,
                                                     environment: config.env ?? [],
@@ -564,7 +571,10 @@ private struct DockerContainerSnapshotPayload: Encodable {
         var stopSignal: String?
         var creationDate: Date?
 
-        struct Image: Encodable { var reference: String }
+        struct Image: Encodable {
+            var reference: String
+            var descriptor: Core.Container.Descriptor?
+        }
         struct InitProcess: Encodable {
             var executable: String?
             var arguments: [String]

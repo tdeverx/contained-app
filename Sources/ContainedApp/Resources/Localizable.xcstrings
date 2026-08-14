@@ -1272,7 +1272,37 @@
     "container.created" : {
 
     },
+    "container.rebuild" : {
+
+    },
+    "container.rebuild.action" : {
+
+    },
+    "container.rebuild.completed" : {
+
+    },
+    "container.rebuild.confirmation" : {
+
+    },
+    "container.rebuild.title" : {
+
+    },
     "container.restartedAttempt" : {
+
+    },
+    "container.update" : {
+
+    },
+    "container.update.action" : {
+
+    },
+    "container.update.completed" : {
+
+    },
+    "container.update.confirmation" : {
+
+    },
+    "container.update.title" : {
 
     },
     "container.unhealthy" : {

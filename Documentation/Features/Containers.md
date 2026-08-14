@@ -24,7 +24,16 @@ owning runtime:
 - delete
 - refresh
 - edit
-- update image when an image update is available
+- rebuild from the image currently behind the container's tag
+- update when that tag has changed locally or a newer remote image is available
+
+Rebuild is always available from a container's context menu. When the app knows
+that the container's immutable image identity differs from the current tag—or a
+newer registry digest is available—the action is relabeled **Update Container**
+and an orange update button appears in the card footer. Updating pulls first only
+when needed, then recreates through the same rollback path as Edit → Save.
+Rebuild and Update preserve whether the container was running or stopped, while
+ordinary Start, Stop, and Restart remain non-destructive lifecycle operations.
 
 The app serializes refreshes around lifecycle actions so a user action and the
 background polling tick do not fight over inventory and stats streams. While the

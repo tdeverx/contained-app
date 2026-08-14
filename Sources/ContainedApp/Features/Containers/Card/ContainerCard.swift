@@ -15,7 +15,7 @@ struct ContainerCard: View {
     /// without borrowing another metric's samples.
     var histories: [Core.Metrics.GraphMetric: UI.Chart.SampleBuffer] = [:]
     var isBusy: Bool
-    var hasImageUpdate: Bool = false
+    var imageUpdateState: Core.Image.ContainerUpdateState = .unknown
     var isExpanded: Bool = false
     var cornerRadiusOverride: CGFloat?
     /// Whether the expanded card's controls (footer buttons + close) are shown. The grid drops this
@@ -26,7 +26,7 @@ struct ContainerCard: View {
     var onStop: () -> Void
     var onRestart: () -> Void
     var onEdit: () -> Void = {}
-    var onUpdate: () -> Void = {}
+    var onRebuild: () -> Void = {}
     var onDelete: () -> Void
     var onClose: () -> Void = {}
     var onSelectMultiple: () -> Void = {}
@@ -289,8 +289,9 @@ struct ContainerCard: View {
             Button { onSelectMultiple() } label: { Label("Select Multiple", systemImage: "checklist") }
         }
         Button { onEdit() } label: { Label("Edit…", systemImage: "slider.horizontal.3") }
-        if hasImageUpdate {
-            Button { onUpdate() } label: { Label("Update Container…", systemImage: "arrow.down.circle") }
+        Button { onRebuild() } label: {
+            Label(imageUpdateState.requiresUpdate ? AppText.updateContainerAction : AppText.rebuildContainerAction,
+                  systemImage: imageUpdateState.requiresUpdate ? "arrow.down.circle" : "arrow.triangle.2.circlepath")
         }
         UI.Copy.ValueLabel("Copy ID", value: snapshot.id)
         Divider()
@@ -390,6 +391,12 @@ struct ContainerCard: View {
             footerAction("play.fill", help: AppText.start, tint: tint, action: onStart)
         }
         footerAction("slider.horizontal.3", help: AppText.edit, action: onEdit)
+        if imageUpdateState.requiresUpdate {
+            footerAction("arrow.down.circle",
+                         help: AppText.updateContainer,
+                         tint: .orange,
+                         action: onRebuild)
+        }
         footerAction("trash", help: AppText.delete, role: .destructive) { confirmingDelete = true }
     }
 
