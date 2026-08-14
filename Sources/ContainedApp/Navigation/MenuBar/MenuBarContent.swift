@@ -2,33 +2,19 @@ import SwiftUI
 import ContainedCore
 import ContainedUI
 
-/// The menu shown by the menu-bar extra: a compact command surface with service status, running
-/// containers, live resource counts, and the same creation / navigation affordances as the app menu.
+/// A compact runtime center for the menu-bar extra. Deeper creation, navigation, settings, and
+/// support workflows stay in the main app; this surface is intentionally status-and-action focused.
 struct MenuBarContent: View {
-    @Environment(\.openURL) private var openURL
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
 
-    private var store: ContainersStore { app.containers }
-    private var stopped: [Core.Container.Snapshot] { store.snapshots.filter { $0.state != .running } }
-    private var unreadActivityCount: Int { app.historyStore.activitySummary.unreadEvents }
-    private var statusRuntimeKind: Core.Runtime.Kind? {
-        app.serviceControlRuntimeKind ?? app.firstRuntimeKind(supporting: .systemStatus, readyOnly: false)
+    private var runtimeDescriptors: [Core.Runtime.Descriptor] {
+        let registered = app.registeredRuntimeDescriptors
+        return registered.isEmpty ? app.supportedRuntimeDescriptors : registered
     }
 
-    private var cliLabel: String {
-        switch app.bootstrap {
-        case .ready:
-            return statusRuntimeKind.flatMap { app.runtimeVersion(for: $0) }.map { "CLI v\($0)" } ?? "CLI ready"
-        case .checking:
-            return "Checking CLI"
-        case .cliMissing:
-            return "CLI missing"
-        case .unsupported(let version):
-            return "CLI v\(version) unsupported"
-        case .serviceStopped:
-            return "Service stopped"
-        }
+    private var unreadActivityCount: Int {
+        app.historyStore.activitySummary.unreadEvents
     }
 
     var body: some View {
@@ -37,171 +23,112 @@ struct MenuBarContent: View {
 
             Divider()
 
-            infoGrid
+            runtimeSection
 
             Divider()
 
-            actionStrip
+            quickActions
 
             Divider()
 
-            Menu("Service") {
-                statusItem
-                Divider()
-                if app.serviceControlRuntimeAvailable {
-                    if app.serviceHealthy {
-                        Button("Stop Service") { Task { await app.stopService() } }
-                    } else {
-                        Button("Start Service") { Task { await app.startService() } }
-                    }
-                    Button("Restart Service") { Task { await app.restartService() } }
-                } else {
-                    Button("Retry Runtime Connection") { Task { await app.retryBootstrap() } }
-                }
-            }
-
-            Menu("Containers") {
-                Menu("Running Containers") {
-                    if store.running.isEmpty {
-                        disabledPlaceholder("No running containers")
-                    } else {
-                        ForEach(store.running) { snapshot in
-                            Button(containerName(for: snapshot)) {
-                                Task { await store.stop(snapshot.scopedID) }
-                            }
-                        }
-                    }
-                }
-
-                Menu("Stopped Containers") {
-                    if stopped.isEmpty {
-                        disabledPlaceholder("No stopped containers")
-                    } else {
-                        ForEach(stopped) { snapshot in
-                            Button(containerName(for: snapshot)) {
-                                Task { await store.start(snapshot.scopedID) }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Menu("Create") {
-                Button("Run Container…") { activate(); route(.runContainer) }
-                Button("Pull Image…") { activate(); route(.pullImage) }
-                    .disabled(!app.settings.hubSearchEnabled)
-                Button("Build Image…") { activate(); route(.build) }
-                    .disabled(!app.settings.imageBuildEnabled)
-                Divider()
-                Button("New Volume…") { activate(); route(.createVolume) }
-                Button("New Network…") { activate(); route(.createNetwork) }
-                Button("Import Compose…") { activate(); route(.importCompose) }
-                    .disabled(!app.settings.composeImportEnabled)
-            }
-
-            Menu("Navigate") {
-                Button("Containers") { activate(); navigate(to: .containers) }
-                Button("Images") { activate(); openSectionOrMorph(.images, morph: .updates) }
-                Button("Templates") { activate(); openSectionOrMorph(.templates, morph: .templates) }
-                Button("System") { activate(); openSectionOrMorph(.system, morph: .system) }
-                Button("Activity") { activate(); openSectionOrMorph(.activity, morph: .activity) }
-            }
-
-            Menu("Shortcuts") {
-                if app.settings.keyboardShortcutsEnabled {
-                    Button(ui.sidebarVisible ? "Hide Sidebar" : "Show Sidebar") { activate(); ui.setSidebarVisible(!ui.sidebarVisible) }
-                        .keyboardShortcut("s", modifiers: .command)
-                        .disabled(!app.settings.sidebarNavigationEnabled)
-                    Button("Search This Page") { activate(); ui.focusSearch() }
-                        .keyboardShortcut("f", modifiers: .command)
-                    Button("Settings") { activate(); openSettings(to: .appearance) }
-                        .keyboardShortcut(";", modifiers: .command)
-                    Button("Run Container") { activate(); route(.runContainer) }
-                        .keyboardShortcut("n", modifiers: .command)
-                    Button("Run Image Check") { Task { await app.runImageUpdateSweepNow() } }
-                        .keyboardShortcut("u", modifiers: .command)
-                    Button("Activity") { activate(); route(.activityHistory) }
-                        .keyboardShortcut("i", modifiers: .command)
-                } else {
-                    disabledPlaceholder("Enable keyboard shortcuts in Settings → Experimental")
-                }
-            }
-
-            Menu("Settings") {
-                Button("Open Contained") { activate() }
-                Divider()
-                ForEach(SettingsContent.SettingsPage.allCases) { page in
-                    Button(page.rawValue) { activate(); openSettings(to: page) }
-                }
-            }
-
-            Menu("Help") {
-                Button("Check for Updates…") {
-                    activate()
-                    app.updater.checkForUpdates()
-                }
-                Button("About Contained") { activate(); openSettings(to: .about) }
-                Button("Reveal CLI Binary in Finder") { activate(); revealCLIBinary() }
-                Divider()
-                Button("Release Notes") { activate(); openURL(Links.releasesURL) }
-                Button("Troubleshooting") { activate(); openURL(Links.troubleshootingURL) }
-                Button("Keyboard Shortcuts") { activate(); openURL(Links.shortcutsURL) }
-            }
-
-            Divider()
-
-            footerRow
+            footer
         }
         .padding(UI.MenuBar.Padding.all)
         .frame(width: UI.MenuBar.Size.width)
+        .background {
+            UI.Theme.BackgroundLayer(material: .sheet)
+        }
     }
 
-    @ViewBuilder
     private var header: some View {
-        VStack(alignment: .leading, spacing: UI.Toolbar.Spacing.searchIconGap) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: UI.Layout.Spacing.xs) {
+            HStack(spacing: UI.Layout.Spacing.s) {
                 Label("Contained", systemImage: app.serviceHealthy ? "shippingbox.fill" : "shippingbox")
-                    .designHeadlineLabelStyle()
+                    .designTitleLabelStyle()
                 Spacer(minLength: 0)
-                Text("\(store.running.count)")
-                    .designSecondaryMonospacedDigitHeadline()
+                UI.Badge.Status(text: runningSummary,
+                                tint: app.containers.running.isEmpty ? .secondary : .green)
             }
 
-            HStack(spacing: UI.Card.Padding.content) {
-                UI.State.InlineStatus(app.serviceLabel,
-                                   systemImage: app.serviceHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill",
-                                   tone: app.serviceHealthy ? .success : .neutral)
-                UI.State.StatusText(app.settings.updateChannel.displayName,
-                                 style: .caption)
+            HStack(spacing: UI.Layout.Spacing.s) {
+                UI.State.InlineStatus(overallStatus,
+                                      systemImage: app.serviceHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill",
+                                      tone: app.serviceHealthy ? .success : .warning)
+                UI.State.StatusText(app.settings.updateChannel.displayName, style: .caption)
                 Spacer(minLength: 0)
                 if unreadActivityCount > 0 {
                     UI.State.InlineStatus("\(unreadActivityCount) unread",
-                                       systemImage: "bell.badge")
+                                          systemImage: "bell.badge",
+                                          tone: .accent)
                 }
             }
         }
     }
 
+    private var runtimeSection: some View {
+        VStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
+            HStack {
+                Text("Runtimes")
+                    .designSectionLabelStyle()
+                Spacer(minLength: 0)
+                Text("\(runtimeDescriptors.count)")
+                    .designSecondaryMonospacedDigitCaption()
+            }
+
+            runtimeCards
+        }
+    }
+
     @ViewBuilder
-    private var infoGrid: some View {
-        LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
-            UI.List.CompactInfoRow("Containers", value: "\(store.running.count) running · \(stopped.count) stopped")
-            UI.List.CompactInfoRow("Resources", value: "\(app.images.count) images · \(app.volumes.count) volumes · \(app.networks.count) networks")
-            UI.List.CompactInfoRow("Bootstrap", value: cliLabel)
-            UI.List.CompactInfoRow("Activity", value: unreadActivityCount > 0 ? "\(unreadActivityCount) unread" : "All caught up")
+    private var runtimeCards: some View {
+        if runtimeDescriptors.count > 2 {
+            ScrollView {
+                runtimeCardStack
+            }
+            .scrollIndicators(.hidden)
+            .frame(height: UI.MenuBar.Size.runtimeListMaxHeight)
+        } else {
+            runtimeCardStack
         }
     }
 
-    private var actionStrip: some View {
+    private var runtimeCardStack: some View {
+        LazyVStack(spacing: UI.Layout.Spacing.s) {
+            ForEach(runtimeDescriptors, id: \.kind) { descriptor in
+                MenuBarRuntimeCard(descriptor: descriptor,
+                                   openSystem: openSystem)
+            }
+        }
+    }
+
+    private var quickActions: some View {
         HStack(spacing: UI.Layout.Spacing.s) {
-            miniAction("Open", systemImage: "app")
-            miniAction("Run", systemImage: "plus") { route(.runContainer) }
-            miniAction("Activity", systemImage: unreadActivityCount > 0 ? "bell.badge" : "bell") { route(.activityHistory) }
-            miniAction("Updates", systemImage: "arrow.triangle.2.circlepath") { app.updater.checkForUpdates() }
+            UI.Action.Group([
+                UI.Action.Item(systemName: "plus",
+                               title: "Run",
+                               help: "Run Container") {
+                    activate()
+                    ui.dispatch(.runContainer)
+                },
+                UI.Action.Item(systemName: unreadActivityCount > 0 ? "bell.badge" : "bell",
+                               title: "Activity",
+                               help: "Activity",
+                               tint: unreadActivityCount > 0 ? .accentColor : nil) {
+                    activate()
+                    ui.dispatch(.activityHistory)
+                },
+                UI.Action.Item(systemName: "arrow.triangle.2.circlepath",
+                               title: "Updates",
+                               help: "Check for Updates") {
+                    activate()
+                    app.updater.checkForUpdates()
+                }
+            ])
+            Spacer(minLength: 0)
         }
     }
 
-    private var footerRow: some View {
+    private var footer: some View {
         HStack(spacing: UI.Layout.Spacing.s) {
             Button("Open Contained") { activate() }
             Spacer(minLength: 0)
@@ -210,69 +137,29 @@ struct MenuBarContent: View {
         .buttonStyle(.borderless)
     }
 
-    @ViewBuilder
-    private func miniAction(_ title: String,
-                            systemImage: String,
-                            action: @escaping () -> Void = {}) -> some View {
-        Button(action: {
-            activate()
-            action()
-        }) {
-            Label(title, systemImage: systemImage)
+    private var runningSummary: String {
+        let count = app.containers.running.count
+        return "\(count) running"
+    }
+
+    private var overallStatus: String {
+        if runtimeDescriptors.isEmpty { return "No runtimes detected" }
+        let ready = runtimeDescriptors.filter { app.runtimeIsReady($0.kind) }.count
+        if ready == runtimeDescriptors.count { return "All runtimes available" }
+        if ready > 0 { return "\(ready) of \(runtimeDescriptors.count) available" }
+        return "Runtimes unavailable"
+    }
+
+    private func openSystem() {
+        activate()
+        if app.settings.usesPanelNavigation {
+            ui.toggleMorph(.system)
+        } else {
+            ui.navigate(to: .system)
         }
-        .buttonStyle(.borderless)
     }
 
-    @ViewBuilder
-    private func disabledPlaceholder(_ text: String) -> some View {
-        Button(text) { }
-            .disabled(true)
-    }
-
-    @ViewBuilder
-    private var statusItem: some View {
-        UI.State.InlineStatus(app.serviceLabel,
-                           systemImage: app.serviceHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill",
-                           tone: app.serviceHealthy ? .success : .neutral)
-    }
-
-    /// Bring the main window to the front.
     private func activate() {
         Platform.activateMainWindow()
-    }
-
-    private func containerName(for snapshot: Core.Container.Snapshot) -> String {
-        app.containerStyle(for: snapshot).displayName(fallback: snapshot.id)
-    }
-
-    private func navigate(to section: AppSection) {
-        ui.navigate(to: section)
-    }
-
-    private func route(_ action: PendingAction) {
-        ui.dispatch(action)
-    }
-
-    private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
-        if app.settings.usesPanelNavigation {
-            ui.toggleMorph(morph)
-        } else {
-            ui.navigate(to: section)
-        }
-    }
-
-    private func openSettings(to page: SettingsContent.SettingsPage) {
-        ui.settingsPage = page
-        if app.settings.usesPanelNavigation {
-            ui.openSettings(to: page)
-        } else {
-            ui.navigate(to: .settings)
-        }
-    }
-
-    /// Reveal the resolved `container` binary in Finder (honoring the CLI-path override).
-    private func revealCLIBinary() {
-        guard let url = app.runtimeCLIURL(for: .appleContainer) else { return }
-        Platform.revealInFinder(url)
     }
 }

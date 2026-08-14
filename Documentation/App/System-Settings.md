@@ -19,6 +19,15 @@ does not depend on Docker Desktop. Privileged kernel or DNS operations may
 trigger prompts handled by the CLI or macOS. Contained does not ask for or store
 administrator credentials.
 
+## Menu-bar runtime center
+
+The optional menu-bar extra is the compact companion to System. It shows one
+card per detected runtime with reachability, CLI version, running and stopped
+container counts, image count, and capability-scoped start, stop, restart, or
+retry controls. The card's System action opens the full management surface.
+Run, Activity, and update checks remain available as focused quick actions;
+creation, navigation, settings, and support workflows stay in the main app.
+
 ## Settings tabs
 
 Settings tabs use native grouped SwiftUI forms inside the shared Settings panel.

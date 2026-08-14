@@ -181,9 +181,10 @@ enum Tokens {
     }
 
     public enum MenuBar {
-        public static let width: CGFloat = 340
+        public static let width: CGFloat = 420
         public static let titleWidth: CGFloat = 78
         public static let padding: CGFloat = 14
+        public static let runtimeListMaxHeight: CGFloat = 420
     }
 
     /// The app toolbar band — custom (non-native) controls sized to macOS 26 Liquid Glass toolbar
@@ -471,6 +472,7 @@ public extension UI.MenuBar {
     enum Size {
         public static let width = UI.Tokens.MenuBar.width
         public static let titleWidth = UI.Tokens.MenuBar.titleWidth
+        public static let runtimeListMaxHeight = UI.Tokens.MenuBar.runtimeListMaxHeight
     }
 
     /// Menu-bar padding mirrors the compact popover inset.

@@ -1155,22 +1155,22 @@ final class AppModel {
     }
 
     /// Start the container system service and optionally restore Always-policy containers.
-    func startService() async {
-        if await runServiceLifecycle([.start]) {
+    func startService(runtimeKind: Core.Runtime.Kind? = nil) async {
+        if await runServiceLifecycle([.start], runtimeKind: runtimeKind) {
             logger.record("Started container service", category: .system)
         }
     }
 
     /// Stop the container system service, then re-bootstrap.
-    func stopService() async {
-        if await runServiceLifecycle([.stop]) {
+    func stopService(runtimeKind: Core.Runtime.Kind? = nil) async {
+        if await runServiceLifecycle([.stop], runtimeKind: runtimeKind) {
             logger.record("Stopped container service", category: .system, severity: .warning)
         }
     }
 
     /// Stop then start the container system service, optionally restoring Always-policy containers.
-    func restartService() async {
-        if await runServiceLifecycle([.stop, .start]) {
+    func restartService(runtimeKind: Core.Runtime.Kind? = nil) async {
+        if await runServiceLifecycle([.stop, .start], runtimeKind: runtimeKind) {
             logger.record("Restarted container service", category: .system, severity: .warning)
         }
     }
@@ -1180,7 +1180,8 @@ final class AppModel {
     @discardableResult
     private func runServiceLifecycle(_ actions: [Core.Runtime.SystemAction],
                                      runtimeKind requestedKind: Core.Runtime.Kind? = nil) async -> Bool {
-        guard let kind = requestedKind ?? serviceControlRuntimeKind, serviceControlRuntimeAvailable else {
+        guard let kind = requestedKind ?? serviceControlRuntimeKind,
+              client?.supportsRuntime(kind, capability: .serviceControl) == true else {
             flash(AppText.string("runtime.service.unavailable",
                                  defaultValue: "Service controls are not available for the current runtime. Start the runtime provider externally, then retry."))
             return false
