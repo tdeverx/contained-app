@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 import ContainedCore
 import ContainedUI
 @testable import ContainedApp
@@ -68,9 +69,60 @@ struct ContainerGridProjectionTests {
         #expect(state.projection.containers.map(\.id) == ["newest"])
     }
 
+    @Test func richSortOptionsUseStableInventoryAndDerivedValues() {
+        let apple = Self.snapshot(id: "apple", image: "example/z:latest", state: .running)
+        let docker = Self.snapshot(id: "docker", image: "example/a:latest", state: .stopped,
+                                   runtimeKind: .docker)
+        let worker = Self.snapshot(id: "worker", image: "example/m:latest", state: .stopping)
+        let snapshots = [apple, docker, worker]
+        let values: [String: ContainerGridProjection.SortValues] = [
+            apple.scopedID: .init(displayName: "Zebra", creationDate: Date(timeIntervalSince1970: 10),
+                                  startedDate: Date(timeIntervalSince1970: 20),
+                                  cpuCoreFraction: 0.25, memoryFraction: 0.9),
+            docker.scopedID: .init(displayName: "Alpha", creationDate: Date(timeIntervalSince1970: 30),
+                                   imageUpdate: .updateAvailable,
+                                   cpuCoreFraction: 0.8, memoryFraction: 0.2),
+            worker.scopedID: .init(displayName: "Middle", creationDate: Date(timeIntervalSince1970: 20),
+                                   startedDate: Date(timeIntervalSince1970: 40), health: .unhealthy,
+                                   cpuCoreFraction: 0.5, memoryFraction: 0.5),
+        ]
+
+        func ids(sortedBy sort: ContainerSort) -> [String] {
+            ContainerGridProjection.build(.init(snapshots: snapshots, sort: sort,
+                                                runningOnly: false, search: "",
+                                                sortValuesByID: values)).containers.map(\.id)
+        }
+
+        #expect(ids(sortedBy: .name) == ["docker", "worker", "apple"])
+        #expect(ids(sortedBy: .status) == ["worker", "docker", "apple"])
+        #expect(ids(sortedBy: .created) == ["docker", "worker", "apple"])
+        #expect(ids(sortedBy: .uptime) == ["apple", "worker", "docker"])
+        #expect(ids(sortedBy: .image) == ["docker", "worker", "apple"])
+        #expect(ids(sortedBy: .runtime) == ["worker", "apple", "docker"])
+        #expect(ids(sortedBy: .cpu) == ["docker", "worker", "apple"])
+        #expect(ids(sortedBy: .memory) == ["apple", "worker", "docker"])
+        #expect(ids(sortedBy: .attention) == ["worker", "docker", "apple"])
+    }
+
+    @Test func nicknameParticipatesInSearchWithoutHidingTheRuntimeID() {
+        let snapshot = Self.snapshot(id: "api", image: "example/api:latest")
+        let values = [snapshot.scopedID: ContainerGridProjection.SortValues(displayName: "Gateway")]
+
+        let nicknameMatch = ContainerGridProjection.build(.init(snapshots: [snapshot], sort: .name,
+                                                                 runningOnly: false, search: "gate",
+                                                                 sortValuesByID: values))
+        let idMatch = ContainerGridProjection.build(.init(snapshots: [snapshot], sort: .name,
+                                                           runningOnly: false, search: "api",
+                                                           sortValuesByID: values))
+
+        #expect(nicknameMatch.containers.map(\.id) == ["api"])
+        #expect(idMatch.containers.map(\.id) == ["api"])
+    }
+
     private static func snapshot(id: String,
                                  image: String,
+                                 state: Core.Runtime.Status = .running,
                                  runtimeKind: Core.Runtime.Kind = .appleContainer) -> Core.Container.Snapshot {
-        .placeholder(id: id, image: image, runtimeKind: runtimeKind)
+        .placeholder(id: id, image: image, state: state, runtimeKind: runtimeKind)
     }
 }

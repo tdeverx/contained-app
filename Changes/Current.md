@@ -1,0 +1,1 @@
+- Prevented sparkline strokes and marks from clipping at chart boundaries, and expanded container sorting by activity, age, runtime, and attention state.

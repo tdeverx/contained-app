@@ -36,24 +36,36 @@ struct ContainersGridView: View {
     @State private var detailSourceFrame: CGRect?
     @State private var projectionState = ContainerGridProjectionState()
     @State private var selectedWidgetIndices: [String: Int] = [:]
+    @State private var liveSortRefresh = 0
 
     private let detailSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
 
     private var store: ContainersStore { app.containers }
 
     private var projectionInput: ContainerGridProjection.Input {
-        ContainerGridProjection.Input(snapshots: ui.containers(in: store.snapshots),
+        let snapshots = ui.containers(in: store.snapshots)
+        let includeMetrics = ui.sort.usesLiveMetrics
+        let includeHealth = ui.sort == .status || ui.sort == .attention
+        let includeUpdates = ui.sort == .attention
+        if includeMetrics { _ = liveSortRefresh }
+        let sortValues = Dictionary(uniqueKeysWithValues: snapshots.map { snapshot in
+            let stats = includeMetrics ? store.statsByID[snapshot.scopedID] : nil
+            let style = app.containerStyle(for: snapshot)
+            return (snapshot.scopedID, ContainerGridProjection.SortValues(
+                displayName: style.displayName(fallback: snapshot.id),
+                creationDate: snapshot.configuration.creationDate,
+                startedDate: snapshot.startedDate,
+                health: includeHealth ? app.health.status(for: snapshot.scopedID) : .unknown,
+                imageUpdate: includeUpdates ? app.containerImageUpdateState(for: snapshot) : .unknown,
+                cpuCoreFraction: stats?.cpuCoreFraction,
+                memoryFraction: stats?.memoryFraction
+            ))
+        })
+        return ContainerGridProjection.Input(snapshots: snapshots,
                                       sort: ui.sort,
                                       runningOnly: ui.runningOnly,
-                                      search: ui.search.text)
-    }
-
-    private var projectionKey: ContainerGridProjectionKey {
-        ContainerGridProjectionKey(inventoryRevision: store.inventoryRevision,
-                                   sort: ui.sort,
-                                   runningOnly: ui.runningOnly,
-                                   search: ui.search.text,
-                                   containerGroupRevision: ui.containerGroupRevision)
+                                      search: ui.search.text,
+                                      sortValuesByID: sortValues)
     }
 
     var body: some View {
@@ -147,7 +159,15 @@ struct ContainersGridView: View {
             Text(request.isUpdate ? AppText.updateContainerConfirmation : AppText.rebuildContainerConfirmation)
         }
         .refreshable { await store.refresh() }
-        .task(id: projectionKey) { await projectionState.update(projectionInput) }
+        .task(id: projectionInput) { await projectionState.update(projectionInput) }
+        .task(id: ui.sort) {
+            guard ui.sort.usesLiveMetrics else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled else { return }
+                liveSortRefresh &+= 1
+            }
+        }
         .sensoryFeedback(.success, trigger: lifecycleFeedback)
         // Report the in-page search count so the toolbar can escalate an empty search into the palette.
         .onAppear { ui.search.pageResultCount = projectionState.projection.visibleCount }
@@ -407,14 +427,6 @@ struct ContainersGridView: View {
             ? AppText.string("containers.empty.runningOnly", defaultValue: "No running containers.")
             : AppText.string("containers.empty.description", defaultValue: "Run a container to see it here.")
     }
-}
-
-private struct ContainerGridProjectionKey: Hashable {
-    let inventoryRevision: Int
-    let sort: ContainerSort
-    let runningOnly: Bool
-    let search: String
-    let containerGroupRevision: Int
 }
 
 private struct ContainerCardMetricsRenderer: View {

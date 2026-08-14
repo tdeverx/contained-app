@@ -2279,6 +2279,12 @@
     "filter.allNetworks" : {
 
     },
+    "filter.cpuUsage" : {
+
+    },
+    "filter.created" : {
+
+    },
     "filter.builtInOnly" : {
 
     },
@@ -2297,10 +2303,16 @@
     "filter.kind" : {
 
     },
+    "filter.memoryUsage" : {
+
+    },
     "filter.mode" : {
 
     },
     "filter.name" : {
+
+    },
+    "filter.needsAttention" : {
 
     },
     "filter.network" : {
@@ -2321,7 +2333,13 @@
     "filter.runningOnly" : {
 
     },
+    "filter.runtime" : {
+
+    },
     "filter.status" : {
+
+    },
+    "filter.uptime" : {
 
     },
     "filter.updatesOnly" : {

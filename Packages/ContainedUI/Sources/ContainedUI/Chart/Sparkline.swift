@@ -144,10 +144,16 @@ struct Sparkline: View {
         let secondary = SparklineGeometry.series(comparisonSamples, scale: comparisonScale,
                                                  capacity: Self.maximumPlottedSamples)
         return Canvas(opaque: false, colorMode: .nonLinear, rendersAsynchronously: true) { context, size in
+            let renderingInset = SparklineGeometry.renderingInset(for: style,
+                                                                  lineWidth: lineWidth,
+                                                                  pointArea: pointSize,
+                                                                  barWidth: barWidth)
             let primaryPoints = SparklineGeometry.points(primary, in: size,
-                                                         capacity: Self.maximumPlottedSamples)
+                                                         capacity: Self.maximumPlottedSamples,
+                                                         renderingInset: renderingInset)
             let secondaryPoints = SparklineGeometry.points(secondary, in: size,
-                                                           capacity: Self.maximumPlottedSamples)
+                                                           capacity: Self.maximumPlottedSamples,
+                                                           renderingInset: renderingInset)
             let stroke = StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
             switch style {
             case .area:
@@ -262,6 +268,24 @@ struct SparklineSeriesPoint: Equatable, Sendable {
 }
 
 enum SparklineGeometry {
+    static func renderingInset(for style: UI.Chart.GraphStyle,
+                               lineWidth: CGFloat,
+                               pointArea: CGFloat,
+                               barWidth: CGFloat) -> CGSize {
+        switch style {
+        case .area, .line, .multiLine:
+            let radius = max(lineWidth, 0) / 2
+            return CGSize(width: radius, height: radius)
+        case .bar, .range:
+            // Bars extend horizontally around their sample and retain a half-point minimum
+            // height so an all-zero series remains visible without crossing the canvas edge.
+            return CGSize(width: max(barWidth, 0) / 2, height: 0.5)
+        case .points, .scatter:
+            let radius = pointRadius(forArea: pointArea)
+            return CGSize(width: radius, height: radius)
+        }
+    }
+
     static func series(_ values: [Double], scale: UI.Chart.Scale,
                        capacity: Int) -> [SparklineSeriesPoint] {
         let latest = values.suffix(capacity).map(SparklineSeriesScaling.sanitizedSample)
@@ -271,12 +295,20 @@ enum SparklineGeometry {
     }
 
     static func points(_ series: [SparklineSeriesPoint], in size: CGSize,
-                       capacity: Int) -> [CGPoint] {
+                       capacity: Int, renderingInset: CGSize = .zero) -> [CGPoint] {
+        let insetWidth = min(max(renderingInset.width, 0), max(size.width, 0) / 2)
+        let insetHeight = min(max(renderingInset.height, 0), max(size.height, 0) / 2)
+        let plotWidth = max(size.width - insetWidth * 2, 0)
+        let plotHeight = max(size.height - insetHeight * 2, 0)
         let divisor = CGFloat(max(capacity - 1, 1))
         return series.map { point in
-            CGPoint(x: CGFloat(point.index) / divisor * size.width,
-                    y: (1 - CGFloat(min(max(point.value, 0), 1))) * size.height)
+            CGPoint(x: insetWidth + CGFloat(point.index) / divisor * plotWidth,
+                    y: insetHeight + (1 - CGFloat(min(max(point.value, 0), 1))) * plotHeight)
         }
+    }
+
+    static func pointRadius(forArea area: CGFloat) -> CGFloat {
+        max(sqrt(max(area, 1)), 1) / 2
     }
 
     static func path(_ points: [CGPoint], interpolation: UI.Chart.Interpolation) -> Path {
@@ -345,7 +377,7 @@ enum SparklineGeometry {
 
     static func drawPoints(_ points: [CGPoint], area: CGFloat, color: Color,
                            in context: inout GraphicsContext) {
-        let diameter = max(sqrt(max(area, 1)), 1)
+        let diameter = pointRadius(forArea: area) * 2
         for point in points {
             let rect = CGRect(x: point.x - diameter / 2, y: point.y - diameter / 2,
                               width: diameter, height: diameter)
