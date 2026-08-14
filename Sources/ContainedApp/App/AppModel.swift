@@ -725,13 +725,18 @@ final class AppModel {
         historyStore.recordMetrics(deltas, at: observedAt)
     }
 
-    /// Refresh the data behind the System toolbar panel (volumes, networks, and a forced `system df`). Called from
-    /// the panel's `.task` since System is no longer a standing page refreshed by the tick.
+    /// Refresh all mutable System-panel resources after cleanup operations that affect several pages.
     func refreshSystemResources() async {
         guard client != nil, bootstrap == .ready else { return }
         await refreshDiskUsage(force: true)
         await refreshVolumes()
         await refreshNetworks()
+    }
+
+    /// Refresh only the data displayed on the System panel's Runtime page.
+    func refreshSystemRuntimeResources() async {
+        guard client != nil, bootstrap == .ready else { return }
+        await refreshDiskUsage(force: true)
     }
 
     /// Refresh the registry-login list for Settings.

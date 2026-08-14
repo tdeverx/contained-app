@@ -90,7 +90,7 @@ struct ToolbarImageGroupCard: View {
 
     private var rootCard: some View {
         let image = primaryImage(group)
-        let status = app.imageUpdateStatus(for: group.primaryReference)
+        let status = app.imageUpdateStatus(for: group)
         let resolved = app.imageGroupStyle(for: group)
         return UI.Card.Scaffold(size: .medium,
                             isExpanded: isExpanded,
@@ -444,14 +444,13 @@ struct ToolbarImageGroupCard: View {
             }
         }
         footerAction("arrow.triangle.2.circlepath", help: AppText.checkForUpdates) {
-            Task { await app.checkImageUpdate(group.primaryReference) }
+            Task { await app.checkImageUpdates(in: group) }
         }
-        if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable,
-           let runtimeKind = primaryImage(group)?.runtimeKind {
+        if let tag = app.firstImageTagWithUpdate(in: group) {
             footerAction("arrow.down.circle", help: AppText.pullUpdate, tint: .orange) {
                 Task {
-                    await app.pullImageUpdate(group.primaryReference,
-                                              runtimeKind: runtimeKind)
+                    await app.pullImageUpdate(tag.reference,
+                                              runtimeKind: tag.runtimeKind)
                 }
             }
         }
@@ -565,15 +564,14 @@ struct ToolbarImageGroupCard: View {
             Button { save(image) } label: { Label("Save to tar…", systemImage: "arrow.up.doc") }
         }
         Divider()
-        Button { Task { await app.checkImageUpdate(group.primaryReference) } } label: {
+        Button { Task { await app.checkImageUpdates(in: group) } } label: {
             Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
         }
-        if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable,
-           let runtimeKind = primaryImage(group)?.runtimeKind {
+        if let tag = app.firstImageTagWithUpdate(in: group) {
             Button {
                 Task {
-                    await app.pullImageUpdate(group.primaryReference,
-                                              runtimeKind: runtimeKind)
+                    await app.pullImageUpdate(tag.reference,
+                                              runtimeKind: tag.runtimeKind)
                 }
             } label: {
                 Label("Pull Update", systemImage: "arrow.down.circle")

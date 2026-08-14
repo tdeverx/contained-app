@@ -62,6 +62,19 @@ struct SystemContent: View {
         page = item
     }
 
+    private func refreshActivePage() async {
+        switch activePage {
+        case .runtime:
+            await app.refreshSystemRuntimeResources()
+        case .automation:
+            break
+        case .volumes:
+            await app.refreshVolumes()
+        case .networks:
+            await app.refreshNetworks()
+        }
+    }
+
     init(elevated: Bool = true,
          onClose: @escaping () -> Void = {}) {
         self.elevated = elevated
@@ -105,7 +118,7 @@ struct SystemContent: View {
             }
             .padding(UI.Layout.Spacing.s)
         }
-        .task { await app.refreshSystemResources() }
+        .task(id: activePage) { await refreshActivePage() }
         .confirmationDialog("Delete volume \(deletingVolume?.name ?? "")?",
                             isPresented: deletingVolumeBinding, presenting: deletingVolume) { volume in
             Button("Delete", role: .destructive) { Task { await deleteVolume(volume) } }

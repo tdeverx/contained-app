@@ -13,50 +13,58 @@ struct ToolbarUpdatesPanel: View {
     var onClose: () -> Void
     @State private var imageFrames: [Core.Image.LocalTagGroup.ID: CGRect] = [:]
     @State private var settledUpdateStates: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState] = [:]
+    @State private var page: ImagePage?
 
-    private var liveUpdateStates: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState] {
-        app.localImageGroups().reduce(into: [:]) { states, group in
-            states[group.id] = app.imageUpdateStatus(for: group.primaryReference).state
+    enum ImagePage: String, CaseIterable, Identifiable {
+        case updates = "Updates"
+        case images = "Images"
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .updates: return AppText.string("image.page.updates", defaultValue: "Updates")
+            case .images: return AppText.sectionImages
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .updates: return "arrow.down.circle"
+            case .images: return "square.stack.3d.up"
+            }
+        }
+
+        static func defaultPage(updateCount: Int) -> Self {
+            updateCount > 0 ? .updates : .images
         }
     }
 
-    private var imageGroups: [Core.Image.LocalTagGroup] {
-        sortedImageGroups(app.localImageGroups().filter(matchesFilter))
-    }
+    private struct Projection {
+        var activePage: ImagePage
+        var liveUpdateStates: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState]
+        var updateCount: Int
+        var groups: [Core.Image.LocalTagGroup]
+        var sections: [(title: String, groups: [Core.Image.LocalTagGroup])]
 
-    private var imageSections: [(title: String, groups: [Core.Image.LocalTagGroup])] {
-        switch ui.imageGrouping {
-        case .none:
-            return [("", imageGroups)]
-        case .registry:
-            return Dictionary(grouping: imageGroups, by: registryTitle)
-                .map { ($0.key, sortedImageGroups($0.value)) }
-                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-        case .status:
-            return Dictionary(grouping: imageGroups, by: statusTitle)
-                .map { ($0.key, sortedImageGroups($0.value)) }
-                .sorted { lhs, rhs in statusRank(lhs.title) < statusRank(rhs.title) }
+        var isCheckingForUpdates: Bool {
+            liveUpdateStates.values.contains(.checking)
         }
-    }
-
-    private var updateCount: Int {
-        app.localImageGroups().filter {
-            effectiveUpdateState(for: $0) == .updateAvailable
-        }.count
     }
 
     var body: some View {
+        let projection = makeProjection()
         UI.Panel.Scaffold(width: UI.Panel.Size.images.width) {
             VStack(alignment: .leading, spacing: 0) {
-                header
+                header(projection)
                 Divider()
             }
         } content: {
             LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
-                if imageGroups.isEmpty {
-                    emptyCard
+                if projection.groups.isEmpty {
+                    emptyCard(for: projection.activePage)
                 } else {
-                    ForEach(Array(imageSections.enumerated()), id: \.offset) { _, section in
+                    ForEach(Array(projection.sections.enumerated()), id: \.offset) { _, section in
                         if ui.imageGrouping != .none {
                             UI.Badge.Text(text: section.title, font: .caption.weight(.semibold))
                                 .padding(.horizontal, UI.Layout.Spacing.xs)
@@ -70,22 +78,39 @@ struct ToolbarUpdatesPanel: View {
             .padding(UI.Layout.Spacing.s)
         }
         .onAppear {
-            rememberSettledUpdateStates(liveUpdateStates)
+            rememberSettledUpdateStates(projection.liveUpdateStates)
         }
-        .onChange(of: liveUpdateStates) { _, states in
+        .onChange(of: projection.liveUpdateStates) { _, states in
             rememberSettledUpdateStates(states)
         }
         .task { await app.refreshImagesIfNeeded() }
     }
 
-    private var header: some View {
-        UI.Panel.Header(symbol: "square.stack.3d.up",
+    private func header(_ projection: Projection) -> some View {
+        UI.Panel.Header(symbol: projection.activePage.systemImage,
                     title: AppText.sectionImages,
-                    subtitle: AppText.string("image.updates.subtitle", defaultValue: "\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")")) {
-            UI.Action.Cluster {
-                imageFilterMenu
-                UI.Action.Items(imageHeaderActions)
+                    subtitle: headerSubtitle(for: projection)) {
+            HStack(spacing: UI.Toolbar.Spacing.groupSpacing) {
+                UI.Action.Group(checkForUpdatesAction(isChecking: projection.isCheckingForUpdates))
+                if projection.activePage == .images {
+                    UI.Action.Cluster {
+                        imageFilterMenu
+                        UI.Action.Items(imagePageActions)
+                    }
+                }
+                UI.Action.Group(navigationActions(activePage: projection.activePage))
             }
+        }
+    }
+
+    private func headerSubtitle(for projection: Projection) -> String {
+        switch projection.activePage {
+        case .updates:
+            return AppText.string("image.page.updates.subtitle",
+                                  defaultValue: "\(projection.updateCount) update\(projection.updateCount == 1 ? "" : "s") available")
+        case .images:
+            return AppText.string("image.updates.subtitle",
+                                  defaultValue: "\(projection.groups.count) local · \(projection.updateCount) update\(projection.updateCount == 1 ? "" : "s")")
         }
     }
 
@@ -118,30 +143,49 @@ struct ToolbarUpdatesPanel: View {
         .buttonStyle(.plain)
     }
 
-    private var imageHeaderActions: [UI.Action.Item] {
-        var actions = [
+    private func checkForUpdatesAction(isChecking: Bool) -> UI.Action.Item {
+        UI.Action.Item(systemName: "arrow.triangle.2.circlepath",
+                       help: AppText.runImageUpdateCheckNow,
+                       isEnabled: !isChecking) {
+            Task { await app.runImageUpdateSweepNow() }
+        }
+    }
+
+    private var imagePageActions: [UI.Action.Item] {
+        [
             UI.Action.Item(systemName: "square.and.arrow.down", help: AppText.loadImageTar) {
                     ui.dispatch(.loadImage)
                     onClose()
-            },
-            UI.Action.Item(systemName: "arrow.triangle.2.circlepath", help: AppText.checkForUpdates) {
-                    Task { await app.runImageUpdateSweepNow() }
             },
             UI.Action.Item(systemName: "trash", help: AppText.pruneImages, role: .destructive) {
                     ui.dispatch(.pruneImages)
                     onClose()
             }
         ]
-        actions.append(UI.Action.Item(systemName: "xmark", help: AppText.close, isCancel: true, action: onClose))
+    }
+
+    private func navigationActions(activePage: ImagePage) -> [UI.Action.Item] {
+        var actions = ImagePage.allCases.map { item in
+            UI.Action.Item(systemName: item.systemImage,
+                           help: item.title,
+                           tint: activePage == item ? .accentColor : nil) {
+                page = item
+            }
+        }
+        actions.append(UI.Action.Item(systemName: "xmark",
+                                     help: AppText.close,
+                                     isCancel: true,
+                                     action: onClose))
         return actions
     }
 
-    private var emptyCard: some View {
+    private func emptyCard(for page: ImagePage) -> some View {
         UI.Card.Scaffold(size: .small,
                      elevated: false,
-                     title: AppText.string("image.empty", defaultValue: "No images"),
-                     subtitle: AppText.string("image.empty.subtitle", defaultValue: "Pull or build an image to see it here")) {
-            UI.Card.IconChip(symbol: "checkmark.circle.fill", tint: .green)
+                     title: emptyTitle(for: page),
+                     subtitle: emptySubtitle(for: page)) {
+            UI.Card.IconChip(symbol: page == .updates ? "checkmark.circle.fill" : "square.stack.3d.up",
+                             tint: page == .updates ? .green : .secondary)
         } titleAccessory: {
             EmptyView()
         } subtitleAccessory: {
@@ -156,6 +200,22 @@ struct ToolbarUpdatesPanel: View {
             EmptyView()
         } widget: {
             EmptyView()
+        }
+    }
+
+    private func emptyTitle(for page: ImagePage) -> String {
+        switch page {
+        case .updates: return AppText.string("image.updates.empty", defaultValue: "No image updates")
+        case .images: return AppText.string("image.empty", defaultValue: "No images")
+        }
+    }
+
+    private func emptySubtitle(for page: ImagePage) -> String {
+        switch page {
+        case .updates:
+            return AppText.string("image.updates.empty.subtitle", defaultValue: "Your local images are up to date")
+        case .images:
+            return AppText.string("image.empty.subtitle", defaultValue: "Pull or build an image to see it here")
         }
     }
 
@@ -185,8 +245,9 @@ struct ToolbarUpdatesPanel: View {
         imageFrames[id] = frame
     }
 
-    private func imageRank(_ group: Core.Image.LocalTagGroup) -> Int {
-        switch effectiveUpdateState(for: group) {
+    private func imageRank(_ group: Core.Image.LocalTagGroup,
+                           states: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState]) -> Int {
+        switch states[group.id] ?? .unknown {
         case .updateAvailable: return 0
         case .error: return 1
         case .checking, .unknown: return 2
@@ -194,12 +255,15 @@ struct ToolbarUpdatesPanel: View {
         }
     }
 
-    private func sortedImageGroups(_ groups: [Core.Image.LocalTagGroup]) -> [Core.Image.LocalTagGroup] {
+    private func sortedImageGroups(
+        _ groups: [Core.Image.LocalTagGroup],
+        states: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState]
+    ) -> [Core.Image.LocalTagGroup] {
         groups.sorted { lhs, rhs in
             switch ui.imageSort {
             case .status:
-                let lhsRank = imageRank(lhs)
-                let rhsRank = imageRank(rhs)
+                let lhsRank = imageRank(lhs, states: states)
+                let rhsRank = imageRank(rhs, states: states)
                 if lhsRank != rhsRank { return lhsRank < rhsRank }
             case .tags:
                 if lhs.references.count != rhs.references.count { return lhs.references.count > rhs.references.count }
@@ -210,14 +274,17 @@ struct ToolbarUpdatesPanel: View {
         }
     }
 
-    private func matchesFilter(_ group: Core.Image.LocalTagGroup) -> Bool {
+    private func matchesFilter(
+        _ group: Core.Image.LocalTagGroup,
+        states: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState]
+    ) -> Bool {
         switch ui.imageFilter {
         case .all:
             return true
         case .updates:
-            return effectiveUpdateState(for: group) == .updateAvailable
+            return states[group.id] == .updateAvailable
         case .errors:
-            return effectiveUpdateState(for: group) == .error
+            return states[group.id] == .error
         }
     }
 
@@ -226,8 +293,11 @@ struct ToolbarUpdatesPanel: View {
         return parsed.registry == "registry-1.docker.io" ? "docker.io" : parsed.registry
     }
 
-    private func statusTitle(_ group: Core.Image.LocalTagGroup) -> String {
-        switch effectiveUpdateState(for: group) {
+    private func statusTitle(
+        _ group: Core.Image.LocalTagGroup,
+        states: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState]
+    ) -> String {
+        switch states[group.id] ?? .unknown {
         case .updateAvailable: return "Updates available"
         case .error: return "Errors"
         case .checking, .unknown: return "Unknown"
@@ -244,10 +314,46 @@ struct ToolbarUpdatesPanel: View {
         }
     }
 
-    private func effectiveUpdateState(for group: Core.Image.LocalTagGroup) -> Core.Image.UpdateState {
-        let liveState = app.imageUpdateStatus(for: group.primaryReference).state
-        guard liveState == .checking else { return liveState }
-        return settledUpdateStates[group.id] ?? .unknown
+    private func makeProjection() -> Projection {
+        let allGroups = app.localImageGroups()
+        let liveStates = allGroups.reduce(into: [:]) { states, group in
+            states[group.id] = app.imageUpdateStatus(for: group).state
+        }
+        let effectiveStates = liveStates.mapValues { state in
+            state == .checking ? nil : state
+        }
+        .reduce(into: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState]()) { states, entry in
+            states[entry.key] = entry.value ?? settledUpdateStates[entry.key] ?? .unknown
+        }
+        let updateCount = effectiveStates.values.count(where: { $0 == .updateAvailable })
+        let activePage = page ?? .defaultPage(updateCount: updateCount)
+        let visibleGroups = allGroups.filter { group in
+            switch activePage {
+            case .updates:
+                return effectiveStates[group.id] == .updateAvailable
+            case .images:
+                return matchesFilter(group, states: effectiveStates)
+            }
+        }
+        let groups = sortedImageGroups(visibleGroups, states: effectiveStates)
+        let sections: [(title: String, groups: [Core.Image.LocalTagGroup])]
+        switch ui.imageGrouping {
+        case .none:
+            sections = [("", groups)]
+        case .registry:
+            sections = Dictionary(grouping: groups, by: registryTitle)
+                .map { ($0.key, sortedImageGroups($0.value, states: effectiveStates)) }
+                .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .status:
+            sections = Dictionary(grouping: groups) { statusTitle($0, states: effectiveStates) }
+                .map { ($0.key, sortedImageGroups($0.value, states: effectiveStates)) }
+                .sorted { lhs, rhs in statusRank(lhs.title) < statusRank(rhs.title) }
+        }
+        return Projection(activePage: activePage,
+                          liveUpdateStates: liveStates,
+                          updateCount: updateCount,
+                          groups: groups,
+                          sections: sections)
     }
 
     private func rememberSettledUpdateStates(

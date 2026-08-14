@@ -319,23 +319,21 @@ struct PaletteItem: Identifiable {
                                      visual: .imageGroup(group),
                                      icon: "arrow.triangle.2.circlepath",
                                      tint: .blue) {
-                Task { await app.checkImageUpdate(group.primaryReference) }
+                Task { await app.checkImageUpdates(in: group) }
             })
-            if app.imageUpdateStatus(for: group.primaryReference).state == .updateAvailable {
-                if let runtimeKind = group.images.first(where: { $0.reference == group.primaryReference })?.runtimeKind {
-                    items.append(PaletteItem(title: AppText.palettePullImageUpdate(Format.shortImage(group.primaryReference)),
-                                             subtitle: AppText.paletteImageSubtitle,
-                                             keywords: group.references,
-                                             kind: .image,
-                                             visual: .imageGroup(group),
-                                             icon: "arrow.down.circle",
-                                             tint: .orange) {
-                        Task {
-                            await app.pullImageUpdate(group.primaryReference,
-                                                      runtimeKind: runtimeKind)
-                        }
-                    })
-                }
+            if let tag = app.firstImageTagWithUpdate(in: group) {
+                items.append(PaletteItem(title: AppText.palettePullImageUpdate(Format.shortImage(tag.reference)),
+                                         subtitle: AppText.paletteImageSubtitle,
+                                         keywords: group.references,
+                                         kind: .image,
+                                         visual: .imageGroup(group),
+                                         icon: "arrow.down.circle",
+                                         tint: .orange) {
+                    Task {
+                        await app.pullImageUpdate(tag.reference,
+                                                  runtimeKind: tag.runtimeKind)
+                    }
+                })
             }
             let primaryRuntime = group.images.first { $0.reference == group.primaryReference }?.runtimeKind
                 ?? group.tags.first?.runtimeKind

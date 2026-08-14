@@ -50,6 +50,19 @@ extension AppModel {
             ?? Core.Image.UpdateStatus()
     }
 
+    /// Aggregate every runtime-owned tag in a repository group without rescanning the image inventory.
+    func imageUpdateStatus(for group: Core.Image.LocalTagGroup) -> Core.Image.UpdateStatus {
+        aggregateUpdateStatus(group.tags.map {
+            imageUpdateStatus(for: $0.reference, runtimeKind: $0.runtimeKind)
+        })
+    }
+
+    func firstImageTagWithUpdate(in group: Core.Image.LocalTagGroup) -> Core.Image.LocalTag? {
+        group.tags.first {
+            imageUpdateStatus(for: $0.reference, runtimeKind: $0.runtimeKind).state == .updateAvailable
+        }
+    }
+
     /// Combine registry state with the immutable image identity captured when a container was
     /// created. A successful pull makes the registry status current, but leaves the old container
     /// pointing at its previous identity until it is recreated.
@@ -142,6 +155,24 @@ extension AppModel {
                           runtimeKind: Core.Runtime.Kind,
                           notify: Bool = true) async {
         await checkImageUpdate(reference, runtimeKinds: [runtimeKind], notify: notify)
+    }
+
+    func checkImageUpdates(in group: Core.Image.LocalTagGroup) async {
+        for tag in group.tags {
+            await checkImageUpdate(tag.reference, runtimeKind: tag.runtimeKind, notify: false)
+        }
+        let status = imageUpdateStatus(for: group)
+        let name = Format.shortImage(group.primaryReference)
+        switch status.state {
+        case .updateAvailable:
+            flash(AppText.imageUpdateAvailable(name))
+        case .current:
+            flash(AppText.imageUpToDate(name))
+        case .error:
+            flash(status.message ?? AppText.string("updates.checkFailed", defaultValue: "Update check failed"))
+        case .checking, .unknown:
+            break
+        }
     }
 
     private func checkImageUpdate(_ reference: String,
