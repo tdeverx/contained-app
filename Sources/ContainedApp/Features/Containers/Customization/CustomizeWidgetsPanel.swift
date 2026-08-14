@@ -100,7 +100,13 @@ struct CustomizeWidgetsPanel: View {
         UI.Panel.ToggleRow(title: AppText.string("customize.widget.showText", defaultValue: "Show text"), isOn: widgetBinding(index, \.showText))
         UI.Panel.Row(title: AppText.string("customize.color", defaultValue: "Color")) {
             UI.Control.TintSelector(optionalSelection: widgetBinding(index, \.tint),
-                         automaticLabel: AppText.cardColor) { $0.localizedDisplayName }
+                                    automaticLabel: AppText.cardColor,
+                                    customLabel: AppText.customHexColor) { $0.localizedDisplayName }
+        }
+        if style.widget(at: index).tint?.isCustom == true {
+            UI.Panel.Row(title: AppText.customHexColor) {
+                UI.Control.HexTintField(optionalSelection: widgetBinding(index, \.tint))
+            }
         }
     }
 

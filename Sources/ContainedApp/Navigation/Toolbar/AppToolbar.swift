@@ -489,7 +489,7 @@ private struct ActivityToolbarButton: View {
         return UI.Action.Items([
             UI.Action.Item(systemName: hasUnread ? "bell.fill" : "bell",
                          help: hasUnread ? "Activity — \(count) unread" : "Activity",
-                         tint: hasUnread ? app.settings.accentTint.color : .white) {
+                         tint: hasUnread ? app.settings.accentTint.resolvedAppAccentColor : .white) {
                                    if ui.panelNavigationEnabled {
                                        ui.toggleMorph(.activity)
                                    } else {

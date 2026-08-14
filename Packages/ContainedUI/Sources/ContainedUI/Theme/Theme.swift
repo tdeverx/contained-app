@@ -14,31 +14,130 @@ enum Material {
     public static let floatingPanelShadowY: CGFloat = 12
 }
 
-/// A curated color, used consistently for host accent choices and per-surface personalization.
-/// `.multicolor` follows `Color.accentColor`, so package callers can decide whether that means a
-/// global accent, a scoped accent, or the platform default.
-enum Tint: String, CaseIterable, Identifiable, Codable, Sendable {
-    case multicolor, graphite, azure, teal, coral, indigo, green, amber, pink
+/// A system color or custom sRGB hex value, used consistently for host accent choices and
+/// per-surface personalization. The preset list mirrors SwiftUI's standard named colors;
+/// `.multicolor` follows `Color.accentColor`.
+struct Tint: RawRepresentable, CaseIterable, Identifiable, Codable, Hashable, Sendable {
+    public let rawValue: String
 
-    public var id: String { rawValue }
+    public static let multicolor = Tint(canonicalRawValue: "multicolor")
+    public static let gray = Tint(canonicalRawValue: "gray")
+    public static let red = Tint(canonicalRawValue: "red")
+    public static let orange = Tint(canonicalRawValue: "orange")
+    public static let yellow = Tint(canonicalRawValue: "yellow")
+    public static let green = Tint(canonicalRawValue: "green")
+    public static let mint = Tint(canonicalRawValue: "mint")
+    public static let teal = Tint(canonicalRawValue: "teal")
+    public static let cyan = Tint(canonicalRawValue: "cyan")
+    public static let blue = Tint(canonicalRawValue: "blue")
+    public static let indigo = Tint(canonicalRawValue: "indigo")
+    public static let purple = Tint(canonicalRawValue: "purple")
+    public static let pink = Tint(canonicalRawValue: "pink")
+    public static let brown = Tint(canonicalRawValue: "brown")
+    public static let black = Tint(canonicalRawValue: "black")
+    public static let white = Tint(canonicalRawValue: "white")
 
-    /// True for the "follow the host accent" option (rendered with a marker in the swatch row).
-    public var followsAccent: Bool { self == .multicolor }
+    public static let allCases: [Tint] = [
+        .multicolor, .gray, .red, .orange, .yellow, .green, .mint, .teal,
+        .cyan, .blue, .indigo, .purple, .pink, .brown, .black, .white,
+    ]
 
-    public var color: Color {
-        switch self {
-        case .multicolor: return .accentColor
-        case .graphite:   return Color(red: 0.45, green: 0.46, blue: 0.50)
-        case .azure:      return Color(red: 0.14, green: 0.52, blue: 0.92)
-        case .teal:       return Color(red: 0.11, green: 0.62, blue: 0.50)
-        case .coral:      return Color(red: 0.85, green: 0.35, blue: 0.19)
-        case .indigo:     return Color(red: 0.33, green: 0.29, blue: 0.72)
-        case .green:      return Color(red: 0.39, green: 0.60, blue: 0.13)
-        case .amber:      return Color(red: 0.73, green: 0.46, blue: 0.09)
-        case .pink:       return Color(red: 0.83, green: 0.21, blue: 0.34)
+    public init?(rawValue: String) {
+        let migratedRawValue: String
+        switch rawValue.lowercased() {
+        case "graphite": migratedRawValue = Self.gray.rawValue
+        case "azure": migratedRawValue = Self.blue.rawValue
+        case "coral": migratedRawValue = Self.orange.rawValue
+        case "amber": migratedRawValue = Self.yellow.rawValue
+        default: migratedRawValue = rawValue.lowercased()
+        }
+
+        if Self.allCases.contains(where: { $0.rawValue == migratedRawValue }) {
+            self.init(canonicalRawValue: migratedRawValue)
+        } else if let hex = Self.normalizedHex(migratedRawValue) {
+            self.init(canonicalRawValue: hex)
+        } else {
+            return nil
         }
     }
 
+    public init?(hex: String) {
+        guard let normalized = Self.normalizedHex(hex) else { return nil }
+        self.init(canonicalRawValue: normalized)
+    }
+
+    private init(canonicalRawValue: String) {
+        rawValue = canonicalRawValue
+    }
+
+    public var id: String { rawValue }
+    public var followsAccent: Bool { self == .multicolor }
+    public var isCustom: Bool { rawValue.hasPrefix("#") }
+    public var hexValue: String? { isCustom ? rawValue : nil }
+
+    public var color: Color {
+        switch rawValue {
+        case Self.multicolor.rawValue: return .accentColor
+        case Self.gray.rawValue: return .gray
+        case Self.red.rawValue: return .red
+        case Self.orange.rawValue: return .orange
+        case Self.yellow.rawValue: return .yellow
+        case Self.green.rawValue: return .green
+        case Self.mint.rawValue: return .mint
+        case Self.teal.rawValue: return .teal
+        case Self.cyan.rawValue: return .cyan
+        case Self.blue.rawValue: return .blue
+        case Self.indigo.rawValue: return .indigo
+        case Self.purple.rawValue: return .purple
+        case Self.pink.rawValue: return .pink
+        case Self.brown.rawValue: return .brown
+        case Self.black.rawValue: return .black
+        case Self.white.rawValue: return .white
+        default:
+            guard let components = rgbComponents else { return .accentColor }
+            return Color(.sRGB,
+                         red: Double(components.red) / 255,
+                         green: Double(components.green) / 255,
+                         blue: Double(components.blue) / 255)
+        }
+    }
+
+    public var contrastingColor: Color {
+        guard let components = rgbComponents else { return .primary }
+        let luminance = (0.299 * Double(components.red)
+                         + 0.587 * Double(components.green)
+                         + 0.114 * Double(components.blue)) / 255
+        return luminance > 0.58 ? .black : .white
+    }
+
+    public static func normalizedHex(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let digits = trimmed.hasPrefix("#") ? String(trimmed.dropFirst()) : trimmed
+        guard digits.count == 6, UInt32(digits, radix: 16) != nil else { return nil }
+        return "#" + digits.uppercased()
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        guard let tint = Tint(rawValue: rawValue) else {
+            throw DecodingError.dataCorruptedError(in: container,
+                                                   debugDescription: "Invalid tint value: \(rawValue)")
+        }
+        self = tint
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
+    private var rgbComponents: (red: UInt8, green: UInt8, blue: UInt8)? {
+        guard let hexValue else { return nil }
+        let digits = hexValue.dropFirst()
+        guard let value = UInt32(digits, radix: 16) else { return nil }
+        return (UInt8((value >> 16) & 0xFF), UInt8((value >> 8) & 0xFF), UInt8(value & 0xFF))
+    }
 }
 
 enum ColorBlendMode: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -123,6 +222,9 @@ enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
 }
 
 public extension EnvironmentValues {
+    /// The app-selected accent rendered by controls that need an explicit color value, such as the
+    /// "App Accent" swatch. Seed this beside `.tint(...)` at each scene root.
+    @Entry var designSystemAccentColor: Color = .accentColor
     /// The user-chosen modal material, seeded at the app root and inherited by presented sheets.
     @Entry var modalMaterial: UI.Theme.WindowMaterial = .sheet
     /// The user-chosen toolbar-control (button) material, seeded at the app root.

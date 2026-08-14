@@ -59,11 +59,13 @@ Seed shared material and tint policy once near the app shell:
 
 ```swift
 struct AppRoot: View {
-    let tint = UI.Theme.Tint.azure
+    let tint = UI.Theme.Tint.blue
 
     var body: some View {
         RootContent()
             .tint(tint.color)
+            .accentColor(tint.color)
+            .environment(\.designSystemAccentColor, tint.color)
             .environment(\.modalMaterial, UI.Theme.WindowMaterial.sheet)
             .environment(\.buttonMaterial, UI.Theme.WindowMaterial.glassClear)
             .environment(\.cardMaterial, UI.Theme.WindowMaterial.glassRegular)

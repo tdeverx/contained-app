@@ -97,7 +97,9 @@ struct RootView: View {
         }
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: app.banner)
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: app.activity)
-        .tint(settings.accentTint.color)
+        .tint(settings.accentTint.resolvedAppAccentColor)
+        .accentColor(settings.accentTint.resolvedAppAccentColor)
+        .environment(\.designSystemAccentColor, settings.accentTint.resolvedAppAccentColor)
         .environment(\.modalMaterial, settings.modalMaterial)
         .environment(\.buttonMaterial, settings.buttonMaterial)
         .environment(\.buttonTintStyle, UI.Theme.ButtonTintStyle(enabled: settings.buttonTintEnabled,

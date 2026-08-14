@@ -9,7 +9,7 @@ enum LabelState: Equatable {
     var foregroundStyle: Color {
         switch self {
         case .normal: .primary
-        case .changed: .blue
+        case .changed: .accentColor
         case .invalid: .red
         }
     }
@@ -41,9 +41,9 @@ struct Row<Trailing: View>: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: UI.Tokens.Space.xxs) {
-            HStack(spacing: UI.Tokens.Space.m) {
+            SharedAdaptiveLabeledRow {
                 labelStack
-                Spacer(minLength: UI.Tokens.Space.m)
+            } trailing: {
                 trailing()
             }
             .contentShape(Rectangle())
@@ -78,6 +78,7 @@ struct Row<Trailing: View>: View {
                 UI.Control.InfoButton(info, visible: labelHovering)
             }
         }
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private var labelState: UI.Form.LabelState {

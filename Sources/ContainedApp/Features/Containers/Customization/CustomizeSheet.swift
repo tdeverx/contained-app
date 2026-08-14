@@ -186,7 +186,13 @@ struct CustomizeSheet: View {
             }
             UI.Panel.Row(title: AppText.string("customize.color", defaultValue: "Color"),
                      info: AppText.string("customize.color.info", defaultValue: "App Accent follows the accent tint from Settings; other swatches pin this style.")) {
-                UI.Control.TintSelector(selection: $style.tint) { $0.localizedDisplayName }
+                UI.Control.TintSelector(selection: $style.tint,
+                                        customLabel: AppText.customHexColor) { $0.localizedDisplayName }
+            }
+            if style.tint.isCustom {
+                UI.Panel.Row(title: AppText.customHexColor) {
+                    UI.Control.HexTintField(selection: $style.tint)
+                }
             }
         }
     }

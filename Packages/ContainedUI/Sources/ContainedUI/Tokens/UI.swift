@@ -124,7 +124,12 @@ enum Tokens {
         public static let compactSlider: CGFloat = 140
         public static let networkName: CGFloat = 180
         public static let tintColorHex: CGFloat = 220
+        public static let tintSelector: CGFloat = 298
         public static let refreshReadout: CGFloat = 32
+    }
+
+    public enum TintSelector {
+        public static let trailingFadeWidth: CGFloat = 24
     }
 
     public enum Card {

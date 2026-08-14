@@ -65,11 +65,20 @@ UI.Panel.Scaffold(width: UI.Panel.Size.settings.width) {
 } content: {
     UI.Panel.Section(header: "Appearance") {
         UI.Panel.Row(title: "Accent") {
-            UI.Control.TintSelector(selection: $tint, labelForTint: label)
+            UI.Control.TintSelector(selection: $tint,
+                                    customLabel: "Custom",
+                                    labelForTint: label)
+        }
+        UI.Panel.Row(title: "Custom") {
+            UI.Control.HexTintField(selection: $tint)
         }
     }
 }
 ```
+
+Seed `.tint(...)`, `.accentColor(...)`, and `\.designSystemAccentColor` at every scene root. The
+first styles native controls, the second scopes explicit accent drawing, and the third gives reusable
+controls such as the App Accent swatch the resolved, live accent color to render.
 
 ```swift
 UI.Form.Grouped {

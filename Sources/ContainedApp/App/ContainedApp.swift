@@ -175,6 +175,9 @@ public struct ContainedApplication: App {
             MenuBarContent()
                 .environment(app)
                 .environment(ui)
+                .tint(app.settings.accentTint.resolvedAppAccentColor)
+                .accentColor(app.settings.accentTint.resolvedAppAccentColor)
+                .environment(\.designSystemAccentColor, app.settings.accentTint.resolvedAppAccentColor)
         } label: {
             Label {
                 Text("\(app.containers.running.count)")

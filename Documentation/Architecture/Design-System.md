@@ -42,6 +42,15 @@ The design system is a building block package. It owns layout, materials,
 tokens, animation behavior, and control anatomy, but it does not own app copy or
 localized resources.
 
+`UI.Panel.Row` and `UI.Form.Row` preserve their label's useful width and
+automatically move a wide trailing control onto the next line when the normal
+label-left/control-right arrangement cannot fit. Stacked controls reclaim the
+full row and align to its leading edge.
+
+Reusable controls should express minimum and ideal widths while remaining
+flexible to the row's available width; stacked controls must not preserve a
+desktop-column width that leaves unused space beside them.
+
 Guidelines:
 
 - user-facing labels, help text, accessibility labels, picker names, page names,
@@ -49,7 +58,7 @@ Guidelines:
 - package APIs that need words take app-supplied strings or semantic item
   titles, such as `UI.Card.Pages.closeLabel`,
   `UI.Toolbar.SearchField.clearSearchLabel`, and `UI.Control.TintSelector`'s
-  `labelForTint`
+  `customLabel` and `labelForTint`
 - app-owned enum labels and dynamic templates flow through `AppText`, which uses
   `String(localized:defaultValue:bundle:)` with English fallbacks today
 - package-owned strings are limited to non-user identifiers such as SF Symbol
@@ -227,6 +236,18 @@ The palette should not degrade rich app objects into plain text. Use
 - `.tint` for appearance color choices
 
 Plain rows are reserved for generic actions such as refresh or opening a page.
+
+## Accent color
+
+Each app scene seeds SwiftUI's `.tint(...)` and `.accentColor(...)` plus ContainedUI's
+`\.designSystemAccentColor` from the resolved app accent. Native controls inherit the tint, explicit
+accent-colored drawing inherits the scoped SwiftUI accent, and components that need a concrete color
+value—including the App Accent swatch—read the design-system environment value. Selection,
+changed-value, and interactive emphasis use `.accentColor`; fixed system colors remain appropriate
+only when color communicates a semantic state or category.
+Hosts reveal `UI.Control.HexTintField` in a sibling form or panel row only while the custom swatch is
+active, preserving the host page's normal label alignment. The app-accent setting supplies the native
+macOS control accent as its inheritance preview; other tint pickers inherit the selected app accent.
 
 ## Tokens
 

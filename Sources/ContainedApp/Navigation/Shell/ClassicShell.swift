@@ -106,7 +106,7 @@ private struct AppSidebar: View {
             }
         }
         .listStyle(.sidebar)
-        .tint(app.settings.accentTint.color)
+        .tint(app.settings.accentTint.resolvedAppAccentColor)
         .navigationTitle("Contained")
     }
 

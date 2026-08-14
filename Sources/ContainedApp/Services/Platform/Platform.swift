@@ -1,8 +1,13 @@
 import AppKit
+import SwiftUI
 
 /// Narrow AppKit boundary for macOS host behaviors SwiftUI does not expose directly.
 @MainActor
 enum Platform {
+    static var systemAccentColor: Color {
+        Color(nsColor: .controlAccentColor)
+    }
+
     static func disableAutomaticWindowTabbing() {
         NSWindow.allowsAutomaticWindowTabbing = false
     }

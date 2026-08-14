@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import ContainedCore
 import ContainedUI
 
@@ -132,6 +133,7 @@ enum AppText {
     static var sectionGroupInfra: String { string("sectionGroup.infra", defaultValue: "Infra") }
     static var sectionGroupSystem: String { string("sectionGroup.system", defaultValue: "System") }
     static var tint: String { string("common.tint", defaultValue: "Tint") }
+    static var customHexColor: String { string("common.customHexColor", defaultValue: "Custom") }
     static var unread: String { string("common.unread", defaultValue: "Unread") }
     static var runtime: String { string("runtime.label", defaultValue: "Runtime") }
     static var runtimeSubtitle: String {
@@ -618,23 +620,37 @@ enum AppText {
 }
 
 extension UI.Theme.Tint {
+    /// Resolves the app-level inheritance choice to the native macOS accent before the app scopes
+    /// that value back into SwiftUI's tint and accent environments.
+    @MainActor var resolvedAppAccentColor: Color {
+        self == .multicolor ? Platform.systemAccentColor : color
+    }
+
     var localizedDisplayName: String {
-        switch self {
-        case .multicolor: return AppText.string("tint.multicolor", defaultValue: "App Accent")
-        case .graphite: return AppText.string("tint.graphite", defaultValue: "Graphite")
-        case .azure: return AppText.string("tint.azure", defaultValue: "Azure")
-        case .teal: return AppText.string("tint.teal", defaultValue: "Teal")
-        case .coral: return AppText.string("tint.coral", defaultValue: "Coral")
-        case .indigo: return AppText.string("tint.indigo", defaultValue: "Indigo")
-        case .green: return AppText.string("tint.green", defaultValue: "Green")
-        case .amber: return AppText.string("tint.amber", defaultValue: "Amber")
-        case .pink: return AppText.string("tint.pink", defaultValue: "Pink")
+        switch rawValue {
+        case UI.Theme.Tint.multicolor.rawValue: return AppText.string("tint.multicolor", defaultValue: "App Accent")
+        case UI.Theme.Tint.gray.rawValue: return AppText.string("tint.gray", defaultValue: "Gray")
+        case UI.Theme.Tint.red.rawValue: return AppText.string("tint.red", defaultValue: "Red")
+        case UI.Theme.Tint.orange.rawValue: return AppText.string("tint.orange", defaultValue: "Orange")
+        case UI.Theme.Tint.yellow.rawValue: return AppText.string("tint.yellow", defaultValue: "Yellow")
+        case UI.Theme.Tint.green.rawValue: return AppText.string("tint.green", defaultValue: "Green")
+        case UI.Theme.Tint.mint.rawValue: return AppText.string("tint.mint", defaultValue: "Mint")
+        case UI.Theme.Tint.teal.rawValue: return AppText.string("tint.teal", defaultValue: "Teal")
+        case UI.Theme.Tint.cyan.rawValue: return AppText.string("tint.cyan", defaultValue: "Cyan")
+        case UI.Theme.Tint.blue.rawValue: return AppText.string("tint.blue", defaultValue: "Blue")
+        case UI.Theme.Tint.indigo.rawValue: return AppText.string("tint.indigo", defaultValue: "Indigo")
+        case UI.Theme.Tint.purple.rawValue: return AppText.string("tint.purple", defaultValue: "Purple")
+        case UI.Theme.Tint.pink.rawValue: return AppText.string("tint.pink", defaultValue: "Pink")
+        case UI.Theme.Tint.brown.rawValue: return AppText.string("tint.brown", defaultValue: "Brown")
+        case UI.Theme.Tint.black.rawValue: return AppText.string("tint.black", defaultValue: "Black")
+        case UI.Theme.Tint.white.rawValue: return AppText.string("tint.white", defaultValue: "White")
+        default: return rawValue
         }
     }
 
     var localizedSearchAliases: [String] {
-        switch self {
-        case .multicolor:
+        switch rawValue {
+        case UI.Theme.Tint.multicolor.rawValue:
             return [
                 AppText.string("tint.multicolor.alias.default", defaultValue: "default"),
                 AppText.string("tint.multicolor.alias.appAccent", defaultValue: "app accent"),
@@ -642,47 +658,40 @@ extension UI.Theme.Tint {
                 AppText.string("tint.multicolor.alias.auto", defaultValue: "auto"),
                 AppText.string("tint.multicolor.alias.rainbow", defaultValue: "rainbow"),
             ]
-        case .graphite:
+        case UI.Theme.Tint.gray.rawValue:
             return [
-                AppText.string("tint.graphite.alias.gray", defaultValue: "gray"),
-                AppText.string("tint.graphite.alias.grey", defaultValue: "grey"),
-                AppText.string("tint.graphite.alias.slate", defaultValue: "slate"),
-                AppText.string("tint.graphite.alias.charcoal", defaultValue: "charcoal"),
-                AppText.string("tint.graphite.alias.silver", defaultValue: "silver"),
-                AppText.string("tint.graphite.alias.neutral", defaultValue: "neutral"),
-                AppText.string("tint.graphite.alias.mono", defaultValue: "mono"),
+                AppText.string("tint.gray.alias.grey", defaultValue: "grey"),
+                AppText.string("tint.gray.alias.graphite", defaultValue: "graphite"),
+                AppText.string("tint.gray.alias.slate", defaultValue: "slate"),
+                AppText.string("tint.gray.alias.charcoal", defaultValue: "charcoal"),
+                AppText.string("tint.gray.alias.silver", defaultValue: "silver"),
             ]
-        case .azure:
+        case UI.Theme.Tint.blue.rawValue:
             return [
-                AppText.string("tint.azure.alias.blue", defaultValue: "blue"),
-                AppText.string("tint.azure.alias.sky", defaultValue: "sky"),
-                AppText.string("tint.azure.alias.ocean", defaultValue: "ocean"),
-                AppText.string("tint.azure.alias.cobalt", defaultValue: "cobalt"),
+                AppText.string("tint.blue.alias.azure", defaultValue: "azure"),
+                AppText.string("tint.blue.alias.sky", defaultValue: "sky"),
+                AppText.string("tint.blue.alias.ocean", defaultValue: "ocean"),
+                AppText.string("tint.blue.alias.cobalt", defaultValue: "cobalt"),
             ]
-        case .teal:
+        case UI.Theme.Tint.teal.rawValue:
             return [
-                AppText.string("tint.teal.alias.cyan", defaultValue: "cyan"),
                 AppText.string("tint.teal.alias.aqua", defaultValue: "aqua"),
                 AppText.string("tint.teal.alias.turquoise", defaultValue: "turquoise"),
-                AppText.string("tint.teal.alias.mint", defaultValue: "mint"),
                 AppText.string("tint.teal.alias.seafoam", defaultValue: "seafoam"),
             ]
-        case .coral:
+        case UI.Theme.Tint.orange.rawValue:
             return [
-                AppText.string("tint.coral.alias.orange", defaultValue: "orange"),
-                AppText.string("tint.coral.alias.salmon", defaultValue: "salmon"),
-                AppText.string("tint.coral.alias.burnt", defaultValue: "burnt"),
-                AppText.string("tint.coral.alias.terracotta", defaultValue: "terracotta"),
-                AppText.string("tint.coral.alias.rust", defaultValue: "rust"),
+                AppText.string("tint.orange.alias.coral", defaultValue: "coral"),
+                AppText.string("tint.orange.alias.salmon", defaultValue: "salmon"),
+                AppText.string("tint.orange.alias.rust", defaultValue: "rust"),
             ]
-        case .indigo:
+        case UI.Theme.Tint.indigo.rawValue:
             return [
-                AppText.string("tint.indigo.alias.purple", defaultValue: "purple"),
                 AppText.string("tint.indigo.alias.violet", defaultValue: "violet"),
                 AppText.string("tint.indigo.alias.blurple", defaultValue: "blurple"),
                 AppText.string("tint.indigo.alias.royal", defaultValue: "royal"),
             ]
-        case .green:
+        case UI.Theme.Tint.green.rawValue:
             return [
                 AppText.string("tint.green.alias.lime", defaultValue: "lime"),
                 AppText.string("tint.green.alias.olive", defaultValue: "olive"),
@@ -690,14 +699,13 @@ extension UI.Theme.Tint {
                 AppText.string("tint.green.alias.forest", defaultValue: "forest"),
                 AppText.string("tint.green.alias.moss", defaultValue: "moss"),
             ]
-        case .amber:
+        case UI.Theme.Tint.yellow.rawValue:
             return [
-                AppText.string("tint.amber.alias.yellow", defaultValue: "yellow"),
-                AppText.string("tint.amber.alias.gold", defaultValue: "gold"),
-                AppText.string("tint.amber.alias.honey", defaultValue: "honey"),
-                AppText.string("tint.amber.alias.mustard", defaultValue: "mustard"),
+                AppText.string("tint.yellow.alias.amber", defaultValue: "amber"),
+                AppText.string("tint.yellow.alias.gold", defaultValue: "gold"),
+                AppText.string("tint.yellow.alias.honey", defaultValue: "honey"),
             ]
-        case .pink:
+        case UI.Theme.Tint.pink.rawValue:
             return [
                 AppText.string("tint.pink.alias.magenta", defaultValue: "magenta"),
                 AppText.string("tint.pink.alias.rose", defaultValue: "rose"),
@@ -705,6 +713,22 @@ extension UI.Theme.Tint {
                 AppText.string("tint.pink.alias.crimson", defaultValue: "crimson"),
                 AppText.string("tint.pink.alias.hotPink", defaultValue: "hot pink"),
             ]
+        case UI.Theme.Tint.red.rawValue:
+            return [AppText.string("tint.red.alias.crimson", defaultValue: "crimson")]
+        case UI.Theme.Tint.mint.rawValue:
+            return [AppText.string("tint.mint.alias.seafoam", defaultValue: "seafoam")]
+        case UI.Theme.Tint.cyan.rawValue:
+            return [AppText.string("tint.cyan.alias.aqua", defaultValue: "aqua")]
+        case UI.Theme.Tint.purple.rawValue:
+            return [AppText.string("tint.purple.alias.violet", defaultValue: "violet")]
+        case UI.Theme.Tint.brown.rawValue:
+            return [AppText.string("tint.brown.alias.earth", defaultValue: "earth")]
+        case UI.Theme.Tint.black.rawValue:
+            return [AppText.string("tint.black.alias.dark", defaultValue: "dark")]
+        case UI.Theme.Tint.white.rawValue:
+            return [AppText.string("tint.white.alias.light", defaultValue: "light")]
+        default:
+            return [localizedDisplayName.lowercased()]
         }
     }
 }

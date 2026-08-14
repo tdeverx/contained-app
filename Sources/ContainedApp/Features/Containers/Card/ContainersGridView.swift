@@ -646,7 +646,7 @@ private enum ContainersGridPreviewDataset {
             ]
         }
 
-        setStyle(tint: .azure, icon: "globe", nickname: "Apple web", for: appleWeb, app: app)
+        setStyle(tint: .blue, icon: "globe", nickname: "Apple web", for: appleWeb, app: app)
         setStyle(tint: .teal, icon: "shippingbox.fill", nickname: "Docker web", for: dockerWeb, app: app)
         setStyle(tint: .indigo, icon: "gearshape.2.fill", nickname: "Worker", for: worker, app: app)
         setStyle(tint: .green, icon: "cylinder.split.1x2.fill", nickname: "Database", for: db, app: app)

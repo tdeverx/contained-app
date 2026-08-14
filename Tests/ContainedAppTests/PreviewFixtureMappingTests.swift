@@ -21,13 +21,13 @@ private extension Personalization {
         var style = Personalization()
         style.nickname = snapshot.displayName
         style.icon = "shippingbox.fill"
-        style.tint = .azure
+        style.tint = .blue
         style.fillBackground = true
         style.backgroundOpacity = 0.16
         style.gradient = true
         style.widgets = [
             WidgetConfiguration(metric: .cpu,
-                                tint: .azure,
+                                tint: .blue,
                                 icon: "cpu",
                                 style: .area,
                                 showText: true),

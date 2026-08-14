@@ -97,7 +97,7 @@ struct GeneralTab: View {
                 VStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
                     Text(AppText.string("settings.logging.categories", defaultValue: "Categories"))
                         .font(.caption)
-                        .foregroundStyle(settings.enabledLogCategories.count == AppLogCategory.allCases.count ? Color.secondary : Color.blue)
+                        .foregroundStyle(settings.enabledLogCategories.count == AppLogCategory.allCases.count ? Color.secondary : Color.accentColor)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), alignment: .leading)],
                               alignment: .leading,
                               spacing: UI.Layout.Spacing.s) {

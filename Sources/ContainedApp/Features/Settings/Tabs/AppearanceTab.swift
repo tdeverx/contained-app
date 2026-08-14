@@ -19,7 +19,18 @@ struct AppearanceTab: View {
                 }
                 UI.Form.Row(title: AppText.string("settings.appearance.accentTint", defaultValue: "Accent tint"),
                             isChanged: settings.accentTint != .multicolor) {
-                    UI.Control.TintSelector(selection: $settings.accentTint) { $0.localizedDisplayName }
+                    UI.Control.TintSelector(selection: $settings.accentTint,
+                                            customLabel: AppText.customHexColor,
+                                            inheritedAccentColor: Platform.systemAccentColor) {
+                        $0 == .multicolor
+                            ? AppText.string("tint.systemAccent", defaultValue: "System Accent")
+                            : $0.localizedDisplayName
+                    }
+                }
+                if settings.accentTint.isCustom {
+                    UI.Form.Row(title: AppText.customHexColor) {
+                        UI.Control.HexTintField(selection: $settings.accentTint)
+                    }
                 }
             }
 
@@ -69,7 +80,13 @@ struct AppearanceTab: View {
                                   isOn: $settings.buttonTintEnabled)
                 UI.Form.Row(title: AppText.tint,
                             isChanged: settings.buttonTint != .multicolor) {
-                    UI.Control.TintSelector(selection: $settings.buttonTint) { $0.localizedDisplayName }
+                    UI.Control.TintSelector(selection: $settings.buttonTint,
+                                            customLabel: AppText.customHexColor) { $0.localizedDisplayName }
+                }
+                if settings.buttonTint.isCustom {
+                    UI.Form.Row(title: AppText.customHexColor) {
+                        UI.Control.HexTintField(selection: $settings.buttonTint)
+                    }
                 }
                 UI.Form.Row(title: AppText.string("settings.appearance.opacity", defaultValue: "Opacity"),
                             isChanged: settings.buttonTintOpacity != 0.18) {
@@ -137,7 +154,13 @@ private struct ImageDefaultStyleSection: View {
             }
             UI.Form.Row(title: AppText.string("settings.appearance.color", defaultValue: "Color"),
                         isChanged: style.tint != Personalization().tint) {
-                UI.Control.TintSelector(selection: styleBinding(\.tint)) { $0.localizedDisplayName }
+                UI.Control.TintSelector(selection: styleBinding(\.tint),
+                                        customLabel: AppText.customHexColor) { $0.localizedDisplayName }
+            }
+            if style.tint.isCustom {
+                UI.Form.Row(title: AppText.customHexColor) {
+                    UI.Control.HexTintField(selection: styleBinding(\.tint))
+                }
             }
             UI.Form.ToggleRow(title: AppText.string("settings.appearance.customIcon", defaultValue: "Custom icon"),
                               isChanged: style.iconEnabled != Personalization().iconEnabled,

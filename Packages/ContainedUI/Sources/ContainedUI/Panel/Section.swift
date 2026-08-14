@@ -144,19 +144,9 @@ struct Row<Trailing: View>: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: UI.Tokens.Space.m) {
-                VStack(alignment: .leading, spacing: 1) {
-                    SharedPanelLabel(title: title,
-                                     info: info,
-                                     error: error,
-                                     highlighted: sectionHighlighted,
-                                     hovering: labelHovering)
-                    if let subtitle {
-                        Text(subtitle).font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                Spacer(minLength: UI.Tokens.Space.m)
+            SharedAdaptiveLabeledRow {
+                labelStack
+            } trailing: {
                 trailing()
             }
             .contentShape(Rectangle())
@@ -166,6 +156,21 @@ struct Row<Trailing: View>: View {
             }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var labelStack: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            SharedPanelLabel(title: title,
+                             info: info,
+                             error: error,
+                             highlighted: sectionHighlighted,
+                             hovering: labelHovering)
+                .fixedSize(horizontal: true, vertical: false)
+            if let subtitle {
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 }

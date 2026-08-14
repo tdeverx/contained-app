@@ -79,11 +79,11 @@ struct ContainerSchemaForm: View {
         HStack(spacing: UI.Layout.Spacing.xs) {
             if highlighted {
                 Circle()
-                    .fill(Color.blue)
+                    .fill(Color.accentColor)
                     .frame(width: 6, height: 6)
             }
             Text(title)
-                .foregroundStyle(highlighted ? Color.blue : Color.secondary)
+                .foregroundStyle(highlighted ? Color.accentColor : Color.secondary)
         }
     }
 
@@ -466,7 +466,13 @@ struct ContainerSchemaForm: View {
             formRow(title: AppText.string("runSpec.color", defaultValue: "Color"),
                     info: AppText.string("containerForm.personalization.color.info", defaultValue: "Sets the card icon color. If background color is enabled, it also tints the glass card."),
                     isChanged: spec.personalization.tint != Personalization().tint) {
-                UI.Control.TintSelector(selection: $spec.personalization.tint) { $0.localizedDisplayName }
+                UI.Control.TintSelector(selection: $spec.personalization.tint,
+                                        customLabel: AppText.customHexColor) { $0.localizedDisplayName }
+            }
+            if spec.personalization.tint.isCustom {
+                formRow(title: AppText.customHexColor) {
+                    UI.Control.HexTintField(selection: $spec.personalization.tint)
+                }
             }
             formToggleRow(title: AppText.string("runSpec.colorCardBackground", defaultValue: "Color the card background"),
                           info: AppText.string("containerForm.personalization.colorCardBackground.info", defaultValue: "Adds a soft color wash behind the glass. Turn it off for clear glass with only a colored icon."),

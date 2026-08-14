@@ -40,7 +40,8 @@ UI.Toolbar.SearchField(text: $query,
     EmptyView()
 }
 
-UI.Control.TintSelector(selection: $settings.accentTint) {
+UI.Control.TintSelector(selection: $settings.accentTint,
+                        customLabel: AppText.customHexColor) {
     $0.localizedDisplayName
 }
 
