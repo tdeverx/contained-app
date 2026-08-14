@@ -44,7 +44,7 @@ element tokens:
 UI.Panel.Padding.top
 UI.Panel.Spacing.section
 UI.Card.Padding.body
-UI.Card.Radius.container
+UI.Card.Radius.compact
 UI.Toolbar.Size.controlHeight
 UI.Chart.Size.height
 ```

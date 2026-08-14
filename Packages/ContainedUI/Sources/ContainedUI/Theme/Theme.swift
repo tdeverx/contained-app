@@ -9,9 +9,9 @@ enum Material {
         Color.white.opacity(colorScheme == .light ? 0.2 : 0.1)
     }
     public static let floatingPanelStroke = Color.white.opacity(0.18)
-    public static let floatingPanelShadow = Color.black.opacity(0.24)
-    public static let floatingPanelShadowRadius: CGFloat = 24
-    public static let floatingPanelShadowY: CGFloat = 12
+    public static let elevatedSurfaceShadow = Color.black.opacity(0.24)
+    public static let elevatedSurfaceShadowRadius: CGFloat = 24
+    public static let elevatedSurfaceShadowY: CGFloat = 0
 }
 
 /// A system color or custom sRGB hex value, used consistently for host accent choices and
@@ -281,9 +281,9 @@ private struct FloatingPanelMaterial: AnimatableModifier {
             .background {
                 if showsShadow {
                     ExteriorShadow(cornerRadius: cornerRadius,
-                                   color: UI.Theme.Material.floatingPanelShadow,
-                                   radius: UI.Theme.Material.floatingPanelShadowRadius,
-                                   y: UI.Theme.Material.floatingPanelShadowY)
+                                   color: UI.Theme.Material.elevatedSurfaceShadow,
+                                   radius: UI.Theme.Material.elevatedSurfaceShadowRadius,
+                                   y: UI.Theme.Material.elevatedSurfaceShadowY)
                 }
             }
             .background {

@@ -7,6 +7,7 @@ struct CardHeader<Leading: View, Content: View, Trailing: View>: View {
     var spacing: CGFloat
     var padding: CGFloat
     var overlaysTrailing: Bool
+    var trailingOverlayPadding: CGFloat?
     @ViewBuilder var leading: () -> Leading
     @ViewBuilder var content: () -> Content
     @ViewBuilder var trailing: () -> Trailing
@@ -15,6 +16,7 @@ struct CardHeader<Leading: View, Content: View, Trailing: View>: View {
          spacing: CGFloat = UI.Tokens.Card.padding,
          padding: CGFloat = UI.Tokens.Card.padding,
          overlaysTrailing: Bool = false,
+         trailingOverlayPadding: CGFloat? = nil,
          @ViewBuilder leading: @escaping () -> Leading,
          @ViewBuilder content: @escaping () -> Content,
          @ViewBuilder trailing: @escaping () -> Trailing) {
@@ -22,6 +24,7 @@ struct CardHeader<Leading: View, Content: View, Trailing: View>: View {
         self.spacing = spacing
         self.padding = padding
         self.overlaysTrailing = overlaysTrailing
+        self.trailingOverlayPadding = trailingOverlayPadding
         self.leading = leading
         self.content = content
         self.trailing = trailing
@@ -49,7 +52,7 @@ struct CardHeader<Leading: View, Content: View, Trailing: View>: View {
             if overlaysTrailing {
                 trailing()
                     .fixedSize(horizontal: true, vertical: false)
-                    .padding(padding)
+                    .padding(trailingOverlayPadding ?? padding)
                     .zIndex(1)
             }
         }
@@ -351,6 +354,45 @@ struct FooterScroller<Content: View>: View {
     }
 }
 
+/// A footer row whose leading metadata lane owns height while the trailing action rail owns only
+/// its intrinsic width. Taller actions stay vertically centered and may render into the footer's
+/// outer padding instead of increasing the card footer's measured height.
+private struct FooterRowLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize,
+                     subviews: Subviews,
+                     cache: inout ()) -> CGSize {
+        guard subviews.count == 2 else { return .zero }
+        let trailingSize = subviews[1].sizeThatFits(.unspecified)
+        let gap = trailingSize.width > 0 ? spacing : 0
+        let proposedWidth = proposal.width.flatMap { $0.isFinite ? $0 : nil }
+        let leadingWidth = proposedWidth.map { max(0, $0 - trailingSize.width - gap) }
+        let leadingSize = subviews[0].sizeThatFits(ProposedViewSize(width: leadingWidth,
+                                                                    height: nil))
+        return CGSize(width: proposedWidth ?? leadingSize.width + gap + trailingSize.width,
+                      height: leadingSize.height)
+    }
+
+    func placeSubviews(in bounds: CGRect,
+                       proposal: ProposedViewSize,
+                       subviews: Subviews,
+                       cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        let trailingSize = subviews[1].sizeThatFits(.unspecified)
+        let gap = trailingSize.width > 0 ? spacing : 0
+        let leadingWidth = max(0, bounds.width - trailingSize.width - gap)
+        let rowProposal = ProposedViewSize(width: leadingWidth, height: bounds.height)
+        subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY),
+                          anchor: .leading,
+                          proposal: rowProposal)
+        subviews[1].place(at: CGPoint(x: bounds.maxX, y: bounds.midY),
+                          anchor: .trailing,
+                          proposal: ProposedViewSize(width: trailingSize.width,
+                                                     height: trailingSize.height))
+    }
+}
+
 /// A horizontal group for content in a card widget band.
 struct WidgetGroup<Content: View>: View {
     public var spacing: CGFloat
@@ -388,7 +430,7 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
          actionsVisible: Bool = true,
          spacing: CGFloat = UI.Tokens.Card.padding,
          horizontalPadding: CGFloat = UI.Tokens.Card.padding,
-         topPadding: CGFloat = 0,
+         topPadding: CGFloat = UI.Tokens.Card.padding,
          bottomPadding: CGFloat = UI.Tokens.Card.padding,
          persistentTrailing: AnyView? = nil,
          @ViewBuilder leading: @escaping () -> Leading,
@@ -411,23 +453,26 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
             if showWidget {
                 widget()
             }
-            HStack(spacing: spacing) {
+            FooterRowLayout(spacing: spacing) {
                 FooterScroller(spacing: spacing) {
                     leading()
                 }
                 .layoutPriority(1)
-                if actionsVisible {
-                    FooterGroup(alignment: .trailing, spacing: spacing) {
-                        trailing()
+
+                HStack(spacing: spacing) {
+                    if actionsVisible {
+                        FooterGroup(alignment: .trailing, spacing: spacing) {
+                            trailing()
+                        }
+                        .transition(.opacity)
                     }
-                    .transition(.opacity)
+                    if let persistentTrailing {
+                        persistentTrailing
+                            .fixedSize(horizontal: true, vertical: false)
+                    }
                 }
-                if let persistentTrailing {
-                    persistentTrailing
-                        .fixedSize(horizontal: true, vertical: false)
-                }
+                .fixedSize(horizontal: true, vertical: true)
             }
-            .frame(minHeight: UI.Tokens.Card.footerControlHeight)
             .padding(.horizontal, horizontalPadding)
             .padding(.top, topPadding)
             .padding(.bottom, bottomPadding)

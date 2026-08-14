@@ -28,7 +28,7 @@ public extension UI {
 /// Minimal raw tokens shared by the visual system.
 ///
 /// Prefer contextual routes such as `UI.Panel.Padding.top` or
-/// `UI.Card.Radius.container` from app code. Raw tokens stay here so package
+/// `UI.Card.Radius.compact` from app code. Raw tokens stay here so package
 /// elements can mirror the same primitive defaults without duplicating values.
 enum Tokens {
     public enum Radius {
@@ -136,7 +136,6 @@ enum Tokens {
         public static let padding: CGFloat = 10
         public static let compactTextSpacing: CGFloat = Space.hairline
         public static let detailTextSpacing: CGFloat = Space.xxs
-        public static let footerControlHeight: CGFloat = IconSize.rowMenu
         public static let footerDividerHeight: CGFloat = Space.l
         public static let sparklineHeight: CGFloat = 58
         public static let iconBackgroundOpacity: Double = 0.16
@@ -291,7 +290,6 @@ public extension UI.Card {
     enum Padding {
         public static let content = UI.Tokens.Card.padding
         public static let body = UI.Layout.Spacing.s
-        public static let widget = UI.Tokens.Card.padding
     }
 
     /// Card spacing mirrors compact card internals and footer/widget grouping.
@@ -302,9 +300,9 @@ public extension UI.Card {
         public static let widget = UI.Tokens.Card.padding
     }
 
-    /// Container cards share the same sheet silhouette as floating panels at every size.
+    /// Compact cards retain their denser silhouette; expanded cards match floating panels.
     enum Radius {
-        public static let container = UI.Panel.Radius.surface
+        public static let compact = UI.Tokens.Radius.card
         public static let expanded = UI.Panel.Radius.surface
         public static let control = UI.Tokens.Radius.control
     }
@@ -334,10 +332,10 @@ public extension UI.Card {
     enum Grid {
         /// Repeated card collections share one rhythm for their outer inset and gutters.
         public static let contentInset = UI.Tokens.Space.m
-        public static let spacing = UI.Tokens.Space.m
-        /// Adjusts the toolbar's reserved band so its visible controls have the same gap as the grid.
+        public static let spacing = UI.Tokens.Space.s
+        /// Adjusts the toolbar's reserved band so its visible controls match the grid's outer inset.
         public static var toolbarClearanceAdjustment: CGFloat {
-            spacing - UI.Tokens.Toolbar.outerPadding
+            contentInset - UI.Tokens.Toolbar.outerPadding
         }
         public static let compactMin = UI.Tokens.CardSize.compactMin
         public static let compactMax = UI.Tokens.CardSize.compactMax

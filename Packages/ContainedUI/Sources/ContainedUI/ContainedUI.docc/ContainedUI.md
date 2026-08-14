@@ -14,7 +14,7 @@ Use contextual tokens first:
 ```swift
 UI.Panel.Padding.top
 UI.Panel.Spacing.section
-UI.Card.Radius.container
+UI.Card.Radius.compact
 UI.Toolbar.Size.controlHeight
 ```
 

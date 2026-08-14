@@ -9,6 +9,8 @@ struct ToolbarImageGroupCard: View {
     @Environment(UIState.self) private var ui
     let group: Core.Image.LocalTagGroup
     let isExpanded: Bool
+    var controlsVisible = true
+    var isSelected = false
     var onTap: () -> Void
     var onClose: () -> Void
 
@@ -92,16 +94,20 @@ struct ToolbarImageGroupCard: View {
         let resolved = app.imageGroupStyle(for: group)
         return UI.Card.Scaffold(size: .medium,
                             isExpanded: isExpanded,
+                            expansionPresented: controlsVisible,
+                            contentSizing: .hug,
+                            controlsVisible: controlsVisible,
+                            isSelected: isSelected,
                             fill: resolved.fillBackground ? resolved.color : nil,
                             fillOpacity: resolved.backgroundOpacity,
                             gradient: resolved.gradient,
                             gradientAngle: resolved.gradientAngle,
                             blendMode: resolved.backgroundBlendMode,
-                            elevated: false,
+                            elevated: isExpanded,
                             onTap: onTap,
                             title: resolved.displayName(fallback: repositoryTitle(group.primaryReference)),
                             subtitle: repositoryOwner(group.primaryReference),
-                            pages: imagePages) {
+                            pages: isExpanded ? imagePages : nil) {
             if let image {
                 CardStyleButton(style: resolved,
                                 target: .imageGroup(group),
@@ -126,6 +132,7 @@ struct ToolbarImageGroupCard: View {
         } widget: {
             EmptyView()
         }
+        .selectionFill()
         .contextMenu { cardMenu(group) }
     }
 
@@ -229,21 +236,18 @@ struct ToolbarImageGroupCard: View {
 
     private func imagePageBody<C: View>(title: String, subtitle: String?,
                                         @ViewBuilder content: @escaping () -> C) -> some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
-                VStack(alignment: .leading, spacing: UI.Card.Spacing.compactText) {
-                    UI.Card.TitleText(text: title)
-                    if let subtitle {
-                        UI.Card.MonospacedSubtitleText(text: subtitle)
-                    }
+        VStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
+            VStack(alignment: .leading, spacing: UI.Card.Spacing.compactText) {
+                UI.Card.TitleText(text: title)
+                if let subtitle {
+                    UI.Card.MonospacedSubtitleText(text: subtitle)
                 }
-                .padding(.horizontal, UI.Layout.Spacing.s)
-                content()
             }
-            .padding(UI.Layout.Spacing.s)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, UI.Layout.Spacing.s)
+            content()
         }
-        .scrollEdgeEffectStyle(.soft, for: .all)
+        .padding(UI.Layout.Spacing.s)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func pushReadiness(_ reference: String) -> some View {
@@ -388,7 +392,7 @@ struct ToolbarImageGroupCard: View {
         UI.Card.Pages(items: imagePageControlItems,
                           selection: page,
                           tint: resolvedImageTint,
-                          controlsReveal: isExpanded ? 1 : 0,
+                          controlsReveal: controlsVisible ? 1 : 0,
                           closeLabel: AppText.close,
                           onSelect: selectPage,
                           onClose: onClose)
@@ -456,20 +460,17 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func tagList(_ group: Core.Image.LocalTagGroup) -> some View {
-        LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
+        VStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
             Text("Tags")
                 .designHeadlineLabelStyle()
                 .padding(.leading, UI.Layout.Spacing.xs)
-            ScrollView(.vertical) {
-                LazyVStack(spacing: UI.Layout.Spacing.s) {
-                    ForEach(group.tags) { tag in
-                        tagRow(tag, in: group)
-                            .frame(maxWidth: .infinity)
-                    }
+            VStack(spacing: UI.Layout.Spacing.s) {
+                ForEach(group.tags) { tag in
+                    tagRow(tag, in: group)
+                        .frame(maxWidth: .infinity)
                 }
-                .padding(UI.Layout.Spacing.s)
             }
-            .scrollEdgeEffectStyle(.soft, for: .all)
+            .padding(UI.Layout.Spacing.s)
         }
     }
 

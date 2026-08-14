@@ -48,10 +48,13 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
                 FooterActions: View, Widget: View, PageID: Hashable>: View {
     public var size: UI.Card.Size
     public var isExpanded: Bool
+    public var expansionPresented: Bool?
+    public var contentSizing: UI.Card.ContentSizing
     public var cornerRadiusOverride: CGFloat?
     public var headerAlignment: VerticalAlignment
     public var headerPadding: CGFloat
-    public var overlaysHeaderTrailing: Bool
+    public var overlaysHeaderTrailing: Bool?
+    public var headerTrailingOverlayPadding: CGFloat?
     public var controlsVisible: Bool
     public var isSelected: Bool
     public var showsFooter: Bool
@@ -83,10 +86,13 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
 
     public init(size: UI.Card.Size = .small,
                 isExpanded: Bool = false,
+                expansionPresented: Bool? = nil,
+                contentSizing: UI.Card.ContentSizing = .fill,
                 cornerRadiusOverride: CGFloat? = nil,
                 headerAlignment: VerticalAlignment = .top,
-                headerPadding: CGFloat = UI.Tokens.Card.padding,
-                overlaysHeaderTrailing: Bool = false,
+                headerPadding: CGFloat = UI.Card.Padding.content,
+                overlaysHeaderTrailing: Bool? = nil,
+                headerTrailingOverlayPadding: CGFloat? = nil,
                 controlsVisible: Bool = true,
                 isSelected: Bool = false,
                 showsFooter: Bool = true,
@@ -114,10 +120,13 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
                 @ViewBuilder widget: @escaping () -> Widget) {
         self.size = size
         self.isExpanded = isExpanded
+        self.expansionPresented = expansionPresented
+        self.contentSizing = contentSizing
         self.cornerRadiusOverride = cornerRadiusOverride
         self.headerAlignment = headerAlignment
         self.headerPadding = headerPadding
         self.overlaysHeaderTrailing = overlaysHeaderTrailing
+        self.headerTrailingOverlayPadding = headerTrailingOverlayPadding
         self.controlsVisible = controlsVisible
         self.isSelected = isSelected
         self.showsFooter = showsFooter
@@ -162,6 +171,8 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
     public var body: some View {
         CardSurface(size: size,
                           isExpanded: isExpanded,
+                          expansionPresented: expansionPresented,
+                          contentSizing: contentSizing,
                           cornerRadiusOverride: cornerRadiusOverride,
                           controlsVisible: controlsVisible,
                           isSelected: isSelected,
@@ -192,7 +203,8 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
     private var header: some View {
         CardHeader(alignment: headerAlignment,
                    padding: headerPadding,
-                   overlaysTrailing: overlaysHeaderTrailing) {
+                   overlaysTrailing: overlaysHeaderTrailing ?? isExpanded,
+                   trailingOverlayPadding: headerTrailingOverlayPadding ?? expandedHeaderOverlayPadding) {
             icon()
         } content: {
             CardHeaderTextBlock {
@@ -249,16 +261,23 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
     private var hasSubtitleRow: Bool {
         (subtitle?.isEmpty == false) || SubtitleAccessory.self != EmptyView.self
     }
+
+    private var expandedHeaderOverlayPadding: CGFloat? {
+        isExpanded ? UI.Panel.Padding.compact : nil
+    }
 }
 }
 
 public extension UI.Card.Scaffold where PageID == UI.Card.NoPage {
     init(size: UI.Card.Size = .small,
          isExpanded: Bool = false,
+         expansionPresented: Bool? = nil,
+         contentSizing: UI.Card.ContentSizing = .fill,
          cornerRadiusOverride: CGFloat? = nil,
          headerAlignment: VerticalAlignment = .top,
-         headerPadding: CGFloat = UI.Tokens.Card.padding,
-         overlaysHeaderTrailing: Bool = false,
+         headerPadding: CGFloat = UI.Card.Padding.content,
+         overlaysHeaderTrailing: Bool? = nil,
+         headerTrailingOverlayPadding: CGFloat? = nil,
          controlsVisible: Bool = true,
          isSelected: Bool = false,
          showsFooter: Bool = true,
@@ -285,10 +304,13 @@ public extension UI.Card.Scaffold where PageID == UI.Card.NoPage {
          @ViewBuilder widget: @escaping () -> Widget) {
         self.init(size: size,
                   isExpanded: isExpanded,
+                  expansionPresented: expansionPresented,
+                  contentSizing: contentSizing,
                   cornerRadiusOverride: cornerRadiusOverride,
                   headerAlignment: headerAlignment,
                   headerPadding: headerPadding,
                   overlaysHeaderTrailing: overlaysHeaderTrailing,
+                  headerTrailingOverlayPadding: headerTrailingOverlayPadding,
                   controlsVisible: controlsVisible,
                   isSelected: isSelected,
                   showsFooter: showsFooter,

@@ -19,4 +19,9 @@ struct CardLayoutPolicyTests {
         #expect(UI.Card.Size.large.keepsWidgetSticky == true)
         #expect(UI.Card.Size.large.embedsWidgetInBody == false)
     }
+
+    @Test func contentSizingDeclaresExpandedHeightPolicy() {
+        #expect(UI.Card.ContentSizing.fill.fillsAvailableHeight)
+        #expect(!UI.Card.ContentSizing.hug.fillsAvailableHeight)
+    }
 }

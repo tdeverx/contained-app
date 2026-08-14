@@ -117,8 +117,11 @@ struct PaletteResultCard: View {
     }
 
     private func imageGroupCard(_ group: Core.Image.LocalTagGroup) -> some View {
-        ToolbarImageGroupCard(group: group, isExpanded: false, onTap: action, onClose: {})
-            .designCardSelectionOverlay(when: selected)
+        ToolbarImageGroupCard(group: group,
+                              isExpanded: false,
+                              isSelected: selected,
+                              onTap: action,
+                              onClose: {})
             .accessibilityAddTraits(selected ? .isSelected : [])
     }
 

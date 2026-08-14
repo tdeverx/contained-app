@@ -239,9 +239,10 @@ struct AppToolbar: View {
                                           backdropStyle: .dim,
                                           showsBackdrop: true,
                                           closeRequestToken: toolbarImageCloseRequestToken,
-                                          onBackdropTap: closeToolbarImageDetail) {
+                                          onBackdropTap: closeToolbarImageDetail) { controlsVisible in
                 ToolbarImageGroupCard(group: currentToolbarImageGroup(detail),
                                       isExpanded: true,
+                                      controlsVisible: controlsVisible,
                                       onTap: {},
                                       onClose: closeToolbarImageDetail)
             }

@@ -96,7 +96,7 @@ private struct SafeAreaManagerPreview: View {
             ZStack(alignment: .topLeading) {
                 Rectangle()
                     .fill(.quaternary)
-                RoundedRectangle(cornerRadius: UI.Card.Radius.container, style: .continuous)
+                RoundedRectangle(cornerRadius: UI.Card.Radius.expanded, style: .continuous)
                     .stroke(Color.accentColor, lineWidth: 2)
                     .frame(width: bounds.width, height: bounds.height)
                     .position(x: bounds.midX, y: bounds.midY)

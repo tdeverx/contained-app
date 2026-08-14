@@ -218,12 +218,10 @@ struct ContainersGridView: View {
         // starts (expanded → false), finishing before the shrink animation does.
         containerCard(snapshot,
                       isExpanded: true,
-                      cornerRadiusOverride: expanded ? UI.Card.Radius.expanded : UI.Card.Radius.container,
                       controlsVisible: expanded) {}
     }
 
     private func containerCard(_ snapshot: Core.Container.Snapshot, isExpanded: Bool,
-                               cornerRadiusOverride: CGFloat? = nil,
                                controlsVisible: Bool = true,
                                onTap: @escaping () -> Void) -> some View {
         let style = app.containerStyle(for: snapshot)
@@ -241,7 +239,6 @@ struct ContainersGridView: View {
             isBusy: store.busyIDs.contains(key),
             imageUpdateState: imageUpdateState,
             isExpanded: isExpanded,
-            cornerRadiusOverride: cornerRadiusOverride,
             controlsVisible: controlsVisible,
             onTap: onTap,
             onStart: { lifecycleAction { await store.start(key) } },
@@ -430,7 +427,6 @@ private struct ContainerCardMetricsRenderer: View {
     let isBusy: Bool
     let imageUpdateState: Core.Image.ContainerUpdateState
     let isExpanded: Bool
-    let cornerRadiusOverride: CGFloat?
     let controlsVisible: Bool
     let onTap: () -> Void
     let onStart: () -> Void
@@ -459,7 +455,6 @@ private struct ContainerCardMetricsRenderer: View {
             isBusy: isBusy,
             imageUpdateState: imageUpdateState,
             isExpanded: isExpanded,
-            cornerRadiusOverride: cornerRadiusOverride,
             controlsVisible: controlsVisible,
             onTap: onTap,
             onStart: onStart,

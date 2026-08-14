@@ -21,7 +21,6 @@ struct ContainerCard: View {
     var isBusy: Bool
     var imageUpdateState: Core.Image.ContainerUpdateState = .unknown
     var isExpanded: Bool = false
-    var cornerRadiusOverride: CGFloat?
     /// Whether the expanded card's controls (footer buttons + close) are shown. The grid drops this
     /// the instant a close begins so the glass buttons fade out *before* the shrink finishes.
     var controlsVisible: Bool = true
@@ -138,10 +137,7 @@ struct ContainerCard: View {
     private var cardSurface: some View {
         UI.Card.Scaffold(size: cardSize,
                      isExpanded: isExpanded,
-                     cornerRadiusOverride: cornerRadiusOverride ?? UI.Card.Radius.container,
-                     headerAlignment: isExpanded ? .center : .top,
-                     headerPadding: isExpanded ? UI.Panel.Padding.compact : UI.Card.Padding.content,
-                     overlaysHeaderTrailing: isExpanded,
+                     expansionPresented: controlsVisible,
                      controlsVisible: controlsVisible,
                      isSelected: isSelected,
                      fill: styleForDisplay.fillBackground ? styleForDisplay.color : nil,

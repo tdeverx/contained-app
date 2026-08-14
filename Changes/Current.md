@@ -3,3 +3,4 @@
 - Made card footer metadata fill and scroll within the space left by intrinsic action buttons, and removed the five-widget limit from container personalization.
 - Muted stopped container cards to a grey, softened compact state that restores their configured color and full content emphasis on hover without affecting expanded details.
 - Made Containers the sole, flat primary grid; moved Networks into the System panel; and replaced the old page/filter controls with one top-left menu for session-local named groups, sorting, and the running-only filter.
+- Unified design-card expansion across containers, images, resources, and palette results with panel-matched radii, non-displacing header controls, and pinned header, widget, and footer chrome.

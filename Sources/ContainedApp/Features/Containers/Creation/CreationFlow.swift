@@ -189,44 +189,39 @@ struct CreationFlow: View {
 
     private var chooserPage: some View {
         gridScaffold {
-            VStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
-                CreationRuntimePickerRow(runtimeKind: $resourceRuntimeKind,
-                                         runtimes: app.availableRuntimeDescriptors,
-                                         disabledReason: app.runtimePickerDisabledReason)
-                optionStack {
-                    optionRow {
-                        if app.settings.hubSearchEnabled {
-                            box(symbol: "magnifyingglass", title: AppText.string("common.search", defaultValue: "Search"),
-                                subtitle: AppText.string("creation.option.search.subtitle", defaultValue: "Find an image on Docker Hub"),
-                                matchedID: "creation-option-0") { go(.search) }
-                        }
-                        box(symbol: "square.stack.3d.up", title: AppText.string("creation.option.localImage", defaultValue: "Local image"),
-                            subtitle: app.images.isEmpty
-                                ? AppText.string("creation.option.localImage.emptySubtitle", defaultValue: "Choose from pulled images")
-                                : AppText.string("creation.option.localImage.subtitle", defaultValue: "Use an image already pulled"),
-                            matchedID: "creation-option-1") {
-                            go(.localImages)
-                        }
-                        box(symbol: "slider.horizontal.3", title: AppText.string("creation.option.scratch", defaultValue: "Start from scratch"),
-                            subtitle: AppText.string("creation.option.scratch.subtitle", defaultValue: "Configure manually"),
-                            matchedID: "creation-option-2") { configure(with: ContainerFormState(runtimeKind: resourceRuntimeKind)) }
+            optionStack {
+                optionRow {
+                    if app.settings.hubSearchEnabled {
+                        box(symbol: "magnifyingglass", title: AppText.string("common.search", defaultValue: "Search"),
+                            subtitle: AppText.string("creation.option.search.subtitle", defaultValue: "Find an image on Docker Hub"),
+                            matchedID: "creation-option-0") { go(.search) }
                     }
-                    optionRow {
-                        box(symbol: "shippingbox.and.arrow.backward", title: AppText.string("creation.option.compose", defaultValue: "Compose"),
-                            subtitle: AppText.string("creation.option.compose.subtitle", defaultValue: "Paste YAML or choose a file"),
-                            matchedID: "compose-option-0",
-                            enabled: app.settings.composeImportEnabled) {
-                            guard app.settings.composeImportEnabled else { return }
-                            go(.compose)
-                        }
-                        box(symbol: "archivebox", title: AppText.string("creation.option.imageArchive", defaultValue: "Image archive"),
-                            subtitle: AppText.string("creation.option.imageArchive.subtitle", defaultValue: "Load an image .tar")) { selectImageArchive() }
-                        box(symbol: "bookmark", title: AppText.sectionTemplates,
-                            subtitle: saved.isEmpty
-                                ? AppText.string("creation.option.templates.emptySubtitle", defaultValue: "None saved yet")
-                                : AppText.string("creation.option.templates.subtitle", defaultValue: "Reuse a saved recipe"),
-                            enabled: !saved.isEmpty) { go(.templates) }
+                    box(symbol: "square.stack.3d.up", title: AppText.string("creation.option.localImage", defaultValue: "Local image"),
+                        subtitle: app.images.isEmpty
+                            ? AppText.string("creation.option.localImage.emptySubtitle", defaultValue: "Choose from pulled images")
+                            : AppText.string("creation.option.localImage.subtitle", defaultValue: "Use an image already pulled"),
+                        matchedID: "creation-option-1") {
+                        go(.localImages)
                     }
+                    box(symbol: "slider.horizontal.3", title: AppText.string("creation.option.scratch", defaultValue: "Start from scratch"),
+                        subtitle: AppText.string("creation.option.scratch.subtitle", defaultValue: "Configure manually"),
+                        matchedID: "creation-option-2") { configure(with: ContainerFormState(runtimeKind: resourceRuntimeKind)) }
+                }
+                optionRow {
+                    box(symbol: "shippingbox.and.arrow.backward", title: AppText.string("creation.option.compose", defaultValue: "Compose"),
+                        subtitle: AppText.string("creation.option.compose.subtitle", defaultValue: "Paste YAML or choose a file"),
+                        matchedID: "compose-option-0",
+                        enabled: app.settings.composeImportEnabled) {
+                        guard app.settings.composeImportEnabled else { return }
+                        go(.compose)
+                    }
+                    box(symbol: "archivebox", title: AppText.string("creation.option.imageArchive", defaultValue: "Image archive"),
+                        subtitle: AppText.string("creation.option.imageArchive.subtitle", defaultValue: "Load an image .tar")) { selectImageArchive() }
+                    box(symbol: "bookmark", title: AppText.sectionTemplates,
+                        subtitle: saved.isEmpty
+                            ? AppText.string("creation.option.templates.emptySubtitle", defaultValue: "None saved yet")
+                            : AppText.string("creation.option.templates.subtitle", defaultValue: "Reuse a saved recipe"),
+                        enabled: !saved.isEmpty) { go(.templates) }
                 }
             }
         }

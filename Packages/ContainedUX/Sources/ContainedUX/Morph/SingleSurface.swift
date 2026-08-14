@@ -63,7 +63,7 @@ struct SingleSurfaceExpander<Content: View>: View {
     public var closeRequestToken: Int
     public var onBackdropTap: (() -> Void)?
     public var onExpansionChange: ((Bool) -> Void)?
-    @ViewBuilder private var content: () -> Content
+    @ViewBuilder private var content: (Bool) -> Content
 
     @State private var expanded = false
     @State private var liveSize: CGSize?
@@ -80,7 +80,7 @@ struct SingleSurfaceExpander<Content: View>: View {
                 closeRequestToken: Int = 0,
                 onBackdropTap: (() -> Void)? = nil,
                 onExpansionChange: ((Bool) -> Void)? = nil,
-                @ViewBuilder content: @escaping () -> Content) {
+                @ViewBuilder content: @escaping (Bool) -> Content) {
         self._isPresented = isPresented
         self.originFrame = originFrame
         self.target = target
@@ -96,7 +96,6 @@ struct SingleSurfaceExpander<Content: View>: View {
         GeometryReader { geo in
             let target = targetRect(in: geo.size)
             let source = originFrame.isUsableForMorph ? originFrame : target
-            let rect = expanded ? target : source
             ZStack {
                 if showsBackdrop {
                     Color.clear
@@ -113,9 +112,11 @@ struct SingleSurfaceExpander<Content: View>: View {
                     .opacity(0)
                     .accessibilityHidden(true)
 
-                content()
-                    .frame(width: max(rect.width, 1), height: max(rect.height, 1), alignment: .top)
-                    .position(x: rect.midX, y: rect.midY)
+                UX.Morph.SingleSurface(source: source,
+                                       target: target,
+                                       progress: expanded ? 1 : 0) {
+                    content(expanded)
+                }
             }
         }
         .onPreferenceChange(MorphPanelSizeKey.self) { size in
@@ -265,7 +266,7 @@ private struct SingleSurfacePreview: View {
                 UX.Morph.SingleSurfaceExpander(isPresented: $isPresented,
                                                originFrame: source,
                                                target: .centered(size: CGSize(width: 320, height: 180)),
-                                               showsBackdrop: false) {
+                                               showsBackdrop: false) { _ in
                     UI.Surface.Content(elevated: true) {
                         Text("Lifecycle expander")
                     }
