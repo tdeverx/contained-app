@@ -4,15 +4,15 @@ Resources cover volumes, networks, registries, templates, and activity history.
 
 ## Volumes
 
-Volumes can be browsed, created, attached during container runs, and
-deleted or pruned when appropriate. The page groups runtime-managed volumes and
+Volumes can be browsed from the System panel, created, attached during container runs, and
+deleted or pruned when appropriate. The panel groups runtime-managed volumes and
 host-path or temporary mounts vertically so the source type stays obvious.
 Volume styling is local app state and can be used for scan-friendly resource
 cards.
 
 ## Networks
 
-Networks can be browsed, created, attached during container runs, and
+Networks can be browsed from the System panel, created, attached during container runs, and
 deleted or pruned when appropriate. The create-network path is part of the
 shared [Creation Workflow](/Documentation/Features/Creation-Workflow.md).
 

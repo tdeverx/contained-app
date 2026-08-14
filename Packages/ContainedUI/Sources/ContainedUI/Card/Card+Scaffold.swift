@@ -49,6 +49,9 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
     public var size: UI.Card.Size
     public var isExpanded: Bool
     public var cornerRadiusOverride: CGFloat?
+    public var headerAlignment: VerticalAlignment
+    public var headerPadding: CGFloat
+    public var overlaysHeaderTrailing: Bool
     public var controlsVisible: Bool
     public var isSelected: Bool
     public var showsFooter: Bool
@@ -76,10 +79,14 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
     public var persistentFooterActions: AnyView?
 
     private var usesSelectionFill = false
+    private var usesCompactMutedPresentation = false
 
     public init(size: UI.Card.Size = .small,
                 isExpanded: Bool = false,
                 cornerRadiusOverride: CGFloat? = nil,
+                headerAlignment: VerticalAlignment = .top,
+                headerPadding: CGFloat = UI.Tokens.Card.padding,
+                overlaysHeaderTrailing: Bool = false,
                 controlsVisible: Bool = true,
                 isSelected: Bool = false,
                 showsFooter: Bool = true,
@@ -108,6 +115,9 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
         self.size = size
         self.isExpanded = isExpanded
         self.cornerRadiusOverride = cornerRadiusOverride
+        self.headerAlignment = headerAlignment
+        self.headerPadding = headerPadding
+        self.overlaysHeaderTrailing = overlaysHeaderTrailing
         self.controlsVisible = controlsVisible
         self.isSelected = isSelected
         self.showsFooter = showsFooter
@@ -141,12 +151,21 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
         return copy
     }
 
+    /// Desaturate and soften compact card contents until hover. Expanded cards always render at
+    /// full emphasis, keeping detail content readable regardless of the supplied state.
+    public func compactMuted(_ on: Bool = true) -> Self {
+        var copy = self
+        copy.usesCompactMutedPresentation = on
+        return copy
+    }
+
     public var body: some View {
         CardSurface(size: size,
                           isExpanded: isExpanded,
                           cornerRadiusOverride: cornerRadiusOverride,
                           controlsVisible: controlsVisible,
                           isSelected: isSelected,
+                          compactMuted: usesCompactMutedPresentation,
                           showsFooter: showsFooter,
                           showsWidget: showsWidget,
                           fill: fill,
@@ -171,7 +190,9 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
     }
 
     private var header: some View {
-        CardHeader {
+        CardHeader(alignment: headerAlignment,
+                   padding: headerPadding,
+                   overlaysTrailing: overlaysHeaderTrailing) {
             icon()
         } content: {
             CardHeaderTextBlock {
@@ -235,6 +256,9 @@ public extension UI.Card.Scaffold where PageID == UI.Card.NoPage {
     init(size: UI.Card.Size = .small,
          isExpanded: Bool = false,
          cornerRadiusOverride: CGFloat? = nil,
+         headerAlignment: VerticalAlignment = .top,
+         headerPadding: CGFloat = UI.Tokens.Card.padding,
+         overlaysHeaderTrailing: Bool = false,
          controlsVisible: Bool = true,
          isSelected: Bool = false,
          showsFooter: Bool = true,
@@ -262,6 +286,9 @@ public extension UI.Card.Scaffold where PageID == UI.Card.NoPage {
         self.init(size: size,
                   isExpanded: isExpanded,
                   cornerRadiusOverride: cornerRadiusOverride,
+                  headerAlignment: headerAlignment,
+                  headerPadding: headerPadding,
+                  overlaysHeaderTrailing: overlaysHeaderTrailing,
                   controlsVisible: controlsVisible,
                   isSelected: isSelected,
                   showsFooter: showsFooter,

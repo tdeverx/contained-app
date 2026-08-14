@@ -1,6 +1,6 @@
 # Images
 
-The Images area covers local image browsing, image actions, registry search,
+The Images toolbar panel covers local image browsing, image actions, registry search,
 updates, archives, and the experimental build workspace.
 
 ## Local images

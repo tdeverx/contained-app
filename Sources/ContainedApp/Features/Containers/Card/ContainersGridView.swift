@@ -9,7 +9,6 @@ import ContainedCore
 struct ContainersGridView: View {
     private struct DetailSource: Equatable {
         let snapshot: Core.Container.Snapshot
-        let placement: ContainerGridCardPlacement
     }
 
     private struct RebuildRequest: Identifiable {
@@ -38,18 +37,12 @@ struct ContainersGridView: View {
     @State private var projectionState = ContainerGridProjectionState()
     @State private var selectedWidgetIndices: [String: Int] = [:]
 
-    // Each network is a collapsible section of the containers attached to it.
-    @State private var collapsedNetworks: Set<String> = []
-    @State private var deletingNetwork: Core.Network.Resource?
-
     private let detailSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
 
     private var store: ContainersStore { app.containers }
 
     private var projectionInput: ContainerGridProjection.Input {
-        ContainerGridProjection.Input(snapshots: store.snapshots,
-                                      networks: app.networks,
-                                      grouping: ui.grouping,
+        ContainerGridProjection.Input(snapshots: ui.containers(in: store.snapshots),
                                       sort: ui.sort,
                                       runningOnly: ui.runningOnly,
                                       search: ui.search.text)
@@ -57,11 +50,10 @@ struct ContainersGridView: View {
 
     private var projectionKey: ContainerGridProjectionKey {
         ContainerGridProjectionKey(inventoryRevision: store.inventoryRevision,
-                                   networksRevision: app.networksRevision,
-                                   grouping: ui.grouping,
                                    sort: ui.sort,
                                    runningOnly: ui.runningOnly,
-                                   search: ui.search.text)
+                                   search: ui.search.text,
+                                   containerGroupRevision: ui.containerGroupRevision)
     }
 
     var body: some View {
@@ -69,8 +61,8 @@ struct ContainersGridView: View {
         return GeometryReader { viewport in
             let scrollBounds = safeAreaManager.bounds(in: viewport.size, policy: .content)
             let gridColumns = UI.Card.Grid.stableColumns(
-                availableWidth: viewport.size.width - (UI.Layout.Spacing.l * 2),
-                spacing: UI.Layout.Spacing.m
+                availableWidth: viewport.size.width - (UI.Card.Grid.contentInset * 2),
+                spacing: UI.Card.Grid.spacing
             )
             ZStack {
                 ScrollView {
@@ -82,14 +74,17 @@ struct ContainersGridView: View {
                             .frame(maxWidth: .infinity, minHeight: scrollBounds.height)
                             .contentShape(Rectangle())
                             .onTapGesture(count: 2) { zoomFrontWindow() }
-                        LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.l) {
-                            ForEach(projectionState.projection.groups) { group in
-                                groupSection(group, columns: gridColumns)
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            LazyVGrid(columns: gridColumns, spacing: UI.Card.Grid.spacing) {
+                                ForEach(projectionState.projection.containers, id: \.scopedID) { snapshot in
+                                    gridCard(snapshot)
+                                }
                             }
                             Color.clear
-                                .frame(height: UI.Toolbar.Size.band)
+                                .frame(height: UI.Toolbar.Size.band + UI.Card.Grid.toolbarClearanceAdjustment)
                         }
-                        .padding(.horizontal, UI.Layout.Spacing.l)
+                        .padding(.horizontal, UI.Card.Grid.contentInset)
+                        .padding(.top, UI.Card.Grid.toolbarClearanceAdjustment)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
@@ -122,7 +117,9 @@ struct ContainersGridView: View {
             if selecting && !selection.isEmpty { batchBar } else if let message = store.errorMessage { UI.State.ErrorBanner(message: message) }
         }
         .overlay {
-            if store.snapshots.isEmpty && app.networks.isEmpty { emptyState }
+            if store.snapshots.isEmpty || (ui.selectedContainerGroup != nil && projectionState.projection.visibleCount == 0) {
+                emptyState
+            }
         }
         .confirmationDialog(
             "Delete \(customizeName(deleting))?",
@@ -148,12 +145,6 @@ struct ContainersGridView: View {
         } message: { request in
             Text(request.isUpdate ? AppText.updateContainerConfirmation : AppText.rebuildContainerConfirmation)
         }
-        // Network-level actions.
-        .task { await app.refreshNetworks() }
-        .confirmationDialog("Delete network \(deletingNetwork?.name ?? "")?",
-                            isPresented: deleteNetworkBinding, presenting: deletingNetwork) { network in
-            Button("Delete", role: .destructive) { Task { await deleteNetwork(network) } }
-        } message: { _ in Text("This removes the network. Containers must be detached first.") }
         .refreshable { await store.refresh() }
         .task(id: projectionKey) { await projectionState.update(projectionInput) }
         .sensoryFeedback(.success, trigger: lifecycleFeedback)
@@ -172,91 +163,16 @@ struct ContainersGridView: View {
         }
     }
 
-    // MARK: - Network sections
-
-    @ViewBuilder
-    private func groupSection(_ group: ContainerGridProjection.Group,
-                              columns: [GridItem]) -> some View {
-        let collapsed = collapsedNetworks.contains(group.name)
-        LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
-            sectionHeader(group, collapsed: collapsed)
-            if !collapsed {
-                if group.containers.isEmpty {
-                    UI.State.Empty(ui.grouping == .network ? "No containers on this network." : "No containers.",
-                                     systemImage: group.symbol,
-                                     tone: .tertiary,
-                                     padding: UI.Layout.Spacing.s)
-                } else {
-                    LazyVGrid(columns: columns, spacing: UI.Layout.Spacing.m) {
-                        ForEach(group.containers, id: \.scopedID) { snapshot in
-                            gridCard(snapshot, placement: .init(groupID: group.id, snapshot: snapshot))
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func sectionHeader(_ group: ContainerGridProjection.Group, collapsed: Bool) -> some View {
-        HStack(spacing: UI.Layout.Spacing.s) {
-            Button {
-                toggleCollapsed(group.name)
-            } label: {
-                UI.Symbol.Image(systemName: "chevron.right", size: .caption)
-                    .rotationEffect(.degrees(collapsed ? 0 : 90))
-            }
-            .buttonStyle(.plain)
-            UI.Symbol.Image(systemName: group.symbol)
-            Text(group.name).designHeadlineLabelStyle()
-            UI.Badge.Text(text: "\(group.containers.count)")
-            if group.isBuiltin {
-                UI.Badge.Text(text: "builtin", font: .caption2.weight(.medium))
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, UI.Layout.Spacing.xs)
-        .padding(.vertical, UI.Layout.Spacing.xs)
-        .contextMenu { if let resource = group.resource { networkMenu(resource) } }
-    }
-
-    @ViewBuilder
-    private func networkMenu(_ resource: Core.Network.Resource) -> some View {
-        UI.Copy.ValueLabel("Copy Name", value: resource.name)
-        if !resource.isBuiltin {
-            Divider()
-            Button(role: .destructive) { deletingNetwork = resource } label: { Label("Delete Network", systemImage: "trash") }
-        }
-    }
-
-    private func toggleCollapsed(_ name: String) {
-        if collapsedNetworks.contains(name) { collapsedNetworks.remove(name) } else { collapsedNetworks.insert(name) }
-    }
-
     /// Zoom (fill/restore) the window — the title-bar gesture, relocated to the empty background.
     private func zoomFrontWindow() {
         Platform.zoomFrontWindow()
     }
 
-    private var deleteNetworkBinding: Binding<Bool> {
-        Binding(get: { deletingNetwork != nil }, set: { if !$0 { deletingNetwork = nil } })
-    }
-
-    private func deleteNetwork(_ network: Core.Network.Resource) async {
-        guard let client = app.client else { return }
-        do {
-            _ = try await client.deleteNetworks([network.name], runtimeKind: network.runtimeKind)
-            await app.refreshNetworks()
-        }
-        catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
-        catch { app.flash(error.appDisplayMessage) }
-    }
-
     @ViewBuilder
-    private func gridCard(_ snapshot: Core.Container.Snapshot,
-                          placement: ContainerGridCardPlacement) -> some View {
-        let selected = detail?.placement == placement
-        let measuresSource = selected || pendingDetail?.placement == placement
-        compactCard(snapshot, placement: placement)
+    private func gridCard(_ snapshot: Core.Container.Snapshot) -> some View {
+        let selected = detail?.snapshot.scopedID == snapshot.scopedID
+        let measuresSource = selected || pendingDetail?.snapshot.scopedID == snapshot.scopedID
+        compactCard(snapshot)
             // Stays laid out (so the slot is reserved and its frame keeps publishing) but invisible
             // while the promoted overlay grows out of it — no second card to see double.
             .opacity(selected ? 0 : 1)
@@ -267,11 +183,10 @@ struct ContainersGridView: View {
                         Color.clear
                             .onAppear {
                                 updateDetailSource(proxy.frame(in: .named("grid")),
-                                                   snapshot: snapshot,
-                                                   placement: placement)
+                                                   snapshot: snapshot)
                             }
                             .onChange(of: proxy.frame(in: .named("grid"))) { _, frame in
-                                updateDetailSource(frame, snapshot: snapshot, placement: placement)
+                                updateDetailSource(frame, snapshot: snapshot)
                             }
                     }
                 }
@@ -279,24 +194,22 @@ struct ContainersGridView: View {
     }
 
     private func updateDetailSource(_ frame: CGRect,
-                                    snapshot: Core.Container.Snapshot,
-                                    placement: ContainerGridCardPlacement) {
+                                    snapshot: Core.Container.Snapshot) {
         guard frame.isUsableForMorph else { return }
-        guard pendingDetail?.placement == placement || detail?.placement == placement else { return }
+        guard pendingDetail?.snapshot.scopedID == snapshot.scopedID || detail?.snapshot.scopedID == snapshot.scopedID else { return }
         if detailSourceFrame?.isClose(to: frame) != true { detailSourceFrame = frame }
-        guard detail == nil, pendingDetail?.placement == placement else { return }
+        guard detail == nil, pendingDetail?.snapshot.scopedID == snapshot.scopedID else { return }
         pendingDetail = nil
-        detail = DetailSource(snapshot: snapshot, placement: placement)
+        detail = DetailSource(snapshot: snapshot)
         expanded = false
         DispatchQueue.main.async {
             withAnimation(detailSpring) { expanded = true }
         }
     }
 
-    private func compactCard(_ snapshot: Core.Container.Snapshot,
-                             placement: ContainerGridCardPlacement) -> some View {
+    private func compactCard(_ snapshot: Core.Container.Snapshot) -> some View {
         containerCard(snapshot, isExpanded: false) {
-            selecting ? toggle(snapshot.scopedID) : openDetail(snapshot, placement: placement)
+            selecting ? toggle(snapshot.scopedID) : openDetail(snapshot)
         }
     }
 
@@ -382,12 +295,11 @@ struct ContainersGridView: View {
         return CGSize(width: width, height: height)
     }
 
-    private func openDetail(_ snapshot: Core.Container.Snapshot,
-                            placement: ContainerGridCardPlacement) {
+    private func openDetail(_ snapshot: Core.Container.Snapshot) {
         guard detail == nil, pendingDetail == nil else { return }
         // Attach geometry only to the tapped card. Its first measurement promotes the card into the
         // overlay, eliminating continuous frame publication from every visible grid item.
-        pendingDetail = DetailSource(snapshot: snapshot, placement: placement)
+        pendingDetail = DetailSource(snapshot: snapshot)
         detailSourceFrame = nil
         expanded = false
     }
@@ -479,9 +391,7 @@ struct ContainersGridView: View {
         VStack(spacing: UI.Layout.Spacing.m) {
             UI.State.Empty(AppText.string("containers.empty", defaultValue: "No containers"),
                              systemImage: "shippingbox",
-                             description: ui.runningOnly
-                                ? AppText.string("containers.empty.runningOnly", defaultValue: "No running containers.")
-                                : AppText.string("containers.empty.description", defaultValue: "Run a container to see it here."),
+                             description: emptyStateDescription,
                              padding: 0)
             UI.Action.TextButton(title: AppText.string("containers.empty.run", defaultValue: "Run a container"),
                                    systemName: "plus",
@@ -490,15 +400,23 @@ struct ContainersGridView: View {
             }
         }
     }
+
+    private var emptyStateDescription: String {
+        if let group = ui.selectedContainerGroup {
+            return "Switch to All Containers, then add containers to \(group.name) from their context menus."
+        }
+        return ui.runningOnly
+            ? AppText.string("containers.empty.runningOnly", defaultValue: "No running containers.")
+            : AppText.string("containers.empty.description", defaultValue: "Run a container to see it here.")
+    }
 }
 
 private struct ContainerGridProjectionKey: Hashable {
     let inventoryRevision: Int
-    let networksRevision: Int
-    let grouping: ContainerGrouping
     let sort: ContainerSort
     let runningOnly: Bool
     let search: String
+    let containerGroupRevision: Int
 }
 
 private struct ContainerCardMetricsRenderer: View {
@@ -603,7 +521,6 @@ private enum ContainersGridPreviewDataset {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let app = AppModel(database: database)
         let ui = UIState()
-        ui.grouping = .flat
         ui.sort = .name
         let appleWeb = Core.Container.Snapshot.placeholder(
             id: "preview-web",

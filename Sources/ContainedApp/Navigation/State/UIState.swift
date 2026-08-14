@@ -60,9 +60,10 @@ final class UIState {
     var prefill = PrefillPresentation()
     var runtimeSelectionRequest: RuntimeSelectionRequest?
     var runningOnly = false
-    var selectedSection: AppSection = .containers
-    /// How the Containers page groups and orders cards, driven by the page filter control.
-    var grouping: ContainerGrouping = .network
+    var containerGroups: [ContainerGroup] = []
+    var selectedContainerGroupID: ContainerGroup.ID?
+    private(set) var containerGroupRevision = 0
+    /// How the Containers page orders cards, driven by the group menu.
     var sort: ContainerSort = .name
     var imageGrouping: ImageGrouping = .none
     var imageSort: ImageSort = .status
@@ -89,9 +90,47 @@ final class UIState {
         if toolbar.activeMorph != .settings { toolbar.activeMorph = .settings }
     }
 
-    func navigate(to section: AppSection) {
-        selectedSection = section
+    var selectedContainerGroup: ContainerGroup? {
+        guard let selectedContainerGroupID else { return nil }
+        return containerGroups.first { $0.id == selectedContainerGroupID }
+    }
+
+    @discardableResult
+    func createContainerGroup(named proposedName: String) -> ContainerGroup.ID? {
+        let name = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty,
+              !containerGroups.contains(where: { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame })
+        else { return nil }
+        let group = ContainerGroup(name: name)
+        containerGroups.append(group)
+        containerGroupRevision &+= 1
+        return group.id
+    }
+
+    func selectContainerGroup(_ id: ContainerGroup.ID?) {
+        guard id == nil || containerGroups.contains(where: { $0.id == id }) else { return }
+        selectedContainerGroupID = id
+        containerGroupRevision &+= 1
         if toolbar.activeMorph != nil { requestMorphClose() }
+    }
+
+    func containsContainer(_ containerID: String, in groupID: ContainerGroup.ID) -> Bool {
+        containerGroups.first { $0.id == groupID }?.containerIDs.contains(containerID) == true
+    }
+
+    func toggleContainer(_ containerID: String, in groupID: ContainerGroup.ID) {
+        guard let index = containerGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        if containerGroups[index].containerIDs.contains(containerID) {
+            containerGroups[index].containerIDs.remove(containerID)
+        } else {
+            containerGroups[index].containerIDs.insert(containerID)
+        }
+        containerGroupRevision &+= 1
+    }
+
+    func containers(in snapshots: [Core.Container.Snapshot]) -> [Core.Container.Snapshot] {
+        guard let selectedContainerGroup else { return snapshots }
+        return snapshots.filter { selectedContainerGroup.containerIDs.contains($0.scopedID) }
     }
 
     /// Toggle a toolbar morph panel (open it, or close it if already open).

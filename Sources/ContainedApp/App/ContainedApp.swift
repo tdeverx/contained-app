@@ -120,7 +120,7 @@ public struct ContainedApplication: App {
                                                "r",
                                                modifiers: [.command, .shift])
                 Menu("Navigate") {
-                    Button("Containers") { ui.navigate(to: .containers) }
+                    Button("Containers") { ui.requestMorphClose() }
                         .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
                                                    "1",
                                                    modifiers: .command)

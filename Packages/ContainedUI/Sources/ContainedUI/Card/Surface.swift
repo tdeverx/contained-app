@@ -53,6 +53,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
     var cornerRadiusOverride: CGFloat?
     var controlsVisible = true
     var isSelected = false
+    var compactMuted = false
     var showsFooter = true
     var showsWidget = true
     /// When set, the selected state reads as a soft `white.opacity` wash (matching a hovered glass
@@ -75,6 +76,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
 
     @State private var hovering = false
     @Environment(\.cardMaterial) private var cardMaterial
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Render the selected state as a soft fill wash instead of the accent stroke.
     func selectionFill(_ on: Bool = true) -> Self {
@@ -88,6 +90,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
          cornerRadiusOverride: CGFloat? = nil,
          controlsVisible: Bool = true,
          isSelected: Bool = false,
+         compactMuted: Bool = false,
          showsFooter: Bool = true,
          showsWidget: Bool = true,
          fill: Color? = nil,
@@ -108,6 +111,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
         self.cornerRadiusOverride = cornerRadiusOverride
         self.controlsVisible = controlsVisible
         self.isSelected = isSelected
+        self.compactMuted = compactMuted
         self.showsFooter = showsFooter
         self.showsWidget = showsWidget
         self.fill = fill
@@ -135,14 +139,14 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
     private var surface: some View {
         let cornerRadius = cornerRadiusOverride ?? (isExpanded ? UI.Tokens.Radius.sheet : UI.Tokens.Radius.card)
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        return cardContent
+        return emphasizedCardContent
             .frame(maxWidth: isExpanded ? UI.Card.ExpandedMetrics.maxWidth : .infinity,
                    alignment: .leading)
             .clipShape(shape)
             .designCardMaterial(cardMaterial,
                                   cornerRadius: cornerRadius,
                                   shadow: elevated,
-                                  fill: fill,
+                                  fill: resolvedFill,
                                   fillOpacity: fillOpacity,
                                   gradient: gradient,
                                   gradientAngle: gradientAngle,
@@ -162,6 +166,24 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
             }
             .animation(.spring(response: 0.42, dampingFraction: 0.86), value: isExpanded)
             .animation(.spring(response: 0.42, dampingFraction: 0.86), value: cornerRadiusOverride)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: compactContentIsMuted)
+    }
+
+    /// A single presentation layer owns compact-card dimming so nested header, widget, and action
+    /// elements never compound opacity. The material surface remains outside this layer.
+    private var emphasizedCardContent: some View {
+        cardContent
+            .grayscale(compactContentIsMuted ? 1 : 0)
+            .opacity(compactContentIsMuted ? UI.Card.Opacity.mutedContent : 1)
+    }
+
+    private var compactContentIsMuted: Bool {
+        compactMuted && !isExpanded && !hovering
+    }
+
+    private var resolvedFill: Color? {
+        guard compactContentIsMuted, fill != nil else { return fill }
+        return .gray
     }
 
     @ViewBuilder

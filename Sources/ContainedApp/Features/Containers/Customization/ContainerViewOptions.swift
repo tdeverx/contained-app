@@ -1,32 +1,6 @@
 import Foundation
 
-/// How the Containers page buckets its cards. Driven by the page filter control.
-enum ContainerGrouping: String, CaseIterable, Identifiable, Codable, Sendable {
-    case network, volume, image, flat
-
-    var id: String { rawValue }
-
-    /// Short noun shown in the toolbar subtitle and the menu ("by Network").
-    var title: String {
-        switch self {
-        case .network: return AppText.string("filter.network", defaultValue: "Network")
-        case .volume:  return AppText.string("filter.volume", defaultValue: "Volume")
-        case .image:   return AppText.string("filter.image", defaultValue: "Image")
-        case .flat:    return AppText.string("filter.flat", defaultValue: "Flat")
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .network: return "network"
-        case .volume:  return "externaldrive"
-        case .image:   return "shippingbox"
-        case .flat:    return "square.grid.2x2"
-        }
-    }
-}
-
-/// How containers are ordered within each group (and how the groups themselves sort, where relevant).
+/// How containers are ordered in the main grid.
 enum ContainerSort: String, CaseIterable, Identifiable, Codable, Sendable {
     case name, status, image
 

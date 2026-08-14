@@ -125,20 +125,11 @@ Guidelines:
 
 ## Toolbar shell
 
-`AppShell` owns the permanent top and bottom toolbar chrome. Its primary page
-body receives toolbar-aware safe areas from `UX.SafeArea.Manager`; scrollable
-page interiors add bottom content clearance so the last row can move above the
-toolbar without lifting the page itself. Toolbar page actions live in the top
-row to the left of search; page filters live in the bottom row next to System
-and hide on pages without filters.
-
-Bottom page filters use the shared toolbar menu-button shape. Containers,
-Images, and Networks expose their page-specific grouping/sorting
-state from this slot rather than inventing page-local controls.
-
-Contextual page controls act on the current page. They should switch page or
-subpage state directly rather than opening morph panels. Global toolbar buttons
-and menu commands own panel presentation.
+`AppShell` owns the permanent top and bottom toolbar chrome. Its Containers body
+receives toolbar-aware safe areas from `UX.SafeArea.Manager`; scrollable content
+adds bottom clearance so the last row can move above the toolbar without lifting
+the page itself. The top-left container-group menu also owns container sorting
+and the running-only filter. Panel-specific controls stay inside their panel headers.
 
 Panel-owned destinations such as System, Templates, Activity, and Settings stay
 out of page navigation and remain available through toolbar/menu entry points.

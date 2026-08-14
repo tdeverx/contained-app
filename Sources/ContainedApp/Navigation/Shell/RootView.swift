@@ -108,7 +108,6 @@ struct RootView: View {
         .onAppear {
             updateContainerStatsVisibility()
         }
-        .onChange(of: ui.selectedSection) { _, _ in updateContainerStatsVisibility() }
         .onChange(of: ui.toolbar.activeMorph) { _, _ in updateContainerStatsVisibility() }
         .task {
             await app.bootstrapIfNeeded()
@@ -164,7 +163,7 @@ struct RootView: View {
             ForEach(UI.Card.Density.allCases) { Text($0.localizedDisplayName).tag($0) }
         } label: { Label("Card Size", systemImage: "square.grid.2x2") }
         Divider()
-        Button { ui.navigate(to: .images) } label: { Label("Images", systemImage: "square.stack.3d.up") }
+        Button { ui.toggleMorph(.updates) } label: { Label("Images", systemImage: "square.stack.3d.up") }
         Button { ui.toggleMorph(.templates) } label: { Label("Templates", systemImage: "bookmark") }
         Button { ui.toggleMorph(.system) } label: { Label("System", systemImage: "gearshape.2") }
         Button { ui.toggleMorph(.activity) } label: { Label("Activity", systemImage: "bell") }
@@ -180,7 +179,6 @@ struct RootView: View {
 
     private func updateContainerStatsVisibility() {
         app.setContainerStatsVisible(scenePhase == .active
-                                     && ui.selectedSection == .containers
                                      && ui.toolbar.activeMorph == nil)
     }
 

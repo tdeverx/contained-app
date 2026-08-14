@@ -74,7 +74,7 @@ bundles, signing, notarization, and appcast scripts.
 - **`HistoryStore`** — SwiftData stack for the persistent event log + metric samples (the "rewind" timeline) with bounded retention.
 - **`UpdaterController`** — wraps Sparkle; the user's selected update channel chooses a branch-hosted appcast feed. Stable and Beta feeds are branch-local, while Nightly is a superset that also carries promoted release items.
 - **`SettingsStore`** — persists appearance, update cadence, logging, material choices, and experimental feature gates. `SettingsBackup` owns the portable export/import shape.
-- **`UIState`** — owns primary-page navigation, toolbar morph state, palette routing, and creation/edit flow handoff. Toolbar grouping/sort/filter enums and one-shot actions live in adjacent navigation files so routing state stays readable.
+- **`UIState`** — owns container-group selection, toolbar morph state, palette routing, and creation/edit flow handoff. Panel-specific filter state, container sorting, and one-shot actions live in adjacent navigation files so routing state stays readable.
 
 ## Design system
 

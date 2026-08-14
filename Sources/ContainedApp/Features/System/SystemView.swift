@@ -3,14 +3,13 @@ import ContainedUX
 import ContainedUI
 import ContainedCore
 
-/// System overview content: service status + controls, volumes, `system df` disk usage, a Prune
-/// Center, and a system-logs viewer. Hosted header-less in the toolbar System morph panel. Daemon
+/// System overview content: service status + controls, volumes, networks, `system df` disk usage, a Prune
+/// Center, and a system-logs viewer. Hosted in the toolbar System morph panel. Daemon
 /// defaults, kernel, and DNS configuration live in Settings → Runtime.
 struct SystemContent: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    /// Flat cards (no shadow) when hosted in the toolbar morph panel; elevated if shown standalone.
-    var showClose: Bool
+    /// Flat cards (no shadow) when hosted in the toolbar morph panel.
     var elevated = true
     var onClose: () -> Void = {}
 
@@ -24,6 +23,7 @@ struct SystemContent: View {
         case runtime = "Runtime"
         case automation = "Automation"
         case volumes = "Volumes"
+        case networks = "Networks"
 
         var id: String { rawValue }
         var systemImage: String {
@@ -31,6 +31,7 @@ struct SystemContent: View {
             case .runtime: return "server.rack"
             case .automation: return "clock.arrow.circlepath"
             case .volumes: return "externaldrive"
+            case .networks: return "network"
             }
         }
 
@@ -39,6 +40,7 @@ struct SystemContent: View {
             case .runtime: return AppText.string("system.page.runtime.subtitle", defaultValue: "Container runtime")
             case .automation: return AppText.string("system.page.automation.subtitle", defaultValue: "Background work")
             case .volumes: return AppText.string("system.page.volumes.subtitle", defaultValue: "Named, temp, and path mounts")
+            case .networks: return AppText.string("system.page.networks.subtitle", defaultValue: "Runtime network inventory")
             }
         }
 
@@ -47,12 +49,9 @@ struct SystemContent: View {
             case .runtime: return AppText.string("system.page.runtime", defaultValue: "Runtime")
             case .automation: return AppText.string("system.page.automation", defaultValue: "Automation")
             case .volumes: return AppText.sectionVolumes
+            case .networks: return AppText.sectionNetworks
             }
         }
-    }
-
-    private var showsHeader: Bool {
-        showClose
     }
 
     private var activePage: SystemPage {
@@ -63,14 +62,11 @@ struct SystemContent: View {
         page = item
     }
 
-    init(initialPage: SystemPage = .runtime,
-         showClose: Bool = true,
-         elevated: Bool = true,
+    init(elevated: Bool = true,
          onClose: @escaping () -> Void = {}) {
-        self.showClose = showClose
         self.elevated = elevated
         self.onClose = onClose
-        _page = State(initialValue: initialPage)
+        _page = State(initialValue: .runtime)
     }
 
     private typealias VolumeInventoryEntry = SystemVolumeInventory.Entry
@@ -90,11 +86,9 @@ struct SystemContent: View {
 
     var body: some View {
         UI.Panel.Scaffold(width: UI.Panel.Size.system.width) {
-            if showsHeader {
-                VStack(spacing: 0) {
-                    header
-                    Divider()
-                }
+            VStack(spacing: 0) {
+                header
+                Divider()
             }
         } content: {
             LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.l) {
@@ -102,6 +96,11 @@ struct SystemContent: View {
                 case .runtime: runtimeStatusCard
                 case .automation: automationCard
                 case .volumes: volumesCard
+                case .networks:
+                    SystemNetworksContent(elevated: elevated) {
+                        onClose()
+                        ui.dispatch(.createNetwork)
+                    }
                 }
             }
             .padding(UI.Layout.Spacing.s)
@@ -137,12 +136,10 @@ struct SystemContent: View {
                 UI.Action.Cluster {
                     UI.Action.Items(pageActions)
                     storageMenu
-                    if showClose {
-                        UI.Action.Items([UI.Action.Item(systemName: "xmark",
-                                                        help: AppText.close,
-                                                        isCancel: true,
-                                                        action: onClose)])
-                    }
+                    UI.Action.Items([UI.Action.Item(systemName: "xmark",
+                                                    help: AppText.close,
+                                                    isCancel: true,
+                                                    action: onClose)])
                 }
             }
         }

@@ -55,13 +55,19 @@ struct PaletteItem: Identifiable {
     @MainActor
     static func all(app: AppModel, ui: UIState) -> [PaletteItem] {
         var items: [PaletteItem] = []
-        for section in AppSection.allCases {
-            items.append(PaletteItem(title: section.title,
-                                     subtitle: section.group.title,
+        let panels: [(String, String, UIState.ToolbarMorph)] = [
+            (AppText.sectionImages, "square.stack.3d.up", .updates),
+            (AppText.string("section.templates", defaultValue: "Templates"), "bookmark", .templates),
+            (AppText.sectionSystem, "gearshape.2", .system),
+            (AppText.sectionActivity, "bell", .activity),
+        ]
+        for (title, icon, morph) in panels {
+            items.append(PaletteItem(title: title,
+                                     subtitle: AppText.string("palette.panel.subtitle", defaultValue: "Open panel"),
                                      kind: .navigation,
-                                     icon: section.symbol,
+                                     icon: icon,
                                      tint: .secondary) {
-                ui.navigate(to: section)
+                ui.toggleMorph(morph)
             })
         }
         // Add anything, from anywhere. (Pulling an image is covered by the Docker Hub search scope

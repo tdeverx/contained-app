@@ -62,9 +62,9 @@ enum Tokens {
         // rather than capping them tightly and leaving trailing dead space on wide windows.
         public static let compactMin: CGFloat = 230
         public static let compactMax: CGFloat = 400
-        public static let largeMin: CGFloat = 280
+        public static let largeMin: CGFloat = 240
         public static let largeMax: CGFloat = 520
-        public static let largePreferred: CGFloat = 360
+        public static let largePreferred: CGFloat = 320
     }
 
     /// Canonical sheet dimensions — expose through `UI.Panel.SheetSize` for app and UX use. Replaces ad-hoc
@@ -136,6 +136,7 @@ enum Tokens {
         public static let padding: CGFloat = 10
         public static let compactTextSpacing: CGFloat = Space.hairline
         public static let detailTextSpacing: CGFloat = Space.xxs
+        public static let footerControlHeight: CGFloat = IconSize.rowMenu
         public static let footerDividerHeight: CGFloat = Space.l
         public static let sparklineHeight: CGFloat = 58
         public static let iconBackgroundOpacity: Double = 0.16
@@ -146,6 +147,7 @@ enum Tokens {
         public static let selectedResourceFillOpacity: Double = 0.12
         public static let selectedTintFillOpacity: Double = 0.18
         public static let selectedPersonalizedFillOpacity: Double = 0.14
+        public static let mutedContentOpacity: Double = 0.62
     }
 
     public enum Chart {
@@ -300,10 +302,10 @@ public extension UI.Card {
         public static let widget = UI.Tokens.Card.padding
     }
 
-    /// Card radii mirror raw radius defaults. Expanded cards intentionally use the sheet radius.
+    /// Container cards share the same sheet silhouette as floating panels at every size.
     enum Radius {
-        public static let container = UI.Tokens.Radius.card
-        public static let expanded = UI.Tokens.Radius.sheet
+        public static let container = UI.Panel.Radius.surface
+        public static let expanded = UI.Panel.Radius.surface
         public static let control = UI.Tokens.Radius.control
     }
 
@@ -321,10 +323,22 @@ public extension UI.Card {
         public static let selectedPersonalizedFillOpacity = UI.Tokens.Card.selectedPersonalizedFillOpacity
     }
 
+    /// Card content emphasis values. These affect card contents, never the material surface.
+    enum Opacity {
+        public static let mutedContent = UI.Tokens.Card.mutedContentOpacity
+    }
+
     /// Card grid sizing for repeated card collections. Use `stableColumns` for live-updating
     /// cards: it derives a fixed column count from the viewport alone, preventing transient child
     /// measurements (for example a changing metric label) from reflowing a grid row.
     enum Grid {
+        /// Repeated card collections share one rhythm for their outer inset and gutters.
+        public static let contentInset = UI.Tokens.Space.m
+        public static let spacing = UI.Tokens.Space.m
+        /// Adjusts the toolbar's reserved band so its visible controls have the same gap as the grid.
+        public static var toolbarClearanceAdjustment: CGFloat {
+            spacing - UI.Tokens.Toolbar.outerPadding
+        }
         public static let compactMin = UI.Tokens.CardSize.compactMin
         public static let compactMax = UI.Tokens.CardSize.compactMax
         public static let largeMin = UI.Tokens.CardSize.largeMin

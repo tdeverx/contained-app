@@ -7,7 +7,6 @@ import ContainedCore
 struct ToolbarUpdatesPanel: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
-    var showClose = true
     var coordinateSpaceName = AppToolbar.space
     var hiddenImageGroupID: Core.Image.LocalTagGroup.ID?
     var onOpenImage: (Core.Image.LocalTagGroup, CGRect) -> Void
@@ -39,17 +38,11 @@ struct ToolbarUpdatesPanel: View {
         }.count
     }
 
-    private var showsHeader: Bool {
-        showClose
-    }
-
     var body: some View {
         UI.Panel.Scaffold(width: UI.Panel.Size.images.width) {
-            if showsHeader {
-                VStack(alignment: .leading, spacing: 0) {
-                    header
-                    Divider()
-                }
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                Divider()
             }
         } content: {
             LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
@@ -76,8 +69,40 @@ struct ToolbarUpdatesPanel: View {
         UI.Panel.Header(symbol: "square.stack.3d.up",
                     title: AppText.sectionImages,
                     subtitle: AppText.string("image.updates.subtitle", defaultValue: "\(imageGroups.count) local · \(updateCount) update\(updateCount == 1 ? "" : "s")")) {
-            UI.Action.Group(imageHeaderActions)
+            UI.Action.Cluster {
+                imageFilterMenu
+                UI.Action.Items(imageHeaderActions)
+            }
         }
+    }
+
+    private var imageFilterMenu: some View {
+        @Bindable var ui = ui
+        return Menu {
+            Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.imageGrouping) {
+                ForEach(ImageGrouping.allCases) { grouping in
+                    Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
+                }
+            }
+            .pickerStyle(.inline)
+            Picker(AppText.string("toolbar.sortBy", defaultValue: "Sort by"), selection: $ui.imageSort) {
+                ForEach(ImageSort.allCases) { sort in
+                    Label(sort.title, systemImage: sort.symbol).tag(sort)
+                }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Picker(AppText.string("activity.filter", defaultValue: "Filter"), selection: $ui.imageFilter) {
+                ForEach(ImageFilter.allCases) { filter in
+                    Label(filter.title, systemImage: filter.symbol).tag(filter)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            UI.Action.MenuLabel(systemName: ui.imageFilter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill",
+                                help: AppText.string("toolbar.imageFilters", defaultValue: "Image filters"))
+        }
+        .buttonStyle(.plain)
     }
 
     private var imageHeaderActions: [UI.Action.Item] {
@@ -94,9 +119,7 @@ struct ToolbarUpdatesPanel: View {
                     onClose()
             }
         ]
-        if showClose {
-            actions.append(UI.Action.Item(systemName: "xmark", help: AppText.close, isCancel: true, action: onClose))
-        }
+        actions.append(UI.Action.Item(systemName: "xmark", help: AppText.close, isCancel: true, action: onClose))
         return actions
     }
 

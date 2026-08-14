@@ -19,6 +19,9 @@ available, the grid aggregates containers from every reachable runtime.
   first published port opens on localhost.
 - Cards expose full-card hit targets plus context actions for lifecycle and edit
   operations.
+- The top-left group menu can create and switch between named, session-local
+  container groups. Use **Add to Group** in a container's context menu to change
+  membership; **All Containers** returns to the complete grid.
 
 ## Lifecycle
 

@@ -3,26 +3,32 @@ import SwiftUI
 /// A reusable three-part card header: leading accessory, fill/truncate text block, and trailing
 /// button rail. This keeps the container/image cards using the same top-aligned chrome structure.
 struct CardHeader<Leading: View, Content: View, Trailing: View>: View {
+    var alignment: VerticalAlignment
     var spacing: CGFloat
     var padding: CGFloat
+    var overlaysTrailing: Bool
     @ViewBuilder var leading: () -> Leading
     @ViewBuilder var content: () -> Content
     @ViewBuilder var trailing: () -> Trailing
 
-    init(spacing: CGFloat = UI.Tokens.Card.padding,
+    init(alignment: VerticalAlignment = .top,
+         spacing: CGFloat = UI.Tokens.Card.padding,
          padding: CGFloat = UI.Tokens.Card.padding,
+         overlaysTrailing: Bool = false,
          @ViewBuilder leading: @escaping () -> Leading,
          @ViewBuilder content: @escaping () -> Content,
          @ViewBuilder trailing: @escaping () -> Trailing) {
+        self.alignment = alignment
         self.spacing = spacing
         self.padding = padding
+        self.overlaysTrailing = overlaysTrailing
         self.leading = leading
         self.content = content
         self.trailing = trailing
     }
 
     public var body: some View {
-        HStack(alignment: .top, spacing: spacing) {
+        HStack(alignment: alignment, spacing: spacing) {
             leading()
                 .fixedSize(horizontal: true, vertical: false)
                 .layoutPriority(2)
@@ -32,11 +38,21 @@ struct CardHeader<Leading: View, Content: View, Trailing: View>: View {
                 .transaction { transaction in
                     transaction.animation = nil
                 }
-            trailing()
-                .fixedSize(horizontal: true, vertical: false)
-                .layoutPriority(2)
+            if !overlaysTrailing {
+                trailing()
+                    .fixedSize(horizontal: true, vertical: false)
+                    .layoutPriority(2)
+            }
         }
         .padding(padding)
+        .overlay(alignment: .topTrailing) {
+            if overlaysTrailing {
+                trailing()
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(padding)
+                    .zIndex(1)
+            }
+        }
     }
 }
 
@@ -400,20 +416,22 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
                     leading()
                 }
                 .layoutPriority(1)
-                FooterGroup(alignment: .trailing, spacing: spacing) {
-                    trailing()
+                if actionsVisible {
+                    FooterGroup(alignment: .trailing, spacing: spacing) {
+                        trailing()
+                    }
+                    .transition(.opacity)
                 }
-                .opacity(actionsVisible ? 1 : 0)
-                .allowsHitTesting(actionsVisible)
-                .animation(.easeOut(duration: 0.18), value: actionsVisible)
                 if let persistentTrailing {
                     persistentTrailing
                         .fixedSize(horizontal: true, vertical: false)
                 }
             }
+            .frame(minHeight: UI.Tokens.Card.footerControlHeight)
             .padding(.horizontal, horizontalPadding)
             .padding(.top, topPadding)
             .padding(.bottom, bottomPadding)
+            .animation(.easeOut(duration: 0.18), value: actionsVisible)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

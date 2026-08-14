@@ -725,12 +725,13 @@ final class AppModel {
         historyStore.recordMetrics(deltas, at: observedAt)
     }
 
-    /// Refresh the data behind the System toolbar panel (volumes + a forced `system df`). Called from
+    /// Refresh the data behind the System toolbar panel (volumes, networks, and a forced `system df`). Called from
     /// the panel's `.task` since System is no longer a standing page refreshed by the tick.
     func refreshSystemResources() async {
         guard client != nil, bootstrap == .ready else { return }
         await refreshDiskUsage(force: true)
         await refreshVolumes()
+        await refreshNetworks()
     }
 
     /// Refresh the registry-login list for Settings.
@@ -775,7 +776,7 @@ final class AppModel {
         }
     }
 
-    /// Refresh the cached network list. Networks back the collapsible groups on the Containers page.
+    /// Refresh the cached network list displayed in the System panel.
     func refreshNetworks() async {
         guard let client, bootstrap == .ready else { return }
         do {

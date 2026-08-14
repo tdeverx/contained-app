@@ -1,0 +1,5 @@
+- Fixed stale image-update badges reappearing after launch by consolidating duplicate persisted tag records and reconciling saved results with the live runtime inventory.
+- Simplified navigation around the permanent toolbar and panels, retiring the legacy sidebar and redundant full-page utility routes.
+- Made card footer metadata fill and scroll within the space left by intrinsic action buttons, and removed the five-widget limit from container personalization.
+- Muted stopped container cards to a grey, softened compact state that restores their configured color and full content emphasis on hover without affecting expanded details.
+- Made Containers the sole, flat primary grid; moved Networks into the System panel; and replaced the old page/filter controls with one top-left menu for session-local named groups, sorting, and the running-only filter.

@@ -1,9 +1,8 @@
 # Features
 
 Contained is organized around a small set of feature areas and shared workflows.
-The permanent toolbar switches among full-page resource collections for Containers,
-Images, Volumes, and Networks. System, Templates, Activity, Settings, and creation
-or editing workflows open as focused toolbar panels.
+Containers is the permanent workload page. Images, System resources, Templates,
+Activity, Settings, and creation or editing workflows open as focused toolbar panels.
 
 ## Feature areas
 
