@@ -111,17 +111,48 @@ final class PersonalizationStore {
         return personalization.normalizedForPersistence()
     }
 
-    /// Resolve a container's effective style: per-container override -> image default -> fallback.
+    /// Resolve appearance through image inheritance while retaining container-only metadata.
     func resolved(id: String,
                   image: String,
                   group: Core.Image.LocalTagGroup? = nil,
                   fallback: Personalization = Personalization()) -> Personalization {
-        Self.meaningful(overrides[id]) ?? imageDefault(for: image, group: group) ?? fallback
+        let inheritedAppearance = resolvedImageAppearance(for: image,
+                                                          group: group,
+                                                          fallback: fallback)
+        guard let own = Self.meaningful(overrides[id]) else { return inheritedAppearance }
+        var resolved = own.hasAppearanceCustomization ? own : inheritedAppearance
+        resolved.applyContainerMetadata(from: own)
+        return resolved
     }
 
     // MARK: Per-container overrides
 
     func hasOverride(id: String) -> Bool { Self.meaningful(overrides[id]) != nil }
+
+    func hasAppearanceOverride(id: String) -> Bool {
+        Self.meaningful(overrides[id])?.hasAppearanceCustomization == true
+    }
+
+    func override(for id: String) -> Personalization? { Self.meaningful(overrides[id]) }
+
+    /// Resolve tag appearance independently from tag and image-group nicknames.
+    func resolvedImageAppearance(for image: String,
+                                 group: Core.Image.LocalTagGroup? = nil,
+                                 fallback: Personalization = Personalization()) -> Personalization {
+        let groupStyle = group.flatMap(imageGroupDefault(for:))
+        let inherited = groupStyle?.hasAppearanceCustomization == true ? groupStyle! : fallback
+        let tagStyle = imageDefault(for: image)
+        let resolved = tagStyle?.hasAppearanceCustomization == true ? tagStyle! : inherited
+        return resolved.appearanceOnly()
+    }
+
+    func hasImageAppearanceOverride(for image: String) -> Bool {
+        imageDefault(for: image)?.hasAppearanceCustomization == true
+    }
+
+    func hasImageGroupAppearanceOverride(for group: Core.Image.LocalTagGroup) -> Bool {
+        imageGroupDefault(for: group)?.hasAppearanceCustomization == true
+    }
 
     func setOverride(_ personalization: Personalization, for id: String) {
         if personalization.isDefault {

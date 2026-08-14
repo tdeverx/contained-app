@@ -7,9 +7,16 @@ available, the grid aggregates containers from every reachable runtime.
 
 - Personalized Liquid Glass cards show status, image, command, resource
   highlights, and local-only appearance choices.
-- Card personalization can be set per container or inherited from image styling.
-- Local tint, nickname, icon, and card background are not written back to
-  container labels.
+- Card appearance (icon, tint, and background) can be set per container or
+  inherited from image styling. Container-only choices such as nickname, web
+  destination, status display, and widgets remain independently editable.
+- Image, tag, and container nicknames are separate identities. Cards compose
+  image and tag nicknames into compact references such as `nice-image:latest`,
+  while a container keeps its own title.
+- Local personalization is not written back to container labels.
+- A card shows an **Open in browser** action when the container publishes a TCP
+  port. Customize can supply a full URL or host/path override; otherwise the
+  first published port opens on localhost.
 - Cards expose full-card hit targets plus context actions for lifecycle and edit
   operations.
 
@@ -30,7 +37,8 @@ owning runtime:
 Rebuild is always available from a container's context menu. When the app knows
 that the container's immutable image identity differs from the current tag—or a
 newer registry digest is available—the action is relabeled **Update Container**
-and an orange update button appears in the card footer. Updating pulls first only
+and an orange update button appears persistently at the far right of the card
+footer. Updating pulls first only
 when needed, then recreates through the same rollback path as Edit → Save.
 Rebuild and Update preserve whether the container was running or stopped, while
 ordinary Start, Stop, and Restart remain non-destructive lifecycle operations.

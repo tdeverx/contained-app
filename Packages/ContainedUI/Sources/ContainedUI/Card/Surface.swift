@@ -71,6 +71,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
     @ViewBuilder var footerLeading: () -> FooterLeading
     @ViewBuilder var footerActions: () -> FooterActions
     @ViewBuilder var widget: () -> Widget
+    var persistentFooterActions: AnyView?
 
     @State private var hovering = false
     @Environment(\.cardMaterial) private var cardMaterial
@@ -96,6 +97,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
          blendMode: UI.Theme.ColorBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
+         persistentFooterActions: AnyView? = nil,
          @ViewBuilder header: @escaping () -> Header,
          @ViewBuilder bodyContent: @escaping () -> BodyContent,
          @ViewBuilder footerLeading: @escaping () -> FooterLeading,
@@ -115,6 +117,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
         self.blendMode = blendMode
         self.elevated = elevated
         self.onTap = onTap
+        self.persistentFooterActions = persistentFooterActions
         self.header = header
         self.bodyContent = bodyContent
         self.footerLeading = footerLeading
@@ -209,7 +212,8 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
     }
 
     private func stickyFooter(showActions: Bool) -> some View {
-        UI.Card.CardFooter(actionsVisible: showActions) {
+        UI.Card.CardFooter(actionsVisible: showActions,
+                           persistentTrailing: persistentFooterActions) {
             footerLeading()
         } trailing: {
             footerActions()
@@ -246,7 +250,9 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
     }
 
     private var hasFooterSlot: Bool {
-        FooterLeading.self != EmptyView.self || FooterActions.self != EmptyView.self
+        FooterLeading.self != EmptyView.self
+            || FooterActions.self != EmptyView.self
+            || persistentFooterActions != nil
     }
 }
 

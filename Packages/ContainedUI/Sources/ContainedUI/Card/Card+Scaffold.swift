@@ -73,6 +73,7 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
     @ViewBuilder public var footerLeading: () -> FooterLeading
     @ViewBuilder public var footerActions: () -> FooterActions
     @ViewBuilder public var widget: () -> Widget
+    public var persistentFooterActions: AnyView?
 
     private var usesSelectionFill = false
 
@@ -90,6 +91,7 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
                 blendMode: UI.Theme.ColorBlendMode = .softLight,
                 elevated: Bool = true,
                 onTap: @escaping () -> Void = {},
+                persistentFooterActions: AnyView? = nil,
                 title: String,
                 subtitle: String? = nil,
                 titleStyle: UI.Card.TextStyle = .standard,
@@ -117,6 +119,7 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
         self.blendMode = blendMode
         self.elevated = elevated
         self.onTap = onTap
+        self.persistentFooterActions = persistentFooterActions
         self.title = title
         self.subtitle = subtitle
         self.titleStyle = titleStyle
@@ -152,7 +155,8 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
                           gradientAngle: gradientAngle,
                           blendMode: blendMode,
                           elevated: elevated,
-                          onTap: onTap) {
+                          onTap: onTap,
+                          persistentFooterActions: persistentFooterActions) {
             header
         } bodyContent: {
             bodyContent()
@@ -242,6 +246,7 @@ public extension UI.Card.Scaffold where PageID == UI.Card.NoPage {
          blendMode: UI.Theme.ColorBlendMode = .softLight,
          elevated: Bool = true,
          onTap: @escaping () -> Void = {},
+         persistentFooterActions: AnyView? = nil,
          title: String,
          subtitle: String? = nil,
          titleStyle: UI.Card.TextStyle = .standard,
@@ -268,6 +273,7 @@ public extension UI.Card.Scaffold where PageID == UI.Card.NoPage {
                   blendMode: blendMode,
                   elevated: elevated,
                   onTap: onTap,
+                  persistentFooterActions: persistentFooterActions,
                   title: title,
                   subtitle: subtitle,
                   titleStyle: titleStyle,

@@ -99,7 +99,7 @@ struct ToolbarImageGroupCard: View {
                             blendMode: resolved.backgroundBlendMode,
                             elevated: false,
                             onTap: onTap,
-                            title: repositoryTitle(group.primaryReference),
+                            title: resolved.displayName(fallback: repositoryTitle(group.primaryReference)),
                             subtitle: repositoryOwner(group.primaryReference),
                             pages: imagePages) {
             if let image {
@@ -483,7 +483,7 @@ struct ToolbarImageGroupCard: View {
                             gradientAngle: style.gradientAngle,
                             blendMode: style.backgroundBlendMode,
                             elevated: false,
-                            title: Format.shortImage(reference),
+                            title: app.imageDisplayName(for: reference),
                             subtitle: repositoryName(reference),
                             titleStyle: .monospaced) {
             CardStyleButton(style: style,

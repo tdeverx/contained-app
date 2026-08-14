@@ -8,13 +8,17 @@ import ContainedCore
 /// (image-level default).
 struct Personalization: Codable, Hashable, Sendable {
     /// Bump this whenever the stored shape changes so saved records normalize on load.
-    static let schemaVersion = 2
+    static let schemaVersion = 3
 
     var schemaVersion: Int = Self.schemaVersion
+    /// Persists an explicit per-container appearance override even when it matches built-in values.
+    var appearanceOverrideEnabled: Bool = false
     var tint: UI.Theme.Tint = .multicolor
     var iconEnabled: Bool = true
     var icon: String = ""            // SF Symbol name; empty = default
     var nickname: String = ""
+    /// Optional browser destination for this container. Empty means infer one from its published port.
+    var webURL: String = ""
     var fillBackground: Bool = true
     var backgroundOpacity: Double = Self.defaultBackgroundOpacity
     var gradient: Bool = true
@@ -66,11 +70,66 @@ struct Personalization: Codable, Hashable, Sendable {
     /// True when this is the untouched built-in style (nothing worth persisting).
     var isDefault: Bool { self == Personalization() }
 
+    /// Container appearance is the only part governed by image-style inheritance.
+    var hasAppearanceCustomization: Bool {
+        appearanceOverrideEnabled || appearanceDiffersFromDefaults
+    }
+
+    private var appearanceDiffersFromDefaults: Bool {
+        let defaults = Personalization()
+        return tint != defaults.tint
+            || iconEnabled != defaults.iconEnabled
+            || icon != defaults.icon
+            || fillBackground != defaults.fillBackground
+            || backgroundOpacity != defaults.backgroundOpacity
+            || gradient != defaults.gradient
+            || gradientAngle != defaults.gradientAngle
+            || backgroundBlendMode != defaults.backgroundBlendMode
+    }
+
+    mutating func applyAppearance(from source: Personalization) {
+        tint = source.tint
+        iconEnabled = source.iconEnabled
+        icon = source.icon
+        fillBackground = source.fillBackground
+        backgroundOpacity = source.backgroundOpacity
+        gradient = source.gradient
+        gradientAngle = source.gradientAngle
+        backgroundBlendMode = source.backgroundBlendMode
+    }
+
+    mutating func applyContainerMetadata(from source: Personalization) {
+        nickname = source.nickname
+        webURL = source.webURL
+        widgets = source.widgets
+        showStatusIndicator = source.showStatusIndicator
+        showStatusIcon = source.showStatusIcon
+        showStatusText = source.showStatusText
+    }
+
+    func containerMetadataOnly() -> Personalization {
+        var result = Personalization()
+        result.applyContainerMetadata(from: self)
+        return result
+    }
+
+    func appearanceOnly() -> Personalization {
+        var result = Personalization()
+        result.applyAppearance(from: self)
+        return result
+    }
+
+    func nicknameOnly() -> Personalization {
+        var result = Personalization()
+        result.nickname = nickname
+        return result
+    }
+
     init() {}
 
     enum CodingKeys: String, CodingKey {
-        case schemaVersion
-        case tint, iconEnabled, icon, nickname, fillBackground, backgroundOpacity, gradient, gradientAngle
+        case schemaVersion, appearanceOverrideEnabled
+        case tint, iconEnabled, icon, nickname, webURL, fillBackground, backgroundOpacity, gradient, gradientAngle
         case backgroundBlendMode
         case widgets, showStatusIndicator, showStatusIcon, showStatusText, graphMetric, graphStyle
     }
@@ -78,10 +137,12 @@ struct Personalization: Codable, Hashable, Sendable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 0
+        let savedAppearanceOverride = try container.decodeIfPresent(Bool.self, forKey: .appearanceOverrideEnabled)
         tint = try container.decodeIfPresent(UI.Theme.Tint.self, forKey: .tint) ?? .multicolor
         iconEnabled = try container.decodeIfPresent(Bool.self, forKey: .iconEnabled) ?? true
         icon = try container.decodeIfPresent(String.self, forKey: .icon) ?? ""
         nickname = try container.decodeIfPresent(String.self, forKey: .nickname) ?? ""
+        webURL = try container.decodeIfPresent(String.self, forKey: .webURL) ?? ""
         fillBackground = try container.decodeIfPresent(Bool.self, forKey: .fillBackground) ?? true
         backgroundOpacity = try container.decodeIfPresent(Double.self, forKey: .backgroundOpacity)
             ?? Self.defaultBackgroundOpacity
@@ -106,16 +167,19 @@ struct Personalization: Codable, Hashable, Sendable {
                 WidgetConfiguration(enabled: true, metric: .netTx, style: .area)
             ])
         }
+        appearanceOverrideEnabled = savedAppearanceOverride ?? appearanceDiffersFromDefaults
         schemaVersion = Self.schemaVersion
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(Self.schemaVersion, forKey: .schemaVersion)
+        try container.encode(appearanceOverrideEnabled, forKey: .appearanceOverrideEnabled)
         try container.encode(tint, forKey: .tint)
         try container.encode(iconEnabled, forKey: .iconEnabled)
         try container.encode(icon, forKey: .icon)
         try container.encode(nickname, forKey: .nickname)
+        try container.encode(webURL, forKey: .webURL)
         try container.encode(fillBackground, forKey: .fillBackground)
         try container.encode(backgroundOpacity, forKey: .backgroundOpacity)
         try container.encode(gradient, forKey: .gradient)

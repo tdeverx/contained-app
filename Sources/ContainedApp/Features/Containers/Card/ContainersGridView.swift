@@ -315,7 +315,7 @@ struct ContainersGridView: View {
                                onTap: @escaping () -> Void) -> some View {
         let style = app.containerStyle(for: snapshot)
         let key = snapshot.scopedID
-        let hasStyleOverride = app.personalization.hasOverride(id: key)
+        let hasStyleOverride = app.personalization.hasAppearanceOverride(id: key)
         let imageUpdateState = app.containerImageUpdateState(for: snapshot)
         return ContainerCardMetricsRenderer(
             metrics: store.metricsState(for: key),

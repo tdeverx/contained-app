@@ -7,7 +7,6 @@ import ContainedCore
 struct CustomizeWidgetsPanel: View {
     @Binding var style: Personalization
     let graphOptions: [Core.Metrics.GraphMetric]
-    let settingsDisabled: Bool
 
     private var activeWidgetIndices: [Int] {
         style.widgets.indices.filter { style.widget(at: $0).enabled }
@@ -37,8 +36,6 @@ struct CustomizeWidgetsPanel: View {
             Divider()
             widgetChartOptions(index)
         }
-        .disabled(settingsDisabled)
-        .opacity(settingsDisabled ? 0.48 : 1)
     }
 
     private var addWidgetSection: some View {
@@ -54,8 +51,6 @@ struct CustomizeWidgetsPanel: View {
                 .disabled(!canAddWidget)
             }
         }
-        .disabled(settingsDisabled)
-        .opacity(settingsDisabled ? 0.48 : 1)
     }
 
     private func widgetOrderControls(_ index: Int) -> some View {

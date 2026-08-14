@@ -16,19 +16,64 @@ extension AppModel {
     }
 
     func imageStyle(for reference: String) -> Personalization {
-        personalization.imageDefault(for: reference, group: localImageGroup(containing: reference)) ?? defaultImageStyle
+        let group = localImageGroup(containing: reference)
+        var style = personalization.resolvedImageAppearance(for: reference,
+                                                             group: group,
+                                                             fallback: defaultImageStyle)
+        style.nickname = personalization.imageDefault(for: reference)?.nickname ?? ""
+        return style
     }
 
     func imageGroupStyle(for group: Core.Image.LocalTagGroup) -> Personalization {
-        personalization.imageGroupDefault(for: group) ?? defaultImageStyle
+        let own = personalization.imageGroupDefault(for: group)
+        var style = defaultImageStyle.appearanceOnly()
+        if let own, own.hasAppearanceCustomization { style = own }
+        style.nickname = own?.nickname ?? ""
+        return style
     }
 
     /// The group's style by id, used where only the id is known, such as a tag resolving its parent.
     func imageGroupStyle(forID id: String) -> Personalization {
         if let group = localImageGroup(id: id) {
-            return personalization.imageGroupDefault(for: group) ?? defaultImageStyle
+            return imageGroupStyle(for: group)
         }
-        return personalization.imageGroupDefault(forLegacyID: id) ?? defaultImageStyle
+        let own = personalization.imageGroupDefault(forLegacyID: id)
+        var style = defaultImageStyle.appearanceOnly()
+        if let own, own.hasAppearanceCustomization { style = own }
+        style.nickname = own?.nickname ?? ""
+        return style
+    }
+
+    func imageDisplayName(for reference: String) -> String {
+        let parsed = Core.Registry.ImageReference.parse(reference)
+        let groupNickname = localImageGroup(containing: reference)
+            .flatMap { personalization.imageGroupDefault(for: $0)?.nickname }
+            .flatMap(Self.nonEmptyNickname)
+        let savedTagNickname = personalization.imageDefault(for: reference)?.nickname
+        let tagNickname = savedTagNickname.flatMap(Self.nonEmptyNickname)
+        guard groupNickname != nil || tagNickname != nil else { return Format.shortImage(reference) }
+
+        let separator = parsed.isDigestReference ? "@" : ":"
+        let repository = groupNickname ?? Self.repositoryDisplayName(from: reference, parsed: parsed)
+        return "\(repository)\(separator)\(tagNickname ?? parsed.reference)"
+    }
+
+    func imageGroupDisplayName(for group: Core.Image.LocalTagGroup) -> String? {
+        let savedNickname = personalization.imageGroupDefault(for: group)?.nickname
+        return savedNickname.flatMap(Self.nonEmptyNickname)
+    }
+
+    private static func nonEmptyNickname(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func repositoryDisplayName(from reference: String,
+                                              parsed: Core.Registry.ImageReference) -> String {
+        let short = Format.shortImage(reference)
+        let separator = parsed.isDigestReference ? "@" : ":"
+        let suffix = "\(separator)\(parsed.reference)"
+        return short.hasSuffix(suffix) ? String(short.dropLast(suffix.count)) : short
     }
 
     func volumeStyle(for name: String) -> Personalization {

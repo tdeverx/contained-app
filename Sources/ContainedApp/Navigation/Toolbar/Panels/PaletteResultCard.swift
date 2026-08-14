@@ -86,7 +86,7 @@ struct PaletteResultCard: View {
                             elevated: false,
                             onTap: action,
                             title: name,
-                            subtitle: Format.shortImage(snapshot.image),
+                            subtitle: app.imageDisplayName(for: snapshot.image),
                             subtitleStyle: .monospaced) {
             UI.Card.IconChip(symbol: style.symbol,
                                  tint: style.color,
@@ -123,7 +123,7 @@ struct PaletteResultCard: View {
     }
 
     private func imageTagCard(_ reference: String, groupID: String) -> some View {
-        let style = app.imageGroupStyle(forID: groupID)
+        let style = app.imageStyle(for: reference)
         return UI.Card.Scaffold(size: .medium,
                             isSelected: selected,
                             fill: style.fillBackground ? style.color : nil,
@@ -133,7 +133,7 @@ struct PaletteResultCard: View {
                             blendMode: style.backgroundBlendMode,
                             elevated: false,
                             onTap: action,
-                            title: Format.shortImage(reference),
+                            title: app.imageDisplayName(for: reference),
                             subtitle: repositoryTitle(reference),
                             titleStyle: .monospaced) {
             UI.Card.IconChip(symbol: "tag",

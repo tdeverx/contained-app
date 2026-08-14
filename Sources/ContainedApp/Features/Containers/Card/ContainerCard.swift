@@ -5,6 +5,9 @@ import ContainedCore
 /// A personalized clear-glass card for one container. The same component renders both the compact
 /// grid card and the centered expanded detail card.
 struct ContainerCard: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.openURL) private var openURL
+
     let snapshot: Core.Container.Snapshot
     var style: Personalization
     var hasStyleOverride: Bool = true
@@ -87,6 +90,9 @@ struct ContainerCard: View {
                                                    options: Core.Metrics.GraphMetric.allCases)
     }
     private var cardSize: UI.Card.Size { density.resourceSize }
+    private var webDestination: URL? {
+        ContainerWebDestination.url(customValue: styleForDisplay.webURL, for: snapshot)
+    }
 
     var body: some View {
         Group {
@@ -139,8 +145,9 @@ struct ContainerCard: View {
                      gradientAngle: styleForDisplay.gradientAngle,
                      blendMode: styleForDisplay.backgroundBlendMode,
                      onTap: onTap,
+                     persistentFooterActions: persistentFooterActions,
                      title: name,
-                     subtitle: Format.shortImage(snapshot.image),
+                     subtitle: app.imageDisplayName(for: snapshot.image),
                      subtitleStyle: .monospaced,
                      // Compact cards never expose page controls. Keeping this nil also avoids
                      // constructing all detail-page buttons for every card in a large grid.
@@ -280,6 +287,11 @@ struct ContainerCard: View {
         }
         Divider()
         Button { onTap() } label: { Label("Open details", systemImage: "rectangle.expand.vertical") }
+        if let webDestination {
+            Button { openURL(webDestination) } label: {
+                Label("Open in browser", systemImage: "arrow.up.right.square")
+            }
+        }
         if selecting {
             Button { onToggleSelected() } label: {
                 Label(isSelected ? "Deselect" : "Select", systemImage: isSelected ? "checkmark.circle.fill" : "circle")
@@ -391,13 +403,22 @@ struct ContainerCard: View {
             footerAction("play.fill", help: AppText.start, tint: tint, action: onStart)
         }
         footerAction("slider.horizontal.3", help: AppText.edit, action: onEdit)
-        if imageUpdateState.requiresUpdate {
+        if let webDestination {
+            footerAction("arrow.up.right.square", help: "Open in browser") {
+                openURL(webDestination)
+            }
+        }
+        footerAction("trash", help: AppText.delete, role: .destructive) { confirmingDelete = true }
+    }
+
+    private var persistentFooterActions: AnyView? {
+        guard imageUpdateState.requiresUpdate else { return nil }
+        return AnyView(
             footerAction("arrow.down.circle",
                          help: AppText.updateContainer,
                          tint: .orange,
                          action: onRebuild)
-        }
-        footerAction("trash", help: AppText.delete, role: .destructive) { confirmingDelete = true }
+        )
     }
 
     private func footerAction(_ systemName: String, help: String, tint: Color? = nil,

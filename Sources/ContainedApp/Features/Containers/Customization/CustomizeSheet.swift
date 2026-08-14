@@ -126,16 +126,16 @@ struct CustomizeSheet: View {
             ScrollView {
                 LazyVStack(spacing: UI.Layout.Spacing.l) {
                     if target.supportsInheritance { inheritanceSection }
-                    editableSection { styleSection }
+                    editableSection { appearanceSection }
                     if case .container = target {
-                        editableSection { statusSection }
+                        containerSection
+                    } else {
+                        identitySection
                     }
                     if !target.isImage {
                         CustomizeWidgetsPanel(style: $style,
-                                              graphOptions: graphOptions,
-                                              settingsDisabled: settingsDisabled)
+                                              graphOptions: graphOptions)
                     }
-                    editableSection { backgroundSection }
                     actionsSection
                 }
                 .padding(.horizontal, UI.Layout.Spacing.l)
@@ -168,12 +168,8 @@ struct CustomizeSheet: View {
         }
     }
 
-    private var styleSection: some View {
-        UI.Panel.Section(header: AppText.string("customize.style", defaultValue: "Style")) {
-            UI.Panel.Field(label: nicknameLabel) {
-                TextField("", text: $style.nickname, prompt: Text(nicknamePrompt))
-                    .textFieldStyle(.roundedBorder)
-            }
+    private var appearanceSection: some View {
+        UI.Panel.Section(header: AppText.string("customize.appearance", defaultValue: "Appearance")) {
             UI.Panel.ToggleRow(title: AppText.string("customize.customIcon", defaultValue: "Custom icon"), isOn: $style.iconEnabled)
             if style.iconEnabled {
                 UI.Panel.Field(label: AppText.string("customize.icon", defaultValue: "Icon")) {
@@ -194,21 +190,7 @@ struct CustomizeSheet: View {
                     UI.Control.HexTintField(selection: $style.tint)
                 }
             }
-        }
-    }
-
-    private var statusSection: some View {
-        UI.Panel.Section(header: AppText.string("customize.status", defaultValue: "Status")) {
-            UI.Panel.ToggleRow(title: AppText.string("customize.showStatusIndicator", defaultValue: "Show status indicator"), isOn: $style.showStatusIndicator)
-            if style.showStatusIndicator {
-                UI.Panel.ToggleRow(title: AppText.string("customize.widget.showIcon", defaultValue: "Show icon"), isOn: $style.showStatusIcon)
-                UI.Panel.ToggleRow(title: AppText.string("customize.widget.showText", defaultValue: "Show text"), isOn: $style.showStatusText)
-            }
-        }
-    }
-
-    private var backgroundSection: some View {
-        UI.Panel.Section(header: AppText.string("customize.background", defaultValue: "Background")) {
+            Divider()
             UI.Panel.ToggleRow(title: AppText.string("customize.colorCardBackground", defaultValue: "Color the card background"), isOn: $style.fillBackground)
             if style.fillBackground {
                 UI.Panel.Row(title: AppText.string("customize.opacity", defaultValue: "Opacity")) {
@@ -232,6 +214,35 @@ struct CustomizeSheet: View {
                     .labelsHidden()
                     .fixedSize()
                 }
+            }
+        }
+    }
+
+    private var identitySection: some View {
+        UI.Panel.Section(header: AppText.string("customize.identity", defaultValue: "Identity")) {
+            UI.Panel.Field(label: nicknameLabel) {
+                TextField("", text: $style.nickname, prompt: Text(nicknamePrompt))
+                    .textFieldStyle(.roundedBorder)
+            }
+        }
+    }
+
+    private var containerSection: some View {
+        UI.Panel.Section(header: AppText.string("customize.container", defaultValue: "Container")) {
+            UI.Panel.Field(label: nicknameLabel) {
+                TextField("", text: $style.nickname, prompt: Text(nicknamePrompt))
+                    .textFieldStyle(.roundedBorder)
+            }
+            UI.Panel.Row(title: AppText.string("customize.openURL", defaultValue: "Open URL"),
+                         subtitle: automaticURLSubtitle) {
+                TextField("", text: $style.webURL, prompt: Text("http://localhost:8080/path"))
+                    .textFieldStyle(.roundedBorder)
+            }
+            Divider()
+            UI.Panel.ToggleRow(title: AppText.string("customize.showStatusIndicator", defaultValue: "Show status indicator"), isOn: $style.showStatusIndicator)
+            if style.showStatusIndicator {
+                UI.Panel.ToggleRow(title: AppText.string("customize.widget.showIcon", defaultValue: "Show icon"), isOn: $style.showStatusIcon)
+                UI.Panel.ToggleRow(title: AppText.string("customize.widget.showText", defaultValue: "Show text"), isOn: $style.showStatusText)
             }
         }
     }
@@ -267,6 +278,16 @@ struct CustomizeSheet: View {
         return Core.Metrics.GraphMetric.allCases
     }
 
+    private var automaticURLSubtitle: String? {
+        guard case .container(let snapshot) = target else { return nil }
+        if let inferred = ContainerWebDestination.inferredURL(for: snapshot) {
+            return AppText.string("customize.openURL.portFallback",
+                                  defaultValue: "Leave blank to use \(inferred.absoluteString).")
+        }
+        return AppText.string("customize.openURL.optional",
+                              defaultValue: "Optional. Add a web address to show an Open button.")
+    }
+
     private var headerTitle: String {
         switch target {
         case .container: return AppText.string("customize.header.card", defaultValue: "Customize card")
@@ -287,28 +308,39 @@ struct CustomizeSheet: View {
     private var overrideToggleHint: String {
         switch target {
         case .container:
-            return AppText.string("customize.override.containerHint", defaultValue: "Turn this on to customize only this container. Leave it off to inherit the image style.")
+            return AppText.string("customize.override.containerHint", defaultValue: "Turn this on to customize this container's appearance. Its nickname, URL, status, and widgets remain independent.")
         case .image:
-            return AppText.string("customize.override.imageHint", defaultValue: "Turn this on to style containers from this exact image. Leave it off to inherit the Settings default.")
+            return AppText.string("customize.override.imageHint", defaultValue: "Turn this on to override appearance. The image nickname remains independent.")
         case .imageGroup:
-            return AppText.string("customize.override.imageGroupHint", defaultValue: "Turn this on to style this image group. Leave it off to inherit the Settings default.")
+            return AppText.string("customize.override.imageGroupHint", defaultValue: "Turn this on to override appearance. The image nickname remains independent.")
         case .imageTag:
-            return AppText.string("customize.override.imageTagHint", defaultValue: "Turn this on to style only this tag. Leave it off to inherit the image group's style.")
+            return AppText.string("customize.override.imageTagHint", defaultValue: "Turn this on to override appearance. The tag nickname remains independent.")
         case .volume:
             return ""
         }
     }
 
     private var nicknameLabel: String {
-        if case .container = target { return AppText.string("customize.nickname", defaultValue: "Nickname") }
-        return AppText.string("customize.displayName", defaultValue: "Display name")
+        switch target {
+        case .container: return AppText.string("customize.nickname.container", defaultValue: "Container nickname")
+        case .image, .imageGroup: return AppText.string("customize.nickname.image", defaultValue: "Image nickname")
+        case .imageTag: return AppText.string("customize.nickname.tag", defaultValue: "Tag nickname")
+        case .volume: return AppText.string("customize.nickname.volume", defaultValue: "Volume nickname")
+        }
     }
 
     private var nicknamePrompt: String {
         switch target {
         case .container: return target.previewSnapshot.id
         case .volume(let name): return name
-        default: return Format.shortImage(target.image)
+        case .imageTag(let reference, _):
+            return Core.Registry.ImageReference.parse(reference).reference
+        case .image(let reference):
+            return Core.Registry.ImageReference.parse(reference).repository.split(separator: "/").last.map(String.init)
+                ?? Format.shortImage(reference)
+        case .imageGroup(let group):
+            return Core.Registry.ImageReference.parse(group.primaryReference).repository.split(separator: "/").last.map(String.init)
+                ?? Format.shortImage(group.primaryReference)
         }
     }
 
@@ -358,7 +390,10 @@ struct CustomizeSheet: View {
             overridesInheritedStyle = newValue
             switch target {
             case .container, .image, .imageGroup, .imageTag:
-                style = newValue ? ownStyle() : inheritedStyle()
+                var updated = style
+                updated.applyAppearance(from: newValue ? ownStyle() : inheritedStyle())
+                updated.appearanceOverrideEnabled = newValue
+                style = updated
             case .volume:
                 break
             }
@@ -370,19 +405,16 @@ struct CustomizeSheet: View {
         switch target {
         case .container(let snapshot):
             style = app.containerStyle(for: snapshot)
-            overridesInheritedStyle = app.personalization.hasOverride(id: snapshot.scopedID)
+            overridesInheritedStyle = app.personalization.hasAppearanceOverride(id: snapshot.scopedID)
         case .image(let reference):
-            let own = app.personalization.imageDefault(for: reference)
-            overridesInheritedStyle = own != nil
-            style = own ?? inheritedStyle()
+            style = app.imageStyle(for: reference)
+            overridesInheritedStyle = app.personalization.hasImageAppearanceOverride(for: reference)
         case .imageTag(let reference, _):
-            let own = app.personalization.imageDefault(for: reference)
-            overridesInheritedStyle = own != nil
-            style = own ?? inheritedStyle()
+            style = app.imageStyle(for: reference)
+            overridesInheritedStyle = app.personalization.hasImageAppearanceOverride(for: reference)
         case .imageGroup(let group):
-            let own = app.personalization.imageGroupDefault(for: group)
-            overridesInheritedStyle = own != nil
-            style = own ?? inheritedStyle()
+            style = app.imageGroupStyle(for: group)
+            overridesInheritedStyle = app.personalization.hasImageGroupAppearanceOverride(for: group)
         case .volume(let name):
             style = app.volumeStyle(for: name)
             overridesInheritedStyle = true
@@ -394,33 +426,30 @@ struct CustomizeSheet: View {
     private func save() {
         switch target {
         case .image(let reference):
-            if overridesInheritedStyle {
-                app.personalization.setImageDefault(style, for: reference)
-            } else {
-                app.personalization.clearImageDefault(for: reference)
-            }
+            app.personalization.setImageDefault(savedImagePersonalization(), for: reference)
         case .imageTag(let reference, _):
-            if overridesInheritedStyle {
-                app.personalization.setImageDefault(style, for: reference)
-            } else {
-                app.personalization.clearImageDefault(for: reference)
-            }
+            app.personalization.setImageDefault(savedImagePersonalization(), for: reference)
         case .imageGroup(let group):
-            if overridesInheritedStyle {
-                app.personalization.setImageGroupDefault(style, for: group)
-            } else {
-                app.personalization.clearImageGroupDefault(for: group)
-            }
+            app.personalization.setImageGroupDefault(savedImagePersonalization(), for: group)
         case .container(let snapshot):
             if overridesInheritedStyle {
-                app.personalization.setOverride(style, for: snapshot.scopedID)
+                var containerStyle = style
+                containerStyle.appearanceOverrideEnabled = true
+                app.personalization.setOverride(containerStyle, for: snapshot.scopedID)
             } else {
-                app.personalization.clearOverride(id: snapshot.scopedID)
+                app.personalization.setOverride(style.containerMetadataOnly(), for: snapshot.scopedID)
             }
         case .volume(let name):
             app.personalization.setVolumeStyle(style, for: name)
         }
         dismiss()
+    }
+
+    private func savedImagePersonalization() -> Personalization {
+        guard overridesInheritedStyle else { return style.nicknameOnly() }
+        var saved = style
+        saved.appearanceOverrideEnabled = true
+        return saved
     }
 
     private func reset() {
@@ -439,8 +468,8 @@ struct CustomizeSheet: View {
 
     private func applyToImage() {
         guard case .container(let snapshot) = target else { return }
-        app.personalization.setImageDefault(style, for: snapshot.image)
-        app.personalization.clearOverride(id: snapshot.scopedID)
+        app.personalization.setImageDefault(style.appearanceOnly(), for: snapshot.image)
+        app.personalization.setOverride(style.containerMetadataOnly(), for: snapshot.scopedID)
         overridesInheritedStyle = false
         dismiss()
     }
@@ -461,11 +490,20 @@ struct CustomizeSheet: View {
     private func ownStyle() -> Personalization {
         switch target {
         case .container(let snapshot):
-            return app.personalization.hasOverride(id: snapshot.scopedID) ? app.containerStyle(for: snapshot) : inheritedStyle()
+            if let own = app.personalization.override(for: snapshot.scopedID), own.hasAppearanceCustomization {
+                return own
+            }
+            return inheritedStyle()
         case .image(let reference), .imageTag(let reference, _):
-            return app.personalization.imageDefault(for: reference) ?? inheritedStyle()
+            if let own = app.personalization.imageDefault(for: reference), own.hasAppearanceCustomization {
+                return own
+            }
+            return inheritedStyle()
         case .imageGroup(let group):
-            return app.personalization.imageGroupDefault(for: group) ?? inheritedStyle()
+            if let own = app.personalization.imageGroupDefault(for: group), own.hasAppearanceCustomization {
+                return own
+            }
+            return inheritedStyle()
         case .volume:
             return inheritedStyle()
         }

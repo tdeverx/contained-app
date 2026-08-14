@@ -340,6 +340,7 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
     @ViewBuilder var leading: () -> Leading
     @ViewBuilder var trailing: () -> Trailing
     @ViewBuilder var widget: () -> Widget
+    var persistentTrailing: AnyView?
 
     init(showWidget: Bool = false,
          actionsVisible: Bool = true,
@@ -347,6 +348,7 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
          horizontalPadding: CGFloat = UI.Tokens.Card.padding,
          topPadding: CGFloat = 0,
          bottomPadding: CGFloat = UI.Tokens.Card.padding,
+         persistentTrailing: AnyView? = nil,
          @ViewBuilder leading: @escaping () -> Leading,
          @ViewBuilder trailing: @escaping () -> Trailing,
          @ViewBuilder widget: @escaping () -> Widget) {
@@ -356,6 +358,7 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
         self.horizontalPadding = horizontalPadding
         self.topPadding = topPadding
         self.bottomPadding = bottomPadding
+        self.persistentTrailing = persistentTrailing
         self.leading = leading
         self.trailing = trailing
         self.widget = widget
@@ -376,6 +379,9 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
                 .opacity(actionsVisible ? 1 : 0)
                 .allowsHitTesting(actionsVisible)
                 .animation(.easeOut(duration: 0.18), value: actionsVisible)
+                if let persistentTrailing {
+                    persistentTrailing
+                }
             }
             .padding(.horizontal, horizontalPadding)
             .padding(.top, topPadding)
