@@ -96,7 +96,27 @@ struct AppleContainerClient: Sendable {
         AppleContainerCreateTranslator.preview(for: request)
     }
 
+    func prepareCreateRequest(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateRequest {
+        guard request.volumes.contains(where: {
+            Self.standardizedPath($0.source).hasSuffix("/volume.img")
+        }) else { return request }
+
+        let runtimeVolumes = try await volumes()
+        let namesByBackingPath = runtimeVolumes.reduce(into: [String: String]()) { result, volume in
+            guard let source = volume.configuration.source else { return }
+            result[Self.standardizedPath(source)] = volume.name
+        }
+
+        var prepared = request
+        prepared.volumes = request.volumes.map { mount in
+            guard let name = namesByBackingPath[Self.standardizedPath(mount.source)] else { return mount }
+            return Core.Container.VolumeMount(source: name, target: mount.target, readOnly: mount.readOnly)
+        }
+        return prepared
+    }
+
     @discardableResult func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
+        let request = try await prepareCreateRequest(request)
         let data = try await runner.run(ContainerCommands.run(request))
         return AppleContainerCreateTranslator.result(from: data, request: request)
     }
@@ -116,6 +136,10 @@ struct AppleContainerClient: Sendable {
 
     func volumes() async throws -> [Core.Volume.Resource] {
         try await decode([Core.Volume.Resource].self, ContainerCommands.volumeList(), "volume list")
+    }
+
+    private static func standardizedPath(_ path: String) -> String {
+        URL(fileURLWithPath: path).standardizedFileURL.path
     }
 
     func images() async throws -> [Core.Image.Resource] {

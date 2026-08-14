@@ -1,6 +1,10 @@
 import Foundation
 
 extension RuntimeContainerClient {
+    func prepareCreateRequest(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateRequest {
+        request
+    }
+
     func listContainers() async throws -> [Core.Container.Snapshot] {
         try await listContainers(all: true)
     }
@@ -32,6 +36,10 @@ extension RuntimeContainerClient {
     @discardableResult func recreateContainer(originalID: String,
                                              replacement: Core.Container.CreateRequest,
                                              rollback: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
+        // Resolve runtime-owned resources before touching the original. Adapters may need inventory
+        // lookups to turn inspected implementation details back into stable create arguments.
+        let replacement = try await prepareCreateRequest(replacement)
+        let rollback = try await prepareCreateRequest(rollback)
         _ = try? await stop([originalID])
         let deletedOriginal: Bool
         do {
