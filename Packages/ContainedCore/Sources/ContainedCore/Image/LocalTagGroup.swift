@@ -63,9 +63,16 @@ struct LocalTagGroup: Identifiable, Sendable, Hashable {
                 }
                 return lhs.reference.localizedCaseInsensitiveCompare(rhs.reference) == .orderedAscending
             }
-            let digest = sortedImages.compactMap(\.digest).first
+            let repositoryKeys = Set(sortedImages.map {
+                Core.Registry.ImageReference.normalizedRepositoryKey($0.reference)
+            })
+            let digests = Set(sortedImages.compactMap(\.digest).filter { !$0.isEmpty })
+            let digest = digests.count == 1 ? digests.first : nil
+            let id = repositoryKeys.count == 1
+                ? repositoryKeys.first!
+                : digest ?? repositoryKeys.sorted().first!
             return Core.Image.LocalTagGroup(
-                id: digest ?? Core.Registry.ImageReference.normalizedKey(references[0]),
+                id: id,
                 digest: digest,
                 references: references,
                 tags: tags,
@@ -77,7 +84,7 @@ struct LocalTagGroup: Identifiable, Sendable, Hashable {
 
     public static func group(containing image: Core.Image.Resource, in images: [Core.Image.Resource]) -> Core.Image.LocalTagGroup {
         groups(for: images).first { $0.images.contains(image) }
-            ?? Core.Image.LocalTagGroup(id: image.digest ?? Core.Registry.ImageReference.normalizedKey(image.reference),
+            ?? Core.Image.LocalTagGroup(id: Core.Registry.ImageReference.normalizedRepositoryKey(image.reference),
                                         digest: image.digest,
                                         references: [image.reference],
                                         tags: [Core.Image.LocalTag(reference: image.reference,
@@ -87,7 +94,7 @@ struct LocalTagGroup: Identifiable, Sendable, Hashable {
     }
 
     private static func groupKeys(for image: Core.Image.Resource) -> [String] {
-        var keys = ["ref:\(Core.Registry.ImageReference.normalizedKey(image.reference))"]
+        var keys = ["repository:\(Core.Registry.ImageReference.normalizedRepositoryKey(image.reference))"]
         if let digest = image.digest, !digest.isEmpty { keys.append("digest:\(digest)") }
         return keys
     }

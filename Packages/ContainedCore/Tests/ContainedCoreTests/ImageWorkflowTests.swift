@@ -9,6 +9,7 @@ struct ImageWorkflowTests {
         #expect(official.registry == "registry-1.docker.io")
         #expect(official.repository == "library/nginx")
         #expect(official.reference == "latest")
+        #expect(official.normalizedRepositoryKey == "docker.io/library/nginx")
         #expect(official.normalizedKey == "docker.io/library/nginx:latest")
 
         let namespaced = Core.Registry.ImageReference.parse("docker.io/tdeverx/app:nightly")
@@ -108,6 +109,29 @@ struct ImageWorkflowTests {
         let tagIDs = group?.tags.map(\.id) ?? []
         #expect(runtimeKinds == Set([Core.Runtime.Kind.appleContainer, .docker]))
         #expect(tagIDs.allSatisfy { $0.contains("::") })
+    }
+
+    @Test func localTagGroupingCombinesRepositoryVersionsWithDistinctDigests() {
+        let develop = Self.image(reference: "ghcr.io/seerr-team/seerr:develop",
+                                 digest: "sha256:develop",
+                                 runtimeKind: .appleContainer)
+        let latest = Self.image(reference: "ghcr.io/seerr-team/seerr:latest",
+                                digest: "sha256:latest",
+                                runtimeKind: .appleContainer)
+        let unrelated = Self.image(reference: "ghcr.io/other-team/seerr:latest",
+                                   digest: "sha256:other",
+                                   runtimeKind: .appleContainer)
+
+        let groups = Core.Image.LocalTagGroup.groups(for: [develop, latest, unrelated])
+
+        #expect(groups.count == 2)
+        let seerr = groups.first { $0.id == "ghcr.io/seerr-team/seerr" }
+        #expect(seerr?.references == [
+            "ghcr.io/seerr-team/seerr:develop",
+            "ghcr.io/seerr-team/seerr:latest",
+        ])
+        #expect(seerr?.tags.count == 2)
+        #expect(seerr?.digest == nil)
     }
 
     @Test func hubSearchFetchesThroughSharedHelper() async throws {

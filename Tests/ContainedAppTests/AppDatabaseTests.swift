@@ -281,6 +281,22 @@ struct AppDatabaseTests {
         ])
     }
 
+    @Test func repositoryTagsWithDifferentDigestsShareImageMetadata() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        database.upsertImages([
+            image(reference: "ghcr.io/seerr-team/seerr:develop", id: "develop", digest: "sha256:develop", runtimeKind: .appleContainer),
+            image(reference: "ghcr.io/seerr-team/seerr:latest", id: "latest", digest: "sha256:latest", runtimeKind: .appleContainer),
+        ])
+
+        let image = database.fetch(ImageRecord.self).first
+        let tags = database.fetch(ImageTagRecord.self)
+        #expect(database.fetch(ImageRecord.self).count == 1)
+        #expect(image?.identity == "ghcr.io/seerr-team/seerr")
+        #expect(image?.digest == nil)
+        #expect(tags.count == 2)
+        #expect(tags.allSatisfy { $0.imageIdentity == image?.identity })
+    }
+
     @Test func imageUpdateStatusIsRuntimeScopedAtTagLevel() {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let app = AppModel(database: database)

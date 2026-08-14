@@ -89,6 +89,9 @@ extension AppDatabase {
         var changed = consolidateDuplicateImageTags(&tagRecords)
         let imagesByIdentity = Dictionary(imageRecords.map { ($0.identity, $0) }, uniquingKeysWith: { first, _ in first })
         let tagsByID = Dictionary(tagRecords.map { ($0.scopedID, $0) }, uniquingKeysWith: { first, _ in first })
+        let groupIdentityByTagID = Dictionary(uniqueKeysWithValues: groups.flatMap { group in
+            group.tags.map { ($0.id, group.id) }
+        })
         var seenTags: Set<String> = []
         for group in groups {
             let identity = group.id
@@ -107,8 +110,9 @@ extension AppDatabase {
             }
         }
         for image in images {
-            let identity = image.digest ?? Core.Registry.ImageReference.normalizedKey(image.reference)
             let tagID = image.runtimeKind.scopedID(for: Core.Registry.ImageReference.normalizedKey(image.reference))
+            let identity = groupIdentityByTagID[tagID]
+                ?? Core.Registry.ImageReference.normalizedRepositoryKey(image.reference)
             guard seenTags.insert(tagID).inserted else { continue }
             let resourceData = encode(image)
             if let tag = tagsByID[tagID] {

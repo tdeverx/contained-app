@@ -14,10 +14,14 @@ struct ImageReference: Sendable, Hashable {
 
     public var authScope: String { "repository:\(repository):pull" }
 
-    public var normalizedKey: String {
+    public var normalizedRepositoryKey: String {
         let displayRegistry = registry == "registry-1.docker.io" ? "docker.io" : registry
+        return "\(displayRegistry)/\(repository)"
+    }
+
+    public var normalizedKey: String {
         let separator = isDigestReference ? "@" : ":"
-        return "\(displayRegistry)/\(repository)\(separator)\(reference)"
+        return "\(normalizedRepositoryKey)\(separator)\(reference)"
     }
 
     public static func parse(_ raw: String) -> Core.Registry.ImageReference {
@@ -73,6 +77,10 @@ struct ImageReference: Sendable, Hashable {
 
     public static func normalizedKey(_ raw: String) -> String {
         parse(raw).normalizedKey
+    }
+
+    public static func normalizedRepositoryKey(_ raw: String) -> String {
+        parse(raw).normalizedRepositoryKey
     }
 }
 
