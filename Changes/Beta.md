@@ -1,5 +1,9 @@
 ### Fixed
 
+- Image and image-group customization now follows normalized image references, preserving existing styles when pulls replace a tag's digest or runtimes report an equivalent reference spelling.
+
+### Fixed
+
 - Rebuilding Apple containers now preserves named volumes instead of treating their backing disk images as bind-mounted directories, and resolves replacement and recovery configuration before deleting the original container.
 
 ### Added

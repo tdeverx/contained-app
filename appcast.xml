@@ -3,16 +3,16 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.191+9f8a667</title>
-            <pubDate>Fri, 14 Aug 2026 12:03:57 +0000</pubDate>
-            <sparkle:version>191</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.191+9f8a667</sparkle:shortVersionString>
+            <title>1.0.0-nightly.194+cd1da3d</title>
+            <pubDate>Fri, 14 Aug 2026 12:37:23 +0000</pubDate>
+            <sparkle:version>194</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.194+cd1da3d</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
 <h3>Fixed</h3>
 <ul>
-<li>Rebuilding Apple containers now preserves named volumes instead of treating their backing disk images as bind-mounted directories, and resolves replacement and recovery configuration before deleting the original container.</li>
+<li>Image and image-group customization now follows normalized image references, preserving existing styles when pulls replace a tag's digest or runtimes report an equivalent reference spelling.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -95,7 +95,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.191+9f8a667/Contained-1.0.0-nightly.191+9f8a667.dmg" length="9384650" type="application/octet-stream" sparkle:edSignature="N+ZG8lZV8g4ipWBwFwbUNolDVBdoBYGuvWk0mSufUWmMANrTNAYwsOPmbk6Y1OmSHa9eLGpu9lshG3Geby2iBQ=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.194+cd1da3d/Contained-1.0.0-nightly.194+cd1da3d.dmg" length="9401659" type="application/octet-stream" sparkle:edSignature="YUlOrQPtzNDc1TUW/M+VCHZQv5VREBB8fGI6h4H5oYM42e9FxIigdSLER+UKTkOfr2540AYZtojSnseT+hWqDw=="/>
         </item>
     </channel>
 </rss>
