@@ -85,11 +85,11 @@ extension AppDatabase {
     func upsertImages(_ images: [Core.Image.Resource], observedAt: Date = Date()) {
         let groups = Core.Image.LocalTagGroup.groups(for: images)
         let imageRecords = fetch(ImageRecord.self)
-        let tagRecords = fetch(ImageTagRecord.self)
+        var tagRecords = fetch(ImageTagRecord.self)
+        var changed = consolidateDuplicateImageTags(&tagRecords)
         let imagesByIdentity = Dictionary(imageRecords.map { ($0.identity, $0) }, uniquingKeysWith: { first, _ in first })
         let tagsByID = Dictionary(tagRecords.map { ($0.scopedID, $0) }, uniquingKeysWith: { first, _ in first })
         var seenTags: Set<String> = []
-        var changed = false
         for group in groups {
             let identity = group.id
             if let record = imagesByIdentity[identity] {
@@ -109,7 +109,7 @@ extension AppDatabase {
         for image in images {
             let identity = image.digest ?? Core.Registry.ImageReference.normalizedKey(image.reference)
             let tagID = image.runtimeKind.scopedID(for: Core.Registry.ImageReference.normalizedKey(image.reference))
-            seenTags.insert(tagID)
+            guard seenTags.insert(tagID).inserted else { continue }
             let resourceData = encode(image)
             if let tag = tagsByID[tagID] {
                 guard tag.imageIdentity != identity ||
@@ -155,10 +155,10 @@ extension AppDatabase {
     func updateImageStatuses(_ statuses: [String: Core.Image.UpdateStatus], observedAt: Date = Date()) {
         let seen = Set(statuses.keys)
         let imageRecords = fetch(ImageRecord.self)
-        let tagRecords = fetch(ImageTagRecord.self)
+        var tagRecords = fetch(ImageTagRecord.self)
+        var changed = consolidateDuplicateImageTags(&tagRecords)
         let imagesByIdentity = Dictionary(imageRecords.map { ($0.identity, $0) }, uniquingKeysWith: { first, _ in first })
         let tagsByID = Dictionary(tagRecords.map { ($0.scopedID, $0) }, uniquingKeysWith: { first, _ in first })
-        var changed = false
         for (key, status) in statuses {
             let data = encode(status)
             if let scoped = Core.Runtime.Kind.parseScopedID(key) {
@@ -225,7 +225,9 @@ extension AppDatabase {
             snapshot[record.identity] = value
             snapshot[Core.Registry.ImageReference.normalizedKey(record.primaryReference)] = value
         }
-        for tag in fetch(ImageTagRecord.self) {
+        var tagRecords = fetch(ImageTagRecord.self)
+        if consolidateDuplicateImageTags(&tagRecords) { save() }
+        for tag in tagRecords {
             guard let data = tag.updateStatusData else { continue }
             let status: Core.Image.UpdateStatus
             do {
@@ -238,6 +240,39 @@ extension AppDatabase {
             snapshot[tag.scopedID] = status.state == .checking ? Core.Image.UpdateStatus() : status
         }
         return snapshot
+    }
+
+    /// Older inventories could insert the same runtime/tag more than once when the runtime returned
+    /// repeated entries in a single response. Keep the newest record as the metadata source, carry
+    /// over the most recently checked status independently, and remove the redundant rows.
+    private func consolidateDuplicateImageTags(_ records: inout [ImageTagRecord]) -> Bool {
+        var changed = false
+        var consolidated: [ImageTagRecord] = []
+        for group in Dictionary(grouping: records, by: \.scopedID).values {
+            guard let canonical = group.max(by: { lhs, rhs in
+                if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt < rhs.updatedAt }
+                return lhs.runtimeImageID < rhs.runtimeImageID
+            }) else { continue }
+            if let statusSource = group
+                .filter({ $0.updateStatusData != nil })
+                .max(by: { lhs, rhs in
+                    let left = lhs.lastCheckedAt ?? lhs.updatedAt
+                    let right = rhs.lastCheckedAt ?? rhs.updatedAt
+                    if left != right { return left < right }
+                    return lhs.runtimeImageID < rhs.runtimeImageID
+                }), statusSource !== canonical {
+                canonical.updateStatusData = statusSource.updateStatusData
+                canonical.lastCheckedAt = statusSource.lastCheckedAt
+                changed = true
+            }
+            for duplicate in group where duplicate !== canonical {
+                context.delete(duplicate)
+                changed = true
+            }
+            consolidated.append(canonical)
+        }
+        records = consolidated
+        return changed
     }
 
     func hiddenContainerScopedIDs() -> Set<String> {

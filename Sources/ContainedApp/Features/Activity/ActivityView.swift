@@ -2,18 +2,6 @@ import SwiftUI
 import ContainedUX
 import ContainedUI
 
-/// System-wide activity log: every recorded event across all containers, newest first, filterable
-/// by kind. The persistent counterpart to transient banners and alerts.
-struct ActivityView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        ActivityContent(showClose: true) { dismiss() }
-            .frame(UI.Panel.SheetSize.wide)
-            .sheetMaterial()
-    }
-}
-
 struct ActivityContent: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -56,7 +44,7 @@ struct ActivityContent: View {
     }
 
     private var showsHeader: Bool {
-        showClose || !ui.toolbarUIEnabled
+        showClose
     }
 
     var body: some View {

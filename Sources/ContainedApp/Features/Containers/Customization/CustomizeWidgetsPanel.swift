@@ -12,10 +12,6 @@ struct CustomizeWidgetsPanel: View {
         style.widgets.indices.filter { style.widget(at: $0).enabled }
     }
 
-    private var canAddWidget: Bool {
-        activeWidgetIndices.count < Personalization.widgetSlotCount
-    }
-
     var body: some View {
         LazyVStack(spacing: UI.Layout.Spacing.l) {
             ForEach(activeWidgetIndices, id: \.self) { index in
@@ -40,15 +36,12 @@ struct CustomizeWidgetsPanel: View {
 
     private var addWidgetSection: some View {
         UI.Panel.Section(header: AppText.string("customize.widgets", defaultValue: "Widgets"),
-                     footer: AppText.string("customize.widgets.footer", defaultValue: "\(activeWidgetIndices.count) of \(Personalization.widgetSlotCount) widgets")) {
+                     footer: AppText.string("customize.widgets.footer", defaultValue: "\(activeWidgetIndices.count) widgets")) {
             UI.Panel.Row(title: AppText.string("customize.addWidget", defaultValue: "Add widget"),
-                     subtitle: canAddWidget
-                         ? AppText.string("customize.addWidget.subtitle", defaultValue: "Add another metric chip or chart to this card.")
-                         : AppText.string("customize.addWidget.slotsFull", defaultValue: "All widget slots are in use.")) {
+                     subtitle: AppText.string("customize.addWidget.subtitle", defaultValue: "Add another metric chip or chart to this card.")) {
                 Button { addWidget() } label: {
                     Label(AppText.add, systemImage: "plus")
                 }
-                .disabled(!canAddWidget)
             }
         }
     }
@@ -215,15 +208,19 @@ struct CustomizeWidgetsPanel: View {
     }
 
     private func addWidget() {
-        guard canAddWidget,
-              let index = style.widgets.indices.first(where: { !style.widget(at: $0).enabled }) else { return }
-        var widget = style.widget(at: index)
+        let reusableIndex = style.widgets.indices.first(where: { !style.widget(at: $0).enabled })
+        let index = reusableIndex ?? style.widgets.endIndex
+        var widget = reusableIndex.map { style.widget(at: $0) } ?? WidgetConfiguration()
         widget.enabled = true
         widget.metric = nextWidgetMetric()
         widget.secondaryMetric = widget.style.resolvedSecondaryMetric(primary: widget.metric,
                                                                       requested: widget.secondaryMetric,
                                                                       options: graphOptions)
-        style.setWidget(widget, at: index)
+        if reusableIndex == nil {
+            style.widgets.append(widget)
+        } else {
+            style.setWidget(widget, at: index)
+        }
     }
 
     private func removeWidget(_ index: Int) {

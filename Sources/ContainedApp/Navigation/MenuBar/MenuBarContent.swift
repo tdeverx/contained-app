@@ -152,11 +152,7 @@ struct MenuBarContent: View {
 
     private func openSystem() {
         activate()
-        if app.settings.usesPanelNavigation {
-            ui.toggleMorph(.system)
-        } else {
-            ui.navigate(to: .system)
-        }
+        ui.toggleMorph(.system)
     }
 
     private func activate() {

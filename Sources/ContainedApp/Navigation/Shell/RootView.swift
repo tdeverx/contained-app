@@ -4,8 +4,8 @@ import UniformTypeIdentifiers
 import ContainedCore
 import ContainedUI
 
-/// The app shell. Fresh installs use the classic sidebar; the experimental toolbar shell adds morph
-/// panels, command palette routing, and page-background overflow actions on top of the same app state.
+/// The main scene root. Primary resource pages share one permanent toolbar shell; utility routes and
+/// create/edit flows are presented through its morph panels.
 struct RootView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -18,21 +18,13 @@ struct RootView: View {
     @State private var importingComposeFile = false
     @State private var exportingDowngradeBackup = false
     @State private var downgradeBackupDocument: DataFileDocument?
-    /// System logs are reachable from menus and the command palette while system resources can render
-    /// as either a sidebar page or toolbar panel.
+    /// System logs are reachable from menus, panels, and the command palette.
     @State private var showSystemLogs = false
 
     var body: some View {
         @Bindable var settings = app.settings
         @Bindable var ui = ui
         rootShell(settings: settings)
-        .sheet(isPresented: $ui.prefill.showRunSheet,
-               onDismiss: { ui.prefill.currentSpec = nil; ui.advancePrefillQueue() }) {
-            ContainerEditSheet(mode: .new(prefill: ui.prefill.currentSpec))
-        }
-        .sheet(item: $ui.editSheetSnapshot) { snapshot in
-            ContainerEditSheet(mode: .edit(snapshot, onComplete: {}))
-        }
         .sheet(isPresented: downgradeBinding) {
             DowngradeDecisionView(schemaVersion: app.downgradeSchemaVersion ?? StateMigrator.currentSchemaVersion,
                                   onExportAndReset: prepareDowngradeBackupExport,
@@ -110,35 +102,14 @@ struct RootView: View {
                                                              blendMode: settings.buttonTintBlendMode))
         .environment(\.cardMaterial, settings.cardMaterial)
         .environment(\.designSystemShowsInfoTips, settings.showInfoTips)
-        .environment(\.pageScaffoldUsesToolbarChrome, settings.experimentalToolbarUI)
-        .environment(\.pageScaffoldBottomClearance, settings.experimentalToolbarUI ? AppToolbar.bandHeight : 0)
+        .environment(\.pageScaffoldUsesToolbarChrome, true)
+        .environment(\.pageScaffoldBottomClearance, AppToolbar.bandHeight)
         .preferredColorScheme(settings.appearance.colorScheme)
-        .onAppear { ui.toolbarUIEnabled = settings.experimentalToolbarUI }
         .onAppear {
-            ui.panelNavigationEnabled = settings.usesPanelNavigation
-            ui.ensureSelectedSectionIsNavigable()
-            updateContainerStatsVisibility()
-        }
-        .onChange(of: settings.experimentalToolbarUI) { _, enabled in
-            ui.toolbarUIEnabled = enabled
-            ui.panelNavigationEnabled = settings.usesPanelNavigation
-            if !enabled { ui.toolbar.activeMorph = nil }
-            ui.ensureSelectedSectionIsNavigable()
-            updateContainerStatsVisibility()
-        }
-        .onChange(of: settings.experimentalPanelNavigation) { _, _ in
-            ui.panelNavigationEnabled = settings.usesPanelNavigation
-            if !settings.usesPanelNavigation { ui.toolbar.activeMorph = nil }
-            ui.ensureSelectedSectionIsNavigable()
             updateContainerStatsVisibility()
         }
         .onChange(of: ui.selectedSection) { _, _ in updateContainerStatsVisibility() }
         .onChange(of: ui.toolbar.activeMorph) { _, _ in updateContainerStatsVisibility() }
-        .onChange(of: settings.imageBuildEnabled) { _, enabled in
-            if !enabled, ui.selectedSection == .build {
-                ui.navigate(to: .images)
-            }
-        }
         .task {
             await app.bootstrapIfNeeded()
             app.coordinator.start(app: app)
@@ -150,20 +121,11 @@ struct RootView: View {
         }
     }
 
-    @ViewBuilder
     private func rootShell(settings: SettingsStore) -> some View {
-        if settings.experimentalToolbarUI {
-            toolbarShell(settings: settings)
-        } else {
-            classicShell(settings: settings)
-        }
-    }
-
-    private func toolbarShell(settings: SettingsStore) -> some View {
         GeometryReader { _ in
             ZStack {
                 UI.Theme.BackgroundLayer(material: settings.windowMaterial)
-                toolbarContent
+                content
             }
         }
         // Right-click the empty background for the page's overflow actions (cards/rows keep their own
@@ -173,16 +135,6 @@ struct RootView: View {
         // NOTE: double-click-to-zoom is NOT here — on the shell it would sit above the cards, delay
         // their taps, and fire when double-clicking a card. Pages attach it to a background layer
         // behind their content via `.zoomWindowOnBackgroundDoubleClick()` instead.
-    }
-
-    private func classicShell(settings: SettingsStore) -> some View {
-        ZStack {
-            UI.Theme.BackgroundLayer(material: settings.windowMaterial)
-            content
-                .ignoresSafeArea(.container, edges: .vertical)
-        }
-        .environment(\.morphSafeAreaManager, UX.SafeArea.Manager(system: EdgeInsets()))
-        .contextMenu { backgroundMenu() }
     }
 
     private var downgradeBinding: Binding<Bool> {
@@ -212,10 +164,10 @@ struct RootView: View {
             ForEach(UI.Card.Density.allCases) { Text($0.localizedDisplayName).tag($0) }
         } label: { Label("Card Size", systemImage: "square.grid.2x2") }
         Divider()
-        Button { openSectionOrMorph(.images, morph: .updates) } label: { Label("Images", systemImage: "square.stack.3d.up") }
-        Button { openSectionOrMorph(.templates, morph: .templates) } label: { Label("Templates", systemImage: "bookmark") }
-        Button { openSectionOrMorph(.system, morph: .system) } label: { Label("System", systemImage: "gearshape.2") }
-        Button { openSectionOrMorph(.activity, morph: .activity) } label: { Label("Activity", systemImage: "bell") }
+        Button { ui.navigate(to: .images) } label: { Label("Images", systemImage: "square.stack.3d.up") }
+        Button { ui.toggleMorph(.templates) } label: { Label("Templates", systemImage: "bookmark") }
+        Button { ui.toggleMorph(.system) } label: { Label("System", systemImage: "gearshape.2") }
+        Button { ui.toggleMorph(.activity) } label: { Label("Activity", systemImage: "bell") }
         if settings.commandPaletteEnabled {
             Divider()
             Button { openPaletteOrContainers() } label: { Label("Command Palette…", systemImage: "command") }
@@ -223,25 +175,13 @@ struct RootView: View {
     }
 
     private func openPaletteOrContainers() {
-        if app.settings.usesPanelNavigation {
-            ui.toggleMorph(.palette)
-        } else {
-            ui.navigate(to: .containers)
-        }
+        ui.toggleMorph(.palette)
     }
 
     private func updateContainerStatsVisibility() {
         app.setContainerStatsVisible(scenePhase == .active
                                      && ui.selectedSection == .containers
                                      && ui.toolbar.activeMorph == nil)
-    }
-
-    private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
-        if app.settings.usesPanelNavigation {
-            ui.toggleMorph(morph)
-        } else {
-            ui.navigate(to: section)
-        }
     }
 
     /// Pick an image `.tar` and load it into the local store.
@@ -331,18 +271,9 @@ struct RootView: View {
     private var content: some View {
         switch app.bootstrap {
         case .ready:
-            if app.settings.experimentalToolbarUI {
-                toolbarContent
-            } else {
-                ClassicShell(sidebarNavigationEnabled: app.settings.sidebarNavigationEnabled)
-            }
+            AppShell()
         default: BootstrapView()
         }
-    }
-
-    @ViewBuilder
-    private var toolbarContent: some View {
-        ClassicShell(sidebarNavigationEnabled: app.settings.sidebarNavigationEnabled)
     }
 
 }

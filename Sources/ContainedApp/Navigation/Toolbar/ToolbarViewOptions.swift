@@ -2,8 +2,7 @@ import SwiftUI
 import ContainedUI
 import ContainedCore
 
-/// The toolbar page switcher. In the experimental toolbar shell it complements the sidebar, and when
-/// the sidebar is hidden it becomes the compact page-jump control.
+/// The toolbar page switcher for primary resource pages.
 struct ToolbarPageSwitcher: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
@@ -11,8 +10,7 @@ struct ToolbarPageSwitcher: View {
     var body: some View {
         UI.Action.MenuButton {
             ForEach(AppSectionGroup.allCases) { group in
-                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
-                    .filter { $0.group == group && ($0 != .build || app.settings.imageBuildEnabled) }
+                let sections = AppSection.allCases.filter { $0.group == group }
                 if !sections.isEmpty {
                     Section(group.title) {
                         ForEach(sections) { section in
@@ -49,26 +47,10 @@ struct ToolbarPageSwitcher: View {
                 app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable
             }.count
             return "\(groups.count) local · \(updates) update\(updates == 1 ? "" : "s")"
-        case .build:
-            return "Dockerfile"
         case .volumes:
             return "\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")"
         case .networks:
             return "\(app.networks.count) network\(app.networks.count == 1 ? "" : "s")"
-        case .system:
-            return app.serviceLabel
-        case .templates:
-            let count = app.historyStore.activitySummary.templateCount
-            return "\(count) saved"
-        case .activity:
-            let summary = app.historyStore.activitySummary
-            let unread = summary.unreadEvents
-            let base = "\(summary.totalEvents) event\(summary.totalEvents == 1 ? "" : "s")"
-            return unread > 0 ? "\(base) · \(unread) unread" : base
-        case .settings:
-            return "Preferences"
-        case .registries:
-            return "Credentials"
         }
     }
 }
@@ -139,8 +121,6 @@ struct ToolbarPageContextOptions: View {
                 }
             ])
             .help(imagesSubtitle)
-        case .build:
-            EmptyView()
         case .networks:
             UI.Action.Group([
                 UI.Action.Item(systemName: "plus", help: AppText.newNetwork) {
@@ -161,71 +141,6 @@ struct ToolbarPageContextOptions: View {
                 }
             ])
             .help("\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")")
-        case .system:
-            HStack(spacing: UI.Toolbar.Spacing.groupSpacing) {
-                UI.Action.Group(serviceActions)
-                UI.Action.Group(systemPageActions + [
-                    UI.Action.Item(systemName: "text.alignleft", help: AppText.systemLogs) {
-                        ui.dispatch(.systemLogs)
-                    }
-                ])
-            }
-        case .activity:
-            UI.Action.Group([
-                UI.Action.Item(systemName: "checkmark.circle", help: AppText.markAllRead) {
-                    app.historyStore.markAllEventsRead()
-                },
-                UI.Action.Item(systemName: "trash", help: AppText.clearActivity, role: .destructive) {
-                    app.historyStore.clearEvents()
-                }
-            ])
-        case .registries:
-            EmptyView()
-        case .settings:
-            UI.Action.Group(SettingsContent.SettingsPage.allCases.map { page in
-                UI.Action.Item(systemName: page.systemImage,
-                             help: page.rawValue,
-                             tint: ui.settingsPage == page ? .accentColor : nil) {
-                    ui.settingsPage = page
-                    ui.navigate(to: .settings)
-                }
-            })
-        case .templates:
-            EmptyView()
-        }
-    }
-
-    private var serviceActions: [UI.Action.Item] {
-        guard app.serviceControlRuntimeAvailable else {
-            return [
-                UI.Action.Item(systemName: "arrow.clockwise",
-                               help: AppText.string("common.retry", defaultValue: "Retry")) {
-                    Task { await app.retryBootstrap() }
-                }
-            ]
-        }
-        let power = app.serviceHealthy
-            ? UI.Action.Item(systemName: "stop.fill", help: AppText.stopService, role: .destructive) {
-                Task { await app.stopService() }
-            }
-            : UI.Action.Item(systemName: "play.fill", help: AppText.startService) {
-                Task { await app.startService() }
-            }
-        return [
-            power,
-            UI.Action.Item(systemName: "arrow.clockwise", help: AppText.restartService) {
-                        Task { await app.restartService() }
-            }
-        ]
-    }
-
-    private var systemPageActions: [UI.Action.Item] {
-        SystemContent.SystemPage.allCases.map { page in
-            UI.Action.Item(systemName: page.systemImage,
-                         help: page.rawValue,
-                         tint: ui.systemPage == page ? .accentColor : nil) {
-                ui.systemPage = page
-            }
         }
     }
 
@@ -246,39 +161,11 @@ struct ToolbarPageFilterOptions: View {
             ToolbarViewOptions()
         case .images:
             ImageViewOptions()
-        case .build:
-            EmptyView()
-        case .templates:
-            TemplateViewOptions()
         case .networks:
             NetworkViewOptions()
-        case .activity:
-            @Bindable var ui = ui
-            UI.Action.MenuButton {
-                Picker(AppText.string("activity.filter", defaultValue: "Filter"), selection: $ui.activityFilter) {
-                    Label(AppText.string("activity.filter.allEvents", defaultValue: "All events"), systemImage: "tray.full").tag(EventKind?.none)
-                    Divider()
-                    ForEach(EventKind.allCases, id: \.self) { kind in
-                        Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
-                    }
-                }
-                .pickerStyle(.inline)
-            } labelContent: {
-                activityFilterLabel
-            }
-            .help(ui.activityFilter == nil
-                  ? AppText.string("activity.filterActivity", defaultValue: "Filter Activity")
-                  : AppText.string("activity.filter.current", defaultValue: "Filter: \(ui.activityFilter!.rawValue.capitalized)"))
         default:
             EmptyView()
         }
-    }
-
-    private var activityFilterLabel: some View {
-        UI.Toolbar.TitleSubtitle(symbol: ui.activityFilter == nil ? "line.3.horizontal.decrease"
-                                                                   : "line.3.horizontal.decrease.circle.fill",
-                                  title: AppText.sectionActivity,
-                                  subtitle: ui.activityFilter?.rawValue.capitalized ?? AppText.string("activity.filter.allEvents", defaultValue: "All events"))
     }
 }
 
@@ -319,33 +206,6 @@ private struct ImageViewOptions: View {
         var parts = [AppText.string("toolbar.groupedBy", defaultValue: "by \(ui.imageGrouping.title)")]
         if ui.imageFilter != .all { parts.append(ui.imageFilter.title) }
         return parts.joined(separator: " · ")
-    }
-}
-
-private struct TemplateViewOptions: View {
-    @Environment(UIState.self) private var ui
-
-    var body: some View {
-        @Bindable var ui = ui
-        return UI.Action.MenuButton {
-            Picker(AppText.string("toolbar.groupBy", defaultValue: "Group by"), selection: $ui.templateGrouping) {
-                ForEach(TemplateGrouping.allCases) { grouping in
-                    Label(grouping.title, systemImage: grouping.symbol).tag(grouping)
-                }
-            }
-            .pickerStyle(.inline)
-            Picker(AppText.string("toolbar.sortBy", defaultValue: "Sort by"), selection: $ui.templateSort) {
-                ForEach(TemplateSort.allCases) { sort in
-                    Label(sort.title, systemImage: sort.symbol).tag(sort)
-                }
-            }
-            .pickerStyle(.inline)
-        } labelContent: {
-            optionLabel(symbol: ui.templateGrouping.symbol,
-                        title: AppText.sectionTemplates,
-                        subtitle: AppText.string("toolbar.groupSortSubtitle", defaultValue: "by \(ui.templateGrouping.title) · \(ui.templateSort.title)"))
-        }
-        .help(AppText.string("toolbar.templateGrouping", defaultValue: "Template grouping"))
     }
 }
 

@@ -34,8 +34,6 @@ final class UIState {
     }
 
     struct PrefillPresentation {
-        var showRunSheet = false
-        var currentSpec: ContainerFormState?
         var queue: [ContainerFormState] = []
     }
 
@@ -63,9 +61,6 @@ final class UIState {
     var runtimeSelectionRequest: RuntimeSelectionRequest?
     var runningOnly = false
     var selectedSection: AppSection = .containers
-    var sidebarVisible = true
-    var toolbarUIEnabled = false
-    var panelNavigationEnabled = false
     /// How the Containers page groups and orders cards, driven by the page filter control.
     var grouping: ContainerGrouping = .network
     var sort: ContainerSort = .name
@@ -78,8 +73,6 @@ final class UIState {
     var networkSort: NetworkSort = .name
     var networkFilter: NetworkFilter = .all
     var activityFilter: EventKind? = nil
-    var systemPage: SystemContent.SystemPage = .runtime
-
     /// When set, `SettingsContent` will switch to this page as soon as it appears / becomes active.
     /// Cleared by `SettingsContent` after it consumes the value.
     var settingsPage: SettingsContent.SettingsPage? = nil
@@ -87,56 +80,18 @@ final class UIState {
     /// A one-shot action requested by menus or the command palette. `RootView` consumes global
     /// actions, while toolbar panels and the Containers page handle their local operations directly.
     var pendingAction: PendingAction?
-    var editSheetSnapshot: Core.Container.Snapshot?
 
     // MARK: Actions
 
     /// Open the Settings panel and navigate to a specific page in one call.
     func openSettings(to page: SettingsContent.SettingsPage) {
         settingsPage = page
-        guard panelNavigationEnabled else {
-            navigate(to: .settings)
-            return
-        }
         if toolbar.activeMorph != .settings { toolbar.activeMorph = .settings }
     }
 
     func navigate(to section: AppSection) {
         selectedSection = section
         if toolbar.activeMorph != nil { requestMorphClose() }
-    }
-
-    func ensureSelectedSectionIsNavigable() {
-        if !selectedSection.isNavigable(panelNavigationEnabled: panelNavigationEnabled) {
-            selectedSection = .containers
-        }
-    }
-
-    func setSidebarVisible(_ visible: Bool) {
-        withAnimation(.easeInOut(duration: 0.24)) {
-            sidebarVisible = visible
-        }
-    }
-
-    func navigateForClassicFallback(_ action: PendingAction) {
-        switch action {
-        case .runContainer, .importCompose:
-            navigate(to: .containers)
-        case .pullImage, .loadImage, .pruneImages:
-            navigate(to: .images)
-        case .build:
-            navigate(to: .build)
-        case .createVolume:
-            navigate(to: .volumes)
-        case .createNetwork:
-            navigate(to: .networks)
-        case .registryLogin:
-            openSettings(to: .registries)
-        case .activityHistory:
-            navigate(to: .activity)
-        case .systemLogs:
-            navigate(to: .system)
-        }
     }
 
     /// Toggle a toolbar morph panel (open it, or close it if already open).
@@ -158,24 +113,6 @@ final class UIState {
         if action == .registryLogin {
             openSettings(to: .registries)
             return
-        }
-        if !panelNavigationEnabled {
-            switch action {
-            case .runContainer:
-                presentCreate(ContainerFormState(runtimeKind: AppRuntimeIntent.placeholderKind))
-                return
-            case .pullImage, .createVolume, .createNetwork, .activityHistory:
-                navigateForClassicFallback(action)
-                return
-            case .build:
-                navigate(to: .build)
-                return
-            case .loadImage, .pruneImages, .importCompose, .systemLogs:
-                pendingAction = action
-                return
-            case .registryLogin:
-                return
-            }
         }
         switch action {
         case .runContainer:
@@ -202,21 +139,6 @@ final class UIState {
                            prefill spec: ContainerFormState? = nil,
                            searchQuery: String = "",
                            returningTo returnEntry: CreationEntry? = nil) {
-        guard panelNavigationEnabled else {
-            switch entry {
-            case .menu, .chooser, .configure:
-                presentCreate(spec ?? ContainerFormState(runtimeKind: AppRuntimeIntent.placeholderKind))
-            case .network:
-                navigate(to: .networks)
-            case .volume:
-                navigate(to: .volumes)
-            case .search:
-                navigate(to: .images)
-            case .build:
-                navigate(to: .build)
-            }
-            return
-        }
         creation.entry = entry
         creation.prefillSpec = spec
         creation.editSnapshot = nil
@@ -229,18 +151,10 @@ final class UIState {
     func openCreationPanel(prefill spec: ContainerFormState,
                            returningTo returnEntry: CreationEntry? = nil,
                            searchQuery: String = "") {
-        guard panelNavigationEnabled else {
-            presentCreate(spec)
-            return
-        }
         openCreationPanel(entry: .configure, prefill: spec, searchQuery: searchQuery, returningTo: returnEntry)
     }
 
     func openCreationPanel(editing snapshot: Core.Container.Snapshot) {
-        guard panelNavigationEnabled else {
-            editSheetSnapshot = snapshot
-            return
-        }
         creation.entry = .configure
         creation.prefillSpec = nil
         creation.editSnapshot = snapshot
@@ -267,32 +181,17 @@ final class UIState {
                   searchQuery: String = "") {
         var spec = ContainerFormState(runtimeKind: runtimeKind)
         spec.image = reference
-        guard panelNavigationEnabled else {
-            presentCreate(spec)
-            return
-        }
         prefill.queue = []
         openCreationPanel(prefill: spec, returningTo: returnEntry, searchQuery: searchQuery)
     }
 
     func useTemplate(_ spec: ContainerFormState) {
-        guard panelNavigationEnabled else {
-            presentCreate(spec)
-            return
-        }
         prefill.queue = []
         openCreationPanel(prefill: spec)
     }
 
-    /// Open the New-Container window prefilled with `spec`.
-    func presentCreate(_ spec: ContainerFormState) {
-        prefill.currentSpec = spec
-        prefill.showRunSheet = true
-    }
-
     /// Open the New-Container window for each queued spec in turn (compose import). Pulls each image
-    /// first (with progress), then presents the first editor; the rest follow as editors close. The
-    /// editor is the creation panel when panel navigation is enabled, otherwise the classic sheet.
+    /// first (with progress), then presents the first editor; the rest follow as editors close.
     func beginPrefillQueue(_ specs: [ContainerFormState], using app: AppModel) {
         guard let first = specs.first else { return }
         prefill.queue = Array(specs.dropFirst())
@@ -311,10 +210,6 @@ final class UIState {
     }
 
     private func presentNextPrefill(_ spec: ContainerFormState) {
-        if panelNavigationEnabled {
-            openCreationPanel(prefill: spec)
-        } else {
-            presentCreate(spec)
-        }
+        openCreationPanel(prefill: spec)
     }
 }

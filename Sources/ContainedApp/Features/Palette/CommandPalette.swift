@@ -55,8 +55,7 @@ struct PaletteItem: Identifiable {
     @MainActor
     static func all(app: AppModel, ui: UIState) -> [PaletteItem] {
         var items: [PaletteItem] = []
-        for section in AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
-            where section != .build || app.settings.imageBuildEnabled {
+        for section in AppSection.allCases {
             items.append(PaletteItem(title: section.title,
                                      subtitle: section.group.title,
                                      kind: .navigation,

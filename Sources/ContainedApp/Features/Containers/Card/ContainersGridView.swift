@@ -93,7 +93,7 @@ struct ContainersGridView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                .contentMargins(.top, ui.toolbarUIEnabled ? 0 : UI.Toolbar.Size.band, for: .scrollContent)
+                .contentMargins(.top, 0, for: .scrollContent)
 
                 if detail != nil {
                     Color.clear
@@ -362,15 +362,13 @@ struct ContainersGridView: View {
     }
 
     private var cardDetailSafeAreaPolicy: UX.SafeArea.Policy {
-        let toolbarExclusion: UX.SafeArea.ToolbarExclusion = ui.toolbarUIEnabled ? .bottom : .both
-        return UX.SafeArea.Policy(excluding: toolbarExclusion, padding: .none, includesSystemInsets: false)
+        UX.SafeArea.Policy(excluding: .bottom, padding: .none, includesSystemInsets: false)
     }
 
     private var cardDetailSafeAreaManager: UX.SafeArea.Manager {
-        guard ui.toolbarUIEnabled else { return safeAreaManager }
-        return UX.SafeArea.Manager(system: safeAreaManager.system,
-                                  topToolbarHeight: AppToolbar.bandHeight,
-                                  bottomToolbarHeight: AppToolbar.bandHeight)
+        UX.SafeArea.Manager(system: safeAreaManager.system,
+                           topToolbarHeight: AppToolbar.bandHeight,
+                           bottomToolbarHeight: AppToolbar.bandHeight)
     }
 
     private func panelSize(in available: CGSize) -> CGSize {
@@ -607,8 +605,6 @@ private enum ContainersGridPreviewDataset {
         let ui = UIState()
         ui.grouping = .flat
         ui.sort = .name
-        ui.toolbarUIEnabled = true
-
         let appleWeb = Core.Container.Snapshot.placeholder(
             id: "preview-web",
             image: "docker.io/library/nginx:latest",

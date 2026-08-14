@@ -3,12 +3,14 @@ import ContainedUX
 import ContainedUI
 import ContainedCore
 
-/// The container create/edit form body — hosted by the paged `CreationFlow` and classic sheets.
-/// Owns the spec, validation, pre-flight
-/// warnings, create/recreate, and save-as-template. The host supplies a leading control (cancel for a
-/// sheet, back for a page) and is told when to close via `onFinished` (success) — the form never
-/// dismisses itself.
+/// The container create/edit form body hosted by the toolbar creation flow. Owns the spec,
+/// validation, pre-flight warnings, create/recreate, and save-as-template.
 struct ContainerConfigureView: View {
+    enum Mode {
+        case new(prefill: ContainerFormState?)
+        case edit(Core.Container.Snapshot, onComplete: () -> Void)
+    }
+
     /// The leading header control: a sheet shows cancel (✕), a page shows back (‹).
     enum Leading {
         case cancel(() -> Void)
@@ -18,7 +20,7 @@ struct ContainerConfigureView: View {
     @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
 
-    let mode: ContainerEditSheet.Mode
+    let mode: Mode
     let leading: Leading
     var onFinished: () -> Void
 
@@ -30,7 +32,7 @@ struct ContainerConfigureView: View {
     @State private var templateName = ""
     @State private var page: ContainerFormPage = .basics
 
-    init(mode: ContainerEditSheet.Mode, leading: Leading, onFinished: @escaping () -> Void) {
+    init(mode: Mode, leading: Leading, onFinished: @escaping () -> Void) {
         self.mode = mode
         self.leading = leading
         self.onFinished = onFinished

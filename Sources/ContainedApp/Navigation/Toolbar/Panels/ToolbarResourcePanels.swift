@@ -47,7 +47,7 @@ struct ToolbarTemplatesPanel: View {
     var onClose: () -> Void
 
     private var showsHeader: Bool {
-        showClose || !ui.toolbarUIEnabled
+        showClose
     }
 
     private var sortedTemplates: [RecipeRecord] {

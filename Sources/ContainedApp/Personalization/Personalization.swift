@@ -156,16 +156,16 @@ struct Personalization: Codable, Hashable, Sendable {
         showStatusText = try container.decodeIfPresent(Bool.self, forKey: .showStatusText) ?? true
         if let decodedWidgets = try container.decodeIfPresent([WidgetConfiguration].self, forKey: .widgets),
            !decodedWidgets.isEmpty {
-            widgets = Self.normalizedWidgets(decodedWidgets)
+            widgets = decodedWidgets
         } else {
             let metric = try container.decodeIfPresent(Core.Metrics.GraphMetric.self, forKey: .graphMetric) ?? .cpu
             let style = try container.decodeIfPresent(UI.Chart.GraphStyle.self, forKey: .graphStyle) ?? .area
-            widgets = Self.normalizedWidgets([
+            widgets = [
                 WidgetConfiguration(enabled: true, metric: metric, style: style),
                 WidgetConfiguration(enabled: true, metric: .memory, style: .area),
                 WidgetConfiguration(enabled: true, metric: .netRx, style: .area),
                 WidgetConfiguration(enabled: true, metric: .netTx, style: .area)
-            ])
+            ]
         }
         appearanceOverrideEnabled = savedAppearanceOverride ?? appearanceDiffersFromDefaults
         schemaVersion = Self.schemaVersion
@@ -194,7 +194,9 @@ struct Personalization: Codable, Hashable, Sendable {
     }
 
     mutating func normalizeWidgets() {
-        widgets = Self.normalizedWidgets(widgets)
+        if widgets.isEmpty {
+            widgets = WidgetConfiguration.defaultWidgets()
+        }
     }
 
     func normalizedForPersistence() -> Personalization {
@@ -205,7 +207,9 @@ struct Personalization: Codable, Hashable, Sendable {
     }
 
     mutating func normalizeVolumeWidgets() {
-        normalizeWidgets()
+        while widgets.count < 2 {
+            widgets.append(WidgetConfiguration(enabled: false, metric: .diskRead, style: .area))
+        }
         if widgets.indices.contains(0) {
             widgets[0].enabled = true
             widgets[0].metric = .diskRead
@@ -232,16 +236,4 @@ struct Personalization: Codable, Hashable, Sendable {
         guard widgets.indices.contains(index) else { return }
         widgets[index] = widget
     }
-
-    private static func normalizedWidgets(_ widgets: [WidgetConfiguration]) -> [WidgetConfiguration] {
-        let targetCount = Self.widgetSlotCount
-        var result = Array(widgets.prefix(targetCount))
-        if result.count < targetCount {
-            result.append(contentsOf: Array(repeating: WidgetConfiguration(enabled: false),
-                                            count: targetCount - result.count))
-        }
-        return result
-    }
-
-    static let widgetSlotCount = 5
 }

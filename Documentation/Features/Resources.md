@@ -29,10 +29,9 @@ but they route to Settings.
 
 Templates save reusable container run configurations. Using a template fills the
 same [Run / Edit Form](/Documentation/Features/Run-Edit-Form.md) as other creation paths.
+They are browsed from the Templates toolbar panel rather than a separate page.
 
 ## Activity
 
 Activity is the persistent event log for app operations, lifecycle events,
-long-running tasks, and errors. The toolbar Activity surface shows unread state
-when the experimental toolbar is enabled; the full page remains available from
-the sidebar shell.
+long-running tasks, and errors. The toolbar Activity panel shows unread state.

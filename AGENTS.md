@@ -57,7 +57,7 @@ This file is the working contract for coding agents in this repository. Follow i
 - Reuse app-facing `ContainedUI` routes before adding local styling: `UI.Card.Scaffold`, `UI.Panel.Scaffold`, `UI.Panel.Header`, `UI.Panel.Section`, `UI.Panel.Field`, `UI.Action.Group`, `UI.Action.TextButton`, `UI.Action.ToggleButton`, `UI.Action.SelectionBar`, `UI.Surface.Content`, `UI.Surface.Input`, `UI.Control.TintSelector`, and `UI.Chart.Sparkline`.
 - Do not add app-local spacing, padding, radius, shadow, material, opacity, material button styles, or micro-chrome constants. Add or extend a `ContainedUI` primitive first, then consume it from the app through nested element routes such as `UI.Panel.Padding.top`, `UI.Card.Radius.container`, and `UI.Toolbar.Size.controlHeight`. `UI.Tokens` is the raw token source for `ContainedUI` internals; `ContainedUX` and `Sources/ContainedApp` use contextual element tokens.
 - Low-level package composition pieces such as card shell/header/page-rail assembly, material button groups, and material surface modifiers are package-internal and should not be reintroduced in `Sources/ContainedApp`.
-- Keep the classic sidebar fallback working. Toolbar-first UI and toolbar panel navigation are experimental gates, not replacements.
+- Keep the permanent toolbar and panel navigation as the single app shell. Utility and editing flows belong in panels; primary resource collections remain toolbar-selected pages.
 - Prefer native macOS/Liquid Glass behavior over custom chrome when the system primitive fits.
 - Do not make broad visual changes without a product reason.
 

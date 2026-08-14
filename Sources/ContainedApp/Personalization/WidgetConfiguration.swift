@@ -84,8 +84,7 @@ struct WidgetConfiguration: Codable, Hashable, Sendable {
             WidgetConfiguration(enabled: true, metric: .cpu, style: .area),
             WidgetConfiguration(enabled: true, metric: .memory, style: .area),
             WidgetConfiguration(enabled: true, metric: .netRx, style: .area),
-            WidgetConfiguration(enabled: true, metric: .netTx, style: .area),
-            WidgetConfiguration(enabled: false, metric: .diskRead, style: .area)
+            WidgetConfiguration(enabled: true, metric: .netTx, style: .area)
         ]
     }
 

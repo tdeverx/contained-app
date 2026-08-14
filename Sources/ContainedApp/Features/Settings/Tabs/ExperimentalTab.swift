@@ -5,27 +5,13 @@ import ContainedCore
 // MARK: - Experimental
 
 /// Opt-in gates for features that aren't fully baked yet. Everything here defaults **off** so a fresh
-/// install ships the stable core; flipping a switch reveals the corresponding surface app-wide (menu
-/// commands, toolbar affordances, creation options). See `SettingsStore`'s "Experimental features".
+/// install ships the stable core; flipping a switch reveals the corresponding surface app-wide.
 struct ExperimentalTab: View {
     @Bindable var settings: SettingsStore
 
     var body: some View {
         SettingsForm {
             Section {
-                UI.Form.ToggleRow(title: AppText.string("settings.experimental.toolbarFirstUI", defaultValue: "Toolbar-first UI"),
-                                  info: AppText.string("settings.experimental.toolbarFirstUI.info", defaultValue: "Show the floating app toolbar. Navigation and edit/create presentation are controlled separately below."),
-                                  isChanged: settings.experimentalToolbarUI != false,
-                                  isOn: $settings.experimentalToolbarUI)
-                UI.Form.ToggleRow(title: AppText.string("settings.experimental.toolbarPanelNavigation", defaultValue: "Toolbar panel navigation"),
-                                  info: AppText.string("settings.experimental.toolbarPanelNavigation.info", defaultValue: "Open create/edit flows and page utilities in toolbar morph panels. When off, access points use classic pages and sheets."),
-                                  isChanged: settings.experimentalPanelNavigation != false,
-                                  isOn: $settings.experimentalPanelNavigation)
-                    .disabled(!settings.experimentalToolbarUI)
-                UI.Form.ToggleRow(title: AppText.string("settings.experimental.sidebarNavigation", defaultValue: "Sidebar navigation"),
-                                  info: AppText.string("settings.experimental.sidebarNavigation.info", defaultValue: "Keep the sidebar visible in either shell. Turn this off for a page-only layout."),
-                                  isChanged: settings.sidebarNavigationEnabled != true,
-                                  isOn: $settings.sidebarNavigationEnabled)
                 UI.Form.ToggleRow(title: AppText.string("settings.experimental.commandPalette", defaultValue: "Command palette (Command-K)"),
                                   info: AppText.string("settings.experimental.commandPalette.info", defaultValue: "The Command-K command index: fuzzy search across every app, container, image, and resource action. Page search and menu commands work regardless of this setting."),
                                   isChanged: settings.commandPaletteEnabled != false,

@@ -14,10 +14,8 @@ resource panel, it should be discoverable from `CommandPalette.swift`.
 
 ## Interaction model
 
-- `Command-K` opens the palette from the toolbar search morph when the toolbar
-  UI and command palette are enabled.
-- If toolbar panel navigation is disabled, actions route through the same classic
-  pages and sheets as toolbar buttons and menu commands.
+- `Command-K` opens the palette from the toolbar search morph when the command
+  palette is enabled.
 - The search bar is the panel header. Do not add a second title header above it.
 - The text field autofocuses when the palette opens.
 - Arrow keys move the selected result; Return runs it; Escape closes the panel.
@@ -54,8 +52,7 @@ When adding a feature, check whether it needs one or more palette entries:
   CLI preview visibility, info tips, and app tint
 
 Registry credential actions should route to Settings → Registries. Registries do
-not appear as their own app page in the sidebar, page switcher, or navigation
-results.
+not appear as their own app page or page-switcher result.
 
 ## Implementation map
 

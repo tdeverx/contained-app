@@ -41,9 +41,6 @@ struct SettingsBackup: Codable, Equatable {
     var composeImportEnabled: Bool
     var imageBuildEnabled: Bool
     var keyboardShortcutsEnabled: Bool
-    var experimentalToolbarUI: Bool
-    var experimentalPanelNavigation: Bool
-    var sidebarNavigationEnabled: Bool
 
     private enum CodingKeys: String, CodingKey {
         case accentTint, appearance, density, windowMaterial, modalMaterial, buttonMaterial
@@ -56,8 +53,7 @@ struct SettingsBackup: Codable, Equatable {
         case autoStartEngineOnLaunch, autoStartAlwaysContainers, autoRestartEnabled
         case notifyOnCrash, revealCLI, historyRetentionDays, loggingLevel, enabledLogDestinations
         case enabledLogCategories, updateChannel, commandPaletteEnabled, hubSearchEnabled
-        case composeImportEnabled, imageBuildEnabled, keyboardShortcutsEnabled, experimentalToolbarUI
-        case experimentalPanelNavigation, sidebarNavigationEnabled
+        case composeImportEnabled, imageBuildEnabled, keyboardShortcutsEnabled
     }
 
     init(accentTint: UI.Theme.Tint,
@@ -96,10 +92,7 @@ struct SettingsBackup: Codable, Equatable {
          hubSearchEnabled: Bool,
          composeImportEnabled: Bool,
          imageBuildEnabled: Bool,
-         keyboardShortcutsEnabled: Bool = false,
-         experimentalToolbarUI: Bool,
-         experimentalPanelNavigation: Bool = false,
-         sidebarNavigationEnabled: Bool = true) {
+         keyboardShortcutsEnabled: Bool = false) {
         self.accentTint = accentTint
         self.appearance = appearance
         self.density = density
@@ -137,9 +130,6 @@ struct SettingsBackup: Codable, Equatable {
         self.composeImportEnabled = composeImportEnabled
         self.imageBuildEnabled = imageBuildEnabled
         self.keyboardShortcutsEnabled = keyboardShortcutsEnabled
-        self.experimentalToolbarUI = experimentalToolbarUI
-        self.experimentalPanelNavigation = experimentalPanelNavigation
-        self.sidebarNavigationEnabled = sidebarNavigationEnabled
     }
 
     init(from decoder: Decoder) throws {
@@ -192,9 +182,6 @@ struct SettingsBackup: Codable, Equatable {
         composeImportEnabled = try container.decodeIfPresent(Bool.self, forKey: .composeImportEnabled) ?? false
         imageBuildEnabled = try container.decodeIfPresent(Bool.self, forKey: .imageBuildEnabled) ?? false
         keyboardShortcutsEnabled = try container.decodeIfPresent(Bool.self, forKey: .keyboardShortcutsEnabled) ?? false
-        experimentalToolbarUI = try container.decodeIfPresent(Bool.self, forKey: .experimentalToolbarUI) ?? false
-        experimentalPanelNavigation = try container.decodeIfPresent(Bool.self, forKey: .experimentalPanelNavigation) ?? false
-        sidebarNavigationEnabled = try container.decodeIfPresent(Bool.self, forKey: .sidebarNavigationEnabled) ?? true
     }
 
     func encode(to encoder: Encoder) throws {
@@ -236,8 +223,5 @@ struct SettingsBackup: Codable, Equatable {
         try container.encode(composeImportEnabled, forKey: .composeImportEnabled)
         try container.encode(imageBuildEnabled, forKey: .imageBuildEnabled)
         try container.encode(keyboardShortcutsEnabled, forKey: .keyboardShortcutsEnabled)
-        try container.encode(experimentalToolbarUI, forKey: .experimentalToolbarUI)
-        try container.encode(experimentalPanelNavigation, forKey: .experimentalPanelNavigation)
-        try container.encode(sidebarNavigationEnabled, forKey: .sidebarNavigationEnabled)
     }
 }

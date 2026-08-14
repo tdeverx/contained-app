@@ -56,7 +56,7 @@ struct SettingsContent: View {
     }
 
     private var showsHeader: Bool {
-        onClose != nil || !ui.toolbarUIEnabled
+        onClose != nil
     }
 
     var body: some View {

@@ -82,6 +82,9 @@ final class AppModel {
             database.updateImageStatuses(imageUpdates)
         }
     }
+    /// Persisted update results remain hidden until the live inventory can confirm that their local
+    /// digest still describes the tag currently installed by each runtime.
+    @ObservationIgnored private var persistedImageUpdatesAwaitingInventory: [String: Core.Image.UpdateStatus] = [:]
     /// Transient watchdog/crash banner text (auto-cleared).
     var banner: String?
     /// A long-running operation surfaced as a floating progress bar (e.g. pulling an image before a
@@ -189,7 +192,7 @@ final class AppModel {
         self.logger = AppLogger(settings: settings, history: historyStore)
         self.containers.logger = logger
         self.containers.database = database
-        imageUpdates = database.imageStatusesSnapshot()
+        persistedImageUpdatesAwaitingInventory = database.imageStatusesSnapshot()
         lastImageUpdateSweep = database.setting(Self.imageUpdateLastSweepKey, fallback: Optional<Date>.none)
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
@@ -245,6 +248,44 @@ final class AppModel {
         imageGroupsCache = nil
         imageGroupIDByReferenceCache.removeAll(keepingCapacity: true)
         database.upsertImages(images)
+        reconcilePersistedImageUpdates(with: images)
+    }
+
+    private func reconcilePersistedImageUpdates(with images: [Core.Image.Resource]) {
+        let restored = persistedImageUpdatesAwaitingInventory.isEmpty
+            ? imageUpdates
+            : persistedImageUpdatesAwaitingInventory
+        persistedImageUpdatesAwaitingInventory.removeAll(keepingCapacity: false)
+        guard !restored.isEmpty else { return }
+
+        var reconciled: [String: Core.Image.UpdateStatus] = [:]
+        var invalidated = false
+        for (key, status) in restored {
+            let candidates: [Core.Image.Resource]
+            if let scoped = Core.Runtime.Kind.parseScopedID(key) {
+                candidates = images.filter {
+                    $0.runtimeKind == scoped.kind && imageUpdateKey($0.reference) == scoped.id
+                }
+            } else {
+                candidates = images.filter { imageUpdateKey($0.reference) == key }
+            }
+            guard let currentDigest = candidates.compactMap(\.digest).first else { continue }
+            guard status.localDigest != currentDigest else {
+                reconciled[key] = status.state == .checking ? Core.Image.UpdateStatus() : status
+                continue
+            }
+            invalidated = true
+            if let remoteDigest = status.remoteDigest, remoteDigest == currentDigest {
+                reconciled[key] = Core.Image.UpdateStatus(state: .current,
+                                                         localDigest: currentDigest,
+                                                         remoteDigest: remoteDigest,
+                                                         checkedAt: status.checkedAt)
+            } else {
+                reconciled[key] = Core.Image.UpdateStatus(localDigest: currentDigest)
+            }
+        }
+        imageUpdates = reconciled
+        if invalidated { lastImageUpdateSweep = nil }
     }
 
     func bootstrapIfNeeded() async {

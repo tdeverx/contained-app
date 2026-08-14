@@ -125,35 +125,23 @@ Guidelines:
 
 ## Toolbar shell
 
-The floating toolbar and toolbar-panel navigation are separate experimental
-settings. `experimentalToolbarUI` turns on the custom top/bottom toolbar chrome;
-`experimentalPanelNavigation` decides whether eligible routes open morph panels
-or fall back to classic pages and sheets.
-
-`AppToolbar` is mounted inside the `NavigationSplitView` detail column by
-`ClassicShell`, not across the whole split view. The detail body receives top
-padding from `UX.SafeArea.Manager`, while the sidebar and bottom page edge keep
-native split-view layout. Scrollable page interiors add bottom scroll-content
-clearance for the floating toolbar, so the last row can move above it without
-lifting the page itself. Toolbar page actions live in the top row to the left of
-search; page filters live in the bottom row next to System and hide on pages
-without filters.
+`AppShell` owns the permanent top and bottom toolbar chrome. Its primary page
+body receives toolbar-aware safe areas from `UX.SafeArea.Manager`; scrollable
+page interiors add bottom content clearance so the last row can move above the
+toolbar without lifting the page itself. Toolbar page actions live in the top
+row to the left of search; page filters live in the bottom row next to System
+and hide on pages without filters.
 
 Bottom page filters use the shared toolbar menu-button shape. Containers,
-Images, Templates, and Networks all expose their page-specific grouping/sorting
+Images, and Networks expose their page-specific grouping/sorting
 state from this slot rather than inventing page-local controls.
 
 Contextual page controls act on the current page. They should switch page or
 subpage state directly rather than opening morph panels. Global toolbar buttons
 and menu commands own panel presentation.
 
-When the sidebar is visible, the top-row vanity traffic-light house and page
-switcher are hidden because native sidebar navigation owns that role. Contextual
-page controls remain in the leading toolbar cluster, immediately before search.
-
-When toolbar panel navigation is enabled, panel-owned destinations such as
-System, Activity, and Settings are removed from page navigation and remain
-available through their toolbar/menu entry points.
+Panel-owned destinations such as System, Templates, Activity, and Settings stay
+out of page navigation and remain available through toolbar/menu entry points.
 
 Expanded design cards opened from full pages should receive the same toolbar
 safe-area contract as morph panels, clearing both top and bottom toolbar bands.

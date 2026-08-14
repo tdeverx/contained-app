@@ -331,7 +331,7 @@ struct CreationFlow: View {
         start == .menu ? .back { go(.menu) } : .close
     }
 
-    private var configureMode: ContainerEditSheet.Mode {
+    private var configureMode: ContainerConfigureView.Mode {
         if let editSnapshot {
             return .edit(editSnapshot, onComplete: {})
         }

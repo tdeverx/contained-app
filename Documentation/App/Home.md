@@ -65,7 +65,10 @@ Updates ship in-app via [Sparkle](https://sparkle-project.org) across three inde
 | **Beta** | Pre-release builds, ahead of stable. |
 | **Nightly** | The latest build from every commit (CI). Bleeding edge. **(default while pre-1.0)** |
 
-The classic sidebar shell is the default. Toolbar-first UI, toolbar panel navigation, command palette, Docker Hub search, Compose import, image build workspace, and keyboard shortcuts are opt-in from **Settings → Experimental**.
+The permanent toolbar switches resource pages and opens focused panels for System,
+Templates, Activity, Settings, and creation workflows. Command palette, Docker Hub
+search, Compose import, image build workspace, and keyboard shortcuts are opt-in
+from **Settings → Experimental**.
 
 ## License
 

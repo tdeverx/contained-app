@@ -7,9 +7,8 @@ import ContainedCore
 /// window. Search stays in the top-right titlebar band; the add/images/templates/activity cluster and
 /// system status control float in a bottom toolbar area.
 ///
-/// Mounted inside the split-view detail column by `ClassicShell`: the top band sits in the title-bar
-/// region, the bottom band floats above the detail body, and the sidebar stays outside the custom
-/// toolbar safe-area contract.
+/// Mounted by `AppShell`: the top band sits in the title-bar region and the bottom band floats above
+/// the primary page body.
 /// The add `+`, search field, and bottom toolbar controls all grow through the same
 /// `UX.Morph.Expander` shell from their measured toolbar slots. Control sizing and source radius come
 /// from `UI.Toolbar` / `UI.Toolbar controls`.
@@ -84,10 +83,8 @@ struct AppToolbar: View {
 
     private var topToolbarRow: some View {
         HStack(spacing: UI.Toolbar.Spacing.groupSpacing) {
-            if !isSidebarOpen {
-                settingsZone
-                ToolbarPageSwitcher()
-            }
+            settingsZone
+            ToolbarPageSwitcher()
             ToolbarPageContextOptions()
             Spacer(minLength: UI.Layout.Spacing.m)
             searchZone
@@ -104,10 +101,6 @@ struct AppToolbar: View {
         UI.Toolbar.VanitySlot()
         .opacity(ui.toolbar.activeMorph == .settings ? 0 : 1)
         .background(singleSlotReader(.settings))
-    }
-
-    private var isSidebarOpen: Bool {
-        app.settings.sidebarNavigationEnabled && ui.sidebarVisible
     }
 
     private var searchZone: some View {
@@ -148,7 +141,7 @@ struct AppToolbar: View {
 
     private var systemStatusButton: some View {
         UI.Toolbar.StatusButton(help: app.activity?.title ?? "System \(app.serviceLabel)",
-                                  action: { openGlobalSectionOrPanel(.system, morph: .system) }) {
+                                  action: { ui.toggleMorph(.system) }) {
             if let activity = app.activity {
                 UI.State.ActivityStatusIndicator(activity: UI.State.ActivityStatus(title: activity.title,
                                                                         detail: activity.detail,
@@ -175,10 +168,10 @@ struct AppToolbar: View {
                 UI.Action.Items([
                     UI.Action.Item(systemName: "plus", help: AppText.add) { ui.openCreationPanel() },
                     UI.Action.Item(systemName: "shippingbox", help: AppText.string("section.images", defaultValue: "Images")) {
-                        openGlobalSectionOrPanel(.images, morph: .updates)
+                        ui.toggleMorph(.updates)
                     },
                     UI.Action.Item(systemName: "bookmark", help: AppText.string("section.templates", defaultValue: "Templates")) {
-                        openGlobalSectionOrPanel(.templates, morph: .templates)
+                        ui.toggleMorph(.templates)
                     }
                 ])
                 ActivityToolbarButton()
@@ -468,13 +461,6 @@ struct AppToolbar: View {
         toolbarImageCloseRequestToken &+= 1
     }
 
-    private func openGlobalSectionOrPanel(_ section: AppSection, morph: UIState.ToolbarMorph) {
-        if ui.panelNavigationEnabled {
-            ui.toggleMorph(morph)
-        } else {
-            ui.navigate(to: section)
-        }
-    }
 }
 
 /// The Activity bell in the bottom toolbar cluster. Filled + accent-tinted when there are unread
@@ -490,11 +476,7 @@ private struct ActivityToolbarButton: View {
             UI.Action.Item(systemName: hasUnread ? "bell.fill" : "bell",
                          help: hasUnread ? "Activity — \(count) unread" : "Activity",
                          tint: hasUnread ? app.settings.accentTint.resolvedAppAccentColor : .white) {
-                                   if ui.panelNavigationEnabled {
-                                       ui.toggleMorph(.activity)
-                                   } else {
-                                       ui.navigate(to: .activity)
-                                   }
+                                   ui.toggleMorph(.activity)
             }
         ])
     }

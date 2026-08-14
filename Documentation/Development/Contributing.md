@@ -112,7 +112,7 @@ appcast.xml              Sparkle feed at the root of each release branch
 - **Never put secrets or personal data in test fixtures.** Fixtures are captured CLI output — scrub tokens, domains, and paths before committing. (`.gitignore` blocks signing material; push protection is on.)
 - **Match the surrounding style** — comment density, naming, Liquid Glass idioms. Prefer app-facing design routes such as `UI.Panel.Header`, `UI.Panel.Section`, `UI.Panel.Scaffold`, `UI.Card.Scaffold`, `UI.Action.Group`, `UI.Action.TextButton`, `UI.Action.ToggleButton`, `UI.Command.PreviewBar`, and contextual element tokens. Do not add app-local spacing, padding, radius, shadow, material, opacity, material button styles, or badge/keycap/status-dot recipes; add them to `ContainedUI` first.
 - **Gate debug-only tools at compile time.** Use `#if CONTAINED_DEBUG_TOOLS` for debug menus, diagnostics, or local-only inspection surfaces. Fixture-backed samples use `CONTAINED_CORE_FIXTURES` in fixture/test/preview/sandbox-only targets, never plain `DEBUG`. SwiftPM defines `CONTAINED_DEBUG_TOOLS` only for debug builds, so release bundles exclude that code instead of merely hiding it at runtime.
-- **Keep the sidebar fallback working.** Toolbar-first UI and toolbar panel navigation are experimental gates, not replacements for the classic shell.
+- **Keep one navigation shell.** Primary resource collections are toolbar-selected pages; utility, creation, and editing destinations belong in morph panels.
 - **Sync docs with behavior.** If behavior, settings, routes, or user-facing wording changes, update the matching page under `Documentation/App`, `Documentation/Features`, `Documentation/Development`, `Documentation/Architecture`, or `Documentation/Release`; keep README links and the wiki map current.
 - **Preserve update build numbers.** `Scripts/package.sh version` is the single build-number source of truth; beta/stable workflows must pass the retained `BUILD` into `Scripts/package.sh app` and merge promoted appcast items into the nightly feed.
 - **Keep code scanning intentional.** `.github/workflows/codeql.yml` is the repository-owned CodeQL setup. GitHub Actions workflow analysis runs on PRs and pushes that touch source, scripts, workflows, package files, or tests, plus a weekly scheduled baseline. Swift analysis is scheduled/manual because Swift CodeQL currently takes too long to be a healthy per-PR gate. Appcast-only, docs-only, changelog-resource-only, and release-note-only commits are ignored so generated release feed commits do not burn macOS scan minutes.
@@ -142,7 +142,7 @@ xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Deb
 Use a packaged Debug app, the same runtime inventory, window size, and feature flags for both runs.
 In Instruments, record the **Time Profiler** and **Hangs** templates for these fixed scenarios:
 
-- Toolbar-first and classic idle for 45 seconds.
+- Toolbar idle for 45 seconds.
 - Container grid scroll for 20 seconds, card open/close morphs for 25 seconds, then resize and regroup.
 - Activity navigation for 25 seconds and repeated History, Stats, and Logs switches for 30 seconds.
 - A ten-loop navigation/log soak followed by one idle minute.

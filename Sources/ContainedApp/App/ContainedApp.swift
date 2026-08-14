@@ -109,13 +109,6 @@ public struct ContainedApplication: App {
                                                    modifiers: .command)
                 }
             }
-            CommandGroup(replacing: .sidebar) {
-                Toggle("Show Sidebar", isOn: sidebarVisibilityBinding)
-                    .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
-                                               "s",
-                                               modifiers: .command)
-                    .disabled(!app.settings.sidebarNavigationEnabled)
-            }
             CommandGroup(replacing: .toolbar) {
                 Toggle("Show Running Only", isOn: runningOnlyBinding)
                 Picker("Card Size", selection: cardSizeBinding) {
@@ -131,19 +124,19 @@ public struct ContainedApplication: App {
                         .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
                                                    "1",
                                                    modifiers: .command)
-                    Button("Images") { openSectionOrMorph(.images, morph: .updates) }
+                    Button("Images") { ui.toggleMorph(.updates) }
                         .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
                                                    "2",
                                                    modifiers: .command)
-                    Button("Templates") { openSectionOrMorph(.templates, morph: .templates) }
+                    Button("Templates") { ui.toggleMorph(.templates) }
                         .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
                                                    "3",
                                                    modifiers: .command)
-                    Button("System") { openSectionOrMorph(.system, morph: .system) }
+                    Button("System") { ui.toggleMorph(.system) }
                         .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
                                                    "4",
                                                    modifiers: .command)
-                    Button("Activity") { openSectionOrMorph(.activity, morph: .activity) }
+                    Button("Activity") { ui.toggleMorph(.activity) }
                         .keyboardShortcutIfEnabled(app.settings.keyboardShortcutsEnabled,
                                                    "5",
                                                    modifiers: .command)
@@ -201,38 +194,16 @@ public struct ContainedApplication: App {
         Binding(get: { ui.runningOnly }, set: { ui.runningOnly = $0 })
     }
 
-    private var sidebarVisibilityBinding: Binding<Bool> {
-        Binding(get: { app.settings.sidebarNavigationEnabled && ui.sidebarVisible },
-                set: { ui.setSidebarVisible($0) })
-    }
-
     private func route(_ action: PendingAction) {
         ui.dispatch(action)
     }
 
     private func routePalette() {
-        if app.settings.usesPanelNavigation {
-            ui.toggleMorph(.palette)
-        } else {
-            ui.navigate(to: .containers)
-        }
-    }
-
-    private func openSectionOrMorph(_ section: AppSection, morph: UIState.ToolbarMorph) {
-        if app.settings.usesPanelNavigation {
-            ui.toggleMorph(morph)
-        } else {
-            ui.navigate(to: section)
-        }
+        ui.toggleMorph(.palette)
     }
 
     private func openSettings(to page: SettingsContent.SettingsPage = .appearance) {
-        ui.settingsPage = page
-        if app.settings.usesPanelNavigation {
-            ui.openSettings(to: page)
-        } else {
-            ui.navigate(to: .settings)
-        }
+        ui.openSettings(to: page)
     }
 
     private func showReleaseNotes() {

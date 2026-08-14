@@ -40,7 +40,7 @@ struct ToolbarUpdatesPanel: View {
     }
 
     private var showsHeader: Bool {
-        showClose || !ui.toolbarUIEnabled
+        showClose
     }
 
     var body: some View {

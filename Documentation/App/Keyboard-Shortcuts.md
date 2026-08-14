@@ -4,7 +4,6 @@ Keyboard shortcuts are experimental and default off. Enable them from **Settings
 
 | Shortcut | Action |
 | --- | --- |
-| ⌘S | Show or hide the sidebar when sidebar navigation is enabled |
 | ⌘F | Focus search for the current page |
 | ⌘; | Open Settings |
 | ⌘N | Run Container |

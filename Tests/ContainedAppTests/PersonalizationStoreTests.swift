@@ -6,6 +6,19 @@ import ContainedCore
 @Suite("Image personalization identity")
 @MainActor
 struct PersonalizationStoreTests {
+    @Test func persistenceKeepsEveryConfiguredWidget() throws {
+        var style = Personalization()
+        style.widgets = (0..<8).map { index in
+            WidgetConfiguration(metric: index.isMultiple(of: 2) ? .cpu : .memory)
+        }
+
+        let saved = style.normalizedForPersistence()
+        let restored = try JSONDecoder().decode(Personalization.self,
+                                                from: JSONEncoder().encode(saved))
+
+        #expect(restored.widgets.count == 8)
+    }
+
     @Test func imageTagStylesUseCanonicalReferences() {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let store = PersonalizationStore(database: database)

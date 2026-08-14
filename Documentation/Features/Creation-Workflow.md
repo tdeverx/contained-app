@@ -1,8 +1,8 @@
 # Creation Workflow
 
 The creation flow is the shared front door for creating and editing resources.
-It avoids parallel sheets and keeps routing consistent across toolbar, sidebar,
-menu, palette, empty-state, and card actions.
+It avoids parallel sheets and keeps routing consistent across toolbar, menu,
+palette, empty-state, and card actions.
 
 ## Entry points
 
@@ -19,9 +19,7 @@ The flow can start from:
 
 ## Presentation
 
-With toolbar panel navigation enabled, run and edit open in the creation morph
-from their measured toolbar origin. With it disabled, the same state opens
-through classic pages or sheets so the sidebar fallback remains complete.
+Run and edit open in the creation morph from their measured toolbar origin.
 
 ## Pages
 

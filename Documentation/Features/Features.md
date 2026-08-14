@@ -1,10 +1,9 @@
 # Features
 
 Contained is organized around a small set of feature areas and shared workflows.
-The classic sidebar is the default shell, with full-page destinations for
-Containers, Images, Volumes, Networks, System, Templates, Activity, and Settings.
-Toolbar-first UI and toolbar panel navigation are experimental opt-ins from
-**Settings → Experimental**.
+The permanent toolbar switches among full-page resource collections for Containers,
+Images, Volumes, and Networks. System, Templates, Activity, Settings, and creation
+or editing workflows open as focused toolbar panels.
 
 ## Feature areas
 

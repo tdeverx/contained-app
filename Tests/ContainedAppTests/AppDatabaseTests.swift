@@ -306,24 +306,92 @@ struct AppDatabaseTests {
         #expect(database.fetch(ImageRecord.self).first?.updateStatusData == nil)
     }
 
-    @Test func duplicateLegacyImageTagRecordsDoNotPreventLaunch() {
+    @Test func duplicateImageEntriesPersistOneRuntimeTag() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        database.upsertImages([
+            image(reference: "nginx:latest", id: "first", digest: "sha256:first", runtimeKind: .appleContainer),
+            image(reference: "nginx:latest", id: "second", digest: "sha256:second", runtimeKind: .appleContainer),
+        ])
+
+        let tags = database.fetch(ImageTagRecord.self)
+        #expect(tags.count == 1)
+        #expect(tags.first?.runtimeImageID == "first")
+    }
+
+    @Test func duplicateLegacyImageTagsKeepNewestMetadataAndStatus() throws {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let key = "apple-container::docker.io/library/nginx:latest"
+        let oldStatus = Core.Image.UpdateStatus.resolved(localDigest: "sha256:old",
+                                                         remoteDigest: "sha256:older",
+                                                         checkedAt: Date(timeIntervalSince1970: 10))
+        let latestStatus = Core.Image.UpdateStatus.resolved(localDigest: "sha256:old",
+                                                            remoteDigest: "sha256:new",
+                                                            checkedAt: Date(timeIntervalSince1970: 20))
         database.context.insert(ImageTagRecord(scopedID: key,
                                               imageIdentity: "nginx",
                                               reference: "nginx:latest",
                                               runtimeKindRaw: Core.Runtime.Kind.appleContainer.rawValue,
-                                              runtimeImageID: "first"))
+                                              runtimeImageID: "first",
+                                              updateStatusData: try JSONEncoder().encode(latestStatus),
+                                              lastCheckedAt: latestStatus.checkedAt,
+                                              updatedAt: Date(timeIntervalSince1970: 10)))
         database.context.insert(ImageTagRecord(scopedID: key,
                                               imageIdentity: "nginx",
                                               reference: "nginx:latest",
                                               runtimeKindRaw: Core.Runtime.Kind.appleContainer.rawValue,
-                                              runtimeImageID: "second"))
+                                              runtimeImageID: "second",
+                                              updateStatusData: try JSONEncoder().encode(oldStatus),
+                                              lastCheckedAt: oldStatus.checkedAt,
+                                              updatedAt: Date(timeIntervalSince1970: 30)))
         database.save()
 
-        database.updateImageStatuses([key: .resolved(localDigest: "sha256:old", remoteDigest: "sha256:new")])
+        let snapshot = database.imageStatusesSnapshot()
 
-        #expect(database.fetch(ImageTagRecord.self).contains { $0.updateStatusData != nil })
+        let tags = database.fetch(ImageTagRecord.self)
+        #expect(tags.count == 1)
+        #expect(tags.first?.runtimeImageID == "second")
+        #expect(snapshot[key] == latestStatus)
+    }
+
+    @Test func restoredImageUpdateWaitsForInventoryAndReconcilesChangedDigest() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let oldImage = image(reference: "nginx:latest", id: "old", digest: "sha256:old", runtimeKind: .appleContainer)
+        database.upsertImages([oldImage])
+        let key = "apple-container::docker.io/library/nginx:latest"
+        database.updateImageStatuses([
+            key: .resolved(localDigest: "sha256:old", remoteDigest: "sha256:new"),
+        ])
+        database.setSetting(Date(), for: AppModel.imageUpdateLastSweepKey)
+
+        let app = AppModel(database: database)
+        #expect(app.imageUpdates.isEmpty)
+
+        app.setImages([
+            image(reference: "nginx:latest", id: "new", digest: "sha256:new", runtimeKind: .appleContainer),
+        ])
+
+        #expect(app.imageUpdates[key]?.state == .current)
+        #expect(app.imageUpdates[key]?.localDigest == "sha256:new")
+        #expect(app.lastImageUpdateSweep == nil)
+    }
+
+    @Test func restoredImageUpdateBecomesUnknownWhenInventoryChangedAgain() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        database.upsertImages([
+            image(reference: "nginx:latest", id: "old", digest: "sha256:old", runtimeKind: .appleContainer),
+        ])
+        let key = "apple-container::docker.io/library/nginx:latest"
+        database.updateImageStatuses([
+            key: .resolved(localDigest: "sha256:old", remoteDigest: "sha256:remote"),
+        ])
+
+        let app = AppModel(database: database)
+        app.setImages([
+            image(reference: "nginx:latest", id: "new", digest: "sha256:unexpected", runtimeKind: .appleContainer),
+        ])
+
+        #expect(app.imageUpdates[key]?.state == .unknown)
+        #expect(app.imageUpdates[key]?.localDigest == "sha256:unexpected")
     }
 
     @Test func defaultAppSupportedRuntimesKeepDockerDormant() {

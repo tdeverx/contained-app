@@ -65,8 +65,7 @@ final class SettingsStore {
     //
     // Opt-in gates for surfaces that aren't fully baked yet. All default **off** so a fresh install
     // ships the stable core; users enable them in Settings → Experimental. The command palette also
-    // has a render-level backstop in `AppToolbar` so flipping it off fully hides the surface
-    // regardless of any activation path.
+    // has a render-level backstop in `AppToolbar` so flipping it off fully hides the surface.
 
     /// The `⌘K` command palette (toolbar search escalation + menu command + morph).
     var commandPaletteEnabled: Bool { didSet { persist(commandPaletteEnabled, for: Keys.commandPaletteEnabled) } }
@@ -78,16 +77,6 @@ final class SettingsStore {
     var imageBuildEnabled: Bool { didSet { persist(imageBuildEnabled, for: Keys.imageBuildEnabled) } }
     /// Menu keyboard shortcuts and command shortcuts. Disabled by default.
     var keyboardShortcutsEnabled: Bool { didSet { persist(keyboardShortcutsEnabled, for: Keys.keyboardShortcutsEnabled) } }
-    /// Floating toolbar chrome. Off by default so the sidebar shell is the stable fresh-install path.
-    var experimentalToolbarUI: Bool { didSet { persist(experimentalToolbarUI, for: Keys.experimentalToolbarUI) } }
-    /// Route eligible actions through toolbar morph panels instead of classic pages/sheets. Depends on
-    /// the floating toolbar so page routing never targets panels without visible toolbar origins.
-    var experimentalPanelNavigation: Bool { didSet { persist(experimentalPanelNavigation, for: Keys.experimentalPanelNavigation) } }
-    var usesPanelNavigation: Bool { experimentalToolbarUI && experimentalPanelNavigation }
-    /// Classic-shell sidebar visibility. Separate from the toolbar toggle so users can keep the
-    /// stable content shell but reclaim width when they want a page-only layout.
-    var sidebarNavigationEnabled: Bool { didSet { persist(sidebarNavigationEnabled, for: Keys.sidebarNavigationEnabled) } }
-
     /// Register/unregister the app as a login item via `SMAppService`. Backed by the live service
     /// status; failures (e.g. unsigned dev build) leave the stored value and the status governs.
     var launchAtLogin: Bool {
@@ -157,9 +146,6 @@ final class SettingsStore {
         composeImportEnabled = database.setting(Keys.composeImportEnabled, fallback: false)
         imageBuildEnabled = database.setting(Keys.imageBuildEnabled, fallback: false)
         keyboardShortcutsEnabled = database.setting(Keys.keyboardShortcutsEnabled, fallback: false)
-        experimentalToolbarUI = database.setting(Keys.experimentalToolbarUI, fallback: false)
-        experimentalPanelNavigation = database.setting(Keys.experimentalPanelNavigation, fallback: false)
-        sidebarNavigationEnabled = database.setting(Keys.sidebarNavigationEnabled, fallback: true)
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
@@ -200,10 +186,7 @@ final class SettingsStore {
                        hubSearchEnabled: hubSearchEnabled,
                        composeImportEnabled: composeImportEnabled,
                        imageBuildEnabled: imageBuildEnabled,
-                       keyboardShortcutsEnabled: keyboardShortcutsEnabled,
-                       experimentalToolbarUI: experimentalToolbarUI,
-                       experimentalPanelNavigation: experimentalPanelNavigation,
-                       sidebarNavigationEnabled: sidebarNavigationEnabled)
+                       keyboardShortcutsEnabled: keyboardShortcutsEnabled)
     }
 
     func applyBackup(_ snapshot: SettingsBackup) {
@@ -246,9 +229,6 @@ final class SettingsStore {
         composeImportEnabled = snapshot.composeImportEnabled
         imageBuildEnabled = snapshot.imageBuildEnabled
         keyboardShortcutsEnabled = snapshot.keyboardShortcutsEnabled
-        experimentalToolbarUI = snapshot.experimentalToolbarUI
-        experimentalPanelNavigation = snapshot.experimentalPanelNavigation
-        sidebarNavigationEnabled = snapshot.sidebarNavigationEnabled
     }
 
     private func persist<T: Codable>(_ value: T, for key: String) {
@@ -313,8 +293,5 @@ final class SettingsStore {
         static let composeImportEnabled = "experimental.composeImport"
         static let imageBuildEnabled = "experimental.imageBuild"
         static let keyboardShortcutsEnabled = "experimental.keyboardShortcuts"
-        static let experimentalToolbarUI = "experimental.toolbarUI"
-        static let experimentalPanelNavigation = "experimental.panelNavigation"
-        static let sidebarNavigationEnabled = "experimental.sidebarNavigation"
     }
 }

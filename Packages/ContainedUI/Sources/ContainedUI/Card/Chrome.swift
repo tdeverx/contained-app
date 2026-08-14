@@ -284,7 +284,8 @@ struct CardPageControls<ID: Hashable>: View {
     }
 }
 
-/// A reusable footer item band that hugs its content and anchors either left or right.
+/// A reusable footer item band. Leading bands fill available width; trailing bands hug their
+/// contents so card actions never compete with the flexible metadata lane.
 struct FooterGroup<Content: View>: View {
     public enum Alignment {
         case leading, trailing
@@ -304,8 +305,33 @@ struct FooterGroup<Content: View>: View {
 
     public var body: some View {
         HStack(spacing: spacing) { content() }
-            .frame(maxWidth: .infinity,
+            .frame(maxWidth: alignment == .leading ? .infinity : nil,
                    alignment: alignment == .leading ? .leading : .trailing)
+            .fixedSize(horizontal: alignment == .trailing, vertical: false)
+    }
+}
+
+/// A horizontally scrollable card-footer lane. The lane expands into the space left by fixed
+/// trailing actions, while its chips retain their intrinsic widths and can scroll as more are added.
+struct FooterScroller<Content: View>: View {
+    public var spacing: CGFloat
+    @ViewBuilder public var content: () -> Content
+
+    public init(spacing: CGFloat = UI.Tokens.Card.padding,
+                @ViewBuilder content: @escaping () -> Content) {
+        self.spacing = spacing
+        self.content = content
+    }
+
+    public var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: spacing) {
+                content()
+            }
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .scrollIndicators(.hidden)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -370,9 +396,10 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
                 widget()
             }
             HStack(spacing: spacing) {
-                FooterGroup(alignment: .leading, spacing: spacing) {
+                FooterScroller(spacing: spacing) {
                     leading()
                 }
+                .layoutPriority(1)
                 FooterGroup(alignment: .trailing, spacing: spacing) {
                     trailing()
                 }
@@ -381,6 +408,7 @@ struct CardFooter<Leading: View, Trailing: View, Widget: View>: View {
                 .animation(.easeOut(duration: 0.18), value: actionsVisible)
                 if let persistentTrailing {
                     persistentTrailing
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
             .padding(.horizontal, horizontalPadding)

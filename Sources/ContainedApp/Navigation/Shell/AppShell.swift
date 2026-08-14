@@ -4,56 +4,26 @@ import ContainedUI
 import SwiftData
 import ContainedCore
 
-struct ClassicShell: View {
-    @Environment(AppModel.self) private var app
+/// The single app shell: primary resource pages sit beneath permanent toolbar chrome, while utility
+/// destinations and creation/edit flows are presented by toolbar morph panels.
+struct AppShell: View {
     @Environment(UIState.self) private var ui
-    let sidebarNavigationEnabled: Bool
-
-    init(sidebarNavigationEnabled: Bool = true) {
-        self.sidebarNavigationEnabled = sidebarNavigationEnabled
-    }
 
     var body: some View {
-        @Bindable var ui = ui
-        NavigationSplitView(columnVisibility: sidebarColumnVisibility) {
-            AppSidebar(selection: $ui.selectedSection)
-                .toolbar(removing: .sidebarToggle)
-        } detail: {
-            detailColumn
-        }
-        .navigationSplitViewStyle(.balanced)
-        .onAppear {
-            if !sidebarNavigationEnabled { ui.sidebarVisible = false }
-        }
-        .onChange(of: sidebarNavigationEnabled) { _, enabled in
-            withAnimation(.easeInOut(duration: 0.24)) {
-                ui.sidebarVisible = enabled
-            }
-        }
-    }
-
-    private var detailColumn: some View {
         ZStack {
-            detailPage
-        }
-        .overlay {
-            if ui.toolbarUIEnabled {
-                // The custom toolbar belongs to the detail column, not the whole split view. Mounting
-                // it here keeps the sidebar outside the toolbar safe-area bands.
-                AppToolbar()
-                    .environment(\.morphSafeAreaManager, toolbarSafeAreaManager)
-                    .ignoresSafeArea(.container, edges: .vertical)
-            }
+            pageContent
+            AppToolbar()
+                .environment(\.morphSafeAreaManager, toolbarSafeAreaManager)
+                .ignoresSafeArea(.container, edges: .vertical)
         }
         .environment(\.morphSafeAreaManager, UX.SafeArea.Manager(system: EdgeInsets()))
     }
 
-    private var detailPage: some View {
+    private var pageContent: some View {
         let insets = toolbarSafeAreaManager.insets(UX.SafeArea.Policy(excluding: .top, padding: .none))
-        return ClassicSectionPage(section: ui.selectedSection)
+        return AppSectionPage(section: ui.selectedSection)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Body-only padding from the same custom safe-area measurer used by morph panels.
-            .padding(.top, ui.toolbarUIEnabled ? insets.top : 0)
+            .padding(.top, insets.top)
             .ignoresSafeArea(.container, edges: .vertical)
     }
 
@@ -63,78 +33,9 @@ struct ClassicShell: View {
                            bottomToolbarHeight: AppToolbar.bandHeight)
     }
 
-    private var sidebarColumnVisibility: Binding<NavigationSplitViewVisibility> {
-        Binding {
-            sidebarNavigationEnabled && ui.sidebarVisible ? .automatic : .detailOnly
-        } set: { visibility in
-            if visibility == .detailOnly {
-                ui.sidebarVisible = false
-            }
-        }
-    }
 }
 
-private struct AppSidebar: View {
-    @Environment(AppModel.self) private var app
-    @Environment(UIState.self) private var ui
-    @Binding var selection: AppSection
-
-    var body: some View {
-        List(selection: $selection) {
-            ForEach(AppSectionGroup.allCases) { group in
-                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
-                    .filter { $0.group == group && isVisible($0) }
-                if !sections.isEmpty {
-                    Section(group.title) {
-                        ForEach(sections) { section in
-                        Label {
-                            HStack {
-                                Text(section.title)
-                                Spacer()
-                                if let badge = badge(for: section) {
-                                    Text(badge)
-                                        .designSecondaryMonospacedDigitCaption()
-                                }
-                            }
-                        } icon: {
-                            Image(systemName: section.symbol)
-                        }
-                        .tag(section)
-                        }
-                    }
-                }
-            }
-        }
-        .listStyle(.sidebar)
-        .tint(app.settings.accentTint.resolvedAppAccentColor)
-        .navigationTitle("Contained")
-    }
-
-    private func isVisible(_ section: AppSection) -> Bool {
-        section != .build || app.settings.imageBuildEnabled
-    }
-
-    private func badge(for section: AppSection) -> String? {
-        switch section {
-        case .containers:
-            return "\(app.containers.snapshots.count)"
-        case .images:
-            return "\(app.images.count)"
-        case .volumes:
-            return "\(app.volumes.count)"
-        case .networks:
-            return "\(app.networks.count)"
-        case .activity:
-            return app.activity == nil ? nil : "1"
-        default:
-            return nil
-        }
-    }
-}
-
-private struct ClassicSectionPage: View {
-    @Environment(AppModel.self) private var app
-    @Environment(UIState.self) private var ui
+private struct AppSectionPage: View {
     let section: AppSection
 
     var body: some View {
@@ -143,35 +44,10 @@ private struct ClassicSectionPage: View {
             ContainersGridView()
         case .images:
             ImagesPage()
-        case .build:
-            BuildPage()
         case .volumes:
-            SystemContent(initialPage: .volumes, showClose: false, elevated: false, usesToolbarSelection: false)
+            SystemContent(initialPage: .volumes, showClose: false, elevated: false)
         case .networks:
             NetworksPage()
-        case .system:
-            SystemContent(showClose: false, elevated: false)
-        case .registries:
-            SettingsContent(initialPage: .registries)
-        case .templates:
-            ToolbarTemplatesPanel(showClose: false, onClose: {})
-        case .activity:
-            ActivityContent(showClose: false, elevated: false)
-        case .settings:
-            SettingsContent()
-        }
-    }
-}
-
-private struct BuildPage: View {
-    var body: some View {
-        UI.Panel.PageScaffold(symbol: "hammer",
-                     title: AppText.sectionBuild,
-                     subtitle: AppText.string("build.subtitle.context", defaultValue: "From a Dockerfile + build context")) {
-            EmptyView()
-        } content: {
-            BuildWorkspaceView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
@@ -390,14 +266,13 @@ private struct ImagesPage: View {
     private let pageImageSpace = "imagesPage"
 
     private var imageDetailSafeAreaPolicy: UX.SafeArea.Policy {
-        ui.toolbarUIEnabled ? UX.SafeArea.Policy(excluding: .both, padding: .small) : .content
+        UX.SafeArea.Policy(excluding: .both, padding: .small)
     }
 
     private var imageDetailSafeAreaManager: UX.SafeArea.Manager {
-        guard ui.toolbarUIEnabled else { return UX.SafeArea.Manager(system: EdgeInsets()) }
-        return UX.SafeArea.Manager(system: EdgeInsets(),
-                                  topToolbarHeight: AppToolbar.bandHeight,
-                                  bottomToolbarHeight: AppToolbar.bandHeight)
+        UX.SafeArea.Manager(system: EdgeInsets(),
+                           topToolbarHeight: AppToolbar.bandHeight,
+                           bottomToolbarHeight: AppToolbar.bandHeight)
     }
 
     private var detailBinding: Binding<Bool> {

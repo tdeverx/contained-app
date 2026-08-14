@@ -51,10 +51,9 @@ for the selected runtime. The app resolves the descriptor's localized text key,
 then appends source aliases and examples such as the Apple `container` flag,
 Docker CLI flag, or Compose service key when Core publishes one.
 
-The presentation path is shared. With toolbar panel navigation enabled, run and
-edit open in the creation morph from their measured toolbar origin. With it
-disabled, the same form state opens as a classic sheet so card buttons, menus,
-keyboard shortcuts, and palette actions keep one routing model.
+The presentation path is shared. Run and edit open in the creation morph from
+their measured toolbar origin, so card buttons, menus, keyboard shortcuts, and
+palette actions keep one routing model.
 
 ## UI abstractions over CLI flags
 

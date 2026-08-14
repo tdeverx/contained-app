@@ -5,10 +5,8 @@ experimental gates, registries, and local data management.
 
 ## System
 
-The System page surfaces runtime status, runtime details, resource usage,
-image update status, and app/runtime actions. System content is shared between
-the classic sidebar page and toolbar morph panel when the experimental toolbar
-UI is enabled.
+The System panel surfaces runtime status, runtime details, resource usage,
+image update status, and app/runtime actions.
 
 Runtime controls are rendered from descriptor capabilities. Apple container
 currently exposes service lifecycle, kernel, and DNS controls; future runtimes
@@ -47,9 +45,6 @@ a specific issue, and blue means the setting differs from the shipped default.
 
 Experimental features default off:
 
-- Toolbar-first UI
-- Toolbar panel navigation
-- Sidebar navigation
 - Command palette
 - Docker Hub search
 - Compose import

@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 import ContainedCore
 
 /// The shared container Create/Edit form body: native grouped Form sections mapping the `run`
-/// flags. Reused by `ContainerEditSheet` for both new and edit modes. Field guidance stays available
+/// flags. Reused by `ContainerConfigureView` for both new and edit modes. Field guidance stays available
 /// through tappable `info.circle` popovers that appear on row hover/focus.
 struct ContainerSchemaForm: View {
     @Environment(AppModel.self) private var app

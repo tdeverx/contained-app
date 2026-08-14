@@ -63,7 +63,7 @@ Expanded container detail surfaces include:
 - Files
 
 Expanded views use the same toolbar safe-area contract as morph panels, clearing
-top and bottom toolbar bands when the experimental toolbar is visible.
+the permanent top and bottom toolbar bands.
 
 ## Restart and health
 
@@ -81,8 +81,7 @@ reserved for live crash recovery.
 ## Edit
 
 Container edit opens the same [Run / Edit Form](/Documentation/Features/Run-Edit-Form.md) used for new
-containers. Toolbar panel navigation opens it in the [Creation Workflow](/Documentation/Features/Creation-Workflow.md)
-morph; classic routing opens the same form state as a sheet.
+containers in the [Creation Workflow](/Documentation/Features/Creation-Workflow.md) morph.
 
 Runtime configuration is immutable, so saving an edit recreates the container.
 Contained validates the replacement and a snapshot-derived rollback recipe before
