@@ -120,7 +120,6 @@ enum Tokens {
         public static let port: CGFloat = 70
         public static let containerPort: CGFloat = 80
         public static let userID: CGFloat = 90
-        public static let shellPicker: CGFloat = 140
         public static let compactSlider: CGFloat = 140
         public static let networkName: CGFloat = 180
         public static let tintColorHex: CGFloat = 220
@@ -151,6 +150,7 @@ enum Tokens {
 
     public enum Chart {
         public static let height: CGFloat = 140
+        public static let metricTileWidth: CGFloat = 220
         public static let axisDesiredCount = 4
         public static let areaOpacity: Double = 0.30
         public static let emptyHeight: CGFloat = 200
@@ -171,8 +171,6 @@ enum Tokens {
     }
 
     public enum Terminal {
-        public static let surfaceOpacity: Double = 0.22
-        public static let nativeBackgroundOpacity: CGFloat = 0.82
         public static let nativeForegroundWhite: CGFloat = 0.92
         public static let fontSize: CGFloat = 12
     }
@@ -391,6 +389,7 @@ public extension UI.Chart {
     enum Size {
         public static let height = UI.Tokens.Chart.height
         public static let emptyHeight = UI.Tokens.Chart.emptyHeight
+        public static let metricTileWidth = UI.Tokens.Chart.metricTileWidth
     }
 
     /// Chart rendering mirrors reusable chart defaults.
@@ -424,7 +423,6 @@ public extension UI.Form {
         public static let port = UI.Tokens.FormWidth.port
         public static let containerPort = UI.Tokens.FormWidth.containerPort
         public static let userID = UI.Tokens.FormWidth.userID
-        public static let shellPicker = UI.Tokens.FormWidth.shellPicker
         public static let compactSlider = UI.Tokens.FormWidth.compactSlider
         public static let networkName = UI.Tokens.FormWidth.networkName
         public static let tintColorHex = UI.Tokens.FormWidth.tintColorHex
@@ -477,8 +475,6 @@ public extension UI.Control {
 public extension UI.Console {
     /// Console metrics mirror terminal surface defaults.
     enum Metric {
-        public static let surfaceOpacity = UI.Tokens.Terminal.surfaceOpacity
-        public static let nativeBackgroundOpacity = UI.Tokens.Terminal.nativeBackgroundOpacity
         public static let nativeForegroundWhite = UI.Tokens.Terminal.nativeForegroundWhite
         public static let fontSize = UI.Tokens.Terminal.fontSize
     }

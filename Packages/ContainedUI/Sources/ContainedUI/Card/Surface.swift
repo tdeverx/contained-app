@@ -329,7 +329,7 @@ struct CardSurface<Header: View, BodyContent: View, FooterLeading: View,
     }
 }
 
-private struct CardMaterialSurface: ViewModifier {
+struct CardMaterialSurface: ViewModifier {
     var material: UI.Theme.WindowMaterial
     var cornerRadius: CGFloat
     var shadow: Bool
@@ -344,11 +344,12 @@ private struct CardMaterialSurface: ViewModifier {
         content
             .clipShape(shape)
             .background {
-                ExteriorShadow(cornerRadius: cornerRadius,
-                               color: shadowColor,
-                               radius: shadowRadius,
-                               y: shadowY)
-                    .opacity(shadow ? 1 : 0)
+                if shadow {
+                    ExteriorShadow(cornerRadius: cornerRadius,
+                                   color: shadowColor,
+                                   radius: shadowRadius,
+                                   y: shadowY)
+                }
             }
             .background {
                 ZStack {
@@ -382,7 +383,7 @@ private struct CardMaterialSurface: ViewModifier {
     private var shadowY: CGFloat { UI.Theme.Material.elevatedSurfaceShadowY }
 }
 
-private extension View {
+extension View {
     func designCardMaterial(_ material: UI.Theme.WindowMaterial,
                               cornerRadius: CGFloat,
                               shadow: Bool,

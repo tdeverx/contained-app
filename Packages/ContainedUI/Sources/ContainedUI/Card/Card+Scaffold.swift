@@ -224,6 +224,8 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
             }
         } trailing: {
             HStack(spacing: UI.Tokens.Space.s) {
+                headerAccessory()
+                    .cardControlsReveal(pages?.controlsReveal ?? 1)
                 if let pages {
                     CardPageControls(items: pages.items,
                                              selection: pages.selection,
@@ -233,7 +235,6 @@ struct Scaffold<Icon: View, TitleAccessory: View, SubtitleAccessory: View,
                                              onSelect: pages.onSelect,
                                              onClose: pages.onClose)
                 }
-                headerAccessory()
             }
         }
     }

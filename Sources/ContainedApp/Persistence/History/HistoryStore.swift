@@ -191,6 +191,24 @@ final class HistoryStore {
         }
     }
 
+    func containerMetrics(scopedContainerID: String, since cutoff: Date) async -> [MetricSampleSnapshot] {
+        do {
+            return try await reader.containerMetrics(scopedContainerID: scopedContainerID, since: cutoff)
+        } catch {
+            database.recordFailure(.fetch(model: "Container metrics", detail: String(describing: error)))
+            return []
+        }
+    }
+
+    func containerEvents(scopedContainerID: String, since cutoff: Date) async -> [ActivityEvent] {
+        do {
+            return try await reader.containerEvents(scopedContainerID: scopedContainerID, since: cutoff)
+        } catch {
+            database.recordFailure(.fetch(model: "Container events", detail: String(describing: error)))
+            return []
+        }
+    }
+
     // MARK: Retention
 
     func pruneOld(now: Date = Date()) {
@@ -345,18 +363,24 @@ actor HistoryReader {
     }
 
     func containerHistory(scopedContainerID: String, since cutoff: Date) throws -> ContainerHistorySnapshot {
-        let metrics = try modelContext.fetch(FetchDescriptor<MetricSample>(
+        ContainerHistorySnapshot(metrics: try containerMetrics(scopedContainerID: scopedContainerID, since: cutoff),
+                                 events: try containerEvents(scopedContainerID: scopedContainerID, since: cutoff))
+    }
+
+    func containerMetrics(scopedContainerID: String, since cutoff: Date) throws -> [MetricSampleSnapshot] {
+        try modelContext.fetch(FetchDescriptor<MetricSample>(
             predicate: #Predicate { $0.containerID == scopedContainerID && $0.timestamp >= cutoff },
             sortBy: [SortDescriptor(\MetricSample.timestamp)]
         )).map(MetricSampleSnapshot.init)
+    }
 
+    func containerEvents(scopedContainerID: String, since cutoff: Date) throws -> [ActivityEvent] {
         var eventDescriptor = FetchDescriptor<EventRecord>(
             predicate: #Predicate { $0.containerID == scopedContainerID && $0.timestamp >= cutoff },
             sortBy: [SortDescriptor(\EventRecord.timestamp, order: .reverse)]
         )
         eventDescriptor.fetchLimit = 50
-        let events = try modelContext.fetch(eventDescriptor).map(ActivityEvent.init)
-        return ContainerHistorySnapshot(metrics: metrics, events: events)
+        return try modelContext.fetch(eventDescriptor).map(ActivityEvent.init)
     }
 }
 

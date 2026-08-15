@@ -16,7 +16,7 @@ struct TerminalSurface: NSViewRepresentable {
         let view = LocalProcessTerminalView(frame: .zero)
         view.processDelegate = context.coordinator
         view.font = NSFont.monospacedSystemFont(ofSize: UI.Console.Metric.fontSize, weight: .regular)
-        view.nativeBackgroundColor = NSColor.black.withAlphaComponent(UI.Console.Metric.nativeBackgroundOpacity)
+        view.nativeBackgroundColor = .clear
         view.nativeForegroundColor = NSColor(white: UI.Console.Metric.nativeForegroundWhite, alpha: 1)
 
         // PTY is provided by SwiftTerm; the command builder requests a TTY inside the container.

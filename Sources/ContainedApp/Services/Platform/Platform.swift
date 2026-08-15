@@ -28,6 +28,12 @@ enum Platform {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
+    static func copyToPasteboard(_ value: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(value, forType: .string)
+    }
+
     static func zoomFrontWindow() {
         (NSApp.keyWindow ?? NSApp.mainWindow)?.zoom(nil)
     }

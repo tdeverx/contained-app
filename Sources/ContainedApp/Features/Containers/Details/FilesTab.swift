@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 struct FilesTab: View {
     @Environment(AppModel.self) private var app
     let snapshot: Core.Container.Snapshot
+    let headerActions: ContainerPageHeaderActions
 
     @State private var path = "/"
     @State private var entries: [String] = []
@@ -19,42 +20,59 @@ struct FilesTab: View {
     @State private var copiedFileName = ""
 
     var body: some View {
-        if snapshot.state != .running {
-            UI.State.Empty(AppText.string("files.notRunning", defaultValue: "Not running"),
-                             systemImage: "folder",
-                             description: AppText.string("files.notRunning.description", defaultValue: "Start the container to browse its files."))
-        } else {
-            ContainerToolTabScaffold {
-                pathBar
-            } content: {
-                listing
-            }
-            .task(id: path) { await load() }
-            .fileImporter(isPresented: $copyingIn,
-                          allowedContentTypes: [.item, .folder]) { result in
-                handleCopyInSelection(result)
-            }
-            .fileMover(isPresented: $movingCopiedFile,
-                       file: copiedFileURL) { result in
-                handleCopyOutMove(result)
+        Group {
+            if snapshot.state != .running {
+                UI.State.Empty(AppText.string("files.notRunning", defaultValue: "Not running"),
+                                 systemImage: "folder",
+                                 description: AppText.string("files.notRunning.description", defaultValue: "Start the container to browse its files."))
+            } else {
+                ContainerToolTabScaffold {
+                    pathBar
+                } content: {
+                    listing
+                }
+                .task(id: path) { await load() }
+                .fileImporter(isPresented: $copyingIn,
+                              allowedContentTypes: [.item, .folder]) { result in
+                    handleCopyInSelection(result)
+                }
+                .fileMover(isPresented: $movingCopiedFile,
+                           file: copiedFileURL) { result in
+                    handleCopyOutMove(result)
+                }
             }
         }
+        .onAppear { updateHeaderActions() }
+        .onDisappear { headerActions.clear(for: .files) }
+        .onChange(of: path) { _, _ in updateHeaderActions() }
+        .onChange(of: loading) { _, _ in updateHeaderActions() }
     }
 
     private var pathBar: some View {
         HStack(spacing: UI.Layout.Spacing.s) {
-            UI.Action.Group(UI.Action.Item(systemName: "chevron.up",
-                                           help: AppText.parent,
-                                           isEnabled: path != "/") { goUp() })
             Text(path).designMonospacedCallout().lineLimit(1).truncationMode(.middle)
             Spacer()
             if loading { UI.State.InlineStatus(AppText.string("files.loading", defaultValue: "loading"), isWorking: true) }
-            UI.Action.Group(UI.Action.Item(systemName: "square.and.arrow.down",
-                                           help: AppText.string("files.copyIntoFolder", defaultValue: "Copy a file into this folder")) {
-                    copyingIn = true
-            })
-            UI.Action.Group(UI.Action.Item(systemName: "arrow.clockwise", help: AppText.refresh) { Task { await load() } })
         }
+    }
+
+    private func updateHeaderActions() {
+        let actions: [UI.Action.Item] = snapshot.state == .running ? [
+            UI.Action.Item(systemName: "chevron.up",
+                           help: AppText.parent,
+                           isEnabled: path != "/",
+                           action: goUp),
+            UI.Action.Item(systemName: "square.and.arrow.down",
+                           help: AppText.string("files.copyIntoFolder", defaultValue: "Copy a file into this folder")) {
+                copyingIn = true
+            },
+            UI.Action.Item(systemName: "arrow.clockwise",
+                           help: AppText.refresh,
+                           isEnabled: !loading) {
+                Task { await load() }
+            },
+        ] : []
+        headerActions.replace(for: .files, with: actions)
     }
 
     @ViewBuilder

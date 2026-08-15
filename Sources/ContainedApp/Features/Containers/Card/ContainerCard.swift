@@ -13,11 +13,8 @@ struct ContainerCard: View {
     var style: Personalization
     var hasStyleOverride: Bool = true
     var density: UI.Card.Density
-    var stats: Core.Metrics.StatsDelta?
+    let metrics: ContainerMetricsState
     var statsNormalization: Core.Metrics.NormalizationContext = .containerSpecific
-    /// Every metric's recent history, so the footer's widget chips can flip the graph instantly
-    /// without borrowing another metric's samples.
-    var histories: [Core.Metrics.GraphMetric: UI.Chart.SampleBuffer] = [:]
     var isBusy: Bool
     var imageUpdateState: Core.Image.ContainerUpdateState = .unknown
     var isExpanded: Bool = false
@@ -49,13 +46,19 @@ struct ContainerCard: View {
     @State private var draftStyle: Personalization? = nil
     /// Session-only graph tab selection. The footer chips act as tabs and switch the graph.
     @State private var localSelectedWidgetIndex = 0
+    @State private var pageHeaderActions = ContainerPageHeaderActions()
+    @State private var historyViewport: HistoryViewport = .oneHour
+    @State private var historyInterpolation: UI.Chart.Interpolation = .monotone
+    @State private var terminalShell = "/bin/sh"
+
+    private let terminalShells = ["/bin/sh", "/bin/bash", "/bin/ash", "/bin/zsh"]
 
     enum Tab: String, CaseIterable, Identifiable {
         case overview = "Overview"
         case logs = "Logs"
         case terminal = "Terminal"
-        case stats = "Stats"
-        case history = "History"
+        case statistics = "Statistics"
+        case alerts = "Alerts"
         case files = "Files"
 
         var id: String { rawValue }
@@ -65,8 +68,8 @@ struct ContainerCard: View {
             case .overview: return "rectangle.grid.1x2"
             case .logs: return "text.alignleft"
             case .terminal: return "terminal"
-            case .stats: return "chart.xyaxis.line"
-            case .history: return "clock.arrow.circlepath"
+            case .statistics: return "chart.xyaxis.line"
+            case .alerts: return "bell"
             case .files: return "folder"
             }
         }
@@ -160,7 +163,21 @@ struct ContainerCard: View {
         } subtitleAccessory: {
             EmptyView()
         } headerAccessory: {
-            EmptyView()
+            if isExpanded {
+                if tab == .statistics {
+                    UI.Action.Cluster {
+                        historyViewportMenu
+                        historyInterpolationMenu
+                    }
+                } else if tab == .terminal {
+                    UI.Action.Cluster {
+                        terminalShellMenu
+                        UI.Action.Items(pageHeaderActions.items)
+                    }
+                } else if !pageHeaderActions.items.isEmpty {
+                    UI.Action.Group(pageHeaderActions.items)
+                }
+            }
         } bodyContent: {
             detailBody
         } footerLeading: {
@@ -168,24 +185,15 @@ struct ContainerCard: View {
                 statusChip
             }
             ForEach(styleForDisplay.widgets.indices.filter { styleForDisplay.widget(at: $0).enabled }, id: \.self) { index in
-                widgetChip(index)
+                metricChip(index)
             }
         } footerActions: {
             footerActions
         } widget: {
-            UI.Chart.Sparkline(samples: histories[activeWidget.metric]?.values ?? [],
-                          comparisonSamples: activeWidgetComparisonMetric.flatMap { histories[$0]?.values } ?? [],
-                          color: activeWidgetColor,
-                          lineWidth: activeWidget.lineWidth,
-                          style: activeWidget.style,
-                          areaUsesGradient: activeWidget.areaUsesGradient,
-                          interpolation: activeWidget.interpolation,
-                          pointSize: activeWidget.pointSize,
-                          barWidth: activeWidget.barWidth,
-                          scale: sparklineScale(for: activeWidget.metric),
-                          comparisonScale: activeWidgetComparisonMetric.map(sparklineScale(for:)))
-                .frame(maxWidth: .infinity)
-                .frame(height: UI.Card.Metric.sparklineHeight)
+            ContainerCardLiveSparkline(metrics: metrics,
+                                       widget: activeWidget,
+                                       comparisonMetric: activeWidgetComparisonMetric,
+                                       color: activeWidgetColor)
         }
         .compactMuted(isStopped)
         .designCardProgressOverlay(when: isBusy)
@@ -350,25 +358,74 @@ struct ContainerCard: View {
             ContainerOverviewTab(snapshot: snapshot)
         case .logs:
             DeferredContainerPage {
-                LogsTab(snapshot: snapshot)
+                LogsTab(snapshot: snapshot, headerActions: pageHeaderActions)
             }
         case .terminal:
             DeferredContainerPage {
-                TerminalTab(snapshot: snapshot)
+                TerminalTab(snapshot: snapshot,
+                            shell: $terminalShell,
+                            headerActions: pageHeaderActions)
             }
-        case .stats:
-            DeferredContainerPage {
-                StatsTab(snapshot: snapshot)
-            }
-        case .history:
-            ContainerHistoryTab(snapshot: snapshot)
+        case .statistics:
+            ContainerStatisticsTab(snapshot: snapshot,
+                                   viewport: historyViewport,
+                                   interpolation: historyInterpolation,
+                                   tint: tint)
+        case .alerts:
+            ContainerAlertsTab(snapshot: snapshot)
         case .files:
-            FilesTab(snapshot: snapshot)
+            FilesTab(snapshot: snapshot, headerActions: pageHeaderActions)
         }
+    }
+
+    private var historyViewportMenu: some View {
+        Menu {
+            Picker("Statistics range", selection: $historyViewport) {
+                ForEach(HistoryViewport.allCases) { viewport in
+                    Text(viewport.title).tag(viewport)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            UI.Action.MenuLabel(systemName: "clock",
+                                help: "Statistics range: \(historyViewport.title)")
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var historyInterpolationMenu: some View {
+        Menu {
+            Picker("Interpolation", selection: $historyInterpolation) {
+                ForEach(UI.Chart.Interpolation.allCases) { interpolation in
+                    Text(interpolation.localizedDisplayName).tag(interpolation)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            UI.Action.MenuLabel(systemName: "line.diagonal",
+                                help: "Interpolation: \(historyInterpolation.localizedDisplayName)")
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var terminalShellMenu: some View {
+        Menu {
+            Picker("Shell", selection: $terminalShell) {
+                ForEach(terminalShells, id: \.self) { shell in
+                    Text(shell).tag(shell)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            UI.Action.MenuLabel(systemName: "terminal",
+                                help: "Shell: \(terminalShell)")
+        }
+        .buttonStyle(.plain)
     }
 
     private func selectTab(_ item: Tab) {
         guard tab != item else { return }
+        pageHeaderActions.clear()
         var transaction = Transaction()
         transaction.disablesAnimations = true
         withTransaction(transaction) {
@@ -377,38 +434,19 @@ struct ContainerCard: View {
     }
 
     /// A selectable widget tab. Tapping flips the graph for this session only (not persisted).
-    private func widgetChip(_ index: Int) -> some View {
+    private func metricChip(_ index: Int) -> some View {
         let widget = styleForDisplay.widget(at: index)
-        let active = index == activeWidgetIndex
-        return UI.Card.FooterChip(isSelected: active,
-                                      tint: widget.tint?.color ?? tint,
-                                      help: widget.metric.displayName,
-                                      action: {
+        return ContainerCardLiveMetricChip(metrics: metrics,
+                                           snapshot: snapshot,
+                                           widget: widget,
+                                           normalization: statsNormalization,
+                                           isSelected: index == activeWidgetIndex,
+                                           tint: widget.tint?.color ?? tint) {
             if let selectedWidgetIndex {
                 selectedWidgetIndex.wrappedValue = index
             } else {
                 localSelectedWidgetIndex = index
             }
-        }) {
-            if widget.showIcon {
-                UI.Symbol.Image(systemName: widget.resolvedSystemImage,
-                             size: .caption2)
-            }
-        } text: {
-            if widget.showText {
-                UI.Card.MetricText(text: stats.map {
-                    widget.metric.chipCaption(from: $0,
-                                              snapshot: snapshot,
-                                              normalization: statsNormalization)
-                } ?? "—")
-            }
-        }
-    }
-
-    private func sparklineScale(for metric: Core.Metrics.GraphMetric) -> UI.Chart.Scale {
-        switch metric {
-        case .cpu, .memory: return .fraction
-        case .netRx, .netTx, .diskRead, .diskWrite: return .normalized
         }
     }
 
@@ -449,6 +487,70 @@ struct ContainerCard: View {
                                  tint: tint,
                                  role: role,
                                  action: action)
+    }
+}
+
+/// Keeps streamed metrics below the card's observation boundary. A stats tick refreshes the live
+/// footer value without reconstructing card chrome or an open context menu.
+struct ContainerCardLiveMetricChip: View {
+    let metrics: ContainerMetricsState
+    let snapshot: Core.Container.Snapshot
+    let widget: WidgetConfiguration
+    let normalization: Core.Metrics.NormalizationContext
+    let isSelected: Bool
+    let tint: Color
+    let action: () -> Void
+
+    var body: some View {
+        let caption = metrics.stats.map {
+            widget.metric.chipCaption(from: $0,
+                                      snapshot: snapshot,
+                                      normalization: normalization)
+        } ?? "—"
+        UI.Card.FooterChip(isSelected: isSelected,
+                           tint: tint,
+                           help: widget.metric.displayName,
+                           action: action) {
+            if widget.showIcon {
+                UI.Symbol.Image(systemName: widget.resolvedSystemImage,
+                                size: .caption2)
+            }
+        } text: {
+            if widget.showText {
+                UI.Card.MetricText(text: caption)
+            }
+        }
+    }
+}
+
+/// The sparkline owns the other live metrics read, so history changes repaint only its Canvas.
+struct ContainerCardLiveSparkline: View {
+    let metrics: ContainerMetricsState
+    let widget: WidgetConfiguration
+    let comparisonMetric: Core.Metrics.GraphMetric?
+    let color: Color
+
+    var body: some View {
+        UI.Chart.Sparkline(samples: metrics.values(for: widget.metric),
+                           comparisonSamples: comparisonMetric.map(metrics.values(for:)) ?? [],
+                           color: color,
+                           lineWidth: widget.lineWidth,
+                           style: widget.style,
+                           areaUsesGradient: widget.areaUsesGradient,
+                           interpolation: widget.interpolation,
+                           pointSize: widget.pointSize,
+                           barWidth: widget.barWidth,
+                           scale: sparklineScale(for: widget.metric),
+                           comparisonScale: comparisonMetric.map(sparklineScale(for:)))
+            .frame(maxWidth: .infinity)
+            .frame(height: UI.Card.Metric.sparklineHeight)
+    }
+
+    private func sparklineScale(for metric: Core.Metrics.GraphMetric) -> UI.Chart.Scale {
+        switch metric {
+        case .cpu, .memory: return .fraction
+        case .netRx, .netTx, .diskRead, .diskWrite: return .normalized
+        }
     }
 }
 

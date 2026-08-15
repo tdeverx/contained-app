@@ -61,9 +61,28 @@ Expanded container detail surfaces include:
 - Overview
 - Logs
 - Terminal
-- Stats
-- History
+- Statistics
+- Alerts
 - Files
+
+The expanded card header adapts to the active page. Page-wide commands such as
+following, copying, or clearing logs; reconnecting a terminal; and navigating,
+importing, or refreshing files stay in one consistent header action group.
+Terminal shell selection also lives in that header, while the terminal content
+uses the same flat card material and radius as the Statistics graphs.
+Status readouts remain with their page content. Overview uses the same grouped
+section rhythm as Run, Edit, and Settings, with live metric cards in an edge-to-edge
+horizontal scroll lane whose gaps match the page inset. The Statistics header selects a 1, 6, 12, or 24-hour viewport and
+the interpolation used by every chart. CPU, memory, network-in, network-out, disk-read, and
+disk-write charts each independently scroll through the retained timeline and
+settle on hourly boundaries. Visible scales update after scrolling settles, and
+reduced long histories retain their low/high envelope instead of averaging short
+peaks away. Charts retain the full scrollable time domain while rendering only a
+small nearby buffer, keeping narrow 1-hour and 6-hour viewports responsive. They
+open with the newest sample at the right edge, use the container's resolved theme
+color, and retain the standard inset inside their rounded material surfaces.
+Container-scoped lifecycle, health, image, and watchdog notifications live on
+the Alerts page rather than being mixed into Statistics.
 
 Expanded views use the same toolbar safe-area contract as morph panels, clearing
 the permanent top and bottom toolbar bands.
@@ -72,7 +91,8 @@ the permanent top and bottom toolbar bands.
 
 Apple `container` has no native restart policy or healthcheck. Contained stores
 restart intent and health probes as app-managed state, runs probes through the
-container's owning runtime, and records events in Activity/History.
+container's owning runtime, and records events in Activity and the container's
+Alerts page.
 
 In **Settings → General → Startup**, you can independently opt in to starting a
 stopped controllable engine when Contained opens and to restoring stopped

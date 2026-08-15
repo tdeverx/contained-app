@@ -429,7 +429,7 @@ struct ContainersGridView: View {
     }
 }
 
-private struct ContainerCardMetricsRenderer: View {
+struct ContainerCardMetricsRenderer: View {
     let metrics: ContainerMetricsState
     let snapshot: Core.Container.Snapshot
     let style: Personalization
@@ -462,9 +462,8 @@ private struct ContainerCardMetricsRenderer: View {
             style: style,
             hasStyleOverride: hasStyleOverride,
             density: density,
-            stats: metrics.stats,
+            metrics: metrics,
             statsNormalization: statsNormalization,
-            histories: metrics.historyByMetric,
             isBusy: isBusy,
             imageUpdateState: imageUpdateState,
             isExpanded: isExpanded,

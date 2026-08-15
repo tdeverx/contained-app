@@ -1,0 +1,4 @@
+- Fixed container context menus flashing during live metric updates while keeping card footer values and sparklines current.
+- Moved expanded-container page commands into the shared card header, which now adapts to Logs, Terminal, and Files.
+- Consolidated expanded container metrics into a Statistics page with selectable range and interpolation, independent hourly-snapping history charts, peak-preserving virtualization, latest-first positioning, theme colors, and standard graph padding; moved live metric cards into a flat horizontal Overview lane with the same shadowless card material and radius as the historical graphs, aligned Overview with Run/Edit/Settings section styling, and added a dedicated container Alerts page.
+- Made the Overview metric lane edge-to-edge with inset-matched gaps, moved Terminal shell selection into the page header, and placed the transparent terminal layer inside the same shadowless material and corner radius used by Statistics graphs.

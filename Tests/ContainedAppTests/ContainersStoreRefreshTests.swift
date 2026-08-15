@@ -1,6 +1,10 @@
 import Foundation
+import Observation
+import SwiftUI
+import Synchronization
 import Testing
 import ContainedCore
+import ContainedUI
 @testable import ContainedApp
 
 @Suite("Container stats streaming")
@@ -141,6 +145,78 @@ struct ContainersStoreRefreshTests {
         #expect(dbMetrics.values(for: .netRx).last == 300)
     }
 
+    @Test func cardChromeDoesNotObserveLiveMetricsButFooterAndGraphDo() {
+        let snapshot = Self.snapshot(id: "web", cpus: 2, memoryInBytes: 1_000)
+        let metrics = ContainerMetricsState(id: snapshot.scopedID)
+        let renderer = ContainerCardMetricsRenderer(
+            metrics: metrics,
+            snapshot: snapshot,
+            style: Personalization(),
+            hasStyleOverride: false,
+            density: .medium,
+            statsNormalization: .containerSpecific,
+            selectedWidgetIndex: .constant(0),
+            isBusy: false,
+            imageUpdateState: .unknown,
+            isExpanded: false,
+            controlsVisible: true,
+            onTap: {},
+            onStart: {},
+            onStop: {},
+            onRestart: {},
+            onEdit: {},
+            onRebuild: {},
+            onDelete: {},
+            onClose: {},
+            onSelectMultiple: {},
+            onToggleSelected: {},
+            onEndSelecting: {},
+            health: .unknown,
+            selecting: false,
+            isSelected: false
+        )
+        let widget = WidgetConfiguration(metric: .cpu)
+        let footer = ContainerCardLiveMetricChip(metrics: metrics,
+                                                 snapshot: snapshot,
+                                                 widget: widget,
+                                                 normalization: .containerSpecific,
+                                                 isSelected: true,
+                                                 tint: .blue,
+                                                 action: {})
+        let graph = ContainerCardLiveSparkline(metrics: metrics,
+                                               widget: widget,
+                                               comparisonMetric: nil,
+                                               color: .blue)
+        let chromeInvalidations = Mutex(0)
+        let footerInvalidations = Mutex(0)
+        let graphInvalidations = Mutex(0)
+
+        withObservationTracking {
+            _ = renderer.body
+        } onChange: {
+            chromeInvalidations.withLock { $0 += 1 }
+        }
+        withObservationTracking {
+            _ = footer.body
+        } onChange: {
+            footerInvalidations.withLock { $0 += 1 }
+        }
+        withObservationTracking {
+            _ = graph.body
+        } onChange: {
+            graphInvalidations.withLock { $0 += 1 }
+        }
+
+        var cpuHistory = UI.Chart.SampleBuffer()
+        cpuHistory.append(0.42)
+        metrics.update(stats: .sample(id: snapshot.scopedID),
+                       historyByMetric: [.cpu: cpuHistory])
+
+        #expect(chromeInvalidations.withLock { $0 } == 0)
+        #expect(footerInvalidations.withLock { $0 } == 1)
+        #expect(graphInvalidations.withLock { $0 } == 1)
+    }
+
     @Test func graphMetricCaptionsUseContainerResourceLimits() {
         let snapshot = Self.snapshot(id: "web", cpus: 4, memoryInBytes: 1_024)
         let delta = Core.Metrics.StatsDelta(id: "web",
@@ -277,16 +353,16 @@ struct ContainersStoreRefreshTests {
                          memoryBytes: 512,
                          netRxBytesPerSec: 1_024,
                          netTxBytesPerSec: 2_048,
-                         diskReadBytesPerSec: 0,
-                         diskWriteBytesPerSec: 0),
+                         diskReadBytesPerSec: 3_072,
+                         diskWriteBytesPerSec: 4_096),
             MetricSample(timestamp: Date(timeIntervalSinceReferenceDate: 1_060),
                          containerID: "web",
                          cpuFraction: 0.5,
                          memoryBytes: 1_024,
                          netRxBytesPerSec: 2_048,
                          netTxBytesPerSec: 4_096,
-                         diskReadBytesPerSec: 0,
-                         diskWriteBytesPerSec: 0)
+                         diskReadBytesPerSec: 5_120,
+                         diskWriteBytesPerSec: 6_144)
         ].map(MetricSampleSnapshot.init)
 
         let containerPoints = HistoryChartPoint.points(from: samples,
@@ -296,6 +372,8 @@ struct ContainersStoreRefreshTests {
         #expect(containerPoints.map { $0.memoryPercent } == [50, 100])
         #expect(containerPoints.map { $0.netRxKBPerSec } == [1, 2])
         #expect(containerPoints.map { $0.netTxKBPerSec } == [2, 4])
+        #expect(containerPoints.map { $0.diskReadKBPerSec } == [3, 5])
+        #expect(containerPoints.map { $0.diskWriteKBPerSec } == [4, 6])
 
         let machine = Core.Metrics.NormalizationContext(mode: .machine,
                                                 machineCPUs: 4,
@@ -328,6 +406,93 @@ struct ContainersStoreRefreshTests {
         #expect(downsampled.count == 120)
         #expect(downsampled.first!.timestamp >= samples.first!.timestamp)
         #expect(downsampled.last!.timestamp <= samples.last!.timestamp)
+    }
+
+    @Test func historyChartDownsamplingPreservesShortPeaksAndLows() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let samples = (0..<100).map { offset in
+            let isPeak = offset == 47
+            return MetricSampleSnapshot(timestamp: start.addingTimeInterval(Double(offset)),
+                                        containerID: "web",
+                                        cpuFraction: isPeak ? 100 : 1,
+                                        memoryBytes: isPeak ? 100 : 1,
+                                        netRxBytesPerSec: isPeak ? 100 : 1,
+                                        netTxBytesPerSec: isPeak ? 100 : 1,
+                                        diskReadBytesPerSec: isPeak ? 100 : 1,
+                                        diskWriteBytesPerSec: isPeak ? 100 : 1)
+        }
+
+        let downsampled = HistoryChartPoint.downsample(samples, maximumPoints: 20)
+
+        #expect(downsampled.count <= 20)
+        #expect(downsampled.contains { $0.cpuFraction == 100 })
+        #expect(downsampled.contains { $0.cpuFraction == 1 })
+    }
+
+    @Test func sevenDayDownsamplingDoesNotTurnContinuousHistoryIntoSinglePointSegments() {
+        let snapshot = Self.snapshot(id: "web", cpus: 1, memoryInBytes: 1)
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let samples = (0..<1_201).map { offset in
+            MetricSampleSnapshot(timestamp: start.addingTimeInterval(Double(offset) * 8 * 60),
+                                 containerID: snapshot.scopedID,
+                                 cpuFraction: 0.2,
+                                 memoryBytes: 1,
+                                 netRxBytesPerSec: 2,
+                                 netTxBytesPerSec: 3,
+                                 diskReadBytesPerSec: 4,
+                                 diskWriteBytesPerSec: 5)
+        }
+
+        let points = HistoryChartPoint.points(from: samples,
+                                              snapshot: snapshot,
+                                              normalization: .containerSpecific)
+
+        #expect(points.count == HistoryChartPoint.maximumRenderedPoints)
+        #expect(Set(points.map(\.segment)) == [0])
+    }
+
+    @Test func historyPercentageScaleRoundsToTheNextUsefulMagnitude() {
+        #expect(HistoryPercentScale(values: []).upperBound == 1)
+        #expect(HistoryPercentScale(values: [0.04]).upperBound == 0.05)
+        #expect(HistoryPercentScale(values: [0.8]).upperBound == 1)
+        #expect(HistoryPercentScale(values: [8]).upperBound == 10)
+        #expect(HistoryPercentScale(values: [36]).upperBound == 50)
+        #expect(HistoryPercentScale(values: [99, .infinity, .nan]).upperBound == 100)
+        #expect(HistoryPercentScale(values: [140]).upperBound == 100)
+        #expect(HistoryValueScale(values: [620]).upperBound == 1_000)
+    }
+
+    @Test func scrollableHistoryWindowsStayBounded() {
+        let latest = Date(timeIntervalSince1970: 12 * 3_600 + 47 * 60)
+        #expect(HistoryTimeline.initialScrollPosition(latest: latest, viewport: .oneHour)
+            == Date(timeIntervalSince1970: 11 * 3_600 + 47 * 60))
+        #expect(HistoryTimeline.initialScrollPosition(latest: latest, viewport: .sixHours)
+            == Date(timeIntervalSince1970: 6 * 3_600 + 47 * 60))
+        #expect(HistoryViewport.allCases.map(\.rawValue) == [1, 6, 12, 24])
+
+        let snapshot = Self.snapshot(id: "web", cpus: 1, memoryInBytes: 1)
+        var samples: [MetricSampleSnapshot] = []
+        for hour in 0..<10 {
+            let value = Double(hour)
+            let timestamp = Date(timeIntervalSince1970: value * 3_600)
+            samples.append(MetricSampleSnapshot(timestamp: timestamp,
+                                                containerID: snapshot.scopedID,
+                                                cpuFraction: value,
+                                                memoryBytes: value,
+                                                netRxBytesPerSec: value,
+                                                netTxBytesPerSec: value,
+                                                diskReadBytesPerSec: value,
+                                                diskWriteBytesPerSec: value))
+        }
+        let points = HistoryChartPoint.points(from: samples,
+                                              snapshot: snapshot,
+                                              normalization: .containerSpecific,
+                                              maximumPoints: samples.count)
+        let position = Date(timeIntervalSince1970: 5 * 3_600)
+        #expect(HistoryTimeline.visiblePoints(in: points, from: position, viewport: .oneHour).count == 2)
+        #expect(HistoryTimeline.points(in: points,
+                                      range: HistoryTimeline.bufferedRange(around: position,
+                                                                           viewport: .oneHour)).count == 4)
     }
 
     @Test func historyChartBreaksLinesAfterLongSamplingGap() {

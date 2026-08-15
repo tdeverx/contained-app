@@ -10,6 +10,8 @@ struct MetricTile: View {
     public var samples: [Double]? = nil
     public var sparklineScale: UI.Chart.Scale = .normalized
 
+    @Environment(\.cardMaterial) private var cardMaterial
+
     public init(label: String,
                 value: String,
                 systemImage: String? = nil,
@@ -47,7 +49,14 @@ struct MetricTile: View {
         }
         .padding(UI.Tokens.Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .materialSurface(.regular, cornerRadius: UI.Tokens.Radius.card, fill: tint, fillOpacity: 0.10)
+        .designCardMaterial(cardMaterial,
+                            cornerRadius: UI.Tokens.Radius.card,
+                            shadow: false,
+                            fill: nil,
+                            fillOpacity: 0,
+                            gradient: false,
+                            gradientAngle: 0,
+                            blendMode: .normal)
     }
 }
 }

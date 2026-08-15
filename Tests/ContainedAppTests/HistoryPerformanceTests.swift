@@ -122,8 +122,14 @@ struct HistoryPerformanceTests {
 
         let snapshot = await history.containerHistory(scopedContainerID: containerID,
                                                       since: now.addingTimeInterval(-60))
+        let metrics = await history.containerMetrics(scopedContainerID: containerID,
+                                                     since: now.addingTimeInterval(-60))
+        let events = await history.containerEvents(scopedContainerID: containerID,
+                                                   since: now.addingTimeInterval(-60))
 
         #expect(snapshot.events.map(\.message) == ["current"])
         #expect(snapshot.metrics.count == 1)
+        #expect(events.map(\.message) == ["current"])
+        #expect(metrics.count == 1)
     }
 }

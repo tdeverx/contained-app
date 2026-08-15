@@ -4,12 +4,44 @@ import Charts
 public extension UI.Chart {
 enum Style {
     public static func primaryLine(_ mark: LineMark) -> some ChartContent {
-        mark.foregroundStyle(Color.accentColor)
-            .interpolationMethod(.monotone)
+        primaryLine(mark, color: .accentColor)
+    }
+
+    public static func primaryLine(_ mark: LineMark, color: Color) -> some ChartContent {
+        primaryLine(mark, color: color, interpolation: .monotone)
+    }
+
+    public static func primaryLine(_ mark: LineMark,
+                                   color: Color,
+                                   interpolation: UI.Chart.Interpolation) -> some ChartContent {
+        mark.foregroundStyle(color)
+            .interpolationMethod(interpolation.chartMethod)
     }
 
     public static func primaryArea(_ mark: AreaMark) -> some ChartContent {
-        mark.foregroundStyle(Color.accentColor.opacity(UI.Tokens.Chart.areaOpacity))
+        primaryArea(mark, color: .accentColor)
+    }
+
+    public static func primaryArea(_ mark: AreaMark, color: Color) -> some ChartContent {
+        primaryArea(mark, color: color, interpolation: .monotone)
+    }
+
+    public static func primaryArea(_ mark: AreaMark,
+                                   color: Color,
+                                   interpolation: UI.Chart.Interpolation) -> some ChartContent {
+        mark.foregroundStyle(color.opacity(UI.Tokens.Chart.areaOpacity))
+            .interpolationMethod(interpolation.chartMethod)
+    }
+
+    public static func themedLine(_ mark: LineMark, color: Color) -> some ChartContent {
+        themedLine(mark, color: color, interpolation: .monotone)
+    }
+
+    public static func themedLine(_ mark: LineMark,
+                                  color: Color,
+                                  interpolation: UI.Chart.Interpolation) -> some ChartContent {
+        mark.foregroundStyle(color)
+            .interpolationMethod(interpolation.chartMethod)
     }
 
     public static func successLine(_ mark: LineMark) -> some ChartContent {
@@ -75,6 +107,18 @@ enum Interpolation: String, CaseIterable, Identifiable, Codable, Sendable {
     case linear, catmullRom, cardinal, monotone, stepStart, stepCenter, stepEnd
 
     public var id: String { rawValue }
+
+    fileprivate var chartMethod: InterpolationMethod {
+        switch self {
+        case .linear: return .linear
+        case .catmullRom: return .catmullRom
+        case .cardinal: return .cardinal
+        case .monotone: return .monotone
+        case .stepStart: return .stepStart
+        case .stepCenter: return .stepCenter
+        case .stepEnd: return .stepEnd
+        }
+    }
 
 }
 

@@ -74,7 +74,11 @@ history charts:
 
 Network and disk widgets remain raw bytes-per-second rates in both modes.
 History keeps raw samples on disk and applies the selected normalization mode
-when rendering charts, so older samples remain usable if the mode changes.
+when rendering charts, so older samples remain usable if the mode changes. While
+live stats are visible, Contained persists at most one metrics sample per minute;
+otherwise it requests a low-priority snapshot every five minutes. The selected
+history-retention setting controls how far back the horizontally scrollable
+history timeline can travel.
 
 The neighboring **List refresh interval** setting controls background service,
 container list, and resource-cache polling. Live metric widgets use their own

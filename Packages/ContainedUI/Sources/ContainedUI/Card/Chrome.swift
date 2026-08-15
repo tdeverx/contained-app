@@ -1,5 +1,13 @@
 import SwiftUI
 
+extension View {
+    func cardControlsReveal(_ reveal: Double) -> some View {
+        opacity(reveal)
+            .allowsHitTesting(reveal > 0.01)
+            .animation(.easeOut(duration: 0.18), value: reveal)
+    }
+}
+
 /// A reusable three-part card header: leading accessory, fill/truncate text block, and trailing
 /// button rail. This keeps the container/image cards using the same top-aligned chrome structure.
 struct CardHeader<Leading: View, Content: View, Trailing: View>: View {
@@ -297,9 +305,7 @@ struct CardPageControls<ID: Hashable>: View {
             }
             MaterialButtonItem(systemName: "xmark", help: closeLabel, action: onClose)
         }
-        .opacity(controlsReveal)
-        .allowsHitTesting(controlsReveal > 0.01)
-        .animation(.easeOut(duration: 0.18), value: controlsReveal)
+        .cardControlsReveal(controlsReveal)
     }
 }
 
