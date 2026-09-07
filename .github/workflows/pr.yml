@@ -65,7 +65,7 @@ jobs:
 
       - name: Native Xcode tests
         if: steps.changes.outputs.material == 'true'
-        run: xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug -destination 'platform=macOS' -resultBundlePath Contained.xcresult test
+        run: xcodebuild -workspace Contained.xcworkspace -scheme Contained -configuration Debug -destination 'platform=macOS' -skipPackagePluginValidation -resultBundlePath Contained.xcresult test
 
       - name: Upload native test results
         if: always() && steps.changes.outputs.material == 'true'
