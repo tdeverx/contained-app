@@ -1,6 +1,8 @@
 import Foundation
 
 extension RuntimeContainerClient {
+    var recreateVerificationDelay: Duration { .zero }
+
     func prepareCreateRequest(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateRequest {
         request
     }
@@ -40,6 +42,8 @@ extension RuntimeContainerClient {
         // lookups to turn inspected implementation details back into stable create arguments.
         let replacement = try await prepareCreateRequest(replacement)
         let rollback = try await prepareCreateRequest(rollback)
+        let originalWasRunning = try? await containerSnapshot(matching: originalID)?.state == .running
+        let expectedImageIdentities = try await resolvedImageIdentities(for: replacement.image)
         _ = try? await stop([originalID])
         let deletedOriginal: Bool
         do {
@@ -50,10 +54,19 @@ extension RuntimeContainerClient {
                                                  primaryError: error)
         }
 
+        var createdReplacementID: String?
         do {
-            return try await createContainer(replacement)
+            let result = try await createContainer(replacement)
+            createdReplacementID = result.id ?? replacement.name
+            try await verifyReplacement(id: createdReplacementID,
+                                        expectedImageIdentities: expectedImageIdentities,
+                                        mustBeRunning: originalWasRunning == true)
+            return result
         } catch {
             let replacementError = error
+            if let createdReplacementID, !createdReplacementID.isEmpty {
+                _ = try? await deleteContainerIfPresent(createdReplacementID, force: true)
+            }
             guard deletedOriginal else {
                 throw Core.Container.RecreateFailure(phase: .createReplacement,
                                                      recovery: .notNeeded,
@@ -73,6 +86,52 @@ extension RuntimeContainerClient {
         }
     }
 
+    private func resolvedImageIdentities(for reference: String) async throws -> Set<String>? {
+        guard let imageClient = self as? any RuntimeImageClient else { return nil }
+        let images = try await imageClient.inspectImage(reference)
+        let identities = images.reduce(into: Set<String>()) { result, image in
+            result.insert(Self.normalizedImageIdentity(image.id))
+            if let digest = image.digest {
+                result.insert(Self.normalizedImageIdentity(digest))
+            }
+        }
+        return identities.isEmpty ? nil : identities
+    }
+
+    private func verifyReplacement(id: String?,
+                                   expectedImageIdentities: Set<String>?,
+                                   mustBeRunning: Bool) async throws {
+        guard let id, !id.isEmpty else {
+            throw RecreateVerificationError.replacementUnavailable(id: "")
+        }
+        try await Task.sleep(for: recreateVerificationDelay)
+        guard let replacement = try await containerSnapshot(matching: id) else {
+            throw RecreateVerificationError.replacementUnavailable(id: id)
+        }
+        if let expectedImageIdentities {
+            guard let digest = replacement.configuration.image.descriptor?.digest,
+                  expectedImageIdentities.contains(Self.normalizedImageIdentity(digest)) else {
+                throw RecreateVerificationError.imageMismatch(
+                    expected: expectedImageIdentities.sorted(),
+                    actual: replacement.configuration.image.descriptor?.digest
+                )
+            }
+        }
+        if mustBeRunning, replacement.state != .running {
+            throw RecreateVerificationError.replacementNotRunning(id: id, state: replacement.rawState)
+        }
+    }
+
+    private func containerSnapshot(matching id: String) async throws -> Core.Container.Snapshot? {
+        try await listContainers(all: true).first {
+            $0.id == id || $0.scopedID == id || $0.scopedID == descriptor.kind.scopedID(for: id)
+        }
+    }
+
+    private static func normalizedImageIdentity(_ identity: String) -> String {
+        identity.hasPrefix("sha256:") ? String(identity.dropFirst("sha256:".count)) : identity
+    }
+
     private func deleteContainerIfPresent(_ id: String, force: Bool) async throws -> Bool {
         if let current = try? await listContainers(all: true),
            !current.contains(where: { $0.id == id || $0.scopedID == id || $0.scopedID == descriptor.kind.scopedID(for: id) }) {
@@ -83,6 +142,35 @@ extension RuntimeContainerClient {
             return true
         } catch let error as Core.Command.Error where error.isContainerNotFound {
             return false
+        }
+    }
+}
+
+private enum RecreateVerificationError: LocalizedError, Core.Error.PackageError {
+    case replacementUnavailable(id: String)
+    case replacementNotRunning(id: String, state: String)
+    case imageMismatch(expected: [String], actual: String?)
+
+    var packageName: String { "ContainedCore" }
+
+    var packageErrorCode: String {
+        switch self {
+        case .replacementUnavailable: "recreateReplacementUnavailable"
+        case .replacementNotRunning: "recreateReplacementNotRunning"
+        case .imageMismatch: "recreateImageMismatch"
+        }
+    }
+
+    var packageErrorContext: [String: String] { [:] }
+
+    var errorDescription: String? {
+        switch self {
+        case .replacementUnavailable(let id):
+            "Replacement container \(id) was not available after creation."
+        case .replacementNotRunning(let id, let state):
+            "Replacement container \(id) entered state \(state) during startup verification."
+        case .imageMismatch(let expected, let actual):
+            "Replacement resolved image \(actual ?? "unknown") instead of \(expected.joined(separator: ", "))."
         }
     }
 }

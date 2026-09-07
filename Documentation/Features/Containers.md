@@ -42,7 +42,8 @@ that the container's immutable image identity differs from the current tag—or 
 newer registry digest is available—the action is relabeled **Update Container**
 and an orange update button appears persistently at the far right of the card
 footer. Updating pulls first only
-when needed, then recreates through the same rollback path as Edit → Save.
+when needed, then recreates through the same rollback path as Edit → Save. A
+failed streamed pull stops the update instead of being reported as successful.
 Rebuild and Update preserve whether the container was running or stopped, while
 ordinary Start, Stop, and Restart remain non-destructive lifecycle operations.
 
@@ -108,7 +109,14 @@ containers in the [Creation Workflow](/Documentation/Features/Creation-Workflow.
 
 Runtime configuration is immutable, so saving an edit recreates the container.
 Contained validates the replacement and a snapshot-derived rollback recipe before
-deleting anything. If replacement creation then fails, Core automatically tries
-to restore the original container. A failed restoration keeps the original recipe
-in the app database for recovery; data that was not stored in volumes cannot be
-reconstructed.
+deleting anything, and records the locally resolved image identity. After creating
+the replacement, Contained verifies that it uses that identity and, when the
+original was running, remains running after initial startup. A failed creation or
+verification removes any replacement and makes Core try to restore the original
+container.
+
+Rollback restores the original definition and running state from its image
+reference. If a mutable tag has moved and the runtime no longer retains the prior
+image data, rollback cannot guarantee restoration of the exact earlier image
+digest. A failed restoration keeps the original recipe in the app database for
+recovery; data that was not stored in volumes cannot be reconstructed.

@@ -1,0 +1,1 @@
+- Verify image-update recreations use the freshly pulled image and survive startup, and surface streamed pull failures instead of reporting false success.

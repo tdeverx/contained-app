@@ -323,6 +323,95 @@ struct RuntimeDescriptorTests {
         }
     }
 
+    @Test func recreateRejectsStaleReplacementImageAndRestoresOriginal() async throws {
+        let expected = Core.Image.Resource(
+            configuration: Core.Image.Configuration(
+                name: "nginx:latest",
+                descriptor: Core.Container.Descriptor(digest: "sha256:new", mediaType: nil, size: nil),
+                creationDate: nil
+            ),
+            id: "new",
+            runtimeKind: .appleContainer
+        )
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "web", image: "nginx:latest", runtimeKind: .appleContainer)],
+            inspectedImages: [expected],
+            creationDigests: ["sha256:old", "sha256:new"]
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        do {
+            _ = try await orchestrator.recreateContainer(originalID: "web",
+                                                         replacement: recreateDocument(),
+                                                         rollback: recreateDocument(name: "web"))
+            Issue.record("Expected stale replacement verification to fail")
+        } catch let error as Core.Container.RecreateFailure {
+            #expect(error.phase == .createReplacement)
+            #expect(error.recovery == .originalRestored)
+            #expect(error.primaryFailure.code == "recreateImageMismatch")
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await runtime.deletedIDs == ["web", "created"])
+        #expect(await runtime.createdRequests.map(\.name) == ["created", "web"])
+    }
+
+    @Test func recreateKeepsOriginalWhenImageInspectionFails() async throws {
+        let inspectionError = Core.Command.Error.nonZeroExit(code: 1,
+                                                              stderr: "image service unavailable",
+                                                              command: "image inspect nginx:latest")
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "web", image: "nginx:latest", runtimeKind: .appleContainer)],
+            inspectError: inspectionError
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        do {
+            _ = try await orchestrator.recreateContainer(originalID: "web",
+                                                         replacement: recreateDocument(),
+                                                         rollback: recreateDocument(name: "web"))
+            Issue.record("Expected image inspection to fail")
+        } catch let error as Core.Command.Error {
+            #expect(error == inspectionError)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(await runtime.deletedIDs.isEmpty)
+        #expect(await runtime.createdRequests.isEmpty)
+    }
+
+    @Test func recreateRejectsReplacementThatStopsDuringStartup() async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "web", image: "nginx:latest", runtimeKind: .appleContainer)],
+            creationStates: [.stopped, .running]
+        )
+        let orchestrator = Core.Orchestrator(
+            cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient]
+        )
+
+        do {
+            _ = try await orchestrator.recreateContainer(originalID: "web",
+                                                         replacement: recreateDocument(),
+                                                         rollback: recreateDocument(name: "web"))
+            Issue.record("Expected stopped replacement verification to fail")
+        } catch let error as Core.Container.RecreateFailure {
+            #expect(error.phase == .createReplacement)
+            #expect(error.recovery == .originalRestored)
+            #expect(error.primaryFailure.code == "recreateReplacementNotRunning")
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
     private func recreateDocument(name: String = "created", image: String = "nginx:latest") -> Core.Schema.Document {
         var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
         request.image = image
@@ -414,7 +503,7 @@ private enum TestStubError: Error {
     case unused
 }
 
-private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient {
+private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient, RuntimeImageClient {
     nonisolated let descriptor = Core.Runtime.Descriptor.appleContainer
     var containers: [Core.Container.Snapshot]
     var deleteError: Core.Command.Error?
@@ -422,13 +511,25 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient {
     var deletedIDs: [String] = []
     var stoppedIDs: [String] = []
     var createdRequests: [Core.Container.CreateRequest] = []
+    var inspectedImages: [Core.Image.Resource]
+    var inspectError: Core.Command.Error?
+    var creationDigests: [String?]
+    var creationStates: [Core.Runtime.Status]
 
     init(containers: [Core.Container.Snapshot],
          deleteError: Core.Command.Error? = nil,
-         createErrors: [Core.Command.Error] = []) {
+         createErrors: [Core.Command.Error] = [],
+         inspectedImages: [Core.Image.Resource] = [],
+         inspectError: Core.Command.Error? = nil,
+         creationDigests: [String?] = [],
+         creationStates: [Core.Runtime.Status] = []) {
         self.containers = containers
         self.deleteError = deleteError
         self.createErrors = createErrors
+        self.inspectedImages = inspectedImages
+        self.inspectError = inspectError
+        self.creationDigests = creationDigests
+        self.creationStates = creationStates
     }
 
     func listContainers(all: Bool) async throws -> [Core.Container.Snapshot] { containers }
@@ -445,7 +546,26 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient {
     func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
         createdRequests.append(request)
         if !createErrors.isEmpty { throw createErrors.removeFirst() }
-        return Core.Container.CreateResult(id: "created")
+        let id = request.name.isEmpty ? "created" : request.name
+        let digest = creationDigests.isEmpty ? nil : creationDigests.removeFirst()
+        let state = creationStates.isEmpty ? Core.Runtime.Status.running : creationStates.removeFirst()
+        let descriptor = digest.map { Core.Container.Descriptor(digest: $0, mediaType: nil, size: nil) }
+        let initProcess = try JSONDecoder().decode(Core.Container.ProcessConfiguration.self,
+                                                   from: Data("{}".utf8))
+        let configuration = Core.Container.Configuration(
+            runtimeKind: .appleContainer,
+            id: id,
+            image: Core.Container.ImageReference(reference: request.image, descriptor: descriptor),
+            initProcess: initProcess
+        )
+        containers.removeAll { $0.id == id }
+        containers.append(Core.Container.Snapshot(
+            configuration: configuration,
+            id: id,
+            status: Core.Container.RuntimeState(state: state),
+            runtimeKind: .appleContainer
+        ))
+        return Core.Container.CreateResult(id: id)
     }
     func runContainer(arguments: [String]) async throws -> Data { Data() }
     func start(_ ids: [String]) async throws -> Data { Data() }
@@ -456,7 +576,30 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient {
     func deleteContainers(_ ids: [String], force: Bool) async throws -> Data {
         deletedIDs.append(contentsOf: ids)
         if let deleteError { throw deleteError }
+        containers.removeAll { ids.contains($0.id) }
         return Data()
     }
     func pruneContainers() async throws -> Data { Data() }
+    func images() async throws -> [Core.Image.Resource] { inspectedImages }
+    func inspectImage(_ ref: String) async throws -> [Core.Image.Resource] {
+        if let inspectError { throw inspectError }
+        return inspectedImages
+    }
+    nonisolated func streamPull(_ ref: String, platform: String?) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+    nonisolated func streamBuild(context: String, tag: String?, dockerfile: String?,
+                                 buildArgs: [String: String], noCache: Bool,
+                                 platform: String?) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+    nonisolated func streamPush(_ ref: String, platform: String?) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+    func deleteImages(_ refs: [String]) async throws -> Data { Data() }
+    func tagImage(source: String, target: String) async throws -> Data { Data() }
+    func saveImages(_ refs: [String], to output: String) async throws -> Data { Data() }
+    func loadImages(from input: String) async throws -> Data { Data() }
+    func exportContainer(_ id: String, to output: String) async throws -> Data { Data() }
+    func pruneImages(all: Bool) async throws -> Data { Data() }
 }

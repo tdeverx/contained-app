@@ -149,35 +149,44 @@ final class Runner: Running {
             process.standardError = pipe
             let handle = pipe.fileHandleForReading
 
-            handle.readabilityHandler = { handle in
-                let data = handle.availableData
-                guard !data.isEmpty else { return }
-                continuation.yield(String(decoding: data, as: UTF8.self))
-            }
-
-            process.terminationHandler = { _ in
-                handle.readabilityHandler = nil
-                continuation.finish()
-            }
-
             continuation.onTermination = { _ in
-                box.handle?.readabilityHandler = nil
                 if box.process.isRunning { box.process.terminate() }
             }
 
-            box.handle = handle
             DispatchQueue.global(qos: priority.dispatchQoS).async {
                 do {
                     try process.run()
                 } catch {
                     continuation.finish(throwing: Core.Command.Error.launchFailed(underlying: error.localizedDescription))
+                    return
                 }
+
+                var output = Data()
+                while true {
+                    let data = handle.availableData
+                    guard !data.isEmpty else { break }
+                    output.append(data)
+                    continuation.yield(String(decoding: data, as: UTF8.self))
+                }
+                process.waitUntilExit()
+
+                guard process.terminationStatus != 0 else {
+                    continuation.finish()
+                    return
+                }
+                let detail = String(decoding: output, as: UTF8.self)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                continuation.finish(throwing: Core.Command.Error.nonZeroExit(
+                    code: process.terminationStatus,
+                    stderr: detail,
+                    command: arguments.joined(separator: " ")
+                ))
             }
         }
     }
 }
 
-/// A Sendable holder for the non-Sendable `Process`/`FileHandle` used by `stream`'s teardown.
+/// A Sendable holder for the non-Sendable `Process` used by `stream`'s teardown.
 ///
 /// `@unchecked Sendable` is sound here by construction, not by the compiler's reasoning: the box is
 /// only ever touched from the stream's single `onTermination`/`terminationHandler` callbacks, which
@@ -186,7 +195,6 @@ final class Runner: Running {
 /// the access pattern (one writer at setup, one reader at teardown) carries no data race.
 private final class ProcessBox: @unchecked Sendable {
     let process = Process()
-    var handle: FileHandle?
 }
 
 private final class DataBox: @unchecked Sendable {
@@ -200,6 +208,7 @@ private final class DataBox: @unchecked Sendable {
     func set(_ data: Data) {
         lock.withLock { storage = data }
     }
+
 }
 
 }

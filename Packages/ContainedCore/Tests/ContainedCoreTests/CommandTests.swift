@@ -129,6 +129,30 @@ struct CommandTests {
         }
     }
 
+    @Test func streamedCommandPropagatesNonZeroExit() async {
+        let runner = Core.Command.Runner(executableURL: URL(fileURLWithPath: "/bin/sh"))
+        var streamed = ""
+
+        do {
+            for try await chunk in runner.stream(["-c", "printf 'pull failed'; exit 7"]) {
+                streamed += chunk
+            }
+            Issue.record("Expected the streamed command to fail")
+        } catch let error as Core.Command.Error {
+            guard case .nonZeroExit(let code, let stderr, let command) = error else {
+                Issue.record("Expected a non-zero exit error")
+                return
+            }
+            #expect(code == 7)
+            #expect(stderr.contains("pull failed"))
+            #expect(command == "-c printf 'pull failed'; exit 7")
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(streamed.contains("pull failed"))
+    }
+
     @Test func statsDeltaComputesCPUFraction() {
         let prev = Core.Metrics.ContainerStats(id: "x", cpuUsageUsec: 1_000_000, memoryUsageBytes: 100, memoryLimitBytes: 1000,
                                   blockReadBytes: 0, blockWriteBytes: 0, networkRxBytes: 0, networkTxBytes: 0, numProcesses: 1)

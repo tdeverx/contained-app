@@ -3,6 +3,7 @@ import Foundation
 struct DockerClient: Sendable {
     let runner: any Core.Command.Running
     var descriptor: Core.Runtime.Descriptor { .docker }
+    var recreateVerificationDelay: Duration { .seconds(1) }
 
     init(runner: any Core.Command.Running) {
         self.runner = runner

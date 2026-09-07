@@ -5,6 +5,7 @@ protocol RuntimeDescribing: Sendable {
 }
 
 protocol RuntimeContainerClient: RuntimeDescribing {
+    var recreateVerificationDelay: Duration { get }
     func listContainers(all: Bool) async throws -> [Core.Container.Snapshot]
     func stats(ids: [String]) async throws -> [Core.Metrics.ContainerStats]
     func streamStats(ids: [String]) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Error>
