@@ -3,13 +3,17 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.227+f6c5706</title>
-            <pubDate>Thu, 24 Sep 2026 18:31:45 +0000</pubDate>
-            <sparkle:version>227</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.227+f6c5706</sparkle:shortVersionString>
+            <title>1.0.0-nightly.229+2e03cb6</title>
+            <pubDate>Thu, 24 Sep 2026 21:09:55 +0000</pubDate>
+            <sparkle:version>229</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.229+2e03cb6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description><![CDATA[<h2>Full Release Notes</h2>
+            <description><![CDATA[<h2>Changes Since Last Nightly</h2>
+<ul>
+<li>Require Apple Container 1.4.1 or newer; support its expanded runtime status and live storage compaction; add kernel arguments, OCI masked/read-only paths, and build SSH forwarding; preserve new network metadata; and remove obsolete registry and stop-signal command output.</li>
+</ul>
+<h2>Full Release Notes</h2>
 <h3>Highlights</h3>
 <ul>
 <li>First complete Contained release: a native macOS 26 SwiftUI control surface for Apple's `container` CLI.</li>
@@ -90,7 +94,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.227+f6c5706/Contained-1.0.0-nightly.227+f6c5706.dmg" length="9546663" type="application/octet-stream" sparkle:edSignature="KgqcEtYGTG8Qxj9Y38Isx5thG8osEQuzRwoM/m2V7KsKB5jEwWPWFdoUYHFWrcjK2+igSyoW5jxT6aIdqvGxDA=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.229+2e03cb6/Contained-1.0.0-nightly.229+2e03cb6.dmg" length="9599306" type="application/octet-stream" sparkle:edSignature="WM/giZqtzvrRhJ/IckwoD7M6VCohOC2IzsnGOJurjgyPGtRxS0yR6WF0BR1/V9+6cYngMXLfXJPR2vF3C4ApDw=="/>
         </item>
     </channel>
 </rss>
