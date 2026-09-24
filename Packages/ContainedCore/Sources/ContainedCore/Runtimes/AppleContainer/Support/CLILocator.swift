@@ -3,6 +3,8 @@ import Foundation
 /// Finds the `container` binary and reports its version. The app is not sandboxed, so it can read
 /// these well-known install locations directly.
 enum AppleContainerCLILocator {
+    static let minimumSupportedVersion = "1.4.1"
+
     static let defaultCandidates = [
         "/usr/local/bin/container",
         "/opt/homebrew/bin/container",
@@ -29,9 +31,18 @@ enum AppleContainerCLILocator {
         return String(output[range])
     }
 
-    /// True when a version string is in the supported 1.0.x line.
+    /// True when the CLI meets the minimum version exercised by this adapter.
     static func isSupported(_ version: String?) -> Bool {
-        guard let version else { return false }
-        return version.hasPrefix("1.0.")
+        guard let version,
+              let installed = semanticComponents(version),
+              let minimum = semanticComponents(minimumSupportedVersion) else { return false }
+        return installed.lexicographicallyPrecedes(minimum) == false
+    }
+
+    private static func semanticComponents(_ version: String) -> [Int]? {
+        let components = version.split(separator: ".").map(String.init)
+        guard components.count == 3 else { return nil }
+        let numbers = components.compactMap(Int.init)
+        return numbers.count == 3 ? numbers : nil
     }
 }

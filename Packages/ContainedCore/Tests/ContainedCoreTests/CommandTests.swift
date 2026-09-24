@@ -11,11 +11,45 @@ struct CommandTests {
     }
 
     @Test func lifecycleArgv() {
-        #expect(ContainerCommands.start(["a", "b"]) == ["start", "a", "b"])
+        #expect(ContainerCommands.start("a") == ["start", "a"])
         #expect(ContainerCommands.stop(["a"], signal: "SIGTERM", time: 5) == ["stop", "--signal", "SIGTERM", "--time", "5", "a"])
         #expect(ContainerCommands.deleteContainers(["a"], force: true) == ["delete", "--force", "a"])
+        #expect(ContainerCommands.cleanContainers(["a", "b"]) == ["clean", "a", "b"])
         #expect(ContainerCommands.execInteractive("web", shell: "/bin/sh")
                 == ["exec", "--interactive", "--tty", "web", "/bin/sh"])
+    }
+
+    @Test func appleRunOmitsUnsupportedStopSignal() {
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "alpine"
+        request.stopSignal = "SIGQUIT"
+
+        #expect(ContainerCommands.run(request) == ["run", "--detach", "alpine"])
+    }
+
+    @Test func runIncludesContainer141SecurityAndKernelOptions() {
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "alpine"
+        request.kernelArguments = ["console=hvc0", ""]
+        request.maskedPaths = ["/proc/kcore"]
+        request.readonlyPaths = ["NONE", "/proc/acpi"]
+
+        #expect(ContainerCommands.run(request) == [
+            "run", "--detach",
+            "--kernel-arg", "console=hvc0",
+            "--masked-path", "/proc/kcore",
+            "--read-only-path", "NONE",
+            "--read-only-path", "/proc/acpi",
+            "alpine",
+        ])
+    }
+
+    @Test func runDropsRemovedAutoRegistryScheme() {
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "alpine"
+        request.scheme = "auto"
+
+        #expect(ContainerCommands.run(request) == ["run", "--detach", "alpine"])
     }
 
     @Test func logsArgv() {
@@ -127,6 +161,14 @@ struct CommandTests {
             #expect(invocation.arguments.contains("--password-stdin"))
             #expect(invocation.stdin == Data(password.utf8))
         }
+    }
+
+    @Test func appleBatchStartUsesOneCLIInvocationPerContainer() async throws {
+        let runner = CapturingCommandRunner()
+        _ = try await AppleContainerClient(runner: runner).start(["one", "two"])
+
+        let invocations = await runner.invocations
+        #expect(invocations.map(\.arguments) == [["start", "one"], ["start", "two"]])
     }
 
     @Test func streamedCommandPropagatesNonZeroExit() async {

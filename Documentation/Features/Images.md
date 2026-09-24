@@ -56,4 +56,9 @@ The image build workspace is experimental and defaults off. Enable **Settings â†
 Experimental â†’ Image build workspace** to build from a Dockerfile and context
 while streaming the BuildKit log.
 
+Build options include build arguments, cache bypass, platform selection, and
+Apple Container 1.2.1's `--ssh default` forwarding. SSH forwarding requires an
+active host agent exposed through `SSH_AUTH_SOCK`; credentials remain in the
+agent and are not stored by Contained.
+
 The build path is entered through the shared [Creation Workflow](/Documentation/Features/Creation-Workflow.md).

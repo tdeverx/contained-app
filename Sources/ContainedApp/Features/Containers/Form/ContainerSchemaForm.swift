@@ -511,13 +511,20 @@ struct ContainerSchemaForm: View {
     }
 
     private var restartSection: some View {
-        formRow(title: AppText.string("runSpec.restartPolicy", defaultValue: "Restart policy"),
-                path: .lifecycleRestartPolicy,
-                info: AppText.string("containerForm.restartPolicy.info", defaultValue: "Contained restarts the container automatically based on this setting. With Always, it can also start the container after Contained starts the engine when that Startup setting is enabled.")) {
-            Picker("", selection: $spec.restart) {
-                ForEach(Core.Container.RestartPolicy.allCases) { Text($0.localizedDisplayName).tag($0) }
+        Group {
+            formRow(title: AppText.string("runSpec.restartPolicy", defaultValue: "Restart policy"),
+                    path: .lifecycleRestartPolicy,
+                    info: AppText.string("containerForm.restartPolicy.info", defaultValue: "Contained restarts the container automatically based on this setting. With Always, it can also start the container after Contained starts the engine when that Startup setting is enabled.")) {
+                Picker("", selection: $spec.restart) {
+                    ForEach(Core.Container.RestartPolicy.allCases) { Text($0.localizedDisplayName).tag($0) }
+                }
+                .labelsHidden().fixedSize()
             }
-            .labelsHidden().fixedSize()
+            formField(label: AppText.string("runSpec.stopSignal", defaultValue: "Stop signal"),
+                      path: .lifecycleStopSignal,
+                      info: fieldInfo(.lifecycleStopSignal)) {
+                TextField("", text: $spec.stopSignal, prompt: Text("optional, e.g. SIGTERM"))
+            }
         }
     }
 
@@ -624,6 +631,10 @@ struct ContainerSchemaForm: View {
             formToggleRow(title: AppText.string("runSpec.readOnlyFilesystem", defaultValue: "Read-only filesystem"),
                           path: .securityReadOnlyRootFS,
                           info: fieldInfo(.securityReadOnlyRootFS), isOn: $spec.readOnly)
+            stringList(AppText.string("runSpec.addReadOnlyPath", defaultValue: "Add read-only path"), $spec.readonlyPaths, prompt: "/path or NONE",
+                       info: fieldInfo(.securityReadOnlyPaths))
+            stringList(AppText.string("runSpec.addMaskedPath", defaultValue: "Add masked path"), $spec.maskedPaths, prompt: "/path or NONE",
+                       info: fieldInfo(.securityMaskedPaths))
             formToggleRow(title: AppText.string("runSpec.useInitProcess", defaultValue: "Use an init process"),
                           path: .securityUseInit,
                           info: fieldInfo(.securityUseInit), isOn: $spec.useInit)
@@ -690,12 +701,13 @@ struct ContainerSchemaForm: View {
                       info: fieldInfo(.kernelPath)) {
                 TextField("", text: $spec.kernel, prompt: Text("optional path"))
             }
+            stringList(AppText.string("runSpec.addKernelArgument", defaultValue: "Add kernel argument"), $spec.kernelArguments, prompt: "key=value",
+                       info: fieldInfo(.kernelArguments))
             formRow(title: AppText.string("runSpec.registryScheme", defaultValue: "Registry scheme"),
                     path: .registryScheme,
                     info: fieldInfo(.registryScheme)) {
                 Picker("", selection: $spec.scheme) {
                     Text("Default").tag("")
-                    Text("Auto").tag("auto")
                     Text("HTTPS").tag("https")
                     Text("HTTP").tag("http")
                 }

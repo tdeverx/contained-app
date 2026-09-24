@@ -41,7 +41,11 @@ struct AppleContainerAdapterTests {
         )
 
         #expect(version == "1.0.0")
-        #expect(AppleContainerCLILocator.isSupported(version))
+        #expect(!AppleContainerCLILocator.isSupported(version))
+        #expect(!AppleContainerCLILocator.isSupported("1.4.0"))
+        #expect(AppleContainerCLILocator.isSupported("1.4.1"))
+        #expect(AppleContainerCLILocator.isSupported("1.5.0"))
+        #expect(AppleContainerCLILocator.isSupported("2.0.0"))
         #expect(!AppleContainerCLILocator.isSupported("0.10.0"))
         #expect(!AppleContainerCLILocator.isSupported(nil))
     }
@@ -53,7 +57,7 @@ struct AppleContainerAdapterTests {
         #expect(descriptor.displayName == "Apple container")
         #expect(descriptor.executableName == "container")
         #expect(descriptor.supports([.containers, .images, .volumes, .networks]))
-        #expect(descriptor.supports([.systemStatus, .systemLogs, .exec, .copy]))
+        #expect(descriptor.supports([.systemStatus, .systemLogs, .exec, .copy, .containerStorageCleanup]))
         #expect(descriptor.supports(.composeImport))
         #expect(!descriptor.supports(.coreMigration))
         try descriptor.require([.imageBuild, .imagePush, .registries])
@@ -64,29 +68,30 @@ struct AppleContainerAdapterTests {
         let ready = await module.readiness(
             cliURL: URL(fileURLWithPath: "/usr/local/bin/container"),
             runner: CommandMapRunner(outputs: [
-                ContainerCommands.version: .success(Data("container CLI version 1.0.0\n".utf8)),
+                ContainerCommands.version: .success(Data("container CLI version 1.4.1\n".utf8)),
                 ContainerCommands.systemStatus: .success(Data(#"{"status":"running"}"#.utf8)),
             ])
         )
 
         #expect(ready.kind == .appleContainer)
-        #expect(ready.version == "1.0.0")
+        #expect(ready.version == "1.4.1")
         #expect(ready.state == .ready)
 
         let unsupported = await module.readiness(
             cliURL: URL(fileURLWithPath: "/usr/local/bin/container"),
             runner: CommandMapRunner(outputs: [
-                ContainerCommands.version: .success(Data("container CLI version 0.9.0\n".utf8)),
+                ContainerCommands.version: .success(Data("container CLI version 1.4.0\n".utf8)),
             ])
         )
 
-        #expect(unsupported.version == "0.9.0")
+        #expect(unsupported.version == "1.4.0")
         #expect(unsupported.state == .unsupported)
+        #expect(unsupported.message?.contains("1.4.1") == true)
 
         let stopped = await module.readiness(
             cliURL: URL(fileURLWithPath: "/usr/local/bin/container"),
             runner: CommandMapRunner(outputs: [
-                ContainerCommands.version: .success(Data("container CLI version 1.0.0\n".utf8)),
+                ContainerCommands.version: .success(Data("container CLI version 1.4.1\n".utf8)),
                 ContainerCommands.systemStatus: .success(Data(#"{"status":"stopped"}"#.utf8)),
             ])
         )

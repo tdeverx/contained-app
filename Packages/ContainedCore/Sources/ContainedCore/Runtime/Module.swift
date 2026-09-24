@@ -15,7 +15,7 @@ internal protocol Module: Sendable {
     func terminalInvocation(containerID: String, shell: String, cliURL: URL) -> Core.Command.Invocation
     func runPreview(for request: Core.Container.CreateRequest) -> [String]
     func buildPreview(context: String, tag: String?, dockerfile: String?,
-                      buildArgs: [String: String], noCache: Bool,
+                      buildArgs: [String: String], noCache: Bool, ssh: Bool,
                       platform: String?) -> [String]
     func networkCreatePreview(name: String, subnet: String?, internalOnly: Bool) -> [String]
     func volumeCreatePreview(name: String, size: String?) -> [String]

@@ -13,6 +13,16 @@ struct ContainerFormStateTests {
         #expect(try arguments(spec) == ["run", "--detach", "nginx:latest"])
     }
 
+    @Test func appleContainer141NameRulesAreValidatedBeforeRun() {
+        var spec = ContainerFormState(runtimeKind: .appleContainer)
+        spec.image = "alpine"
+        spec.name = String(repeating: "a", count: 64)
+        #expect(!spec.isRunnable)
+
+        spec.name = "valid-name_1"
+        #expect(spec.isRunnable)
+    }
+
     @Test func coreFlagsArgv() throws {
         var spec = ContainerFormState(runtimeKind: .appleContainer)
         spec.image = "alpine"
@@ -53,6 +63,9 @@ struct ContainerFormStateTests {
         spec.cidFile = "/tmp/container.cid"
         spec.initImage = "init:latest"
         spec.kernel = "/kernels/vmlinux"
+        spec.kernelArguments = ["console=hvc0"]
+        spec.maskedPaths = ["/proc/kcore"]
+        spec.readonlyPaths = ["NONE", "/proc/acpi"]
         spec.network = "media,mtu=1280"
         spec.noDNS = true
         spec.dns = ["1.1.1.1"]
@@ -80,6 +93,10 @@ struct ContainerFormStateTests {
         #expect(subsequence(["--cidfile", "/tmp/container.cid"], in: args))
         #expect(subsequence(["--init-image", "init:latest"], in: args))
         #expect(subsequence(["--kernel", "/kernels/vmlinux"], in: args))
+        #expect(subsequence(["--kernel-arg", "console=hvc0"], in: args))
+        #expect(subsequence(["--masked-path", "/proc/kcore"], in: args))
+        #expect(subsequence(["--read-only-path", "NONE"], in: args))
+        #expect(subsequence(["--read-only-path", "/proc/acpi"], in: args))
         #expect(subsequence(["--network", "media,mtu=1280"], in: args))
         #expect(args.contains("--no-dns"))
         #expect(!args.contains("--dns"))
@@ -94,6 +111,7 @@ struct ContainerFormStateTests {
         #expect(subsequence(["--scheme", "https"], in: args))
         #expect(subsequence(["--progress", "plain"], in: args))
         #expect(subsequence(["--max-concurrent-downloads", "2"], in: args))
+        #expect(!args.contains("--stop-signal"))
         #expect(args.filter { $0 == "--cap-add" }.count == 1)   // the empty cap was skipped
     }
 
@@ -525,6 +543,8 @@ struct ContainerFormStateTests {
             "virtualization": true,
             "shmSize": 67108864,
             "runtimeHandler": "custom-runtime"
+            ,"maskedPaths": ["/proc/kcore"]
+            ,"readonlyPaths": ["/proc/acpi"]
           }
         }
         """
@@ -548,6 +568,8 @@ struct ContainerFormStateTests {
         #expect(spec.capAdd == ["CAP_NET_RAW"])
         #expect(spec.capDrop == ["ALL"])
         #expect(spec.runtime == "custom-runtime")
+        #expect(spec.maskedPaths == ["NONE", "/proc/kcore"])
+        #expect(spec.readonlyPaths == ["NONE", "/proc/acpi"])
         #expect(spec.ports.first?.spec == "127.0.0.1:18080:8080")
         #expect(spec.sockets.first?.spec == "/tmp/app.sock:/run/app.sock")
         #expect(spec.labels.contains { $0.key == "team" && $0.value == "infra" })
@@ -555,6 +577,38 @@ struct ContainerFormStateTests {
         #expect(!spec.labels.contains { $0.key == "contained.private" })
         #expect(spec.restart == .always)
         #expect(spec.readOnly && spec.useInit && spec.rosetta && spec.ssh && spec.virtualization)
+    }
+
+    @Test func editPrefillCollapsesAppleSecurityPathDefaultsToOverrides() throws {
+        let json =
+        """
+        {
+          "id": "security-paths",
+          "status": { "id": "security-paths", "state": "stopped" },
+          "configuration": {
+            "id": "security-paths",
+            "image": { "reference": "alpine:latest" },
+            "initProcess": {},
+            "maskedPaths": [
+              "/proc/asound", "/proc/acpi", "/proc/kcore", "/proc/keys",
+              "/proc/latency_stats", "/proc/timer_list", "/proc/timer_stats",
+              "/proc/sched_debug", "/proc/scsi", "/sys/firmware",
+              "/sys/devices/virtual/powercap", "/run/secrets"
+            ],
+            "readonlyPaths": [
+              "/proc/bus", "/proc/fs", "/proc/irq", "/proc/sys",
+              "/proc/sysrq-trigger", "/etc/config"
+            ]
+          }
+        }
+        """
+        let snapshot = try Core.Container.JSON.decode(Core.Container.Snapshot.self,
+                                                      from: Data(json.utf8),
+                                                      runtimeKind: .appleContainer)
+        let spec = ContainerFormState(from: snapshot.configuration)
+
+        #expect(spec.maskedPaths == ["/run/secrets"])
+        #expect(spec.readonlyPaths == ["/etc/config"])
     }
 
     /// True if `needle` appears as a contiguous run inside `haystack`.

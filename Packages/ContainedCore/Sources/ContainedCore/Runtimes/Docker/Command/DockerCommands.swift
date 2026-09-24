@@ -162,7 +162,7 @@ enum DockerCommands {
     // MARK: Build
 
     static func build(context: String, tag: String? = nil, dockerfile: String? = nil,
-                      buildArgs: [String: String] = [:], noCache: Bool = false,
+                      buildArgs: [String: String] = [:], noCache: Bool = false, ssh: Bool = false,
                       platform: String? = nil) -> [String] {
         var args = ["build", "--progress", "plain"]
         if let tag, !tag.isEmpty { args += ["--tag", tag] }
@@ -171,6 +171,7 @@ enum DockerCommands {
             args += ["--build-arg", "\(key)=\(value)"]
         }
         if noCache { args.append("--no-cache") }
+        if ssh { args += ["--ssh", "default"] }
         if let platform, !platform.isEmpty { args += ["--platform", platform] }
         args.append(context)
         return args

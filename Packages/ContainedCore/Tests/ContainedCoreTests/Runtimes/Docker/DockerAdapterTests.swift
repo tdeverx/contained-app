@@ -64,7 +64,7 @@ struct DockerAdapterTests {
             == ["container", "exec", "--interactive", "--tty", "web", "/bin/sh"])
         #expect(module.runPreview(for: request).contains("--network"))
         #expect(module.buildPreview(context: ".", tag: "web:dev", dockerfile: nil,
-                                    buildArgs: [:], noCache: false, platform: nil)
+                                    buildArgs: [:], noCache: false, ssh: false, platform: nil)
             == ["build", "--progress", "plain", "--tag", "web:dev", "."])
     }
 

@@ -48,9 +48,9 @@ struct RuntimeWorkflowTests {
                 == ["image", "pull", "--progress", "plain", "--platform", "linux/arm64", "alpine"])
         #expect(ContainerCommands.build(context: ".") == ["build", "--progress", "plain", "."])
         #expect(ContainerCommands.build(context: "ctx", tag: "img:1", dockerfile: "Dockerfile",
-                                        buildArgs: ["A": "1"], noCache: true)
+                                        buildArgs: ["A": "1"], noCache: true, ssh: true)
                 == ["build", "--progress", "plain", "--tag", "img:1", "--file", "Dockerfile",
-                    "--build-arg", "A=1", "--no-cache", "ctx"])
+                    "--build-arg", "A=1", "--no-cache", "--ssh", "default", "ctx"])
     }
 
     @Test func dockerRunArgvIncludesDockerOnlyFields() {
