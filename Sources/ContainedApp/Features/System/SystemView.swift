@@ -16,6 +16,7 @@ struct SystemContent: View {
     @State private var working = false
     @State private var pruneTarget: PruneTarget?
     @State private var reclaimingAll = false
+    @State private var cleaningRunningStorage = false
     @State private var deletingVolume: Core.Volume.Resource?
     @State private var page: SystemPage
 
@@ -131,6 +132,11 @@ struct SystemContent: View {
         } message: {
             Text("Removes stopped containers, unused images, unused volumes, and unused networks.")
         }
+        .confirmationDialog("Compact running container storage?", isPresented: $cleaningRunningStorage) {
+            Button("Compact storage") { Task { await cleanRunningContainerStorage() } }
+        } message: {
+            Text("Reclaims blocks freed inside running containers and their writable named volumes. Containers remain running and their live files are preserved.")
+        }
     }
 
     /// A consistent design-system section card.
@@ -207,6 +213,12 @@ struct SystemContent: View {
 
     private var storageMenu: some View {
         Menu {
+            Button { cleaningRunningStorage = true } label: {
+                Label(AppText.string("cleanup.compactRunning", defaultValue: "Compact running containers"),
+                      systemImage: "arrow.down.right.and.arrow.up.left")
+            }
+            .disabled(cleanableRunningContainers.isEmpty)
+            Divider()
             Button { reclaimingAll = true } label: {
                 Label(AppText.string("cleanup.reclaimAll", defaultValue: "Reclaim all"), systemImage: "trash")
             }
@@ -549,6 +561,25 @@ struct SystemContent: View {
             }
             for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.networks) {
                 _ = try await client.pruneNetworks(runtimeKind: descriptor.kind)
+            }
+        }) { app.flash(error) }
+        await app.refreshSystemResources()
+        await app.refreshSystem()
+    }
+
+    private var cleanableRunningContainers: [Core.Container.Snapshot] {
+        let supported = Set(app.availableRuntimeDescriptors
+            .filter { $0.supports(.containerStorageCleanup) }
+            .map(\.kind))
+        return app.containers.running.filter { supported.contains($0.runtimeKind) }
+    }
+
+    private func cleanRunningContainerStorage() async {
+        guard let client = app.client else { return }
+        let groups = Dictionary(grouping: cleanableRunningContainers, by: \.runtimeKind)
+        if let error = await app.captured({
+            for (runtimeKind, containers) in groups {
+                _ = try await client.cleanContainers(containers.map(\.id).sorted(), runtimeKind: runtimeKind)
             }
         }) { app.flash(error) }
         await app.refreshSystemResources()

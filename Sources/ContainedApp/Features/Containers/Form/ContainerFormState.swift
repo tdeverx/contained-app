@@ -212,6 +212,11 @@ struct ContainerFormState: Codable {
         set { set(.lifecycleRestartPolicy, .enumeration(newValue.rawValue)) }
     }
 
+    var stopSignal: String {
+        get { string(.lifecycleStopSignal) }
+        set { setString(.lifecycleStopSignal, newValue) }
+    }
+
     var workingDir: String {
         get { string(.processWorkingDirectory) }
         set { setString(.processWorkingDirectory, newValue) }
@@ -262,6 +267,21 @@ struct ContainerFormState: Codable {
         set { setString(.kernelPath, newValue) }
     }
 
+    var kernelArguments: [String] {
+        get { strings(.kernelArguments) }
+        set { set(.kernelArguments, .stringList(newValue)) }
+    }
+
+    var maskedPaths: [String] {
+        get { strings(.securityMaskedPaths) }
+        set { set(.securityMaskedPaths, .stringList(newValue)) }
+    }
+
+    var readonlyPaths: [String] {
+        get { strings(.securityReadOnlyPaths) }
+        set { set(.securityReadOnlyPaths, .stringList(newValue)) }
+    }
+
     var network: String {
         get { string(.networkName) }
         set { setString(.networkName, newValue) }
@@ -308,7 +328,10 @@ struct ContainerFormState: Codable {
     }
 
     var scheme: String {
-        get { string(.registryScheme) }
+        get {
+            let value = string(.registryScheme)
+            return value == "auto" ? "" : value
+        }
         set { set(.registryScheme, .enumeration(newValue)) }
     }
 

@@ -17,6 +17,13 @@ does not depend on Docker Desktop. Privileged kernel or DNS operations may
 trigger prompts handled by the CLI or macOS. Contained does not ask for or store
 administrator credentials.
 
+The Storage menu separates destructive pruning from Apple Container 1.4.1's
+non-destructive compaction. **Compact running containers** asks the runtime to
+release blocks for files already deleted inside running container filesystems
+and writable named volumes; it does not delete containers or live files.
+Stopped-container, image, volume, and network pruning remain explicit,
+confirmation-gated actions.
+
 ## Menu-bar runtime center
 
 The optional menu-bar extra is the compact companion to System. It shows one

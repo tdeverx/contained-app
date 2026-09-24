@@ -468,7 +468,7 @@ private struct UnavailableRuntime: RuntimeClient,
         AsyncThrowingStream { $0.finish() }
     }
     func streamBuild(context: String, tag: String?, dockerfile: String?,
-                     buildArgs: [String: String], noCache: Bool,
+                     buildArgs: [String: String], noCache: Bool, ssh: Bool,
                      platform: String?) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { $0.finish() }
     }
@@ -589,7 +589,7 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient, 
         AsyncThrowingStream { $0.finish() }
     }
     nonisolated func streamBuild(context: String, tag: String?, dockerfile: String?,
-                                 buildArgs: [String: String], noCache: Bool,
+                                 buildArgs: [String: String], noCache: Bool, ssh: Bool,
                                  platform: String?) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { $0.finish() }
     }

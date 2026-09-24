@@ -10,6 +10,7 @@ public extension Core.Command {
                              dockerfile: String? = nil,
                              buildArgs: [String: String] = [:],
                              noCache: Bool = false,
+                             ssh: Bool = false,
                              platform: String? = nil,
                              runtimeKind: Core.Runtime.Kind) -> [String] {
         Core.Runtime.module(for: runtimeKind)?.buildPreview(context: context,
@@ -17,6 +18,7 @@ public extension Core.Command {
                                                             dockerfile: dockerfile,
                                                             buildArgs: buildArgs,
                                                             noCache: noCache,
+                                                            ssh: ssh,
                                                             platform: platform) ?? []
     }
 

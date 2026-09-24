@@ -6,7 +6,7 @@ Contained shells out to Apple's `container` binary. If onboarding can't find it:
 
 - Install it from the [container releases](https://github.com/apple/container) (it lands in `/usr/local/bin` or `/opt/homebrew/bin`).
 - If it's somewhere else, set the full path in **Settings → Runtime**.
-- Confirm in a terminal: `container --version` should print `1.0.0`.
+- Confirm in a terminal: `container --version` should print `1.4.1` or newer.
 
 ## The runtime service won't start
 

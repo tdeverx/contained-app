@@ -113,7 +113,7 @@ struct BootstrapView: View {
         case .cliMissing:
             return "Install Apple's container tool, or set its path in Settings. Looked in /usr/local/bin and /opt/homebrew/bin."
         case .unsupported:
-            return "Contained targets container 1.0.x. Some features may not work with this version."
+            return "Contained requires Apple container 1.4.1 or newer."
         case .serviceStopped:
             return app.serviceControlRuntimeAvailable
                 ? "Start the service to manage containers, images, and more."

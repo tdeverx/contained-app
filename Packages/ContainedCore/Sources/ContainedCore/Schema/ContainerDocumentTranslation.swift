@@ -51,6 +51,9 @@ public extension Core.Schema.Document {
         document.set(.outputContainerIDFile, .string(request.cidFile))
         document.set(.imageInitReference, .string(request.initImage))
         document.set(.kernelPath, .string(request.kernel))
+        document.set(.kernelArguments, .stringList(request.kernelArguments))
+        document.set(.securityMaskedPaths, .stringList(request.maskedPaths))
+        document.set(.securityReadOnlyPaths, .stringList(request.readonlyPaths))
         document.set(.networkName, .string(request.network))
         document.set(.networkDNSDisabled, .bool(request.noDNS))
         document.set(.networkDNSServers, .stringList(request.dns))
@@ -122,6 +125,15 @@ public extension Core.Schema.Document {
         request.shmSize = configuration.shmSize.map(Self.memorySpec) ?? ""
         request.capAdd = configuration.capAdd
         request.capDrop = configuration.capDrop
+        if configuration.runtimeKind == .appleContainer {
+            request.maskedPaths = Self.editablePathOverrides(configuration.maskedPaths,
+                                                              defaults: Self.appleDefaultMaskedPaths)
+            request.readonlyPaths = Self.editablePathOverrides(configuration.readonlyPaths,
+                                                                defaults: Self.appleDefaultReadonlyPaths)
+        } else {
+            request.maskedPaths = configuration.maskedPaths ?? []
+            request.readonlyPaths = configuration.readonlyPaths ?? []
+        }
         request.runtime = configuration.runtimeHandler ?? ""
         request.network = configuration.networks.first?.network ?? ""
         request.dns = configuration.dns?.nameservers ?? []
@@ -201,6 +213,9 @@ public extension Core.Schema.Document {
         request.cidFile = document.string(.outputContainerIDFile, in: definition)
         request.initImage = document.string(.imageInitReference, in: definition)
         request.kernel = document.string(.kernelPath, in: definition)
+        request.kernelArguments = document.strings(.kernelArguments, in: definition)
+        request.maskedPaths = document.strings(.securityMaskedPaths, in: definition)
+        request.readonlyPaths = document.strings(.securityReadOnlyPaths, in: definition)
         request.network = document.string(.networkName, in: definition)
         request.noDNS = document.bool(.networkDNSDisabled, in: definition)
         request.dns = document.strings(.networkDNSServers, in: definition)
@@ -210,7 +225,8 @@ public extension Core.Schema.Document {
         request.tmpfs = document.strings(.storageTmpfs, in: definition)
         request.ulimits = document.strings(.processUlimits, in: definition)
         request.runtime = document.string(.runtimeHandler, in: definition)
-        request.scheme = document.string(.registryScheme, in: definition)
+        let registryScheme = document.string(.registryScheme, in: definition)
+        request.scheme = registryScheme == "auto" ? "" : registryScheme
         request.progress = document.string(.progressMode, in: definition)
         request.maxConcurrentDownloads = document.string(.imageMaxConcurrentDownloads, in: definition)
         request.extraHosts = document.strings(.networkExtraHosts, in: definition)
@@ -301,6 +317,15 @@ public extension Core.Schema.Document {
                                 messageKey: "schema.validation.memory",
                                 defaultMessage: "Memory must be a positive number with optional K, M, G, or T suffix."))
         }
+        let containerName = string(.containerName, in: definition)
+        if runtimeKind == .appleContainer, !containerName.isEmpty,
+           (containerName.count > 63 || containerName.range(of: #"^[a-zA-Z0-9][a-zA-Z0-9_.-]+$"#,
+                                                            options: .regularExpression) == nil) {
+            issues.append(.init(field: .containerName,
+                                severity: .error,
+                                messageKey: "schema.validation.containerName",
+                                defaultMessage: "Name must be 2–63 characters and contain only letters, numbers, dots, underscores, or hyphens."))
+        }
         return issues
     }
 
@@ -310,6 +335,28 @@ public extension Core.Schema.Document {
         let mib = Double(bytes) / 1_048_576
         if mib >= 1, mib.rounded() == mib { return "\(Int(mib))M" }
         return String(bytes)
+    }
+
+    private static let appleDefaultMaskedPaths = [
+        "/proc/asound", "/proc/acpi", "/proc/kcore", "/proc/keys", "/proc/latency_stats",
+        "/proc/timer_list", "/proc/timer_stats", "/proc/sched_debug", "/proc/scsi",
+        "/sys/firmware", "/sys/devices/virtual/powercap",
+    ]
+
+    private static let appleDefaultReadonlyPaths = [
+        "/proc/bus", "/proc/fs", "/proc/irq", "/proc/sys", "/proc/sysrq-trigger",
+    ]
+
+    /// Apple persists the effective path set, while its CLI accepts overrides. Collapse the
+    /// runtime defaults for a clean form; prefix `NONE` when recreating must first clear them.
+    private static func editablePathOverrides(_ effective: [String]?, defaults: [String]) -> [String] {
+        guard let effective else { return [] }
+        let effectiveSet = Set(effective)
+        let defaultSet = Set(defaults)
+        if defaultSet.isSubset(of: effectiveSet) {
+            return effective.filter { !defaultSet.contains($0) }
+        }
+        return ["NONE"] + effective
     }
 
     private static func parseMemoryBytes(_ spec: String) -> UInt64? {

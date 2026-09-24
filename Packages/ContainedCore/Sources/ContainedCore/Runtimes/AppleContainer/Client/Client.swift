@@ -167,10 +167,10 @@ struct AppleContainerClient: Sendable {
 
     /// Stream `container build --progress plain` (BuildKit log).
     func streamBuild(context: String, tag: String? = nil, dockerfile: String? = nil,
-                            buildArgs: [String: String] = [:], noCache: Bool = false,
+                            buildArgs: [String: String] = [:], noCache: Bool = false, ssh: Bool = false,
                             platform: String? = nil) -> AsyncThrowingStream<String, Error> {
         runner.stream(ContainerCommands.build(context: context, tag: tag, dockerfile: dockerfile,
-                                              buildArgs: buildArgs, noCache: noCache, platform: platform))
+                                              buildArgs: buildArgs, noCache: noCache, ssh: ssh, platform: platform))
     }
 
     /// Stream `image push --progress plain` to a logged-in registry.
@@ -226,7 +226,11 @@ struct AppleContainerClient: Sendable {
     // MARK: Lifecycle (fire-and-forget; throw on failure)
 
     @discardableResult func start(_ ids: [String]) async throws -> Data {
-        try await runner.run(ContainerCommands.start(ids))
+        var combined = Data()
+        for id in ids {
+            combined.append(try await runner.run(ContainerCommands.start(id)))
+        }
+        return combined
     }
     @discardableResult func stop(_ ids: [String]) async throws -> Data {
         try await runner.run(ContainerCommands.stop(ids))
@@ -236,6 +240,9 @@ struct AppleContainerClient: Sendable {
     }
     @discardableResult func pruneContainers() async throws -> Data {
         try await runner.run(ContainerCommands.containerPrune())
+    }
+    @discardableResult func cleanContainers(_ ids: [String]) async throws -> Data {
+        try await runner.run(ContainerCommands.cleanContainers(ids))
     }
     @discardableResult func pruneVolumes() async throws -> Data {
         try await runner.run(ContainerCommands.volumePrune())

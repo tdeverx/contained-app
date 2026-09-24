@@ -20,6 +20,10 @@ protocol RuntimeContainerClient: RuntimeDescribing {
     @discardableResult func pruneContainers() async throws -> Data
 }
 
+protocol RuntimeContainerStorageClient: RuntimeDescribing {
+    @discardableResult func cleanContainers(_ ids: [String]) async throws -> Data
+}
+
 protocol RuntimeSystemStatusClient: RuntimeDescribing {
     func diskUsage() async throws -> Core.System.DiskUsage
     func systemProperties() async throws -> Core.System.Properties
@@ -71,7 +75,7 @@ protocol RuntimeImageClient: RuntimeDescribing {
     func inspectImage(_ ref: String) async throws -> [Core.Image.Resource]
     func streamPull(_ ref: String, platform: String?) -> AsyncThrowingStream<String, Error>
     func streamBuild(context: String, tag: String?, dockerfile: String?,
-                     buildArgs: [String: String], noCache: Bool,
+                     buildArgs: [String: String], noCache: Bool, ssh: Bool,
                      platform: String?) -> AsyncThrowingStream<String, Error>
     func streamPush(_ ref: String, platform: String?) -> AsyncThrowingStream<String, Error>
     @discardableResult func deleteImages(_ refs: [String]) async throws -> Data

@@ -33,7 +33,7 @@ Sparkle updates are built in. During pre-1.0 development, fresh installs default
 Requirements:
 
 - macOS 26 or later on Apple silicon
-- Apple's `container` CLI 1.0.0 on `PATH`
+- Apple's `container` CLI 1.4.1 or newer on `PATH`
 - Xcode 26 / Swift 6.2+ for local development
 
 ## Build

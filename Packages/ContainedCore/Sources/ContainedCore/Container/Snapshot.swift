@@ -140,6 +140,7 @@ struct NetworkInterfaceStatus: Codable, Sendable, Hashable {
     public let ipv6Address: String?
     public let macAddress: String?
     public let mtu: Int?
+    public let variant: String?
 }
 
 /// The persistent `configuration` of a container.
@@ -167,6 +168,8 @@ struct Configuration: Codable, Sendable, Hashable {
     public let virtualization: Bool
     public let shmSize: UInt64?
     public let stopSignal: String?
+    public let maskedPaths: [String]?
+    public let readonlyPaths: [String]?
     public let creationDate: Date?
 
     public init(from decoder: Decoder) throws {
@@ -204,6 +207,8 @@ struct Configuration: Codable, Sendable, Hashable {
         virtualization = try c.decodeIfPresent(Bool.self, forKey: .virtualization) ?? false
         shmSize = try c.decodeIfPresent(UInt64.self, forKey: .shmSize)
         stopSignal = try c.decodeIfPresent(String.self, forKey: .stopSignal)
+        maskedPaths = try c.decodeIfPresent([String].self, forKey: .maskedPaths)
+        readonlyPaths = try c.decodeIfPresent([String].self, forKey: .readonlyPaths)
         creationDate = try c.decodeIfPresent(Date.self, forKey: .creationDate)
     }
 
@@ -230,6 +235,8 @@ struct Configuration: Codable, Sendable, Hashable {
                 virtualization: Bool = false,
                 shmSize: UInt64? = nil,
                 stopSignal: String? = nil,
+                maskedPaths: [String]? = nil,
+                readonlyPaths: [String]? = nil,
                 creationDate: Date? = nil) {
         self.runtimeKind = runtimeKind
         self.id = id
@@ -254,6 +261,8 @@ struct Configuration: Codable, Sendable, Hashable {
         self.virtualization = virtualization
         self.shmSize = shmSize
         self.stopSignal = stopSignal
+        self.maskedPaths = maskedPaths
+        self.readonlyPaths = readonlyPaths
         self.creationDate = creationDate
     }
 
@@ -281,6 +290,8 @@ struct Configuration: Codable, Sendable, Hashable {
                                      virtualization: virtualization,
                                      shmSize: shmSize,
                                      stopSignal: stopSignal,
+                                     maskedPaths: maskedPaths,
+                                     readonlyPaths: readonlyPaths,
                                      creationDate: creationDate)
     }
 }

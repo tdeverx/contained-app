@@ -3,7 +3,7 @@
 ## Requirements
 
 - macOS 26 or later (Apple silicon)
-- Apple's [`container`](https://github.com/apple/container) CLI **1.0.0** installed and on `PATH`
+- Apple's [`container`](https://github.com/apple/container) CLI **1.4.1 or newer** installed and on `PATH`
 - For building from source: Xcode 26 / Swift 6.2+
 
 ## Install the app

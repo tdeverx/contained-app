@@ -13,6 +13,7 @@ struct BuildWorkspaceView: View {
     @State private var tag = ""
     @State private var platform = ""
     @State private var noCache = false
+    @State private var forwardSSHAgent = false
     @State private var buildArgs: [KeyValue] = []
     @State private var runtimeKind = AppRuntimeIntent.placeholderKind
     @State private var building = false
@@ -30,6 +31,7 @@ struct BuildWorkspaceView: View {
                                        tag: tag.trimmingCharacters(in: .whitespaces),
                                        dockerfile: dockerfile.isEmpty ? nil : dockerfile,
                                        buildArgs: argsDict, noCache: noCache,
+                                       ssh: forwardSSHAgent,
                                        platform: platform.isEmpty ? nil : platform,
                                        runtimeKind: runtimeKind)
                 },
@@ -113,6 +115,9 @@ struct BuildWorkspaceView: View {
             UI.Panel.ToggleRow(title: AppText.string("build.noCache", defaultValue: "No cache"),
                            info: AppText.string("build.noCache.info", defaultValue: "Build every layer from scratch (--no-cache)."),
                            isOn: $noCache)
+            UI.Panel.ToggleRow(title: AppText.string("build.forwardSSHAgent", defaultValue: "Forward SSH agent"),
+                           info: AppText.string("build.forwardSSHAgent.info", defaultValue: "Makes the host SSH agent available to BuildKit as --ssh default. Requires SSH_AUTH_SOCK."),
+                           isOn: $forwardSSHAgent)
             ForEach(buildArgs) { arg in
                 UI.Panel.Field(label: AppText.string("build.arg", defaultValue: "Build arg")) {
                     HStack {
@@ -175,6 +180,7 @@ struct BuildWorkspaceView: View {
                                 tag: tag.isEmpty ? nil : tag,
                                 dockerfile: dockerfile.isEmpty ? nil : dockerfile,
                                 buildArgs: argsDict, noCache: noCache,
+                                ssh: forwardSSHAgent,
                                 platform: platform.isEmpty ? nil : platform,
                                 runtimeKind: runtimeKind)
     }

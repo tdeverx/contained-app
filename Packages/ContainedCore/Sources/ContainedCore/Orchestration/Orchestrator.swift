@@ -463,6 +463,7 @@ public extension Core {
                                 dockerfile: String? = nil,
                                 buildArgs: [String: String] = [:],
                                 noCache: Bool = false,
+                                ssh: Bool = false,
                                 platform: String? = nil,
                                 runtimeKind: Core.Runtime.Kind) -> AsyncThrowingStream<String, Swift.Error> {
             do {
@@ -474,6 +475,7 @@ public extension Core {
                                            dockerfile: dockerfile,
                                            buildArgs: buildArgs,
                                            noCache: noCache,
+                                           ssh: ssh,
                                            platform: platform)
             } catch {
                 return AsyncThrowingStream { continuation in continuation.finish(throwing: error) }
@@ -601,6 +603,13 @@ public extension Core {
             try await requireRuntime(runtimeKind,
                                      capability: .containers,
                                      as: (any RuntimeContainerClient).self).pruneContainers()
+        }
+
+        @discardableResult public func cleanContainers(_ ids: [String],
+                                                        runtimeKind: Core.Runtime.Kind) async throws -> Data {
+            try await requireRuntime(runtimeKind,
+                                     capability: .containerStorageCleanup,
+                                     as: (any RuntimeContainerStorageClient).self).cleanContainers(ids)
         }
 
         @discardableResult public func pruneVolumes(runtimeKind: Core.Runtime.Kind) async throws -> Data {

@@ -55,6 +55,33 @@ another succeeds, Core returns the successful resources with typed partial
 failure details so the app can keep the grid usable and surface the degraded
 runtime instead of hiding the problem.
 
+## Apple Container 1.4.1 Baseline
+
+The Apple adapter requires CLI 1.4.1 or newer. Its compatibility contract
+accounts for every product-relevant change since 1.0.0:
+
+- nested client/server/host/path/resource system status is decoded, while the
+  earlier flat fixture remains readable for stored/test data
+- registry scheme accepts only `http` or `https`; a persisted legacy `auto`
+  value is normalized to the runtime default instead of emitted
+- create/edit supports repeatable kernel arguments, masked paths, and read-only
+  paths, including the CLI's `NONE` semantics and inspection-time expansion of
+  OCI defaults
+- image builds can forward the host SSH agent with `--ssh default`
+- running-container filesystem export and `container clean` are routed through
+  Core; clean failures remain visible because containers created before an
+  upgrade can retain an older guest agent
+- Apple `start` is invoked once per container because the CLI accepts only one
+  ID, while stop/delete/clean retain their supported multi-ID forms
+- new network attachment `variant` metadata is decoded and retained
+- create-time stop signal remains a preserved Docker/Compose field because the
+  installed 1.4.1 Apple CLI rejects the release-note-only `--stop-signal` flag
+
+Apple's machine and Kubernetes additions are separate resource domains, not
+container create/edit fields. They should receive dedicated capabilities and
+screens if Contained adopts them; they are not silently projected into the
+current container, image, or System models.
+
 ## Create, Import, Export, And Runtime Choice
 
 The global Run/Edit form is app-owned form state, but editable runtime fields

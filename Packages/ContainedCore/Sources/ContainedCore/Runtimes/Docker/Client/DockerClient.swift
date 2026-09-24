@@ -174,13 +174,14 @@ struct DockerClient: Sendable {
     }
 
     func streamBuild(context: String, tag: String? = nil, dockerfile: String? = nil,
-                     buildArgs: [String: String] = [:], noCache: Bool = false,
+                     buildArgs: [String: String] = [:], noCache: Bool = false, ssh: Bool = false,
                      platform: String? = nil) -> AsyncThrowingStream<String, Error> {
         runner.stream(DockerCommands.build(context: context,
                                            tag: tag,
                                            dockerfile: dockerfile,
                                            buildArgs: buildArgs,
                                            noCache: noCache,
+                                           ssh: ssh,
                                            platform: platform))
     }
 

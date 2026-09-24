@@ -86,6 +86,18 @@ struct DecodingTests {
         #expect(status.apiServerVersion?.contains("1.0.0") == true)
     }
 
+    @Test func decodesNestedSystemStatusFromContainer141() throws {
+        let data = Data(#"{"status":"running","client":{"version":"1.4.1","build":"release","commit":"client-sha","appName":"container"},"server":{"version":"1.4.1","build":"release","commit":"server-sha","appName":"container-apiserver"},"host":{"architecture":"arm64","operatingSystem":"macOS 26.6.2","cpus":10},"paths":{"appRoot":"/Users/test/Library/Application Support/com.apple.container","installRoot":"/usr/local","logRoot":"/Users/test/Library/Logs/com.apple.container"},"resources":{"containersTotal":24,"containersRunning":17,"images":22}}"#.utf8)
+        let status = try Core.Container.JSON.decode(Core.System.Status.self, from: data)
+
+        #expect(status.isRunning)
+        #expect(status.client?.version == "1.4.1")
+        #expect(status.apiServerVersion == "1.4.1")
+        #expect(status.host?.cpus == 10)
+        #expect(status.appRoot?.hasSuffix("com.apple.container") == true)
+        #expect(status.resources?.containersRunning == 17)
+    }
+
     @Test func decodesSystemPropertiesMachineResources() throws {
         let data = Data("""
         {

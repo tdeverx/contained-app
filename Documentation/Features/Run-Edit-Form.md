@@ -18,7 +18,7 @@ space:
 - steppers for small numeric limits, such as concurrent image downloads
 - repeatable rows for lists, such as environment variables, labels, ports,
   volumes, sockets, capabilities, DNS servers, tmpfs mounts, ulimits, and env
-  files
+  files, plus Apple container kernel arguments, masked paths, and read-only paths
 
 Keep free-form text fields only where the CLI genuinely accepts arbitrary
 strings, paths, names, or raw specs.
@@ -79,7 +79,10 @@ in that section has non-default content.
 | Image OS and architecture | `--os <os>` / `--arch <arch>` | Separate generic fields for Apple container's split image selectors. `--platform` takes precedence when both are present. |
 | Memory limit toggle + slider | `--memory <size>` | The user chooses a host-bounded amount; the app formats it as `M` or `G`. |
 | Shared memory toggle + slider | `--shm-size <size>` | Same UI pattern as memory, with a small default of `64M`. |
-| Registry scheme picker | `--scheme auto\|https\|http` | Empty means runtime default. |
+| Kernel argument rows | `--kernel-arg <arg>` | Repeatable raw boot arguments introduced in Apple Container 1.2.0. Apple does not expose them in container inspection, so they round-trip through saved Contained forms/templates but cannot be recovered when editing an externally created container. |
+| Read-only path rows | `--read-only-path <path>` | Adds paths to the OCI defaults. `NONE` clears defaults before later rows are applied. Edit collapses Apple’s persisted effective defaults back into override form. |
+| Masked path rows | `--masked-path <path>` | Hides paths in the container with the same `NONE` override semantics. |
+| Registry scheme picker | `--scheme https\|http` | Empty means the runtime default (`https`). |
 | Progress picker | `--progress auto\|none\|ansi\|plain\|color` | Empty means runtime default. |
 | Limit parallel downloads toggle + stepper | `--max-concurrent-downloads <n>` | Empty means runtime default. |
 | Storage group | `--volume <source>:<target>` | Each group can contain multiple host-folder paths. Turning on runtime-volume backing mounts one volume and links the group paths inside it. |
@@ -124,7 +127,8 @@ the app should not pretend to know every valid shape:
 - label and environment key/value rows
 - capability names
 - network attachment string, including options such as `mac=` and `mtu=`
-- container ID file, runtime handler, init image, kernel path
+- container ID file, runtime handler, init image, kernel path and kernel arguments
+- additional read-only and masked container paths
 - DNS search/options, tmpfs entries, and ulimits
 
 ## Compose import behavior

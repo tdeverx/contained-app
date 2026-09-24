@@ -46,6 +46,9 @@ public extension Core.Field.Path {
     static let outputContainerIDFile = Core.Field.Path("output.containerIDFile")
     static let imageInitReference = Core.Field.Path("image.init.reference")
     static let kernelPath = Core.Field.Path("kernel.path")
+    static let kernelArguments = Core.Field.Path("kernel.arguments")
+    static let securityMaskedPaths = Core.Field.Path("security.maskedPaths")
+    static let securityReadOnlyPaths = Core.Field.Path("security.readOnlyPaths")
     static let runtimeHandler = Core.Field.Path("runtime.handler")
     static let registryScheme = Core.Field.Path("registry.scheme")
     static let progressMode = Core.Field.Path("progress.mode")
@@ -199,7 +202,6 @@ public extension Core.Schema.Definition {
         ]
         let schemeOptions = [
             Core.Schema.ValueOption(value: "", labelKey: "schema.option.default", defaultLabel: "Default"),
-            Core.Schema.ValueOption(value: "auto", labelKey: "schema.option.scheme.auto", defaultLabel: "Auto"),
             Core.Schema.ValueOption(value: "https", labelKey: "schema.option.scheme.https", defaultLabel: "HTTPS"),
             Core.Schema.ValueOption(value: "http", labelKey: "schema.option.scheme.http", defaultLabel: "HTTP"),
         ]
@@ -312,6 +314,12 @@ public extension Core.Schema.Definition {
             field(.securityReadOnlyRootFS, .bool, .security, "Read-only filesystem", defaultValue: .bool(false),
                   flag: "--read-only", example: "--read-only", docker: ("--read-only", "--read-only"), compose: ("read_only", "read_only: true"),
                   tip: "Mounts the container root filesystem as read-only."),
+            field(.securityReadOnlyPaths, .stringList, .security, "Additional read-only paths", defaultValue: .stringList([]),
+                  flag: "--read-only-path", example: "--read-only-path /proc/acpi",
+                  tip: "Marks additional container paths read-only. Use NONE as the first value to clear the runtime defaults."),
+            field(.securityMaskedPaths, .stringList, .security, "Additional masked paths", defaultValue: .stringList([]),
+                  flag: "--masked-path", example: "--masked-path /proc/kcore",
+                  tip: "Hides additional container paths. Use NONE as the first value to clear the runtime defaults."),
             field(.securityUseInit, .bool, .security, "Use an init process", defaultValue: .bool(false),
                   flag: "--init", example: "--init", docker: ("--init", "--init"), compose: ("init", "init: true"),
                   tip: "Runs a small init process that forwards signals and reaps processes."),
@@ -338,6 +346,9 @@ public extension Core.Schema.Definition {
                   flag: "--init-image", example: "--init-image init:latest", tip: "Uses a custom init image instead of the runtime default."),
             field(.kernelPath, .string, .imageFetch, "Kernel", defaultValue: .string(""),
                   flag: "--kernel", example: "--kernel /path/to/vmlinux", tip: "Uses a custom kernel path."),
+            field(.kernelArguments, .stringList, .imageFetch, "Kernel arguments", defaultValue: .stringList([]),
+                  flag: "--kernel-arg", example: "--kernel-arg console=hvc0",
+                  tip: "Appends raw boot arguments to the container kernel command line."),
             field(.runtimeHandler, .string, .imageFetch, "Runtime handler", defaultValue: .string(""),
                   flag: "--runtime", example: "--runtime container-runtime-linux", compose: ("runtime", "runtime: runc"),
                   tip: "Sets the low-level runtime handler."),
@@ -359,7 +370,7 @@ public extension Core.Schema.Definition {
             preserved(.loggingDriver, .string, "Logging driver", defaultValue: .string(""), docker: ("--log-driver", "--log-driver syslog"), compose: ("logging.driver", "logging: { driver: syslog }"), tip: "Selects a Docker logging driver."),
             preserved(.loggingOptions, .keyValueList, "Logging options", defaultValue: .keyValueList([]), docker: ("--log-opt", "--log-opt max-size=10m"), compose: ("logging.options", "logging: { options: { max-size: 10m } }"), tip: "Configures logging driver options."),
             preserved(.metadataLabelFiles, .stringList, "Label files", defaultValue: .stringList([]), docker: ("--label-file", "--label-file ./labels"), tip: "Loads labels from a file."),
-            preserved(.lifecycleStopSignal, .string, "Stop signal", defaultValue: .string(""), docker: ("--stop-signal", "--stop-signal SIGTERM"), compose: ("stop_signal", "stop_signal: SIGTERM"), tip: "Signal used to stop the container."),
+            preserved(.lifecycleStopSignal, .string, "Stop signal", defaultValue: .string(""), docker: ("--stop-signal", "--stop-signal SIGTERM"), compose: ("stop_signal", "stop_signal: SIGTERM"), tip: "Apple container 1.4.1 does not expose a create-time stop-signal option; the value is preserved for compatible runtimes."),
             preserved(.lifecycleStopGracePeriod, .string, "Stop grace period", defaultValue: .string(""), docker: ("--stop-timeout", "--stop-timeout 30"), compose: ("stop_grace_period", "stop_grace_period: 30s"), tip: "How long Compose waits before force-stopping."),
             preserved(.devices, .stringList, "Devices", defaultValue: .stringList([]), docker: ("--device", "--device /dev/sda:/dev/xvdc"), compose: ("devices", "devices: [/dev/sda:/dev/xvdc]"), tip: "Passes host devices into the container."),
             preserved(.gpus, .string, "GPUs", defaultValue: .string(""), docker: ("--gpus", "--gpus all"), compose: ("gpus", "gpus: all"), tip: "Requests GPU devices."),

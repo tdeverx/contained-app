@@ -20,6 +20,7 @@ public extension Core.Runtime.Capability {
         .containerExport,
         .composeImport,
         .serviceControl,
+        .containerStorageCleanup,
     ]
 }
 
@@ -52,7 +53,8 @@ struct AppleContainerRuntimeModule: Core.Runtime.Module {
             return Core.RuntimeReadiness(kind: descriptor.kind,
                                          cliURL: cliURL,
                                          version: version,
-                                         state: .unsupported)
+                                         state: .unsupported,
+                                         message: "Apple container \(AppleContainerCLILocator.minimumSupportedVersion) or newer is required.")
         }
 
         do {
@@ -86,12 +88,14 @@ struct AppleContainerRuntimeModule: Core.Runtime.Module {
                       dockerfile: String?,
                       buildArgs: [String: String],
                       noCache: Bool,
+                      ssh: Bool,
                       platform: String?) -> [String] {
         ContainerCommands.build(context: context,
                                 tag: tag,
                                 dockerfile: dockerfile,
                                 buildArgs: buildArgs,
                                 noCache: noCache,
+                                ssh: ssh,
                                 platform: platform)
     }
 
@@ -127,6 +131,7 @@ struct AppleContainerRuntimeModule: Core.Runtime.Module {
 
 extension AppleContainerClient: RuntimeClient,
                                 RuntimeContainerClient,
+                                RuntimeContainerStorageClient,
                                 RuntimeSystemStatusClient,
                                 RuntimeDNSClient,
                                 RuntimeKernelClient,

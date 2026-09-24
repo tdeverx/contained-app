@@ -178,6 +178,9 @@ struct CreateRequest: Codable, Equatable, Sendable {
     public var cidFile = ""
     public var initImage = ""
     public var kernel = ""
+    public var kernelArguments: [String] = []
+    public var maskedPaths: [String] = []
+    public var readonlyPaths: [String] = []
     public var network = ""
     public var noDNS = false
     public var dns: [String] = []

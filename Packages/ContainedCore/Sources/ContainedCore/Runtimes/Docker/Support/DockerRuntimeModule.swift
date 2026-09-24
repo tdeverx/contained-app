@@ -73,12 +73,14 @@ struct DockerRuntimeModule: Core.Runtime.Module {
                       dockerfile: String?,
                       buildArgs: [String: String],
                       noCache: Bool,
+                      ssh: Bool,
                       platform: String?) -> [String] {
         DockerCommands.build(context: context,
                              tag: tag,
                              dockerfile: dockerfile,
                              buildArgs: buildArgs,
                              noCache: noCache,
+                             ssh: ssh,
                              platform: platform)
     }
 

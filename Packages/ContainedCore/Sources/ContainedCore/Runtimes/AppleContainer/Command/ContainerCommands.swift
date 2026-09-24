@@ -30,7 +30,7 @@ enum ContainerCommands {
         stats(ids: ids, noStream: false, format: .table)
     }
 
-    static func start(_ ids: [String]) -> [String] { ["start"] + ids }
+    static func start(_ id: String) -> [String] { ["start", id] }
     static func stop(_ ids: [String], signal: String? = nil, time: Int? = nil) -> [String] {
         var args = ["stop"]
         if let signal { args += ["--signal", signal] }
@@ -44,6 +44,8 @@ enum ContainerCommands {
     }
     /// `container prune` — remove all stopped containers.
     static func containerPrune() -> [String] { ["prune"] }
+    /// `container clean <ids...>` — compact storage for running containers without deleting them.
+    static func cleanContainers(_ ids: [String]) -> [String] { ["clean"] + ids }
     /// `container exec <id> <command...>` (no TTY) — for one-shot captures like `ps`, `ls`.
     static func exec(_ id: String, _ command: [String]) -> [String] { ["exec", id] + command }
     /// `container exec --interactive --tty <id> <shell>` — for hosted terminal sessions.
@@ -96,6 +98,9 @@ enum ContainerCommands {
         if !request.cidFile.isEmpty { args += ["--cidfile", request.cidFile] }
         if !request.initImage.isEmpty { args += ["--init-image", request.initImage] }
         if !request.kernel.isEmpty { args += ["--kernel", request.kernel] }
+        for argument in request.kernelArguments where !argument.isEmpty { args += ["--kernel-arg", argument] }
+        for path in request.maskedPaths where !path.isEmpty { args += ["--masked-path", path] }
+        for path in request.readonlyPaths where !path.isEmpty { args += ["--read-only-path", path] }
         if !request.network.isEmpty { args += ["--network", request.network] }
         if request.noDNS { args.append("--no-dns") }
         if !request.noDNS {
@@ -107,7 +112,8 @@ enum ContainerCommands {
         for mount in request.tmpfs where !mount.isEmpty { args += ["--tmpfs", mount] }
         for limit in request.ulimits where !limit.isEmpty { args += ["--ulimit", limit] }
         if !request.runtime.isEmpty { args += ["--runtime", request.runtime] }
-        if !request.scheme.isEmpty { args += ["--scheme", request.scheme] }
+        // Apple Container 1.3 removed `auto`; treat persisted pre-1.3 values as the current default.
+        if !request.scheme.isEmpty, request.scheme != "auto" { args += ["--scheme", request.scheme] }
         if !request.progress.isEmpty { args += ["--progress", request.progress] }
         if !request.maxConcurrentDownloads.isEmpty {
             args += ["--max-concurrent-downloads", request.maxConcurrentDownloads]
@@ -157,13 +163,14 @@ enum ContainerCommands {
     /// `container build [-f Dockerfile] [-t tag] [--build-arg k=v] [--no-cache] [--platform p]
     /// --progress plain <context>` — plain progress streams the BuildKit log line by line.
     static func build(context: String, tag: String? = nil, dockerfile: String? = nil,
-                             buildArgs: [String: String] = [:], noCache: Bool = false,
+                             buildArgs: [String: String] = [:], noCache: Bool = false, ssh: Bool = false,
                              platform: String? = nil) -> [String] {
         var args = ["build", "--progress", "plain"]
         if let tag, !tag.isEmpty { args += ["--tag", tag] }
         if let dockerfile, !dockerfile.isEmpty { args += ["--file", dockerfile] }
         for (k, v) in buildArgs.sorted(by: { $0.key < $1.key }) { args += ["--build-arg", "\(k)=\(v)"] }
         if noCache { args.append("--no-cache") }
+        if ssh { args += ["--ssh", "default"] }
         if let platform, !platform.isEmpty { args += ["--platform", platform] }
         args.append(context)
         return args
