@@ -1,3 +1,5 @@
+- Require Apple Container 1.4.1 or newer; support its expanded runtime status and live storage compaction; add kernel arguments, OCI masked/read-only paths, and build SSH forwarding; preserve new network metadata; and remove obsolete registry and stop-signal command output.
+
 - Verify image-update recreations use the freshly pulled image and survive startup, and surface streamed pull failures instead of reporting false success.
 
 - Fixed container context menus flashing during live metric updates while keeping card footer values and sparklines current.
