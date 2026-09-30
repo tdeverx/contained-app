@@ -79,9 +79,14 @@ struct ManifestClient: Sendable {
     }
 
     static func canSendCredentials(registry: URL, realm: URL) -> Bool {
-        guard realm.scheme == "https", realm.user == nil, realm.password == nil else { return false }
-        if registry.host?.lowercased() == realm.host?.lowercased(), registry.port == realm.port { return true }
-        return registry.host == "registry-1.docker.io" && realm.host == "auth.docker.io" && realm.port == nil
+        guard registry.scheme == "https", realm.scheme == "https",
+              let registryHost = registry.host?.lowercased(), let realmHost = realm.host?.lowercased(),
+              realm.user == nil, realm.password == nil else { return false }
+        let registryPort = registry.port ?? 443
+        let realmPort = realm.port ?? 443
+        if registryHost == realmHost, registryPort == realmPort { return true }
+        return registryHost == "registry-1.docker.io" && realmHost == "auth.docker.io" &&
+            registryPort == 443 && realmPort == 443
     }
 
     private func manifestResponse(for ref: Core.Registry.ImageReference, bearerToken: String?,

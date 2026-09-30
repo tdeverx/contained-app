@@ -222,15 +222,33 @@ struct ImageWorkflowTests {
             ])
         }
         let result = try await Core.Registry.ManifestClient(session: session, credentials: { host in
-            #expect(host == "registry.example.test")
+            #expect(host == "registry.example.test:443")
             return .init(username: "user", password: "pass")
-        }).remoteManifest(for: .parse("registry.example.test/team/app"))
+        }).remoteManifest(for: .parse("registry.example.test:443/team/app"))
         #expect(result.digest == "sha256:private")
         #expect(result.authenticated)
         #expect(!Core.Registry.ManifestClient.canSendCredentials(registry: URL(string: "https://registry.example.test")!,
                                                                 realm: URL(string: "https://evil.test")!))
         #expect(!Core.Registry.ManifestClient.canSendCredentials(registry: URL(string: "https://registry.example.test")!,
                                                                 realm: URL(string: "http://registry.example.test")!))
+    }
+
+    @Test func credentialRealmTrustUsesEffectiveHTTPSPorts() {
+        for (registry, realm, trusted) in [
+            ("https://registry.example.test:443", "https://registry.example.test", true),
+            ("https://registry.example.test", "https://registry.example.test:443", true),
+            ("https://registry.example.test:8443", "https://registry.example.test:8443", true),
+            ("https://registry.example.test:8443", "https://registry.example.test", false),
+            ("https://registry.example.test", "https://evil.test:443", false),
+            ("http://registry.example.test", "https://registry.example.test", false),
+            ("https://registry.example.test", "https://user:pass@registry.example.test", false),
+            ("https://registry-1.docker.io:443", "https://auth.docker.io:443", true),
+            ("https://registry-1.docker.io:8443", "https://auth.docker.io", false),
+            ("https://registry-1.docker.io", "https://auth.docker.io:8443", false),
+        ] {
+            #expect(Core.Registry.ManifestClient.canSendCredentials(registry: URL(string: registry)!,
+                                                                   realm: URL(string: realm)!) == trusted)
+        }
     }
 
     private static func session(_ handler: @escaping @Sendable (URLRequest) throws -> (HTTPURLResponse, Data)) -> URLSession {

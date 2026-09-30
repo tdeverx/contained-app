@@ -45,8 +45,9 @@ final class AppDatabase {
     @ObservationIgnored var historyMaintenanceTask: Task<Void, Never>?
     @ObservationIgnored var now: () -> Date = { Date() }
     @ObservationIgnored var failureInjector: ((String) throws -> Void)?
+    private var schemaWritesBlocked = true
     // Elapsed time is not recovery: app caches may still hold startup fallbacks.
-    var canPersist: Bool { !isCompacting && retryAfter == nil }
+    var canPersist: Bool { !schemaWritesBlocked && !isCompacting && retryAfter == nil }
     var containerInventoryPreparationCount = 0
     var containerInventoryEncodedCount = 0
 
@@ -65,6 +66,14 @@ final class AppDatabase {
         } catch {
             fatalError("Unable to create app database: \(error)")
         }
+        // Validate the logical schema before repair or any app store can mutate startup data.
+        let version: Int? = setting(StateMigrator.schemaVersionSettingKey, fallback: Optional<Int>.none)
+        guard lastFailure == nil else {
+            recordFailure(.save(detail: "Startup schema validation incomplete"))
+            return
+        }
+        if case .newerOnDisk = StateMigrator().reconcile(storedVersion: version) { return }
+        schemaWritesBlocked = false
         repairDuplicateRecords()
     }
 
@@ -134,16 +143,30 @@ final class AppDatabase {
 
     /// Only explicit recovery can resume writes after verifying reads and reloading app caches.
     @discardableResult
-    func retryPersistence(validate: () -> Bool = { true }, reload: () -> Bool = { true }) -> Bool {
+    func retryPersistence(acceptNewerSchema: Bool = false, validate: () -> Bool = { true },
+                          reload: () -> Bool = { true }) -> Bool {
         guard !isCompacting else { return false }
         retryAfter = nil
         do {
             _ = try fetchRequired(AppSettingRecord.self)
             lastFailure = nil
+            let version: Int? = setting(StateMigrator.schemaVersionSettingKey, fallback: Optional<Int>.none)
+            if case .newerOnDisk = StateMigrator().reconcile(storedVersion: version) {
+                schemaWritesBlocked = true
+            }
             guard validate() else {
                 if retryAfter == nil { recordFailure(.save(detail: "Recovery validation incomplete")) }
                 return false
             }
+            guard lastFailure == nil, !schemaWritesBlocked || acceptNewerSchema ||
+                    (version ?? StateMigrator.currentSchemaVersion) <= StateMigrator.currentSchemaVersion else {
+                recordFailure(.save(detail: "Schema acceptance required"))
+                return false
+            }
+            let wasBlocked = schemaWritesBlocked
+            var recovered = false
+            defer { if !recovered { schemaWritesBlocked = wasBlocked } }
+            schemaWritesBlocked = false
             repairDuplicateRecords()
             guard canPersist else { return false }
             // Synchronous MainActor reload keeps background writers out of this recovery window.
@@ -151,6 +174,7 @@ final class AppDatabase {
                 if retryAfter == nil { recordFailure(.save(detail: "Recovery state reload incomplete")) }
                 return false
             }
+            recovered = true
             return true
         } catch { return false }
     }

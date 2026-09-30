@@ -322,6 +322,37 @@ struct DatabaseRecoveryTests {
         #expect(db.successfulSaveCount == dictionarySaves)
     }
 
+    @Test func newerSchemaStartupDefersAllWritesUntilExplicitAcceptance() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("future.store")
+        var original: AppDatabase? = AppDatabase(storeURL: url)
+        let future = StateMigrator.currentSchemaVersion + 1
+        original?.setSetting(future, for: StateMigrator.schemaVersionSettingKey)
+        original?.context.insert(AppSettingRecord(key: "retained", valueData: try AppDatabase.encoded("old"), updatedAt: .distantPast))
+        original?.context.insert(AppSettingRecord(key: "retained", valueData: try AppDatabase.encoded("new")))
+        #expect(original?.save() == true)
+        await original?.historyMaintenanceTask?.value
+        original = nil
+        let database = AppDatabase(storeURL: url)
+        let app = AppModel(database: database, bootstrapRuntime: { _ in .cliMissing(runtimes: []) })
+        #expect(app.downgradeSchemaVersion == future)
+        #expect(!database.canPersist)
+        #expect(database.successfulSaveCount == 0)
+        #expect(try database.fetchRequired(AppSettingRecord.self).filter { $0.key == "retained" }.count == 2)
+        #expect(try database.fetchRequired(RuntimeRecord.self).isEmpty)
+        await app.retryPersistence()
+        #expect(database.successfulSaveCount == 0)
+        #expect(!database.canPersist)
+        app.resolveDowngradeByKeepingReadableData()
+        #expect(database.canPersist)
+        #expect(app.downgradeSchemaVersion == nil)
+        #expect(try database.fetchRequired(AppSettingRecord.self).filter { $0.key == "retained" }.count == 1)
+        #expect(database.setting("retained", fallback: "") == "new")
+        await database.historyMaintenanceTask?.value
+    }
+
     @Test func diskBackedRepairSurvivesReopenAndPreservesUserMetadata() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

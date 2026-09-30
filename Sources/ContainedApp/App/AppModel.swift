@@ -149,13 +149,14 @@ final class AppModel {
     }
 
     func recoverPersistenceForDowngradeDecision() -> Bool {
-        database.retryPersistence(validate: { validatePersistedSchema(allowNewerSchema: true) },
+        database.retryPersistence(acceptNewerSchema: true,
+                                  validate: { validatePersistedSchema(allowNewerSchema: true) },
                                   reload: { reloadPersistedState() })
     }
 
     private func validatePersistedSchema(allowNewerSchema: Bool = false) -> Bool {
         let storedSchema: Int? = database.setting(StateMigrator.schemaVersionSettingKey, fallback: Optional<Int>.none)
-        guard database.canPersist, database.lastFailure == nil else { return false }
+        guard database.retryAfter == nil, database.lastFailure == nil else { return false }
         if case .newerOnDisk(let version) = migrator.reconcile(storedVersion: storedSchema) {
             downgradeSchemaVersion = version
             guard allowNewerSchema else { return false }
