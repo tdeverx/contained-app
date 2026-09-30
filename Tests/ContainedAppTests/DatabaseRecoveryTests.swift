@@ -389,6 +389,47 @@ struct DatabaseRecoveryTests {
         #expect(db.successfulSaveCount == dictionarySaves)
     }
 
+    @Test func newerSchemaBackupReadsSavedStylesAndHealthChecksWithoutWrites() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("backup.store")
+        var original: AppDatabase? = AppDatabase(storeURL: url)
+        var style = Personalization()
+        style.nickname = "Retained nickname"
+        let check = Core.Container.HealthCheck(command: ["true"], enabled: true)
+        for scope in ["personalizationOverrides", "personalizationImageDefaults", "personalizationVolumeStyles"] {
+            original?.context.insert(PersonalizationRecord(key: "saved", scopeRaw: scope, valueData: try AppDatabase.encoded(style)))
+        }
+        original?.context.insert(PersonalizationRecord(key: "default", scopeRaw: "personalizationDefaultImageStyle", valueData: try AppDatabase.encoded(style)))
+        original?.context.insert(HealthCheckRecord(containerScopedID: "saved", valueData: try AppDatabase.encoded(check)))
+        original?.setSetting(StateMigrator.currentSchemaVersion + 1, for: StateMigrator.schemaVersionSettingKey)
+        await original?.historyMaintenanceTask?.value
+        original = nil
+        let database = AppDatabase(storeURL: url)
+        let app = AppModel(database: database, bootstrapRuntime: { _ in .cliMissing(runtimes: []) })
+        #expect(!database.canPersist)
+        let data = try app.configurationData(sections: [.personalization, .healthChecks])
+        let envelope = try JSONDecoder.containedBackup().decode(AppStateEnvelope.self, from: data)
+        let styles = try #require(envelope.sections[.personalization]).decode(PersonalizationBackup.self)
+        #expect(styles.overrides["saved"] == style)
+        #expect(styles.imageDefaults["saved"] == style)
+        #expect(styles.volumeStyles["saved"] == style)
+        #expect(styles.defaultImageStyle == style)
+        #expect(try #require(envelope.sections[.healthChecks]).decode([String: Core.Container.HealthCheck].self)["saved"] == check)
+        #expect(database.successfulSaveCount == 0)
+        #expect(!database.context.hasChanges)
+        #expect(!database.canPersist)
+        #expect(database.setting(StateMigrator.schemaVersionSettingKey, fallback: 0) == StateMigrator.currentSchemaVersion + 1)
+        database.failureInjector = { operation in
+            if operation == "fetch:HealthCheckRecord" { throw diskFull }
+        }
+        #expect(throws: AppDatabase.Failure.self) {
+            _ = try app.configurationData(sections: [.personalization, .healthChecks])
+        }
+        #expect(database.successfulSaveCount == 0)
+    }
+
     @Test func newerSchemaStartupDefersAllWritesUntilExplicitAcceptance() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

@@ -58,6 +58,19 @@ final class HealthCheckStore {
         return checks
     }
 
+    func readOnlyBackupSnapshot() throws -> [String: Core.Container.HealthCheck] {
+        let records = try database.fetchRequired(HealthCheckRecord.self).sorted {
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            return String(describing: $0.persistentModelID) < String(describing: $1.persistentModelID)
+        }
+        var snapshot: [String: Core.Container.HealthCheck] = [:]
+        for record in records where snapshot[record.containerScopedID] == nil {
+            do { snapshot[record.containerScopedID] = try JSONDecoder().decode(Core.Container.HealthCheck.self, from: record.valueData) }
+            catch { throw AppDatabase.Failure.decodeRecord(record: "health check", detail: AppDatabase.safeDetail(error)) }
+        }
+        return snapshot
+    }
+
     func applyBackup(_ snapshot: [String: Core.Container.HealthCheck], replace: Bool) {
         guard database.canPersist, loadIfNeeded() else { return }
         if replace { checks = snapshot }

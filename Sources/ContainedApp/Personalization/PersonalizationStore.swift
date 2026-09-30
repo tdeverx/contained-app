@@ -54,6 +54,26 @@ final class PersonalizationStore {
                               defaultImageStyle: defaultImageStyle)
     }
 
+    /// Export saved values without normalization writes or reliance on a write-gated cache.
+    func readOnlyBackupSnapshot() throws -> PersonalizationBackup {
+        let records = try database.fetchRequired(PersonalizationRecord.self).sorted {
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            return String(describing: $0.persistentModelID) < String(describing: $1.persistentModelID)
+        }
+        func values(_ scope: String) throws -> [String: Personalization] {
+            var result: [String: Personalization] = [:]
+            for record in records where record.scopeRaw == scope && result[record.key] == nil {
+                do { result[record.key] = try JSONDecoder().decode(Personalization.self, from: record.valueData) }
+                catch { throw AppDatabase.Failure.decodeRecord(record: "personalization", detail: AppDatabase.safeDetail(error)) }
+            }
+            return result
+        }
+        return try PersonalizationBackup(overrides: values(Keys.overrides),
+                                         imageDefaults: values(Keys.imageDefaults),
+                                         volumeStyles: values(Keys.volumeStyles),
+                                         defaultImageStyle: values(Keys.defaultImageStyle)["default"] ?? Personalization())
+    }
+
     @discardableResult
     func reloadFromDatabase() -> Bool {
         loadedSuccessfully = false

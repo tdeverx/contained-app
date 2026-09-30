@@ -174,6 +174,9 @@ only after every required recovery read succeeds; failed reads or saves roll the
 Startup validates the saved schema before duplicate repair or app-store writes.
 If a newer saved schema is discovered, writes and repair remain paused until the existing
 downgrade decision is explicitly accepted; ordinary retry does not grant acceptance.
+Configuration export reads saved personalization and health checks directly without
+enabling writes or normalization. Unreadable records abort export instead of producing
+a successful-looking backup with missing data.
 Forced runtime detection queues behind an in-flight
 startup check rather than reusing its pre-recovery configuration.
 Diagnostics show only an error domain/code, not database contents or private paths.
