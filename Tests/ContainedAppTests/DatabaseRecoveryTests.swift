@@ -78,6 +78,46 @@ struct DatabaseRecoveryTests {
         }
     }
 
+    @Test func appRetryReloadsStartupSettingsAndScheduledStateWithoutSavingDefaults() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let original = SettingsStore(database: database)
+        original.refreshInterval = 17
+        original.imageUpdateChecksEnabled = false
+        original.historyRetentionDays = 30
+        var policy = Core.System.StorageCleanupPolicy()
+        policy.enabled = true
+        original.storageCleanupPolicy = policy
+        let lastRun = Date(timeIntervalSince1970: 1_000)
+        database.setSetting(lastRun, for: "lastStorageCleanupRun")
+        database.setSetting(lastRun, for: AppModel.imageUpdateLastSweepKey)
+        database.setSetting(["apple-container::compactRunningContainers": "c15"], for: "storageCleanupCursors")
+        database.failureInjector = { operation in
+            if operation == "fetch:AppSettingRecord" { throw diskFull }
+        }
+        let app = AppModel(database: database)
+        #expect(app.settings.refreshInterval == 2)
+        #expect(!database.canPersist)
+        app.settings.refreshInterval = 99
+        let saves = database.successfulSaveCount
+        app.retryPersistence()
+        #expect(!database.canPersist)
+        #expect(app.settings.refreshInterval == 99)
+        database.failureInjector = nil
+        app.retryPersistence()
+        #expect(app.settings.refreshInterval == 17)
+        #expect(!app.settings.imageUpdateChecksEnabled)
+        #expect(app.settings.storageCleanupPolicy.enabled)
+        #expect(app.historyStore.retentionDays == 30)
+        #expect(app.lastStorageAutomationRun == lastRun)
+        #expect(app.lastImageUpdateSweep == lastRun)
+        #expect(app.storageAutomationCursors["apple-container::compactRunningContainers"] == "c15")
+        #expect(database.successfulSaveCount == saves)
+        #expect(database.lastFailure == nil)
+        app.settings.refreshInterval = 18
+        #expect(database.setting("refreshInterval", fallback: 0) == 18)
+        #expect(database.setting("historyRetentionDays", fallback: 0) == 30)
+    }
+
     @Test func repairKeepsNewestSnapshotAndRecoveryMetadata() throws {
         let db = AppDatabase(isStoredInMemoryOnly: true)
         let older = ContainerRecord(scopedID: "apple-container::web", runtimeKindRaw: "apple-container",

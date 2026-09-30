@@ -6,6 +6,7 @@ struct StorageCleanupPreview: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     let plans: [Core.System.CleanupPlan]
+    let pruneRequests: [AppModel.RuntimePruneRequest]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,9 +14,9 @@ struct StorageCleanupPreview: View {
                                   cancelHelp: AppText.close, onCancel: { if !app.storageCleanupInFlight { dismiss() } }) {
                 UI.Action.Group(UI.Action.Item(systemName: "checkmark", title: AppText.string("storage.apply", defaultValue: "Apply Cleanup"),
                                                help: AppText.string("storage.apply.help", defaultValue: "Execute only the previewed cleanup commands"),
-                                               role: plans.contains { $0.action.risk != .compaction } ? .destructive : nil,
-                                               isEnabled: !app.storageCleanupInFlight && app.activity == nil && app.activeImageBuilds == 0 && plans.contains { !$0.commands.isEmpty }) {
-                    Task { await app.performStorageCleanup(plans); dismiss() }
+                                               role: !pruneRequests.isEmpty || plans.contains { $0.action.risk != .compaction } ? .destructive : nil,
+                                               isEnabled: !app.storageCleanupInFlight && app.activity == nil && app.activeImageBuilds == 0 && (!pruneRequests.isEmpty || plans.contains { !$0.commands.isEmpty })) {
+                    Task { await app.performStorageCleanup(plans, pruneRequests: pruneRequests); dismiss() }
                 })
             }
             ScrollView {
@@ -38,6 +39,13 @@ struct StorageCleanupPreview: View {
                                 }.joined(separator: "\n"), copyHelp: AppText.copyCommand,
                                                       copiedAccessibilityLabel: AppText.copied)
                             }
+                        }
+                    }
+                    ForEach(pruneRequests) { request in
+                        UI.Panel.Section(header: StoragePresentation.title(request.action)) {
+                            Text(app.runtimeDescriptor(for: request.runtimeKind)?.displayName ?? request.runtimeKind.rawValue)
+                            Text(StoragePresentation.consequence(request.action)).foregroundStyle(.secondary)
+                            Text("This runtime does not support exact storage previews. Its native prune command determines unused resources at execution. Apply Cleanup confirms this removal; it cannot be undone.")
                         }
                     }
                     Text("The preview expires after five minutes. Changed runtime inventory requires a new preview. No Apple Container internal files are deleted directly.")

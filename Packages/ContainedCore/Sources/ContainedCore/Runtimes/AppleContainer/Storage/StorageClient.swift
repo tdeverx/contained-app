@@ -35,7 +35,7 @@ extension AppleContainerClient {
                                            longRunningBindContainerIDs: bindIDs)
     }
 
-    func cleanupPlan(_ action: Core.System.CleanupAction, resourceLimit: Int?) async throws -> Core.System.CleanupPlan {
+    func cleanupPlan(_ action: Core.System.CleanupAction, resourceLimit: Int?, afterResourceID: String? = nil) async throws -> Core.System.CleanupPlan {
         if action.risk == .compaction {
             let data = try await runner.run(ContainerCommands.version)
             let version = AppleContainerCLILocator.parseVersion(String(decoding: data, as: UTF8.self))
@@ -45,7 +45,7 @@ extension AppleContainerClient {
         }
         let inventory = try await storageInventory()
         let all = inventory.identities(for: action)
-        let ids = resourceLimit.map { Array(all.prefix(max(0, $0))) } ?? all
+        let ids = storageCandidates(all, limit: resourceLimit, after: afterResourceID)
         guard ids.allSatisfy({ !$0.isEmpty && !$0.hasPrefix("-") }) else { throw Core.System.StorageError.unavailable }
         let commands = storageCommands(action, ids: ids, builders: inventory.builders)
         let analysis = try? await storageAnalysis()
@@ -61,7 +61,8 @@ extension AppleContainerClient {
         }
         return Core.System.CleanupPlan(id: UUID(), runtimeKind: descriptor.kind, action: action,
                                        resourceIDs: ids, commands: commands, candidateAllocatedBytes: bytes,
-                                       createdAt: Date(), validationToken: try inventory.token(), resourceLimit: resourceLimit)
+                                       createdAt: Date(), validationToken: try inventory.token(), resourceLimit: resourceLimit,
+                                       afterResourceID: afterResourceID)
     }
 
     func executeCleanup(_ plan: Core.System.CleanupPlan) async throws -> Core.System.CleanupResult {
@@ -71,7 +72,7 @@ extension AppleContainerClient {
         let inventory = try await storageInventory()
         guard try inventory.token() == plan.validationToken else { throw Core.System.StorageError.inventoryChanged }
         let all = inventory.identities(for: plan.action)
-        let ids = plan.resourceLimit.map { Array(all.prefix(max(0, $0))) } ?? all
+        let ids = storageCandidates(all, limit: plan.resourceLimit, after: plan.afterResourceID)
         guard ids == plan.resourceIDs,
               storageCommands(plan.action, ids: ids, builders: inventory.builders) == plan.commands else {
             throw Core.System.StorageError.inventoryChanged
@@ -104,6 +105,13 @@ extension AppleContainerClient {
         return try await AppleStorageInventory(containers: containers.filter { !builderIDs.contains($0.id) },
                                                builders: builderSnapshots, images: images,
                                                volumes: volumes, networks: networks)
+    }
+
+    private func storageCandidates(_ all: [String], limit: Int?, after cursor: String?) -> [String] {
+        guard let limit else { return all }
+        let start = cursor.flatMap { value in all.firstIndex { $0 > value } } ?? 0
+        let rotated = Array(all.dropFirst(start)) + Array(all.prefix(start))
+        return Array(rotated.prefix(max(0, limit)))
     }
 
     private func storageBuilders() async throws -> [Core.Container.Snapshot] {

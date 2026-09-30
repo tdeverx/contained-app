@@ -50,9 +50,15 @@ System -> Automation offers **automatic compaction**, off by default. Select run
 application containers and/or the running builder, a 1–24-hour interval, and either
 a minimum-free-space or maximum-allocated-space threshold. Checks run hourly while
 Contained runs, skip incomplete scans/app builds/pulls, and compact at most 16
-application containers per run. Automation never starts/stops containers or deletes
+application containers per run, rotating through eligible identities with a persisted
+per-runtime cursor so larger inventories are not starved. Automation never starts/stops containers or deletes
 images, volumes, networks, stopped containers, or builder cache. Settings backups
 retain this opt-in policy; it is not a macOS-wide scheduled job.
+
+Runtimes without host-storage planning retain their native container/image/volume/
+network prune actions. The confirmation names each runtime and explains that its
+native prune command selects unused resources at execution; these are not exact
+Apple Container inventory previews and never run automatically.
 
 Pull, build, and recreate warn below 5 GiB free; below 1 GiB they pause and link to
 System storage. Free-space reporting is advisory when the filesystem cannot provide
@@ -155,6 +161,8 @@ delete settings, templates, container records, or retained history.
 
 If database reads or saves fail, Contained rolls back pending changes and pauses
 new writes for a minute. An alert links to General settings and an explicit retry.
+Successful explicit retry reloads saved preferences, registry retry state, and cleanup/
+image-update scheduling state without saving fallback defaults.
 Diagnostics show only an error domain/code, not database contents or private paths.
 Startup/retry consolidates legacy duplicate identities, preserving the newest
 snapshot and associated personalization, health checks, migration metadata, and

@@ -74,7 +74,7 @@ struct GeneralTab: View {
                                                                 countStyle: .file))
                 if let failure = app.databaseFailureMessage {
                     Text(failure).foregroundStyle(.secondary)
-                    Button("Retry Database") { app.database.retryPersistence() }
+                    Button("Retry Database") { app.retryPersistence() }
                 }
                 if let failure = app.database.maintenanceFailureCode {
                     Text("Database maintenance: \(failure)").foregroundStyle(.secondary)

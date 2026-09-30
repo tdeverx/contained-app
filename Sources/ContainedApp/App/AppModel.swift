@@ -33,12 +33,12 @@ final class AppModel {
     @ObservationIgnored var registryChecksInFlight: Set<String> = []
     var registryCredentialDates: [String: Date] = [:] {
         didSet {
-            if registryCredentialDates != oldValue { database.setSetting(registryCredentialDates, for: "registryCredentialDates") }
+            if !reloadingPersistence, registryCredentialDates != oldValue { database.setSetting(registryCredentialDates, for: "registryCredentialDates") }
         }
     }
     var registryRetryPolicy = Core.Registry.UpdateRetryPolicy() {
         didSet {
-            if registryRetryPolicy != oldValue {
+            if !reloadingPersistence, registryRetryPolicy != oldValue {
                 database.setSetting(registryRetryPolicy, for: "registryUpdateRetryPolicy")
             }
         }
@@ -51,12 +51,20 @@ final class AppModel {
     var storageAnalyses: [Core.Runtime.Kind: Core.System.StorageAnalysis] = [:]
     var storageAnalysisErrors: [Core.Runtime.Kind: String] = [:]
     var storageCleanupPlans: [Core.System.CleanupPlan] = []
+    struct RuntimePruneRequest: Identifiable {
+        let id = UUID()
+        let runtimeKind: Core.Runtime.Kind
+        let action: Core.System.CleanupAction
+    }
+    var runtimePruneRequests: [RuntimePruneRequest] = []
     var storageCleanupInFlight = false
     var storagePlanInFlight = false
     var lowStorageWarning: String?
     var activeImageBuilds = 0
     @ObservationIgnored var lastStorageAutomationCheck: Date?
     @ObservationIgnored var lastStorageAutomationRun: Date?
+    @ObservationIgnored var storageAutomationCursors: [String: String] = [:]
+    @ObservationIgnored private var reloadingPersistence = false
     private(set) var runtimeReadiness: [Core.Runtime.Kind: Core.RuntimeReadiness] = [:]
     @ObservationIgnored private var containerStatsVisible = true
     @ObservationIgnored private var containerStatsStreamTask: Task<Void, Never>?
@@ -118,6 +126,7 @@ final class AppModel {
     // The image-update sweep state below is driven from `AppModel+ImageUpdates.swift`.
     var lastImageUpdateSweep: Date? {
         didSet {
+            guard !reloadingPersistence else { return }
             if let lastImageUpdateSweep {
                 database.setSetting(lastImageUpdateSweep, for: Self.imageUpdateLastSweepKey)
             } else {
@@ -129,6 +138,32 @@ final class AppModel {
     static let imageUpdateLastSweepKey = "imageUpdateLastSweep"
     var databaseFailureMessage: String? {
         database.lastFailure?.localizedDescription
+    }
+
+    /// Recovery belongs to the app so eagerly loaded state and its consumers recover together.
+    func retryPersistence() {
+        guard database.retryPersistence(), settings.reloadFromDatabase(),
+              personalization.reloadFromDatabase(), healthChecks.reloadFromDatabase() else { return }
+        let statuses = database.imageStatusesSnapshot()
+        let retryPolicy = database.setting("registryUpdateRetryPolicy", fallback: Core.Registry.UpdateRetryPolicy())
+        let credentialDates: [String: Date] = database.setting("registryCredentialDates", fallback: [:])
+        let storageRun = database.setting("lastStorageCleanupRun", fallback: Optional<Date>.none)
+        let cursors: [String: String] = database.setting("storageCleanupCursors", fallback: [:])
+        let sweep = database.setting(Self.imageUpdateLastSweepKey, fallback: Optional<Date>.none)
+        guard database.canPersist, database.lastFailure == nil else { return }
+        reloadingPersistence = true
+        defer { reloadingPersistence = false }
+        persistedImageUpdatesAwaitingInventory = statuses
+        registryRetryPolicy = retryPolicy
+        registryCredentialDates = credentialDates
+        lastStorageAutomationRun = storageRun
+        storageAutomationCursors = cursors
+        lastImageUpdateSweep = sweep
+        historyStore.retentionDays = settings.historyRetentionDays
+        updater.channel = settings.updateChannel
+        updater.automaticallyChecks = settings.appUpdateChecksEnabled
+        applyStatsNormalizationContext()
+        coordinator.wake()
     }
     var imageUpdateInterval: TimeInterval { TimeInterval(settings.imageUpdateIntervalHours) * 60 * 60 }
     var imageUpdateLastRunDate: Date? { lastImageUpdateSweep }
@@ -217,6 +252,7 @@ final class AppModel {
         registryRetryPolicy = database.setting("registryUpdateRetryPolicy", fallback: Core.Registry.UpdateRetryPolicy())
         registryCredentialDates = database.setting("registryCredentialDates", fallback: [:])
         lastStorageAutomationRun = database.setting("lastStorageCleanupRun", fallback: Optional<Date>.none)
+        storageAutomationCursors = database.setting("storageCleanupCursors", fallback: [:])
         lastImageUpdateSweep = database.setting(Self.imageUpdateLastSweepKey, fallback: Optional<Date>.none)
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel

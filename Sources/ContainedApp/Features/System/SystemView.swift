@@ -187,9 +187,11 @@ struct SystemContent: View {
     private var storageMenu: some View {
         Menu {
             Button("Refresh Storage Analysis") { Task { await app.refreshStorageAnalysis() } }
+                .disabled(app.storageRuntimes.isEmpty)
             Divider()
             ForEach(Core.System.CleanupAction.allCases) { action in
                 Button(StoragePresentation.title(action)) { Task { await app.prepareStorageCleanup(action) } }
+                    .disabled(app.cleanupRuntimes(for: action).isEmpty)
             }
         } label: {
             UI.Action.MenuLabel(systemName: "trash",
@@ -197,7 +199,7 @@ struct SystemContent: View {
                                   role: .destructive)
         }
         .buttonStyle(.plain)
-        .disabled(app.storageRuntimes.isEmpty || app.storagePlanInFlight || app.storageCleanupInFlight || app.activeImageBuilds > 0)
+        .disabled(app.availableRuntimeDescriptors.isEmpty || app.storagePlanInFlight || app.storageCleanupInFlight || app.activeImageBuilds > 0)
     }
 
     // MARK: Volumes

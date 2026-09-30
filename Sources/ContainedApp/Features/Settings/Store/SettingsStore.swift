@@ -95,6 +95,7 @@ final class SettingsStore {
     }
 
     private let database: AppDatabase
+    private var isReloading = false
 
     init(database: AppDatabase = AppDatabase()) {
         self.database = database
@@ -238,7 +239,22 @@ final class SettingsStore {
     }
 
     private func persist<T: Codable>(_ value: T, for key: String) {
+        guard !isReloading else { return }
         database.setSetting(value, for: key)
+    }
+
+    /// Build a complete read snapshot before changing observable preferences. Assignment must not
+    /// write transient startup defaults back to the newly recovered store.
+    @discardableResult
+    func reloadFromDatabase() -> Bool {
+        guard database.canPersist else { return false }
+        let restored = SettingsStore(database: database)
+        guard database.canPersist, database.lastFailure == nil else { return false }
+        isReloading = true
+        defer { isReloading = false }
+        applyBackup(restored.backupSnapshot())
+        runtimePathOverrides = restored.runtimePathOverrides
+        return true
     }
 
     func runtimePathOverride(for kind: Core.Runtime.Kind) -> String {
@@ -248,7 +264,7 @@ final class SettingsStore {
     func setRuntimePathOverride(_ path: String, for kind: Core.Runtime.Kind) {
         guard runtimePathOverrides[kind] != path else { return }
         runtimePathOverrides[kind] = path
-        database.setRuntimePathOverride(path, for: kind)
+        if !isReloading { database.setRuntimePathOverride(path, for: kind) }
     }
 
     private var backupRuntimePathOverrides: [String: String] {

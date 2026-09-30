@@ -21,6 +21,31 @@ struct StorageManagementTests {
         #expect(Core.System.CleanupAction.allCases.filter(\.automaticAllowed) == [.compactRunningContainers, .compactRunningBuilder])
     }
 
+    @Test func boundedCompactionRotatesAndRevalidatesTheExactBatch() async throws {
+        let directory = try temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var inventory = emptyInventory()
+        inventory.containers = try (0..<40).map { try snapshot(String(format: "c%02d", $0), state: "running") }
+        let runner = StorageRunner(root: directory, inventory: inventory)
+        let client = AppleContainerClient(runner: runner)
+        let first = try await client.cleanupPlan(.compactRunningContainers, resourceLimit: 16)
+        let second = try await client.cleanupPlan(.compactRunningContainers, resourceLimit: 16, afterResourceID: first.resourceIDs.last)
+        let third = try await client.cleanupPlan(.compactRunningContainers, resourceLimit: 16, afterResourceID: second.resourceIDs.last)
+        #expect(first.resourceIDs == (0..<16).map { String(format: "c%02d", $0) })
+        #expect(second.resourceIDs == (16..<32).map { String(format: "c%02d", $0) })
+        #expect(third.resourceIDs == (Array(32..<40) + Array(0..<8)).map { String(format: "c%02d", $0) })
+        _ = try await client.executeCleanup(second)
+        #expect(await runner.mutations == second.commands)
+        // A removed cursor still advances by ordering, rather than restarting at the prefix.
+        inventory.containers.removeAll { $0.id == "c15" }
+        await runner.replace(inventory)
+        let changed = try await client.cleanupPlan(.compactRunningContainers, resourceLimit: 16, afterResourceID: "c15")
+        #expect(changed.resourceIDs == second.resourceIDs)
+        let manual = try await client.cleanupPlan(.compactRunningContainers, resourceLimit: nil, afterResourceID: "c31")
+        #expect(manual.resourceIDs.count == 39)
+        #expect(manual.resourceIDs.first == "c00")
+    }
+
     @Test func oldCLICannotCreateACompactionPlan() async throws {
         let directory = try temporaryRoot()
         defer { try? FileManager.default.removeItem(at: directory) }

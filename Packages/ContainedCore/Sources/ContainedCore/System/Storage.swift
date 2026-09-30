@@ -39,6 +39,16 @@ public extension Core.System {
             }
         }
         public var automaticAllowed: Bool { risk == .compaction }
+        /// Existing runtime prune routes do not require host-storage analysis support.
+        public var pruneCapability: Core.Runtime.Capability? {
+            switch self {
+            case .stoppedContainers: return .containers
+            case .danglingImages, .unusedImages: return .images
+            case .unusedVolumes: return .volumes
+            case .unusedNetworks: return .networks
+            default: return nil
+            }
+        }
     }
 
     enum CleanupRisk: String, Sendable { case compaction, cacheDiscard, unreferencedResources, dataDeletion }
@@ -54,6 +64,7 @@ public extension Core.System {
         public let createdAt: Date
         internal let validationToken: Data
         internal let resourceLimit: Int?
+        internal let afterResourceID: String?
     }
 
     struct CleanupResult: Sendable {

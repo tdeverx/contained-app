@@ -128,14 +128,16 @@ final class AppDatabase {
     }
 
     /// Explicit retry bypasses the cooldown, verifies reads and repairs legacy duplicates.
-    func retryPersistence() {
+    @discardableResult
+    func retryPersistence() -> Bool {
         retryAfter = nil
         repairDuplicateRecords()
-        guard canPersist else { return }
+        guard canPersist else { return false }
         do {
             _ = try fetchRequired(AppSettingRecord.self)
             lastFailure = nil
-        } catch { }
+            return true
+        } catch { return false }
     }
 
     func setting<T: Codable>(_ key: String, fallback: T) -> T {

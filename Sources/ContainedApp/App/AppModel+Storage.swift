@@ -6,6 +6,16 @@ extension AppModel {
         availableRuntimeDescriptors.filter { $0.supports(.storageManagement) }
     }
 
+    func cleanupRuntimes(for action: Core.System.CleanupAction) -> [Core.Runtime.Descriptor] {
+        Self.cleanupRuntimes(availableRuntimeDescriptors, for: action)
+    }
+
+    static func cleanupRuntimes(_ descriptors: [Core.Runtime.Descriptor], for action: Core.System.CleanupAction) -> [Core.Runtime.Descriptor] {
+        descriptors.filter { descriptor in
+            descriptor.supports(.storageManagement) || action.pruneCapability.map { descriptor.supports($0) } == true
+        }
+    }
+
     func refreshStorageAnalysis() async {
         guard let client else { return }
         for runtime in storageRuntimes {
@@ -21,20 +31,31 @@ extension AppModel {
         storagePlanInFlight = true
         defer { storagePlanInFlight = false }
         var plans: [Core.System.CleanupPlan] = []
-        for runtime in storageRuntimes {
-            do { plans.append(try await client.cleanupPlan(action, runtimeKind: runtime.kind)) }
-            catch { flash(storageFailureMessage(error)); return }
+        var requests: [RuntimePruneRequest] = []
+        for runtime in cleanupRuntimes(for: action) {
+            if runtime.supports(.storageManagement) {
+                do { plans.append(try await client.cleanupPlan(action, runtimeKind: runtime.kind)) }
+                catch { flash(storageFailureMessage(error)); return }
+            } else {
+                requests.append(RuntimePruneRequest(runtimeKind: runtime.kind, action: action))
+            }
         }
         storageCleanupPlans = plans
+        runtimePruneRequests = requests
     }
 
-    func performStorageCleanup(_ plans: [Core.System.CleanupPlan]) async {
+    func performStorageCleanup(_ plans: [Core.System.CleanupPlan], pruneRequests: [RuntimePruneRequest] = [], automatic: Bool = false) async {
         guard let client, !storageCleanupInFlight, activity == nil, activeImageBuilds == 0 else { return }
         storageCleanupInFlight = true
         defer { storageCleanupInFlight = false }
         for plan in plans {
             do {
                 let result = try await client.executeCleanup(plan)
+                // Failed candidates must not starve the rest of a larger inventory either.
+                if automatic, result.completedCount + result.failureCodes.count > 0, let cursor = plan.resourceIDs.last {
+                    storageAutomationCursors[plan.runtimeKind.scopedID(for: plan.action.rawValue)] = cursor
+                    database.setSetting(storageAutomationCursors, for: "storageCleanupCursors")
+                }
                 if let after = result.after { storageAnalyses[plan.runtimeKind] = after }
                 let before = result.before.map { Format.bytes($0.totalAllocatedBytes) } ?? "unknown"
                 let after = result.after.map { Format.bytes($0.totalAllocatedBytes) } ?? "unknown"
@@ -49,6 +70,20 @@ extension AppModel {
                 flash(message)
                 logger.record(message, category: .system, severity: .warning)
             }
+        }
+        // Runtimes without exact storage planning retain their explicitly confirmed prune routes.
+        for request in pruneRequests {
+            do {
+                switch request.action {
+                case .stoppedContainers: _ = try await client.pruneContainers(runtimeKind: request.runtimeKind)
+                case .danglingImages, .unusedImages:
+                    _ = try await client.pruneImages(all: request.action == .unusedImages, runtimeKind: request.runtimeKind)
+                case .unusedVolumes: _ = try await client.pruneVolumes(runtimeKind: request.runtimeKind)
+                case .unusedNetworks: _ = try await client.pruneNetworks(runtimeKind: request.runtimeKind)
+                default: continue
+                }
+                logger.record("Runtime prune completed: \(request.runtimeKind.rawValue), \(request.action.rawValue)", category: .system)
+            } catch { flash(storageFailureMessage(error)) }
         }
         await refreshSystemResources()
         await refreshImagesIfNeeded(force: true)
@@ -74,7 +109,8 @@ extension AppModel {
             if settings.storageCleanupPolicy.compactBuilder { actions.append(.compactRunningBuilder) }
             for action in actions {
                 do {
-                    let plan = try await client.cleanupPlan(action, runtimeKind: runtime.kind, automatic: true)
+                    let plan = try await client.cleanupPlan(action, runtimeKind: runtime.kind, automatic: true,
+                                                            afterResourceID: storageAutomationCursors[runtime.kind.scopedID(for: action.rawValue)])
                     if !plan.commands.isEmpty { plans.append(plan) }
                 } catch { storageAnalysisErrors[runtime.kind] = storageFailureMessage(error) }
             }
@@ -87,7 +123,7 @@ extension AppModel {
               activity == nil, activeImageBuilds == 0 else { return }
         lastStorageAutomationRun = now
         database.setSetting(now, for: "lastStorageCleanupRun")
-        await performStorageCleanup(plans)
+        await performStorageCleanup(plans, automatic: true)
     }
 
     func permitStorageIntensiveOperation(runtimeKind: Core.Runtime.Kind) async -> Bool {

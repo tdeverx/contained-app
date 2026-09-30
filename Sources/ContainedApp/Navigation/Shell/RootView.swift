@@ -35,7 +35,7 @@ struct RootView: View {
             }
         }
         .alert("App database unavailable", isPresented: $showDatabaseFailure) {
-            Button("Retry") { app.database.retryPersistence() }
+            Button("Retry") { app.retryPersistence() }
             Button("Data Settings") { ui.openSettings(to: .general) }
             Button("Dismiss", role: .cancel) { }
         } message: {
@@ -68,9 +68,9 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $showSystemLogs) { SystemLogsSheet() }
-        .sheet(isPresented: Binding(get: { !app.storageCleanupPlans.isEmpty },
-                                    set: { if !$0 { app.storageCleanupPlans = [] } })) {
-            StorageCleanupPreview(plans: app.storageCleanupPlans)
+        .sheet(isPresented: Binding(get: { !app.storageCleanupPlans.isEmpty || !app.runtimePruneRequests.isEmpty },
+                                    set: { if !$0 { app.storageCleanupPlans = []; app.runtimePruneRequests = [] } })) {
+            StorageCleanupPreview(plans: app.storageCleanupPlans, pruneRequests: app.runtimePruneRequests)
         }
         .alert("Low disk space", isPresented: Binding(get: { app.lowStorageWarning != nil },
                                                      set: { if !$0 { app.lowStorageWarning = nil } })) {

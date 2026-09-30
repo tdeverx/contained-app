@@ -35,6 +35,12 @@ final class HealthCheckStore {
         return checks[id]
     }
 
+    @discardableResult
+    func reloadFromDatabase() -> Bool {
+        loadedSuccessfully = false
+        return loadIfNeeded()
+    }
+
     func setCheck(_ check: Core.Container.HealthCheck, for id: String) {
         guard database.canPersist, loadIfNeeded() else { return }
         if check.command.isEmpty { checks[id] = nil } else { checks[id] = check }

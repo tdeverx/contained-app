@@ -12,11 +12,11 @@ public extension Core.Orchestrator {
     }
 
     func cleanupPlan(_ action: Core.System.CleanupAction, runtimeKind: Core.Runtime.Kind,
-                     automatic: Bool = false) async throws -> Core.System.CleanupPlan {
+                     automatic: Bool = false, afterResourceID: String? = nil) async throws -> Core.System.CleanupPlan {
         if automatic, !action.automaticAllowed { throw Core.System.StorageError.unsupportedAutomation }
         return try await requireRuntime(runtimeKind, capability: .storageManagement,
                                         as: (any RuntimeStorageClient).self)
-            .cleanupPlan(action, resourceLimit: automatic ? 16 : nil)
+            .cleanupPlan(action, resourceLimit: automatic ? 16 : nil, afterResourceID: automatic ? afterResourceID : nil)
     }
 
     func executeCleanup(_ plan: Core.System.CleanupPlan) async throws -> Core.System.CleanupResult {

@@ -54,6 +54,12 @@ final class PersonalizationStore {
                               defaultImageStyle: defaultImageStyle)
     }
 
+    @discardableResult
+    func reloadFromDatabase() -> Bool {
+        loadedSuccessfully = false
+        return loadIfNeeded()
+    }
+
     func applyBackup(_ snapshot: PersonalizationBackup, replace: Bool) {
         guard database.canPersist, loadIfNeeded(),
               let images = try? database.fetchRequired(ImageRecord.self) else { return }
