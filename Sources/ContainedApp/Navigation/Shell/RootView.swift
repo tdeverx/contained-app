@@ -268,8 +268,7 @@ struct RootView: View {
         defer { downgradeBackupDocument = nil }
         switch result {
         case .success:
-            app.resetIncompatibleLocalState()
-            app.downgradeSchemaVersion = nil
+            guard app.resetIncompatibleLocalState() else { return }
             app.flash(AppText.exportedBackupAndReset)
         case .failure(let error):
             app.flash(error.appDisplayMessage)

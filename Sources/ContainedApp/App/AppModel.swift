@@ -143,8 +143,24 @@ final class AppModel {
 
     /// Recovery belongs to the app so eagerly loaded state and its consumers recover together.
     func retryPersistence() async {
-        guard database.retryPersistence(reload: { reloadPersistedState() }) else { return }
+        guard database.retryPersistence(validate: { validatePersistedSchema() },
+                                        reload: { reloadPersistedState() }) else { return }
         await retryBootstrap()
+    }
+
+    func recoverPersistenceForDowngradeDecision() -> Bool {
+        database.retryPersistence(validate: { validatePersistedSchema(allowNewerSchema: true) },
+                                  reload: { reloadPersistedState() })
+    }
+
+    private func validatePersistedSchema(allowNewerSchema: Bool = false) -> Bool {
+        let storedSchema: Int? = database.setting(StateMigrator.schemaVersionSettingKey, fallback: Optional<Int>.none)
+        guard database.canPersist, database.lastFailure == nil else { return false }
+        if case .newerOnDisk(let version) = migrator.reconcile(storedVersion: storedSchema) {
+            downgradeSchemaVersion = version
+            guard allowNewerSchema else { return false }
+        }
+        return true
     }
 
     private func reloadPersistedState() -> Bool {
@@ -364,19 +380,23 @@ final class AppModel {
     }
 
     private func bootstrap(force: Bool) async {
+        guard downgradeSchemaVersion == nil else { return }
         guard force || !didCompleteInitialBootstrap else { return }
         if let bootstrapTask {
             await bootstrapTask.value
+            if force { await bootstrap(force: true) }
             return
         }
+        bootstrap = .checking
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.performBootstrap()
+            // Clear ownership before waking joined/forced requests, not in the original caller.
+            self.bootstrapTask = nil
+            self.didCompleteInitialBootstrap = true
         }
         bootstrapTask = task
         await task.value
-        bootstrapTask = nil
-        didCompleteInitialBootstrap = true
     }
 
     private func performBootstrap() async {
@@ -385,6 +405,7 @@ final class AppModel {
             (descriptor.kind, Core.Runtime.Configuration(cliPathOverride: settings.runtimePathOverride(for: descriptor.kind)))
         }))
         let result = await bootstrapRuntime(configuration)
+        guard downgradeSchemaVersion == nil else { return }
         switch result {
         case .cliMissing(let readiness):
             runtimeReadiness = Dictionary(uniqueKeysWithValues: readiness.map { ($0.kind, $0) })

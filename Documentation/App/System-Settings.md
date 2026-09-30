@@ -165,6 +165,9 @@ An alert links to General settings and an explicit retry.
 Successful explicit retry reloads saved preferences, registry retry state, and cleanup/
 image-update scheduling state, history counts, and loaded recent activity without
 saving fallback defaults. It then reruns runtime detection using the restored CLI paths.
+If a newer saved schema is discovered, recovery remains paused until the existing
+downgrade decision is resolved. Forced runtime detection queues behind an in-flight
+startup check rather than reusing its pre-recovery configuration.
 Diagnostics show only an error domain/code, not database contents or private paths.
 Startup/retry consolidates legacy duplicate identities, preserving the newest
 snapshot and associated personalization, health checks, migration metadata, and

@@ -209,6 +209,79 @@ struct DatabaseRecoveryTests {
         #expect(database.canPersist)
     }
 
+    @Test func recoveryRestoresNewerSchemaDecisionBeforeAnyWritesOrBootstrap() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        SettingsStore(database: database).loggingLevel = .off
+        let future = StateMigrator.currentSchemaVersion + 1
+        database.setSetting(future, for: StateMigrator.schemaVersionSettingKey)
+        database.failureInjector = { operation in
+            if operation == "fetch:AppSettingRecord" { throw diskFull }
+        }
+        var calls = 0
+        let app = AppModel(database: database, bootstrapRuntime: { _ in
+            calls += 1
+            return .cliMissing(runtimes: [])
+        })
+        #expect(app.downgradeSchemaVersion == nil)
+        // An unrepaired older duplicate must not hide the authoritative newer schema.
+        database.context.insert(AppSettingRecord(key: StateMigrator.schemaVersionSettingKey,
+                                                  valueData: try AppDatabase.encoded(StateMigrator.currentSchemaVersion),
+                                                  updatedAt: .distantPast))
+        try database.context.save()
+        database.failureInjector = nil
+        let saves = database.successfulSaveCount
+        await app.retryPersistence()
+        #expect(app.downgradeSchemaVersion == future)
+        #expect(!database.canPersist)
+        #expect(database.successfulSaveCount == saves)
+        #expect(try database.context.fetch(FetchDescriptor<AppSettingRecord>()).filter {
+            $0.key == StateMigrator.schemaVersionSettingKey
+        }.count == 2)
+        #expect(calls == 0)
+        app.resolveDowngradeByKeepingReadableData()
+        #expect(app.downgradeSchemaVersion == nil)
+        #expect(database.canPersist)
+        #expect(database.setting(StateMigrator.schemaVersionSettingKey, fallback: 0) == StateMigrator.currentSchemaVersion)
+    }
+
+    @Test func retryQueuesRestoredConfigurationBehindAnInFlightBootstrap() async {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let settings = SettingsStore(database: database)
+        settings.loggingLevel = .off
+        settings.setRuntimePathOverride("/fixture/restored/container", for: .appleContainer)
+        database.failureInjector = { operation in
+            if operation == "fetch:AppSettingRecord" { throw diskFull }
+        }
+        let started = AsyncStream<Void>.makeStream()
+        var release: CheckedContinuation<Void, Never>?
+        var paths: [String?] = []
+        let app = AppModel(database: database, bootstrapRuntime: { configuration in
+            paths.append(configuration.configuration(for: .appleContainer).cliPathOverride)
+            if paths.count == 1 {
+                await withCheckedContinuation { continuation in
+                    release = continuation
+                    started.continuation.yield(())
+                }
+            }
+            return .cliMissing(runtimes: [])
+        })
+        let initial = Task { await app.bootstrapIfNeeded() }
+        for await _ in started.stream { break }
+        database.failureInjector = nil
+        let retry = Task { await app.retryPersistence() }
+        for _ in 0..<100 {
+            if app.settings.runtimePathOverride(for: .appleContainer) == "/fixture/restored/container" { break }
+            await Task.yield()
+        }
+        #expect(app.settings.runtimePathOverride(for: .appleContainer) == "/fixture/restored/container")
+        #expect(paths == [""])
+        release?.resume()
+        await initial.value
+        await retry.value
+        #expect(paths == ["", "/fixture/restored/container"])
+        started.continuation.finish()
+    }
+
     @Test func repairKeepsNewestSnapshotAndRecoveryMetadata() throws {
         let db = AppDatabase(isStoredInMemoryOnly: true)
         let older = ContainerRecord(scopedID: "apple-container::web", runtimeKindRaw: "apple-container",

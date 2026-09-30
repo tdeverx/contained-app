@@ -134,14 +134,18 @@ final class AppDatabase {
 
     /// Only explicit recovery can resume writes after verifying reads and reloading app caches.
     @discardableResult
-    func retryPersistence(reload: () -> Bool = { true }) -> Bool {
+    func retryPersistence(validate: () -> Bool = { true }, reload: () -> Bool = { true }) -> Bool {
         guard !isCompacting else { return false }
         retryAfter = nil
-        repairDuplicateRecords()
-        guard canPersist else { return false }
         do {
             _ = try fetchRequired(AppSettingRecord.self)
             lastFailure = nil
+            guard validate() else {
+                if retryAfter == nil { recordFailure(.save(detail: "Recovery validation incomplete")) }
+                return false
+            }
+            repairDuplicateRecords()
+            guard canPersist else { return false }
             // Synchronous MainActor reload keeps background writers out of this recovery window.
             guard reload(), canPersist, lastFailure == nil else {
                 if retryAfter == nil { recordFailure(.save(detail: "Recovery state reload incomplete")) }
@@ -152,7 +156,13 @@ final class AppDatabase {
     }
 
     func setting<T: Codable>(_ key: String, fallback: T) -> T {
-        guard let record = fetch(AppSettingRecord.self).first(where: { $0.key == key }) else {
+        // Recovery validates settings before duplicate repair is allowed to write. Read the same
+        // deterministic winner that repair would retain, not an arbitrary legacy duplicate.
+        let records = fetch(AppSettingRecord.self).filter { $0.key == key }.sorted {
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            return String(describing: $0.persistentModelID) < String(describing: $1.persistentModelID)
+        }
+        guard let record = records.first else {
             return fallback
         }
         do {
