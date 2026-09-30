@@ -3,15 +3,23 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.229+2e03cb6</title>
-            <pubDate>Thu, 24 Sep 2026 21:09:55 +0000</pubDate>
-            <sparkle:version>229</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.229+2e03cb6</sparkle:shortVersionString>
+            <title>1.0.0-nightly.232+59a03dc</title>
+            <pubDate>Wed, 30 Sep 2026 18:09:54 +0000</pubDate>
+            <sparkle:version>232</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.232+59a03dc</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
+<h3>Fixes</h3>
 <ul>
-<li>Require Apple Container 1.4.1 or newer; support its expanded runtime status and live storage compaction; add kernel arguments, OCI masked/read-only paths, and build SSH forwarding; preserve new network metadata; and remove obsolete registry and stop-signal command output.</li>
+<li>Bound app database growth with no-op persistence, hourly activity/metrics retention, and supported transaction-history maintenance. General settings now show allocated database storage and offer manual compaction.</li>
+<li>Recover safely from database fetch/save failures without inserting duplicate inventory. Startup repair and app writes wait for acceptance of newer-schema data; downgrade backups read saved styles and health checks without enabling writes. Explicit retry restores schema downgrade safeguards and reloads saved preferences, history, and scheduling before writes resume; recovery commits repair and normalization only after all required reads succeed. Runtime detection reruns with restored CLI paths even after an in-flight startup check.</li>
+<li>Group registry update failures by host with classified, privacy-safe errors, bounded retry backoff, and login/retry controls. Background retries honor their own deadlines without repeating healthy-image checks or postponing full sweeps; credential changes preserve affected tags for immediate retry. Recovery reconciles saved image statuses against already-loaded inventory. Private Apple Container image checks can reuse accessible Keychain logins without storing credentials in Contained, including equivalent HTTPS authentication origins with explicit default ports.</li>
+</ul>
+<h3>Improvements</h3>
+<ul>
+<li>Add host-allocated storage analysis and exact cleanup previews for container compaction, builder cache reset, and unreferenced resources. Changed inventory requires a fresh preview, and partial results show before/after host allocation.</li>
+<li>Offer opt-in scheduled compaction for running application containers and the builder, with configurable thresholds and rotating bounded batches. Destructive resource cleanup stays manual; low host space is checked before pulls, builds, and recreates. Runtimes without Apple storage analysis retain their confirmed native prune actions.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -94,7 +102,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.229+2e03cb6/Contained-1.0.0-nightly.229+2e03cb6.dmg" length="9599306" type="application/octet-stream" sparkle:edSignature="WM/giZqtzvrRhJ/IckwoD7M6VCohOC2IzsnGOJurjgyPGtRxS0yR6WF0BR1/V9+6cYngMXLfXJPR2vF3C4ApDw=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.232+59a03dc/Contained-1.0.0-nightly.232+59a03dc.dmg" length="9894717" type="application/octet-stream" sparkle:edSignature="pAMR2YwZlh5LW/Tad02aNVR2IXgQFNYlTzaSNLUQtfTFdGhSgZvIWFHNmN72vOexWMeK73TOp4Bc2JzpSLEcCA=="/>
         </item>
     </channel>
 </rss>
