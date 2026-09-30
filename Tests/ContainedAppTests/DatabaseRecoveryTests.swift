@@ -28,7 +28,7 @@ struct DatabaseRecoveryTests {
         #expect(!db.context.hasChanges)
     }
 
-    @Test func failedSaveRollsBackAndCooldownAllowsRecovery() async throws {
+    @Test func failedSaveRollsBackAndRemainsPausedUntilExplicitRecovery() async throws {
         let db = AppDatabase(isStoredInMemoryOnly: true)
         var date = Date()
         db.now = { date }
@@ -43,6 +43,9 @@ struct DatabaseRecoveryTests {
         #expect(!db.context.hasChanges)
         db.failureInjector = nil
         date = date.addingTimeInterval(61)
+        #expect(!db.canPersist)
+        db.setSetting("must-not-overwrite", for: "test")
+        #expect(db.retryPersistence())
         #expect(db.setting("test", fallback: "") == "original")
         db.setSetting("recovered", for: "test")
         #expect(db.lastFailure == nil)
@@ -78,12 +81,13 @@ struct DatabaseRecoveryTests {
         }
     }
 
-    @Test func appRetryReloadsStartupSettingsAndScheduledStateWithoutSavingDefaults() {
+    @Test func appRetryReloadsStartupSettingsAndScheduledStateWithoutSavingDefaults() async {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let original = SettingsStore(database: database)
         original.refreshInterval = 17
         original.imageUpdateChecksEnabled = false
         original.historyRetentionDays = 30
+        original.loggingLevel = .off
         var policy = Core.System.StorageCleanupPolicy()
         policy.enabled = true
         original.storageCleanupPolicy = policy
@@ -94,16 +98,20 @@ struct DatabaseRecoveryTests {
         database.failureInjector = { operation in
             if operation == "fetch:AppSettingRecord" { throw diskFull }
         }
-        let app = AppModel(database: database)
+        var savesBeforeRuntimeDetection = 0
+        let app = AppModel(database: database, bootstrapRuntime: { _ in
+            savesBeforeRuntimeDetection = database.successfulSaveCount
+            return .cliMissing(runtimes: [])
+        })
         #expect(app.settings.refreshInterval == 2)
         #expect(!database.canPersist)
         app.settings.refreshInterval = 99
         let saves = database.successfulSaveCount
-        app.retryPersistence()
+        await app.retryPersistence()
         #expect(!database.canPersist)
         #expect(app.settings.refreshInterval == 99)
         database.failureInjector = nil
-        app.retryPersistence()
+        await app.retryPersistence()
         #expect(app.settings.refreshInterval == 17)
         #expect(!app.settings.imageUpdateChecksEnabled)
         #expect(app.settings.storageCleanupPolicy.enabled)
@@ -111,11 +119,94 @@ struct DatabaseRecoveryTests {
         #expect(app.lastStorageAutomationRun == lastRun)
         #expect(app.lastImageUpdateSweep == lastRun)
         #expect(app.storageAutomationCursors["apple-container::compactRunningContainers"] == "c15")
-        #expect(database.successfulSaveCount == saves)
+        // Runtime re-detection may persist new readiness; the cache reload itself must not write.
+        #expect(savesBeforeRuntimeDetection == saves)
         #expect(database.lastFailure == nil)
         app.settings.refreshInterval = 18
         #expect(database.setting("refreshInterval", fallback: 0) == 18)
         #expect(database.setting("historyRetentionDays", fallback: 0) == 30)
+    }
+
+    @Test func backgroundUpdatesCannotOverwriteSavedStartupStateAfterTheOldCooldown() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        var date = Date()
+        database.now = { date }
+        SettingsStore(database: database).loggingLevel = .off
+        var saved = Core.Registry.UpdateRetryPolicy()
+        saved.failed("ghcr.io/team/saved", runtimeKind: .appleContainer, kind: .unauthorized, now: date)
+        database.setSetting(saved, for: "registryUpdateRetryPolicy")
+        database.setSetting(date, for: AppModel.imageUpdateLastSweepKey)
+        let originalSweep = date
+        database.failureInjector = { operation in
+            if operation == "fetch:AppSettingRecord" { throw diskFull }
+        }
+        let app = AppModel(database: database, bootstrapRuntime: { _ in .cliMissing(runtimes: []) })
+        database.failureInjector = nil
+        date = date.addingTimeInterval(61)
+        app.registryManifestLookup = { _, _ in throw Core.Registry.ManifestError.unauthorized }
+        await app.checkImageUpdate("ghcr.io/team/background", runtimeKind: .appleContainer, notify: false)
+        app.lastImageUpdateSweep = date
+        #expect(!database.canPersist)
+        let rows = try database.context.fetch(FetchDescriptor<AppSettingRecord>())
+        let retryData = try #require(rows.first { $0.key == "registryUpdateRetryPolicy" }?.valueData)
+        #expect(try JSONDecoder().decode(Core.Registry.UpdateRetryPolicy.self, from: retryData) == saved)
+        let sweepData = try #require(rows.first { $0.key == AppModel.imageUpdateLastSweepKey }?.valueData)
+        #expect(try JSONDecoder().decode(Date.self, from: sweepData) == originalSweep)
+        await app.retryPersistence()
+        #expect(database.canPersist)
+        #expect(app.registryRetryPolicy == saved)
+        #expect(app.lastImageUpdateSweep == originalSweep)
+    }
+
+    @Test func retryRebootstrapsWithTheRestoredCLIOverride() async {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let settings = SettingsStore(database: database)
+        settings.loggingLevel = .off
+        settings.setRuntimePathOverride("/fixture/custom/container", for: .appleContainer)
+        database.failureInjector = { operation in
+            if operation == "fetch:AppSettingRecord" { throw diskFull }
+        }
+        var configurations: [Core.Configuration] = []
+        let app = AppModel(database: database, bootstrapRuntime: { configuration in
+            configurations.append(configuration)
+            return .cliMissing(runtimes: [])
+        })
+        await app.bootstrapIfNeeded()
+        #expect(app.bootstrap == .cliMissing)
+        #expect(configurations.count == 1)
+        #expect(configurations.first?.configuration(for: .appleContainer).cliPathOverride == "")
+        database.failureInjector = nil
+        await app.retryPersistence()
+        #expect(configurations.count == 2)
+        #expect(configurations.last?.configuration(for: .appleContainer).cliPathOverride == "/fixture/custom/container")
+    }
+
+    @Test func recoveryReloadsHistoryCountsAndLoadedRecentActivity() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        SettingsStore(database: database).loggingLevel = .off
+        let event = EventRecord(timestamp: Date(), containerID: nil, kind: .system, message: "original")
+        database.context.insert(event)
+        database.context.insert(RecipeRecord(name: "saved template", documentData: Data()))
+        #expect(database.save())
+        database.failureInjector = { operation in
+            if operation == "fetch:EventRecord" { throw diskFull }
+        }
+        let app = AppModel(database: database, bootstrapRuntime: { _ in .cliMissing(runtimes: []) })
+        #expect(app.historyStore.activitySummary == ActivitySummary())
+        await app.historyStore.loadRecentActivity()
+        #expect(app.historyStore.recentActivity.first?.message == "original")
+        // Simulate saved data changing independently while the app's projections are stale.
+        event.message = "restored"
+        event.isRead = true
+        try database.context.save()
+        let revision = app.historyStore.activityRevision
+        database.failureInjector = nil
+        await app.retryPersistence()
+        #expect(app.historyStore.activitySummary == ActivitySummary(totalEvents: 1, unreadEvents: 0, templateCount: 1))
+        #expect(app.historyStore.recentActivity.first?.message == "restored")
+        #expect(app.historyStore.recentActivity.first?.isRead == true)
+        #expect(app.historyStore.activityRevision > revision)
+        #expect(database.canPersist)
     }
 
     @Test func repairKeepsNewestSnapshotAndRecoveryMetadata() throws {

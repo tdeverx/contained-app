@@ -35,7 +35,7 @@ struct RootView: View {
             }
         }
         .alert("App database unavailable", isPresented: $showDatabaseFailure) {
-            Button("Retry") { app.retryPersistence() }
+            Button("Retry") { Task { await app.retryPersistence() } }
             Button("Data Settings") { ui.openSettings(to: .general) }
             Button("Dismiss", role: .cancel) { }
         } message: {

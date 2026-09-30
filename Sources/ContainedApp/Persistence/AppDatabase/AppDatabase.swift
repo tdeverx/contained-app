@@ -45,7 +45,8 @@ final class AppDatabase {
     @ObservationIgnored var historyMaintenanceTask: Task<Void, Never>?
     @ObservationIgnored var now: () -> Date = { Date() }
     @ObservationIgnored var failureInjector: ((String) throws -> Void)?
-    var canPersist: Bool { !isCompacting && (retryAfter.map { now() >= $0 } ?? true) }
+    // Elapsed time is not recovery: app caches may still hold startup fallbacks.
+    var canPersist: Bool { !isCompacting && retryAfter == nil }
     var containerInventoryPreparationCount = 0
     var containerInventoryEncodedCount = 0
 
@@ -69,12 +70,16 @@ final class AppDatabase {
 
     /// Required reads never turn an unavailable store into an empty inventory.
     func fetchRequired<T: PersistentModel>(_ model: T.Type) throws -> [T] {
-        guard retryAfter.map({ now() >= $0 }) ?? true else {
+        try readRequired(model) { try context.fetch(FetchDescriptor<T>()) }
+    }
+
+    func readRequired<T: PersistentModel, Value>(_ model: T.Type, _ read: () throws -> Value) throws -> Value {
+        guard retryAfter == nil else {
             throw lastFailure ?? .save(detail: "Persistence is paused")
         }
         do {
             try failureInjector?("fetch:\(String(describing: T.self))")
-            return try context.fetch(FetchDescriptor<T>())
+            return try read()
         } catch {
             let failure = Failure.fetch(model: String(describing: T.self), detail: Self.safeDetail(error))
             recordFailure(failure)
@@ -127,15 +132,21 @@ final class AppDatabase {
         return try encoder.encode(value)
     }
 
-    /// Explicit retry bypasses the cooldown, verifies reads and repairs legacy duplicates.
+    /// Only explicit recovery can resume writes after verifying reads and reloading app caches.
     @discardableResult
-    func retryPersistence() -> Bool {
+    func retryPersistence(reload: () -> Bool = { true }) -> Bool {
+        guard !isCompacting else { return false }
         retryAfter = nil
         repairDuplicateRecords()
         guard canPersist else { return false }
         do {
             _ = try fetchRequired(AppSettingRecord.self)
             lastFailure = nil
+            // Synchronous MainActor reload keeps background writers out of this recovery window.
+            guard reload(), canPersist, lastFailure == nil else {
+                if retryAfter == nil { recordFailure(.save(detail: "Recovery state reload incomplete")) }
+                return false
+            }
             return true
         } catch { return false }
     }

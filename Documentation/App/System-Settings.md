@@ -160,9 +160,11 @@ safe error code if the database is busy or space is insufficient. It does not
 delete settings, templates, container records, or retained history.
 
 If database reads or saves fail, Contained rolls back pending changes and pauses
-new writes for a minute. An alert links to General settings and an explicit retry.
+new writes until explicit recovery succeeds. Waiting alone never resumes writes.
+An alert links to General settings and an explicit retry.
 Successful explicit retry reloads saved preferences, registry retry state, and cleanup/
-image-update scheduling state without saving fallback defaults.
+image-update scheduling state, history counts, and loaded recent activity without
+saving fallback defaults. It then reruns runtime detection using the restored CLI paths.
 Diagnostics show only an error domain/code, not database contents or private paths.
 Startup/retry consolidates legacy duplicate identities, preserving the newest
 snapshot and associated personalization, health checks, migration metadata, and

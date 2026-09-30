@@ -29,6 +29,7 @@ final class AppModel {
     let updater = UpdaterController()
     let migrator = StateMigrator()
     let logger: AppLogger
+    @ObservationIgnored private let bootstrapRuntime: (Core.Configuration) async -> Core.Orchestrator.Bootstrap
     @ObservationIgnored var registryManifestLookup: ((String, Core.Runtime.Kind) async throws -> Core.Registry.ManifestResult)?
     @ObservationIgnored var registryChecksInFlight: Set<String> = []
     var registryCredentialDates: [String: Date] = [:] {
@@ -141,16 +142,21 @@ final class AppModel {
     }
 
     /// Recovery belongs to the app so eagerly loaded state and its consumers recover together.
-    func retryPersistence() {
-        guard database.retryPersistence(), settings.reloadFromDatabase(),
-              personalization.reloadFromDatabase(), healthChecks.reloadFromDatabase() else { return }
+    func retryPersistence() async {
+        guard database.retryPersistence(reload: { reloadPersistedState() }) else { return }
+        await retryBootstrap()
+    }
+
+    private func reloadPersistedState() -> Bool {
+        guard settings.reloadFromDatabase(), personalization.reloadFromDatabase(),
+              healthChecks.reloadFromDatabase(), historyStore.reloadFromDatabase() else { return false }
         let statuses = database.imageStatusesSnapshot()
         let retryPolicy = database.setting("registryUpdateRetryPolicy", fallback: Core.Registry.UpdateRetryPolicy())
         let credentialDates: [String: Date] = database.setting("registryCredentialDates", fallback: [:])
         let storageRun = database.setting("lastStorageCleanupRun", fallback: Optional<Date>.none)
         let cursors: [String: String] = database.setting("storageCleanupCursors", fallback: [:])
         let sweep = database.setting(Self.imageUpdateLastSweepKey, fallback: Optional<Date>.none)
-        guard database.canPersist, database.lastFailure == nil else { return }
+        guard database.canPersist, database.lastFailure == nil else { return false }
         reloadingPersistence = true
         defer { reloadingPersistence = false }
         persistedImageUpdatesAwaitingInventory = statuses
@@ -164,6 +170,7 @@ final class AppModel {
         updater.automaticallyChecks = settings.appUpdateChecksEnabled
         applyStatsNormalizationContext()
         coordinator.wake()
+        return true
     }
     var imageUpdateInterval: TimeInterval { TimeInterval(settings.imageUpdateIntervalHours) * 60 * 60 }
     var imageUpdateLastRunDate: Date? { lastImageUpdateSweep }
@@ -239,8 +246,12 @@ final class AppModel {
         var fraction: Double? = nil   // nil → indeterminate
     }
 
-    init(database: AppDatabase = AppDatabase()) {
+    init(database: AppDatabase = AppDatabase(),
+         bootstrapRuntime: @escaping (Core.Configuration) async -> Core.Orchestrator.Bootstrap = {
+             await Core.Orchestrator.bootstrap(configuration: $0)
+         }) {
         self.database = database
+        self.bootstrapRuntime = bootstrapRuntime
         self.settings = SettingsStore(database: database)
         self.personalization = PersonalizationStore(database: database)
         self.healthChecks = HealthCheckStore(database: database)
@@ -373,7 +384,7 @@ final class AppModel {
         let configuration = Core.Configuration(runtimes: Dictionary(uniqueKeysWithValues: supportedRuntimeDescriptors.map { descriptor in
             (descriptor.kind, Core.Runtime.Configuration(cliPathOverride: settings.runtimePathOverride(for: descriptor.kind)))
         }))
-        let result = await Core.Orchestrator.bootstrap(configuration: configuration)
+        let result = await bootstrapRuntime(configuration)
         switch result {
         case .cliMissing(let readiness):
             runtimeReadiness = Dictionary(uniqueKeysWithValues: readiness.map { ($0.kind, $0) })

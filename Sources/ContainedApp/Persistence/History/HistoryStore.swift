@@ -327,10 +327,33 @@ final class HistoryStore {
     private func save() -> Bool { database.save() }
 
     private func refreshSummary() {
-        activitySummary = ActivitySummary(totalEvents: fetchCount(EventRecord.self),
-                                          unreadEvents: fetchCount(EventRecord.self,
-                                                                   predicate: #Predicate { !$0.isRead }),
-                                          templateCount: fetchCount(RecipeRecord.self))
+        _ = reloadFromDatabase(refreshRecent: false)
+    }
+
+    /// Refresh all projections together; a failed read must not replace prior values with zeros.
+    @discardableResult
+    func reloadFromDatabase(refreshRecent: Bool = true) -> Bool {
+        do {
+            let total = try database.readRequired(EventRecord.self) {
+                try context.fetchCount(FetchDescriptor<EventRecord>())
+            }
+            let unread = try database.readRequired(EventRecord.self) {
+                try context.fetchCount(FetchDescriptor<EventRecord>(predicate: #Predicate { !$0.isRead }))
+            }
+            let templates = try database.readRequired(RecipeRecord.self) {
+                try context.fetchCount(FetchDescriptor<RecipeRecord>())
+            }
+            var events: [ActivityEvent]?
+            if refreshRecent, recentActivityLoaded {
+                var descriptor = FetchDescriptor<EventRecord>(sortBy: [SortDescriptor(\EventRecord.timestamp, order: .reverse)])
+                descriptor.fetchLimit = Self.recentActivityLimit
+                events = try database.readRequired(EventRecord.self) { try context.fetch(descriptor).map(ActivityEvent.init) }
+            }
+            activitySummary = ActivitySummary(totalEvents: total, unreadEvents: unread, templateCount: templates)
+            if let events { recentActivity = events }
+            activityRevision &+= 1
+            return true
+        } catch { return false }
     }
 
     private func fetch<T: PersistentModel>(_ model: T.Type) -> [T] {
@@ -349,16 +372,6 @@ final class HistoryStore {
         } catch {
             database.recordFailure(.fetch(model: String(describing: T.self), detail: AppDatabase.safeDetail(error)))
             return []
-        }
-    }
-
-    private func fetchCount<T: PersistentModel>(_ model: T.Type,
-                                                predicate: Predicate<T>? = nil) -> Int {
-        do {
-            return try context.fetchCount(FetchDescriptor<T>(predicate: predicate))
-        } catch {
-            database.recordFailure(.fetch(model: String(describing: T.self), detail: AppDatabase.safeDetail(error)))
-            return 0
         }
     }
 

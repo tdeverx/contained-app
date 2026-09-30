@@ -1,7 +1,7 @@
 ### Fixes
 
 - Bound app database growth with no-op persistence, hourly activity/metrics retention, and supported transaction-history maintenance. General settings now show allocated database storage and offer manual compaction.
-- Recover safely from database fetch/save failures without inserting duplicate inventory. Failed writes roll back and pause briefly; explicit retry repairs legacy duplicate records and reloads saved preferences and scheduling state while retaining associated metadata.
+- Recover safely from database fetch/save failures without inserting duplicate inventory. Failed writes roll back and stay paused until explicit retry repairs legacy records and reloads saved preferences, history projections, and scheduling state; runtime detection then reruns with restored CLI paths.
 - Group registry update failures by host with classified, privacy-safe errors, bounded retry backoff, and login/retry controls. Private Apple Container image checks can reuse accessible Keychain logins without storing credentials in Contained.
 
 ### Improvements
