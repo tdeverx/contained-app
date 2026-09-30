@@ -38,6 +38,27 @@ struct RegistryRetryPolicyTests {
         #expect(policy.entries.isEmpty)
     }
 
+    @Test func scheduledCredentialRetryRetainsReferencesAndOnlyResetsMatchingRuntimeHost() {
+        var policy = Core.Registry.UpdateRetryPolicy()
+        let now = Date(timeIntervalSince1970: 1000)
+        for runtime in [Core.Runtime.Kind.appleContainer, .docker] {
+            policy.failed("alpine", runtimeKind: runtime, kind: .unauthorized, now: now)
+        }
+        policy.failed("ghcr.io/team/app", runtimeKind: .appleContainer, kind: .unauthorized, now: now)
+        let previous = policy.entries
+        policy.scheduleRetry(host: "registry-1.docker.io", runtimeKind: .appleContainer, now: now)
+        for entry in policy.entries.values {
+            #expect(entry.references == previous[entry.id]?.references)
+            if entry.host == "docker.io", entry.runtimeKind == .appleContainer {
+                #expect(entry.attempts == 0)
+                #expect(entry.retryAfter == now)
+                #expect(policy.shouldCheck("alpine", runtimeKind: .appleContainer, now: now))
+            } else {
+                #expect(entry == previous[entry.id])
+            }
+        }
+    }
+
     @Test func outcomeClassificationAndPrivacy() throws {
         #expect(Core.Registry.UpdateFailureKind.classify(Core.Registry.ManifestError.httpStatus(429)) == .rateLimited)
         #expect(Core.Registry.UpdateFailureKind.classify(URLError(.timedOut)) == .network)

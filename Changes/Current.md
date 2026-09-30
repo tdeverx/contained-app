@@ -2,7 +2,7 @@
 
 - Bound app database growth with no-op persistence, hourly activity/metrics retention, and supported transaction-history maintenance. General settings now show allocated database storage and offer manual compaction.
 - Recover safely from database fetch/save failures without inserting duplicate inventory. Startup repair and app writes wait for acceptance of newer-schema data. Explicit retry restores schema downgrade safeguards and reloads saved preferences, history, and scheduling before writes resume; recovery commits repair and normalization only after all required reads succeed. Runtime detection reruns with restored CLI paths even after an in-flight startup check.
-- Group registry update failures by host with classified, privacy-safe errors, bounded retry backoff, and login/retry controls. Background retries honor their own deadlines without repeating healthy-image checks or postponing full sweeps. Private Apple Container image checks can reuse accessible Keychain logins without storing credentials in Contained, including equivalent HTTPS authentication origins with explicit default ports.
+- Group registry update failures by host with classified, privacy-safe errors, bounded retry backoff, and login/retry controls. Background retries honor their own deadlines without repeating healthy-image checks or postponing full sweeps; credential changes preserve affected tags for immediate retry. Recovery reconciles saved image statuses against already-loaded inventory. Private Apple Container image checks can reuse accessible Keychain logins without storing credentials in Contained, including equivalent HTTPS authentication origins with explicit default ports.
 
 ### Improvements
 

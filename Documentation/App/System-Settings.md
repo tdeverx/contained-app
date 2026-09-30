@@ -122,6 +122,8 @@ from five minutes to a six-hour cap and one Activity entry per episode. Manual c
 retry, login/logout, changed credential metadata, and authenticated success reset
 backoff. Public tags on the same registry and unrelated registries remain eligible;
 network/rate-limit failures pause the affected runtime/registry until retry is due.
+Credential changes retain affected references as immediately due until a check
+succeeds, so refreshing login cannot hide the retry controls while leaving stale failures.
 Not-found and unexpected-response outcomes are distinct from authentication failures.
 
 Apple update checks try anonymous access before reusing accessible registry logins
@@ -165,6 +167,8 @@ An alert links to General settings and an explicit retry.
 Successful explicit retry reloads saved preferences, registry retry state, and cleanup/
 image-update scheduling state, history counts, and loaded recent activity without
 saving fallback defaults. It then reruns runtime detection using the restored CLI paths.
+Saved image update results are reconciled immediately when live inventory is already
+loaded, including invalidating the sweep deadline when a local digest changed.
 Repair, missing runtime defaults, and normalization writes are committed together
 only after every required recovery read succeeds; failed reads or saves roll them back.
 Startup validates the saved schema before duplicate repair or app-store writes.

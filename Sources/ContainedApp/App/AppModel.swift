@@ -108,7 +108,7 @@ final class AppModel {
     var imagesError: String?
     var imageUpdates: [String: Core.Image.UpdateStatus] = [:] {
         didSet {
-            guard imageUpdates != oldValue else { return }
+            guard !reloadingPersistence, imageUpdates != oldValue else { return }
             database.updateImageStatuses(imageUpdates)
         }
     }
@@ -182,6 +182,10 @@ final class AppModel {
         lastStorageAutomationRun = storageRun
         storageAutomationCursors = cursors
         lastImageUpdateSweep = sweep
+        if !images.isEmpty {
+            imageUpdates = statuses
+            reconcilePersistedImageUpdates(with: images)
+        }
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
         updater.automaticallyChecks = settings.appUpdateChecksEnabled

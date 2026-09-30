@@ -127,6 +127,33 @@ struct DatabaseRecoveryTests {
         #expect(database.setting("historyRetentionDays", fallback: 0) == 30)
     }
 
+    @Test func recoveryReconcilesSavedImageStatusesWithAlreadyLoadedInventory() async throws {
+        for digest in ["sha256:old", "sha256:new"] {
+            let database = AppDatabase(isStoredInMemoryOnly: true)
+            let image = try #require(Core.Container.JSON.decode([Core.Image.Resource].self, from: Data("""
+            [{"configuration":{"name":"ghcr.io/team/app:latest","descriptor":{"digest":"\(digest)"}},"id":"app","variants":[]}]
+            """.utf8), runtimeKind: .appleContainer).first)
+            database.upsertImages([image])
+            let key = "apple-container::ghcr.io/team/app:latest"
+            database.updateImageStatuses([key: .resolved(localDigest: "sha256:old", remoteDigest: "sha256:new")])
+            let sweep = Date()
+            database.setSetting(sweep, for: AppModel.imageUpdateLastSweepKey)
+            database.failureInjector = { operation in
+                if operation == "fetch:AppSettingRecord" { throw diskFull }
+            }
+            let app = AppModel(database: database, bootstrapRuntime: { _ in .cliMissing(runtimes: []) })
+            app.setImages([image])
+            #expect(app.imageUpdates.isEmpty)
+            database.failureInjector = nil
+            await app.retryPersistence()
+            #expect(app.imageUpdates[key]?.localDigest == digest)
+            #expect(app.imageUpdates[key]?.state == (digest == "sha256:old" ? .updateAvailable : .current))
+            #expect(app.lastImageUpdateSweep == (digest == "sha256:old" ? sweep : nil))
+            app.setImages([image])
+            #expect(app.imageUpdates[key]?.localDigest == digest)
+        }
+    }
+
     @Test func recoveryRollsBackRepairAndDefaultsWhenLateReadOrCommitFails() async throws {
         for failingOperation in ["fetch:EventRecord", "save"] {
             let database = AppDatabase(isStoredInMemoryOnly: true)

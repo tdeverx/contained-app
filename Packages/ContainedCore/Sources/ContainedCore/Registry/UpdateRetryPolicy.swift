@@ -95,6 +95,16 @@ public extension Core.Registry {
             }
         }
 
+        /// A credential change removes the delay, not the affected references needed for retry.
+        public mutating func scheduleRetry(host: String, runtimeKind: Core.Runtime.Kind, now: Date = Date()) {
+            let normalized = Self.host(for: host + "/placeholder")
+            for key in Array(entries.keys) {
+                guard entries[key]?.host == normalized, entries[key]?.runtimeKind == runtimeKind else { continue }
+                entries[key]?.attempts = 0
+                entries[key]?.retryAfter = now
+            }
+        }
+
         public mutating func reset(host: String, runtimeKind: Core.Runtime.Kind) {
             let normalized = Self.host(for: host + "/placeholder")
             entries = entries.filter { $0.value.host != normalized || $0.value.runtimeKind != runtimeKind }

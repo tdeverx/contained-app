@@ -7,12 +7,14 @@ extension AppModel {
     }
 
     func registryCredentialsChanged(host: String, runtimeKind: Core.Runtime.Kind) {
-        registryRetryPolicy.reset(host: host, runtimeKind: runtimeKind)
+        registryRetryPolicy.scheduleRetry(host: host, runtimeKind: runtimeKind)
+        coordinator.wake()
     }
 
     func retryRegistryUpdates(_ entry: Core.Registry.UpdateRetryPolicy.Entry) async {
-        registryCredentialsChanged(host: entry.host, runtimeKind: entry.runtimeKind)
         for reference in entry.references {
+            // Explicit retry attempts every affected tag even if an earlier tag fails again.
+            registryRetryPolicy.scheduleRetry(host: entry.host, runtimeKind: entry.runtimeKind)
             await checkImageUpdate(reference, runtimeKind: entry.runtimeKind, notify: false)
         }
     }

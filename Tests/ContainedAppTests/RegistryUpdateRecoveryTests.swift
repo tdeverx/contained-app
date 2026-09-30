@@ -49,6 +49,35 @@ struct RegistryUpdateRecoveryTests {
         #expect(requests == [reference])
     }
 
+    @Test func credentialChangePreservesFailuresAsDueUntilBackgroundRetrySucceeds() async throws {
+        let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
+        let reference = "ghcr.io/team/private:latest"
+        app.setImages(try Core.Container.JSON.decode([Core.Image.Resource].self, from: Data("""
+        [{"configuration":{"name":"\(reference)","descriptor":{"digest":"sha256:old"}},"id":"private","variants":[]}]
+        """.utf8), runtimeKind: .appleContainer))
+        app.settings.imageUpdateChecksEnabled = true
+        app.registryManifestLookup = { _, _ in throw Core.Registry.ManifestError.unauthorized }
+        await app.checkImageUpdate(reference, runtimeKind: .appleContainer, notify: false)
+        let sweep = Date()
+        app.lastImageUpdateSweep = sweep
+        app.registryCredentialsChanged(host: "ghcr.io", runtimeKind: .appleContainer)
+        let due = try #require(app.registryUpdateFailures.first)
+        #expect(due.references == [reference])
+        #expect(due.retryAfter <= Date())
+        #expect(due.attempts == 0)
+        var requests = 0
+        app.registryManifestLookup = { _, kind in
+            #expect(kind == .appleContainer)
+            requests += 1
+            return .init(digest: "sha256:new", authenticated: true)
+        }
+        await app.checkImageUpdatesIfNeeded()
+        #expect(requests == 1)
+        #expect(app.registryUpdateFailures.isEmpty)
+        #expect(app.imageUpdateStatus(for: reference, runtimeKind: .appleContainer).state == .updateAvailable)
+        #expect(app.lastImageUpdateSweep == sweep)
+    }
+
     @Test func activityCoalescesAndExplicitRetryAndCredentialChangesResetBackoff() async throws {
         let db = AppDatabase(isStoredInMemoryOnly: true)
         let app = AppModel(database: db)
@@ -66,7 +95,7 @@ struct RegistryUpdateRecoveryTests {
         await app.retryRegistryUpdates(entry)
         #expect(requests == 4)
         app.registryCredentialsChanged(host: "ghcr.io", runtimeKind: .appleContainer)
-        #expect(app.registryUpdateFailures.isEmpty)
+        #expect(app.registryUpdateFailures.allSatisfy { $0.attempts == 0 && $0.retryAfter <= Date() })
         #expect(app.imageUpdates.values.allSatisfy { $0.registryHost == "ghcr.io" && $0.failureCode == "unauthorized" })
     }
 }
