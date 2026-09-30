@@ -46,6 +46,7 @@ enum SystemVolumeInventory {
                 title: volume.name,
                 subtitle: volumeSubtitle(volume),
                 containers: containersMounting(source: volume.name,
+                                               backingSource: volume.configuration.source,
                                                runtimeKind: volume.runtimeKind,
                                                in: containers),
                 resource: volume,
@@ -112,6 +113,16 @@ enum SystemVolumeInventory {
         let destination = mount.effectiveDestination
         let type = mount.type?.lowercased()
 
+        if type == "volume", let source,
+           let resource = namedResources.values.first(where: {
+               $0.runtimeKind == snapshot.runtimeKind && ($0.name == source || $0.configuration.source == source)
+           }) {
+            return Entry(id: "named:\(resource.scopedID)", kind: .named,
+                         runtimeKind: snapshot.runtimeKind, title: resource.name,
+                         subtitle: volumeSubtitle(resource), containers: [snapshot], resource: resource,
+                         source: resource.name, destination: destination)
+        }
+
         if let source, !source.isEmpty, isLocalPath(source, type: type) {
             return Entry(id: "path:\(snapshot.runtimeKind.rawValue):\(source):\(destination ?? "")",
                          kind: .localPath,
@@ -166,11 +177,14 @@ enum SystemVolumeInventory {
     }
 
     private static func containersMounting(source: String,
+                                           backingSource: String?,
                                            runtimeKind: Core.Runtime.Kind,
                                            in containers: [Core.Container.Snapshot]) -> [Core.Container.Snapshot] {
         sortedContainers(containers.filter { snapshot in
             snapshot.runtimeKind == runtimeKind &&
-            snapshot.configuration.mounts.contains { $0.source == source }
+            snapshot.configuration.mounts.contains {
+                $0.source == source || (backingSource != nil && $0.source == backingSource)
+            }
         })
     }
 

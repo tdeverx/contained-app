@@ -24,6 +24,13 @@ protocol RuntimeContainerStorageClient: RuntimeDescribing {
     @discardableResult func cleanContainers(_ ids: [String]) async throws -> Data
 }
 
+protocol RuntimeStorageClient: RuntimeDescribing {
+    func storageAnalysis() async throws -> Core.System.StorageAnalysis
+    func storageCapacity() async throws -> Core.System.StorageCapacity?
+    func cleanupPlan(_ action: Core.System.CleanupAction, resourceLimit: Int?) async throws -> Core.System.CleanupPlan
+    func executeCleanup(_ plan: Core.System.CleanupPlan) async throws -> Core.System.CleanupResult
+}
+
 protocol RuntimeSystemStatusClient: RuntimeDescribing {
     func diskUsage() async throws -> Core.System.DiskUsage
     func systemProperties() async throws -> Core.System.Properties
@@ -87,9 +94,16 @@ protocol RuntimeImageClient: RuntimeDescribing {
 }
 
 protocol RuntimeRegistryClient: RuntimeDescribing {
+    func remoteImageManifest(_ reference: String) async throws -> Core.Registry.ManifestResult
     func registries() async throws -> [Core.Registry.Login]
     @discardableResult func registryLogin(server: String, username: String, password: String) async throws -> Data
     @discardableResult func registryLogout(server: String) async throws -> Data
+}
+
+extension RuntimeRegistryClient {
+    func remoteImageManifest(_ reference: String) async throws -> Core.Registry.ManifestResult {
+        try await Core.Registry.ManifestClient().remoteManifest(for: .parse(reference))
+    }
 }
 
 protocol RuntimeServiceControlClient: RuntimeDescribing {

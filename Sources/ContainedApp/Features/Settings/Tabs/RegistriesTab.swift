@@ -8,10 +8,29 @@ import ContainedCore
 struct RegistriesTab: View {
     @Environment(AppModel.self) private var app
     @State private var loggingIn = false
+    @State private var loginHost = ""
+    @State private var loginRuntime = AppRuntimeIntent.placeholderKind
     @State private var loggingOut: Core.Registry.Login?
 
     var body: some View {
         SettingsForm {
+            if !app.registryUpdateFailures.isEmpty {
+                Section("Image update checks") {
+                    ForEach(app.registryUpdateFailures) { failure in
+                        VStack(alignment: .leading, spacing: UI.Layout.Spacing.s) {
+                            Text(app.registryFailureMessage(host: failure.host, kind: failure.kind))
+                            Text("\(failure.references.count) affected tags · Retry after \(failure.retryAfter.formatted())")
+                                .foregroundStyle(.secondary)
+                            Button("Retry Now") { Task { await app.retryRegistryUpdates(failure) } }
+                            Button("Refresh Login…") {
+                                loginHost = failure.host
+                                loginRuntime = failure.runtimeKind
+                                loggingIn = true
+                            }
+                        }
+                    }
+                }
+            }
             Section {
                 if app.registries.isEmpty {
                     Text("Not signed in to any registries.")
@@ -38,12 +57,16 @@ struct RegistriesTab: View {
             }
 
             Section {
-                Button("Log In to Registry…") { loggingIn = true }
+                Button("Log In to Registry…") {
+                    loginHost = ""
+                    loginRuntime = AppRuntimeIntent.placeholderKind
+                    loggingIn = true
+                }
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .task { await app.refreshRegistries() }
-        .sheet(isPresented: $loggingIn) { RegistryLoginSheet() }
+        .sheet(isPresented: $loggingIn) { RegistryLoginSheet(server: loginHost, runtimeKind: loginRuntime) }
         .confirmationDialog("Log out of \(loggingOut?.host ?? "")?",
                             isPresented: logoutBinding, presenting: loggingOut) { login in
             Button("Log out", role: .destructive) { Task { await logout(login) } }
@@ -58,6 +81,7 @@ struct RegistriesTab: View {
         guard let client = app.client else { return }
         do {
             _ = try await client.registryLogout(server: login.host, runtimeKind: login.runtimeKind)
+            app.registryCredentialsChanged(host: login.host, runtimeKind: login.runtimeKind)
             await app.refreshRegistries()
         }
         catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }

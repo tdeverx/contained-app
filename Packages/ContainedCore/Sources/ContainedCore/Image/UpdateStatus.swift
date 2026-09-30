@@ -52,6 +52,9 @@ struct UpdateStatus: Sendable, Codable, Equatable {
     public var remoteDigest: String?
     public var checkedAt: Date?
     public var message: String?
+    public var registryHost: String?
+    public var failureCode: String?
+    public var retryAfter: Date?
 
     public init(state: Core.Image.UpdateState = .unknown, localDigest: String? = nil,
                 remoteDigest: String? = nil, checkedAt: Date? = nil, message: String? = nil) {

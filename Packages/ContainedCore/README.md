@@ -122,6 +122,24 @@ if !plan.isAvailable {
 }
 ```
 
+## Storage And Registry Updates
+
+```swift
+let usage = try await core.storageAnalysis(runtimeKind: .appleContainer)
+let plan = try await core.cleanupPlan(.compactRunningContainers,
+                                      runtimeKind: .appleContainer)
+// Show exact identities, commands and consequences before user approval.
+let result = try await core.executeCleanup(plan)
+let manifest = try await core.remoteImageManifest("alpine:latest",
+                                                 runtimeKind: .appleContainer)
+```
+
+Plans expire after five minutes and fail closed if inventory changes. Automatic
+requests accept compaction only, limited to 16 identities. Candidate allocation is
+not guaranteed reclaim; results contain before/after measurements and safe partial-
+failure codes. Apple internals are never deleted directly. Registry credentials stay
+inside the adapter; retry policy is a pure `Core.Registry.UpdateRetryPolicy` value.
+
 ## Fixtures
 
 Core fixtures are available only by depending on the separate

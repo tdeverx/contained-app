@@ -205,6 +205,34 @@ struct ImageWorkflowTests {
         #expect(status.packageErrorContext["status"] == "500")
     }
 
+    @Test func privateManifestRetriesWithCredentialsOnlyOnTrustedRealm() async throws {
+        let session = Self.session { request in
+            if request.url?.path == "/token" {
+                guard request.value(forHTTPHeaderField: "Authorization") != nil else {
+                    return Self.response(url: request.url!, status: 401)
+                }
+                #expect(request.value(forHTTPHeaderField: "Authorization") == "Basic dXNlcjpwYXNz")
+                return Self.response(url: request.url!, status: 200, body: #"{"token":"private-token"}"#)
+            }
+            if request.value(forHTTPHeaderField: "Authorization") == "Bearer private-token" {
+                return Self.response(url: request.url!, status: 200, headers: ["Docker-Content-Digest": "sha256:private"])
+            }
+            return Self.response(url: request.url!, status: 401, headers: [
+                "WWW-Authenticate": #"Bearer realm="https://registry.example.test/token""#,
+            ])
+        }
+        let result = try await Core.Registry.ManifestClient(session: session, credentials: { host in
+            #expect(host == "registry.example.test")
+            return .init(username: "user", password: "pass")
+        }).remoteManifest(for: .parse("registry.example.test/team/app"))
+        #expect(result.digest == "sha256:private")
+        #expect(result.authenticated)
+        #expect(!Core.Registry.ManifestClient.canSendCredentials(registry: URL(string: "https://registry.example.test")!,
+                                                                realm: URL(string: "https://evil.test")!))
+        #expect(!Core.Registry.ManifestClient.canSendCredentials(registry: URL(string: "https://registry.example.test")!,
+                                                                realm: URL(string: "http://registry.example.test")!))
+    }
+
     private static func session(_ handler: @escaping @Sendable (URLRequest) throws -> (HTTPURLResponse, Data)) -> URLSession {
         RegistryMockURLProtocol.handler = handler
         let config = URLSessionConfiguration.ephemeral

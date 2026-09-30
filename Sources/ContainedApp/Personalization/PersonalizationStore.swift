@@ -7,10 +7,11 @@ import ContainedCore
 @MainActor
 @Observable
 final class PersonalizationStore {
-    private var overrides: [String: Personalization]      // keyed by container id (== stable name)
-    private var imageDefaults: [String: Personalization]   // keyed by image reference
-    private var volumeStyles: [String: Personalization]    // keyed by volume name
-    private(set) var defaultImageStyle: Personalization
+    private var overrides: [String: Personalization] = [:]      // keyed by container id (== stable name)
+    private var imageDefaults: [String: Personalization] = [:]   // keyed by image reference
+    private var volumeStyles: [String: Personalization] = [:]    // keyed by volume name
+    private(set) var defaultImageStyle = Personalization()
+    private var loadedSuccessfully = false
     private let database: AppDatabase
     private enum Keys {
         static let overrides = "personalizationOverrides"
@@ -24,25 +25,39 @@ final class PersonalizationStore {
 
     init(database: AppDatabase = AppDatabase()) {
         self.database = database
-        overrides = Self.load(database, Keys.overrides)
-        let loadedImageDefaults = Self.load(database, Keys.imageDefaults)
-        imageDefaults = Self.migratedImageDefaults(loadedImageDefaults, database: database)
-        volumeStyles = Self.load(database, Keys.volumeStyles)
-        defaultImageStyle = Self.loadStyle(database, Keys.defaultImageStyle) ?? Personalization()
+        loadIfNeeded()
+    }
+
+    @discardableResult
+    private func loadIfNeeded() -> Bool {
+        if loadedSuccessfully { return true }
+        guard database.canPersist,
+              let records = try? database.fetchRequired(PersonalizationRecord.self),
+              let images = try? database.fetchRequired(ImageRecord.self) else { return false }
+        overrides = Self.load(database, Keys.overrides, records: records)
+        let loadedImageDefaults = Self.load(database, Keys.imageDefaults, records: records)
+        imageDefaults = Self.migratedImageDefaults(loadedImageDefaults, records: images)
+        volumeStyles = Self.load(database, Keys.volumeStyles, records: records)
+        defaultImageStyle = Self.loadStyle(database, Keys.defaultImageStyle, records: records) ?? Personalization()
         if imageDefaults != loadedImageDefaults {
             Self.persist(database, Keys.imageDefaults, imageDefaults)
         }
+        loadedSuccessfully = database.canPersist
+        return loadedSuccessfully
     }
 
     func backupSnapshot() -> PersonalizationBackup {
-        PersonalizationBackup(overrides: overrides,
+        loadIfNeeded()
+        return PersonalizationBackup(overrides: overrides,
                               imageDefaults: imageDefaults,
                               volumeStyles: volumeStyles,
                               defaultImageStyle: defaultImageStyle)
     }
 
     func applyBackup(_ snapshot: PersonalizationBackup, replace: Bool) {
-        let importedImageDefaults = Self.migratedImageDefaults(snapshot.imageDefaults, database: database)
+        guard database.canPersist, loadIfNeeded(),
+              let images = try? database.fetchRequired(ImageRecord.self) else { return }
+        let importedImageDefaults = Self.migratedImageDefaults(snapshot.imageDefaults, records: images)
         if replace {
             overrides = snapshot.overrides
             imageDefaults = importedImageDefaults
@@ -60,6 +75,7 @@ final class PersonalizationStore {
     }
 
     func purgeOrphans(liveContainerIDs: Set<String>, liveImageRefs: Set<String>) -> Int {
+        guard database.canPersist, loadIfNeeded() else { return 0 }
         let before = overrides.count + imageDefaults.count + volumeStyles.count
         let normalizedLiveImageRefs = Set(liveImageRefs.map(Core.Registry.ImageReference.normalizedKey))
         overrides = overrides.filter { liveContainerIDs.contains($0.key) }
@@ -79,8 +95,8 @@ final class PersonalizationStore {
         return before - (overrides.count + imageDefaults.count + volumeStyles.count)
     }
 
-    private static func load(_ database: AppDatabase, _ scope: String) -> [String: Personalization] {
-        let decoded = Dictionary(uniqueKeysWithValues: database.fetch(PersonalizationRecord.self)
+    private static func load(_ database: AppDatabase, _ scope: String, records: [PersonalizationRecord]) -> [String: Personalization] {
+        let decoded = Dictionary(records.sorted { $0.updatedAt > $1.updatedAt }
             .filter { $0.scopeRaw == scope }
             .compactMap { record -> (String, Personalization)? in
                 do {
@@ -88,7 +104,7 @@ final class PersonalizationStore {
                 } catch {
                     fatalError("Unable to decode personalization \(scope)/\(record.key): \(error)")
                 }
-            })
+            }, uniquingKeysWith: { newest, _ in newest })
         var migrated: [String: Personalization] = [:]
         var changed = false
         for (entryKey, entryValue) in decoded {
@@ -127,13 +143,20 @@ final class PersonalizationStore {
 
     // MARK: Per-container overrides
 
-    func hasOverride(id: String) -> Bool { Self.meaningful(overrides[id]) != nil }
-
-    func hasAppearanceOverride(id: String) -> Bool {
-        Self.meaningful(overrides[id])?.hasAppearanceCustomization == true
+    func hasOverride(id: String) -> Bool {
+        loadIfNeeded()
+        return Self.meaningful(overrides[id]) != nil
     }
 
-    func override(for id: String) -> Personalization? { Self.meaningful(overrides[id]) }
+    func hasAppearanceOverride(id: String) -> Bool {
+        loadIfNeeded()
+        return Self.meaningful(overrides[id])?.hasAppearanceCustomization == true
+    }
+
+    func override(for id: String) -> Personalization? {
+        loadIfNeeded()
+        return Self.meaningful(overrides[id])
+    }
 
     /// Resolve tag appearance independently from tag and image-group nicknames.
     func resolvedImageAppearance(for image: String,
@@ -155,6 +178,7 @@ final class PersonalizationStore {
     }
 
     func setOverride(_ personalization: Personalization, for id: String) {
+        guard database.canPersist, loadIfNeeded() else { return }
         if personalization.isDefault {
             clearOverride(id: id)
             return
@@ -164,6 +188,7 @@ final class PersonalizationStore {
     }
 
     func clearOverride(id: String) {
+        guard database.canPersist, loadIfNeeded() else { return }
         overrides[id] = nil
         persist(Keys.overrides, overrides)
     }
@@ -171,7 +196,8 @@ final class PersonalizationStore {
     // MARK: Image-level defaults
 
     func imageDefault(for image: String) -> Personalization? {
-        Self.meaningful(imageDefaults[Self.imageReferenceKey(image)])
+        loadIfNeeded()
+        return Self.meaningful(imageDefaults[Self.imageReferenceKey(image)])
     }
 
     func imageDefault(for image: String, group: Core.Image.LocalTagGroup?) -> Personalization? {
@@ -179,6 +205,7 @@ final class PersonalizationStore {
     }
 
     func imageGroupDefault(for group: Core.Image.LocalTagGroup) -> Personalization? {
+        loadIfNeeded()
         for key in Self.imageGroupReferenceKeys(group.references) {
             if let style = Self.meaningful(imageDefaults[key]) { return style }
         }
@@ -186,10 +213,12 @@ final class PersonalizationStore {
     }
 
     func imageGroupDefault(forLegacyID groupID: String) -> Personalization? {
-        Self.meaningful(imageDefaults[Self.legacyImageGroupKey(groupID)])
+        loadIfNeeded()
+        return Self.meaningful(imageDefaults[Self.legacyImageGroupKey(groupID)])
     }
 
     func setImageDefault(_ personalization: Personalization, for image: String) {
+        guard database.canPersist, loadIfNeeded() else { return }
         if personalization.isDefault {
             clearImageDefault(for: image)
             return
@@ -199,6 +228,7 @@ final class PersonalizationStore {
     }
 
     func setImageGroupDefault(_ personalization: Personalization, for group: Core.Image.LocalTagGroup) {
+        guard database.canPersist, loadIfNeeded() else { return }
         if personalization.isDefault {
             clearImageGroupDefault(for: group)
             return
@@ -212,11 +242,13 @@ final class PersonalizationStore {
     }
 
     func clearImageDefault(for image: String) {
+        guard database.canPersist, loadIfNeeded() else { return }
         imageDefaults[Self.imageReferenceKey(image)] = nil
         persist(Keys.imageDefaults, imageDefaults)
     }
 
     func clearImageGroupDefault(for group: Core.Image.LocalTagGroup) {
+        guard database.canPersist, loadIfNeeded() else { return }
         for key in Self.imageGroupReferenceKeys(group.references) {
             imageDefaults[key] = nil
         }
@@ -226,6 +258,7 @@ final class PersonalizationStore {
 
     /// Move digest-keyed group styles onto the group's logical references before inventory changes.
     func stabilizeImageGroupDefaults(for groups: [Core.Image.LocalTagGroup]) {
+        guard database.canPersist, loadIfNeeded() else { return }
         var changed = false
         for group in groups {
             guard let style = imageGroupDefault(for: group) else { continue }
@@ -242,15 +275,20 @@ final class PersonalizationStore {
     // MARK: App-wide image default
 
     func setDefaultImageStyle(_ personalization: Personalization) {
+        guard database.canPersist, loadIfNeeded() else { return }
         defaultImageStyle = personalization.normalizedForPersistence()
         Self.persist(database, Keys.defaultImageStyle, defaultImageStyle)
     }
 
     // MARK: Volume styles
 
-    func volumeStyle(for name: String) -> Personalization? { Self.meaningful(volumeStyles[name]) }
+    func volumeStyle(for name: String) -> Personalization? {
+        loadIfNeeded()
+        return Self.meaningful(volumeStyles[name])
+    }
 
     func setVolumeStyle(_ personalization: Personalization, for name: String) {
+        guard database.canPersist, loadIfNeeded() else { return }
         if personalization.isDefault {
             clearVolumeStyle(for: name)
             return
@@ -260,34 +298,39 @@ final class PersonalizationStore {
     }
 
     func clearVolumeStyle(for name: String) {
+        guard database.canPersist, loadIfNeeded() else { return }
         volumeStyles[name] = nil
         persist(Keys.volumeStyles, volumeStyles)
     }
 
     private static func persist(_ database: AppDatabase, _ scope: String, _ values: [String: Personalization]) {
-        let wanted = Set(values.keys)
-        for record in database.fetch(PersonalizationRecord.self) where record.scopeRaw == scope && !wanted.contains(record.key) {
-            database.context.delete(record)
-        }
-        for (key, value) in values {
-            let data: Data
-            do {
-                data = try JSONEncoder().encode(value.normalizedForPersistence())
-            } catch {
-                fatalError("Unable to encode personalization \(scope)/\(key): \(error)")
+        database.performMutation {
+            let records = try database.fetchRequired(PersonalizationRecord.self)
+            let wanted = Set(values.keys)
+            for record in records where record.scopeRaw == scope && !wanted.contains(record.key) {
+                database.context.delete(record)
             }
-            if let record = database.fetch(PersonalizationRecord.self).first(where: { $0.scopeRaw == scope && $0.key == key }) {
-                record.valueData = data
-                record.updatedAt = Date()
-            } else {
-                database.context.insert(PersonalizationRecord(key: key, scopeRaw: scope, valueData: data))
+            for (key, value) in values {
+                let data: Data
+                do {
+                    data = try AppDatabase.encoded(value.normalizedForPersistence())
+                } catch {
+                    fatalError("Unable to encode personalization \(scope)/\(key): \(error)")
+                }
+                if let record = records.first(where: { $0.scopeRaw == scope && $0.key == key }) {
+                    guard record.valueData != data else { continue }
+                    record.valueData = data
+                    record.updatedAt = Date()
+                } else {
+                    database.context.insert(PersonalizationRecord(key: key, scopeRaw: scope, valueData: data))
+                }
             }
+            database.save()
         }
-        database.save()
     }
 
-    private static func loadStyle(_ database: AppDatabase, _ key: String) -> Personalization? {
-        guard let record = database.fetch(PersonalizationRecord.self).first(where: { $0.scopeRaw == key && $0.key == "default" }) else { return nil }
+    private static func loadStyle(_ database: AppDatabase, _ key: String, records: [PersonalizationRecord]) -> Personalization? {
+        guard let record = records.sorted(by: { $0.updatedAt > $1.updatedAt }).first(where: { $0.scopeRaw == key && $0.key == "default" }) else { return nil }
         let decoded: Personalization
         do {
             decoded = try JSONDecoder().decode(Personalization.self, from: record.valueData)
@@ -300,19 +343,23 @@ final class PersonalizationStore {
     }
 
     private static func persist(_ database: AppDatabase, _ scope: String, _ value: Personalization) {
-        let data: Data
-        do {
-            data = try JSONEncoder().encode(value.normalizedForPersistence())
-        } catch {
-            fatalError("Unable to encode personalization \(scope)/default: \(error)")
+        database.performMutation {
+            let records = try database.fetchRequired(PersonalizationRecord.self)
+            let data: Data
+            do {
+                data = try AppDatabase.encoded(value.normalizedForPersistence())
+            } catch {
+                fatalError("Unable to encode personalization \(scope)/default: \(error)")
+            }
+            if let record = records.first(where: { $0.scopeRaw == scope && $0.key == "default" }) {
+                guard record.valueData != data else { return }
+                record.valueData = data
+                record.updatedAt = Date()
+            } else {
+                database.context.insert(PersonalizationRecord(key: "default", scopeRaw: scope, valueData: data))
+            }
+            database.save()
         }
-        if let record = database.fetch(PersonalizationRecord.self).first(where: { $0.scopeRaw == scope && $0.key == "default" }) {
-            record.valueData = data
-            record.updatedAt = Date()
-        } else {
-            database.context.insert(PersonalizationRecord(key: "default", scopeRaw: scope, valueData: data))
-        }
-        database.save()
     }
 
     private func persist(_ key: String, _ value: [String: Personalization]) {
@@ -320,8 +367,8 @@ final class PersonalizationStore {
     }
 
     private static func migratedImageDefaults(_ values: [String: Personalization],
-                                              database: AppDatabase) -> [String: Personalization] {
-        let recordsByIdentity = Dictionary(database.fetch(ImageRecord.self).map { ($0.identity, $0) },
+                                              records: [ImageRecord]) -> [String: Personalization] {
+        let recordsByIdentity = Dictionary(records.map { ($0.identity, $0) },
                                            uniquingKeysWith: { first, _ in first })
         let ordered = values.sorted { lhs, rhs in
             let lhsCanonical = isCanonicalImageKey(lhs.key)

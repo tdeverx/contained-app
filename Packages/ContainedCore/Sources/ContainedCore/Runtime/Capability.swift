@@ -28,5 +28,6 @@ struct Capability: OptionSet, Equatable, Sendable {
     public static let coreMigration = Core.Runtime.Capability(rawValue: 1 << 17)
     public static let serviceControl = Core.Runtime.Capability(rawValue: 1 << 18)
     public static let containerStorageCleanup = Core.Runtime.Capability(rawValue: 1 << 19)
+    public static let storageManagement = Core.Runtime.Capability(rawValue: 1 << 20)
 }
 }

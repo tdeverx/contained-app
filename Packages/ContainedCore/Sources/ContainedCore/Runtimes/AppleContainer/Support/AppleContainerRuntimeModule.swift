@@ -21,6 +21,7 @@ public extension Core.Runtime.Capability {
         .composeImport,
         .serviceControl,
         .containerStorageCleanup,
+        .storageManagement,
     ]
 }
 
@@ -132,6 +133,7 @@ struct AppleContainerRuntimeModule: Core.Runtime.Module {
 extension AppleContainerClient: RuntimeClient,
                                 RuntimeContainerClient,
                                 RuntimeContainerStorageClient,
+                                RuntimeStorageClient,
                                 RuntimeSystemStatusClient,
                                 RuntimeDNSClient,
                                 RuntimeKernelClient,

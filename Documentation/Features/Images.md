@@ -50,6 +50,19 @@ image availability remains owned by each runtime.
 Manual checks are available from Images, System, the toolbar, and the command
 palette. Background cadence is configured in [Updates](/Documentation/App/Updates.md).
 
+Private-registry authentication failures are coalesced by runtime and registry, with
+bounded retry backoff and one Activity warning per failure episode. Unrelated
+registries and public tags can still be checked. **Settings → Registries** shows
+affected tags, the next retry time, **Retry Now**, and **Refresh Login**; a manual
+image check also bypasses backoff. Apple Container credentials are read from its
+existing Keychain entries only when required, without background prompts. Tokens,
+passwords, and raw registry responses are not retained in Activity or retry state.
+
+Image pruning now opens an exact-candidate command preview rather than immediately
+pruning. Running, stopped, and builder references are protected. Pull/build/recreate
+check host free space first; [System storage](/Documentation/App/System-Settings.md#system)
+provides reviewed cleanup and optional, compaction-only automation.
+
 ## Build workspace
 
 The image build workspace is experimental and defaults off. Enable **Settings →

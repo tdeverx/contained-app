@@ -44,6 +44,9 @@ final class SettingsStore {
     /// Restore stopped containers marked `contained.restart=always` after Contained starts a runtime.
     var autoStartAlwaysContainers: Bool { didSet { persist(autoStartAlwaysContainers, for: Keys.autoStartAlwaysContainers) } }
     var autoRestartEnabled: Bool { didSet { persist(autoRestartEnabled, for: Keys.autoRestartEnabled) } }
+    var storageCleanupPolicy: Core.System.StorageCleanupPolicy {
+        didSet { persist(storageCleanupPolicy, for: "storageCleanupPolicy") }
+    }
     var notifyOnCrash: Bool { didSet { persist(notifyOnCrash, for: Keys.notifyOnCrash) } }
     /// Show "Reveal CLI" affordances on destructive/privileged actions (global gate).
     var revealCLI: Bool { didSet { persist(revealCLI, for: Keys.revealCLI) } }
@@ -125,6 +128,7 @@ final class SettingsStore {
         autoStartEngineOnLaunch = database.setting(Keys.autoStartEngineOnLaunch, fallback: false)
         autoStartAlwaysContainers = database.setting(Keys.autoStartAlwaysContainers, fallback: false)
         autoRestartEnabled = database.setting(Keys.autoRestartEnabled, fallback: true)
+        storageCleanupPolicy = database.setting("storageCleanupPolicy", fallback: Core.System.StorageCleanupPolicy())
         notifyOnCrash = database.setting(Keys.notifyOnCrash, fallback: true)
         revealCLI = database.setting(Keys.revealCLI, fallback: true)
         historyRetentionDays = database.setting(Keys.historyRetention, fallback: 7)
@@ -186,7 +190,8 @@ final class SettingsStore {
                        hubSearchEnabled: hubSearchEnabled,
                        composeImportEnabled: composeImportEnabled,
                        imageBuildEnabled: imageBuildEnabled,
-                       keyboardShortcutsEnabled: keyboardShortcutsEnabled)
+                       keyboardShortcutsEnabled: keyboardShortcutsEnabled,
+                       storageCleanupPolicy: storageCleanupPolicy)
     }
 
     func applyBackup(_ snapshot: SettingsBackup) {
@@ -217,6 +222,7 @@ final class SettingsStore {
         autoStartEngineOnLaunch = snapshot.autoStartEngineOnLaunch
         autoStartAlwaysContainers = snapshot.autoStartAlwaysContainers
         autoRestartEnabled = snapshot.autoRestartEnabled
+        storageCleanupPolicy = snapshot.storageCleanupPolicy
         notifyOnCrash = snapshot.notifyOnCrash
         revealCLI = snapshot.revealCLI
         historyRetentionDays = snapshot.historyRetentionDays

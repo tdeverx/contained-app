@@ -67,11 +67,11 @@ struct ToolbarImageGroupCard: View {
                             presenting: deletingTag) { tag in
             Button("Delete", role: .destructive) { Task { await delete(tag) } }
         } message: { _ in Text("This removes the selected local image reference.") }
-        .confirmationDialog("Prune images?", isPresented: $pruning) {
-            Button("Remove unused", role: .destructive) { Task { await prune(all: false) } }
-            Button("Remove all unreferenced", role: .destructive) { Task { await prune(all: true) } }
+        .confirmationDialog("Review image cleanup", isPresented: $pruning) {
+            Button("Review dangling images") { Task { await prune(all: false) } }
+            Button("Review all unreferenced images") { Task { await prune(all: true) } }
         } message: {
-            Text("Unused images aren't referenced by any container. “All” also removes dangling layers.")
+            Text("Review exact candidates and commands before removing anything. Images referenced by running or stopped containers are protected.")
         }
         .confirmationDialog("Push \(Format.shortImage(confirmingPushReference ?? ""))?",
                             isPresented: pushConfirmationBinding,
@@ -698,15 +698,7 @@ struct ToolbarImageGroupCard: View {
     }
 
     private func prune(all: Bool) async {
-        guard let client = app.client else { return }
-        do {
-            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.images) {
-                _ = try await client.pruneImages(all: all, runtimeKind: descriptor.kind)
-            }
-            await app.refreshImagesIfNeeded(force: true)
-        }
-        catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
-        catch { app.flash(error.appDisplayMessage) }
+        await app.prepareStorageCleanup(all ? .unusedImages : .danglingImages)
     }
 
     private func save(_ image: Core.Image.Resource) {

@@ -29,13 +29,34 @@ final class AppModel {
     let updater = UpdaterController()
     let migrator = StateMigrator()
     let logger: AppLogger
-    /// Shared with `AppModel+ImageUpdates.swift` (Swift extensions in other files need ≥ internal).
-    let manifestClient = Core.Registry.ManifestClient()
+    @ObservationIgnored var registryManifestLookup: ((String, Core.Runtime.Kind) async throws -> Core.Registry.ManifestResult)?
+    @ObservationIgnored var registryChecksInFlight: Set<String> = []
+    var registryCredentialDates: [String: Date] = [:] {
+        didSet {
+            if registryCredentialDates != oldValue { database.setSetting(registryCredentialDates, for: "registryCredentialDates") }
+        }
+    }
+    var registryRetryPolicy = Core.Registry.UpdateRetryPolicy() {
+        didSet {
+            if registryRetryPolicy != oldValue {
+                database.setSetting(registryRetryPolicy, for: "registryUpdateRetryPolicy")
+            }
+        }
+    }
 
     private(set) var bootstrap: Bootstrap = .checking
     private(set) var client: Core.Orchestrator?
     private(set) var systemStatus: Core.System.Status?
     private(set) var diskUsage: Core.System.DiskUsage?
+    var storageAnalyses: [Core.Runtime.Kind: Core.System.StorageAnalysis] = [:]
+    var storageAnalysisErrors: [Core.Runtime.Kind: String] = [:]
+    var storageCleanupPlans: [Core.System.CleanupPlan] = []
+    var storageCleanupInFlight = false
+    var storagePlanInFlight = false
+    var lowStorageWarning: String?
+    var activeImageBuilds = 0
+    @ObservationIgnored var lastStorageAutomationCheck: Date?
+    @ObservationIgnored var lastStorageAutomationRun: Date?
     private(set) var runtimeReadiness: [Core.Runtime.Kind: Core.RuntimeReadiness] = [:]
     @ObservationIgnored private var containerStatsVisible = true
     @ObservationIgnored private var containerStatsStreamTask: Task<Void, Never>?
@@ -193,6 +214,9 @@ final class AppModel {
         self.containers.logger = logger
         self.containers.database = database
         persistedImageUpdatesAwaitingInventory = database.imageStatusesSnapshot()
+        registryRetryPolicy = database.setting("registryUpdateRetryPolicy", fallback: Core.Registry.UpdateRetryPolicy())
+        registryCredentialDates = database.setting("registryCredentialDates", fallback: [:])
+        lastStorageAutomationRun = database.setting("lastStorageCleanupRun", fallback: Optional<Date>.none)
         lastImageUpdateSweep = database.setting(Self.imageUpdateLastSweepKey, fallback: Optional<Date>.none)
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
@@ -589,6 +613,7 @@ final class AppModel {
         // update badges populate without first opening the Images panel.
         await refreshImagesIfNeeded()
         await checkImageUpdatesIfNeeded()
+        await runStorageAutomationIfNeeded()
         let elapsed = Date().timeIntervalSince(started)
         if elapsed >= 0.75 {
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
@@ -737,6 +762,7 @@ final class AppModel {
     func refreshSystemRuntimeResources() async {
         guard client != nil, bootstrap == .ready else { return }
         await refreshDiskUsage(force: true)
+        await refreshStorageAnalysis()
     }
 
     /// Refresh the registry-login list for Settings.
@@ -745,7 +771,28 @@ final class AppModel {
         let runtimeKinds = availableRuntimeDescriptors.filter { $0.supports(.registries) }.map(\.kind)
         var next: [Core.Registry.Login] = []
         for kind in runtimeKinds {
-            next += (try? await client.registries(runtimeKind: kind)) ?? []
+            do {
+                let logins = try await client.registries(runtimeKind: kind)
+                for login in logins {
+                    if let modified = login.modified ?? login.created {
+                        if let previous = registryCredentialDates[login.id], previous != modified {
+                            registryCredentialsChanged(host: login.host, runtimeKind: kind)
+                        }
+                        registryCredentialDates[login.id] = modified
+                    }
+                }
+                for key in Array(registryCredentialDates.keys) {
+                    if let scoped = Core.Runtime.Kind.parseScopedID(key), scoped.kind == kind,
+                       !logins.contains(where: { $0.id == key }) {
+                        registryCredentialsChanged(host: scoped.id, runtimeKind: kind)
+                        registryCredentialDates.removeValue(forKey: key)
+                    }
+                }
+                next += logins
+            } catch {
+                // A failed metadata read is not a credential change.
+                next += registries.filter { $0.runtimeKind == kind }
+            }
         }
         registries = next
     }
@@ -861,6 +908,7 @@ final class AppModel {
     /// deleting the current container so an unavailable image does not strand the edit flow.
     @discardableResult
     func recreateContainer(originalID: String, spec: ContainerFormState) async -> String? {
+        guard await permitStorageIntensiveOperation(runtimeKind: spec.effectiveRuntimeKind) else { return nil }
         guard let originalSnapshot = containers.snapshots.first(where: { $0.scopedID == originalID || $0.id == originalID }) else {
             flash(AppText.recreateOriginalUnavailable)
             return nil
@@ -1153,6 +1201,7 @@ final class AppModel {
     @discardableResult
     func pullImage(_ reference: String, runtimeKind: Core.Runtime.Kind) async -> Bool {
         guard let client else { return false }
+        guard await permitStorageIntensiveOperation(runtimeKind: runtimeKind) else { return false }
         activity = ActivityState(title: AppText.activityPullingImage(Format.shortImage(reference)))
         defer { activity = nil }
         do {

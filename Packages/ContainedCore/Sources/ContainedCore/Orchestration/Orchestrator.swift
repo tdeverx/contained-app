@@ -515,6 +515,12 @@ public extension Core {
                                      as: (any RuntimeRegistryClient).self).registries().map { $0.scoped(to: runtimeKind) }
         }
 
+        public func remoteImageManifest(_ reference: String,
+                                        runtimeKind: Core.Runtime.Kind) async throws -> Core.Registry.ManifestResult {
+            try await requireRuntime(runtimeKind, capability: .registries,
+                                     as: (any RuntimeRegistryClient).self).remoteImageManifest(reference)
+        }
+
         @discardableResult public func registryLogin(server: String,
                                                      username: String,
                                                      password: String,

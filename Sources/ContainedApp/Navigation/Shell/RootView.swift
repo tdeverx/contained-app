@@ -20,11 +20,27 @@ struct RootView: View {
     @State private var downgradeBackupDocument: DataFileDocument?
     /// System logs are reachable from menus, panels, and the command palette.
     @State private var showSystemLogs = false
+    @State private var showDatabaseFailure = false
+    @State private var databaseFailurePresented = false
 
     var body: some View {
         @Bindable var settings = app.settings
         @Bindable var ui = ui
         rootShell(settings: settings)
+        .onChange(of: app.database.lastFailure, initial: true) { _, failure in
+            if failure == nil { databaseFailurePresented = false }
+            if app.database.retryAfter != nil, !databaseFailurePresented {
+                databaseFailurePresented = true
+                showDatabaseFailure = true
+            }
+        }
+        .alert("App database unavailable", isPresented: $showDatabaseFailure) {
+            Button("Retry") { app.database.retryPersistence() }
+            Button("Data Settings") { ui.openSettings(to: .general) }
+            Button("Dismiss", role: .cancel) { }
+        } message: {
+            Text("Saving is paused. Free disk space if needed, then retry. Existing saved data is kept. \(app.databaseFailureMessage ?? "")")
+        }
         .sheet(isPresented: downgradeBinding) {
             DowngradeDecisionView(schemaVersion: app.downgradeSchemaVersion ?? StateMigrator.currentSchemaVersion,
                                   onExportAndReset: prepareDowngradeBackupExport,
@@ -52,11 +68,20 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $showSystemLogs) { SystemLogsSheet() }
-        .confirmationDialog("Prune images?", isPresented: $pruningImages) {
-            Button("Remove unused", role: .destructive) { Task { await pruneImages(all: false) } }
-            Button("Remove all unreferenced", role: .destructive) { Task { await pruneImages(all: true) } }
+        .sheet(isPresented: Binding(get: { !app.storageCleanupPlans.isEmpty },
+                                    set: { if !$0 { app.storageCleanupPlans = [] } })) {
+            StorageCleanupPreview(plans: app.storageCleanupPlans)
+        }
+        .alert("Low disk space", isPresented: Binding(get: { app.lowStorageWarning != nil },
+                                                     set: { if !$0 { app.lowStorageWarning = nil } })) {
+            Button("Open System Storage") { ui.toolbar.activeMorph = .system }
+            Button("Cancel", role: .cancel) { }
+        } message: { Text(app.lowStorageWarning ?? "") }
+        .confirmationDialog("Review image cleanup", isPresented: $pruningImages) {
+            Button("Review dangling images") { Task { await pruneImages(all: false) } }
+            Button("Review all unreferenced images") { Task { await pruneImages(all: true) } }
         } message: {
-            Text("Unused images aren't referenced by any container. “All” also removes dangling layers.")
+            Text("Review exact candidates and commands before removing anything. Images referenced by running or stopped containers are protected.")
         }
         // App-wide drop: compose opens editable prefilled run forms; an image .tar loads into the
         // local image store.
@@ -211,13 +236,7 @@ struct RootView: View {
     }
 
     private func pruneImages(all: Bool) async {
-        guard let client = app.client else { return }
-        if let error = await app.captured({
-            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.images) {
-                _ = try await client.pruneImages(all: all, runtimeKind: descriptor.kind)
-            }
-        }) { app.flash(error) }
-        await app.refreshImagesIfNeeded(force: true)
+        await app.prepareStorageCleanup(all ? .unusedImages : .danglingImages)
     }
 
     /// Toggle the front window between its zoomed (filled) and restored size — emulates the

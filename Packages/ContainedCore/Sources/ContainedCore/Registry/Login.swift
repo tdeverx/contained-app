@@ -42,8 +42,8 @@ struct Login: Codable, Sendable, Identifiable, Hashable {
         }
         host = string(["host", "hostname", "server", "registry"]) ?? "unknown"
         username = string(["username", "user"])
-        created = date(["created", "createdAt", "creationDate"])
-        modified = date(["modified", "modifiedAt", "updated"])
+        created = date(["createdDate", "created", "createdAt", "creationDate"])
+        modified = date(["modifiedDate", "modified", "modifiedAt", "updated"])
         if let runtimeKind = string(["runtimeKind"]).map(Core.Runtime.Kind.init(rawValue:)) {
             self.runtimeKind = runtimeKind
         } else if let contextRuntimeKind = decoder.coreRuntimeKindContext {

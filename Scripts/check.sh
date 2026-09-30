@@ -290,7 +290,8 @@ RUBY
 
   echo "▸ Checking stale path references..."
   check_no_matches "lowercase scripts path references" '(^|[^A-Za-z])(\./)?scripts/' README.md AGENTS.md Documentation Packages Sources Tests .github CODEOWNERS Package.swift Contained.xcodeproj
-  check_no_matches "lowercase docs path references" '(^|[^A-Za-z])(/)?docs/' README.md AGENTS.md Documentation Packages Sources Tests .github CODEOWNERS Package.swift
+  # Match local references, not valid upstream URLs containing their own docs directory.
+  check_no_matches "lowercase docs path references" '(^|[[:space:](`"\x27])(\./|/)?docs/' README.md AGENTS.md Documentation Packages Sources Tests .github CODEOWNERS Package.swift
   check_no_matches "old wiki path references" 'docs/wiki' README.md AGENTS.md Documentation Packages Sources Tests .github CODEOWNERS Package.swift
   check_no_matches "old change-fragment path references" 'changes/(unreleased|beta|nightly)|changes/\*\*|Changes/unrelease[d]' README.md AGENTS.md Documentation Packages Sources Tests .github CODEOWNERS Package.swift Scripts
 

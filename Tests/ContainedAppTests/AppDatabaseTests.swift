@@ -55,6 +55,23 @@ struct AppDatabaseTests {
         #expect(settings.runtimePathOverride(for: .docker) == "/opt/docker")
     }
 
+    @Test func storageAutomationDefaultsOffAndRoundTripsThroughBackup() throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let settings = SettingsStore(database: database)
+        #expect(!settings.storageCleanupPolicy.enabled)
+        var policy = settings.storageCleanupPolicy
+        policy.enabled = true
+        policy.compactBuilder = true
+        policy.intervalHours = 12
+        policy.minimumFreeGiB = 20
+        settings.storageCleanupPolicy = policy
+        #expect(SettingsStore(database: database).storageCleanupPolicy == policy)
+        let encoded = try JSONEncoder().encode(settings.backupSnapshot())
+        let restored = SettingsStore(database: AppDatabase(isStoredInMemoryOnly: true))
+        restored.applyBackup(try JSONDecoder().decode(SettingsBackup.self, from: encoded))
+        #expect(restored.storageCleanupPolicy == policy)
+    }
+
     @Test func settingsBackupUsesRuntimeKeyedPathOverrides() throws {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let settings = SettingsStore(database: database)
@@ -100,6 +117,7 @@ struct AppDatabaseTests {
         #expect(decoded.runtimePathOverrides[Core.Runtime.Kind.docker.rawValue] == "/legacy/docker")
         #expect(!decoded.autoStartEngineOnLaunch)
         #expect(!decoded.autoStartAlwaysContainers)
+        #expect(!decoded.storageCleanupPolicy.enabled)
     }
 
     @Test func containerRefreshUpsertsRuntimeScopedRecords() async throws {

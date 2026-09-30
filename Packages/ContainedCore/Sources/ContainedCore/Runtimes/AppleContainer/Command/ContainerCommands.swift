@@ -3,6 +3,9 @@ import Foundation
 /// Pure builders for `container` argument vectors. Kept side-effect-free so golden tests can assert
 /// the exact argv each UI action produces ("Reveal CLI" reads from the same source of truth).
 enum ContainerCommands {
+    static let builderStatus = ["builder", "status", "--format", "json"]
+    static let builderStop = ["builder", "stop"]
+    static let builderDelete = ["builder", "delete"]
     static let jsonFormat = ["--format", "json"]
 
     enum StatsFormat: String, Sendable {

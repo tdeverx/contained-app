@@ -267,7 +267,7 @@ public extension Core.Schema.Definition {
                   tip: "Advanced mount syntax for bind, volume, or tmpfs style mounts."),
             field(.storageTmpfs, .stringList, .storage, "Tmpfs mounts", defaultValue: .stringList([]),
                   flag: "--tmpfs", example: "--tmpfs /tmp", docker: ("--tmpfs", "--tmpfs /tmp"), compose: ("tmpfs", "tmpfs: [/tmp]"),
-                  tip: "Mounts an in-memory filesystem at the given container path."),
+                  tip: "Memory-backed temporary storage, erased whenever the container stops. Use only for genuinely disposable cache/temp paths, with a size limit such as /tmp:size=64M,mode=1777. Never place persistent application data here."),
             field(.environmentVariables, .keyValueList, .environment, "Environment variables", defaultValue: .keyValueList([]),
                   flag: "--env", example: "--env KEY=value", docker: ("--env", "--env KEY=value"), compose: ("environment", "environment: { KEY: value }"),
                   tip: "Sets environment variables inside the container."),
