@@ -165,6 +165,8 @@ An alert links to General settings and an explicit retry.
 Successful explicit retry reloads saved preferences, registry retry state, and cleanup/
 image-update scheduling state, history counts, and loaded recent activity without
 saving fallback defaults. It then reruns runtime detection using the restored CLI paths.
+Repair, missing runtime defaults, and normalization writes are committed together
+only after every required recovery read succeeds; failed reads or saves roll them back.
 Startup validates the saved schema before duplicate repair or app-store writes.
 If a newer saved schema is discovered, writes and repair remain paused until the existing
 downgrade decision is explicitly accepted; ordinary retry does not grant acceptance.

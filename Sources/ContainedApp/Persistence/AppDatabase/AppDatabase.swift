@@ -46,6 +46,7 @@ final class AppDatabase {
     @ObservationIgnored var now: () -> Date = { Date() }
     @ObservationIgnored var failureInjector: ((String) throws -> Void)?
     private var schemaWritesBlocked = true
+    private var isRecovering = false
     // Elapsed time is not recovery: app caches may still hold startup fallbacks.
     var canPersist: Bool { !schemaWritesBlocked && !isCompacting && retryAfter == nil }
     var containerInventoryPreparationCount = 0
@@ -114,6 +115,8 @@ final class AppDatabase {
     func save() -> Bool {
         guard canPersist else { context.rollback(); return false }
         guard context.hasChanges else { return true }
+        // Recovery stages repair, defaults, and normalization in one context transaction.
+        if isRecovering { return true }
         do {
             try failureInjector?("save")
             try context.save()
@@ -145,7 +148,7 @@ final class AppDatabase {
     @discardableResult
     func retryPersistence(acceptNewerSchema: Bool = false, validate: () -> Bool = { true },
                           reload: () -> Bool = { true }) -> Bool {
-        guard !isCompacting else { return false }
+        guard !isCompacting, !isRecovering else { return false }
         retryAfter = nil
         do {
             _ = try fetchRequired(AppSettingRecord.self)
@@ -165,8 +168,15 @@ final class AppDatabase {
             }
             let wasBlocked = schemaWritesBlocked
             var recovered = false
-            defer { if !recovered { schemaWritesBlocked = wasBlocked } }
+            defer {
+                isRecovering = false
+                if !recovered {
+                    context.rollback()
+                    schemaWritesBlocked = wasBlocked
+                }
+            }
             schemaWritesBlocked = false
+            isRecovering = true
             repairDuplicateRecords()
             guard canPersist else { return false }
             // Synchronous MainActor reload keeps background writers out of this recovery window.
@@ -174,6 +184,9 @@ final class AppDatabase {
                 if retryAfter == nil { recordFailure(.save(detail: "Recovery state reload incomplete")) }
                 return false
             }
+            // Only commit after every required read and cache reload has succeeded.
+            isRecovering = false
+            guard save() else { return false }
             recovered = true
             return true
         } catch { return false }

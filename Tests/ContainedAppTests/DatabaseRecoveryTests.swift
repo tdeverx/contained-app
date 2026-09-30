@@ -127,6 +127,46 @@ struct DatabaseRecoveryTests {
         #expect(database.setting("historyRetentionDays", fallback: 0) == 30)
     }
 
+    @Test func recoveryRollsBackRepairAndDefaultsWhenLateReadOrCommitFails() async throws {
+        for failingOperation in ["fetch:EventRecord", "save"] {
+            let database = AppDatabase(isStoredInMemoryOnly: true)
+            database.setSetting("original", for: "retained")
+            database.context.insert(AppSettingRecord(key: "retained", valueData: try AppDatabase.encoded("older"), updatedAt: .distantPast))
+            #expect(database.save())
+            database.failureInjector = { operation in
+                if operation == "fetch:AppSettingRecord" { throw diskFull }
+            }
+            var bootstraps = 0
+            let app = AppModel(database: database, bootstrapRuntime: { _ in
+                bootstraps += 1
+                return .cliMissing(runtimes: [])
+            })
+            // Simulate restored data without defaults that the reload will try to create.
+            for record in try database.context.fetch(FetchDescriptor<RuntimeRecord>()) {
+                database.context.delete(record)
+            }
+            try database.context.save()
+            let saves = database.successfulSaveCount
+            database.failureInjector = { operation in
+                if operation == failingOperation { throw diskFull }
+            }
+            await app.retryPersistence()
+            #expect(!database.canPersist)
+            #expect(database.successfulSaveCount == saves)
+            #expect(!database.context.hasChanges)
+            #expect(try database.context.fetch(FetchDescriptor<RuntimeRecord>()).isEmpty)
+            #expect(try database.context.fetch(FetchDescriptor<AppSettingRecord>()).filter { $0.key == "retained" }.count == 2)
+            #expect(bootstraps == 0)
+            database.failureInjector = nil
+            await app.retryPersistence()
+            #expect(database.canPersist)
+            #expect(try database.fetchRequired(AppSettingRecord.self).filter { $0.key == "retained" }.count == 1)
+            #expect(database.setting("retained", fallback: "") == "original")
+            #expect(!(try database.fetchRequired(RuntimeRecord.self)).isEmpty)
+            #expect(bootstraps == 1)
+        }
+    }
+
     @Test func backgroundUpdatesCannotOverwriteSavedStartupStateAfterTheOldCooldown() async throws {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         var date = Date()
