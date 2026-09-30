@@ -298,11 +298,34 @@ extension AppModel {
         return true
     }
 
-    /// Background entry point (from `tick()`): run a silent sweep only when the throttle window has
-    /// elapsed, loading the image list first if it hasn't been fetched yet.
+    var nextLocalRegistryRetryDate: Date? {
+        localRegistryRetries().map { $0.entry.retryAfter }.min()
+    }
+
+    private func localRegistryRetries() -> [(reference: String, entry: Core.Registry.UpdateRetryPolicy.Entry)] {
+        let local = Set(uniqueImageReferences().map(imageUpdateKey))
+        return registryUpdateFailures.flatMap { entry in
+            entry.references.compactMap { reference in
+                guard local.contains(imageUpdateKey(reference)),
+                      localRuntimeTargets(for: reference).contains(entry.runtimeKind) else { return nil }
+                return (reference: reference, entry: entry)
+            }
+        }
+    }
+
+    /// Background retries follow their own deadlines without rechecking healthy images or
+    /// postponing the regular full sweep. Removed images and other runtimes are not retried.
     func checkImageUpdatesIfNeeded(now: Date = Date()) async {
         guard settings.imageUpdateChecksEnabled else { return }
-        if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < imageUpdateInterval { return }
+        if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < imageUpdateInterval {
+            var checked = Set<String>()
+            for (reference, entry) in localRegistryRetries() where entry.retryAfter <= now {
+                guard registryRetryPolicy.shouldCheck(reference, runtimeKind: entry.runtimeKind, now: now),
+                      checked.insert(imageUpdateKey(reference, runtimeKind: entry.runtimeKind)).inserted else { continue }
+                await checkImageUpdate(reference, runtimeKind: entry.runtimeKind, notify: false)
+            }
+            return
+        }
         if images.isEmpty, let client {
             do {
                 setImages(try await client.runtimeImages())

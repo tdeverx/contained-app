@@ -192,7 +192,8 @@ final class AppModel {
     var imageUpdateInterval: TimeInterval { TimeInterval(settings.imageUpdateIntervalHours) * 60 * 60 }
     var imageUpdateLastRunDate: Date? { lastImageUpdateSweep }
     var imageUpdateNextRunDate: Date {
-        lastImageUpdateSweep?.addingTimeInterval(imageUpdateInterval) ?? Date()
+        let sweep = lastImageUpdateSweep?.addingTimeInterval(imageUpdateInterval) ?? Date()
+        return min(sweep, nextLocalRegistryRetryDate ?? sweep)
     }
     var imageUpdateIntervalDescription: String {
         "Every \(settings.imageUpdateIntervalHours) hour\(settings.imageUpdateIntervalHours == 1 ? "" : "s")"

@@ -52,7 +52,10 @@ palette. Background cadence is configured in [Updates](/Documentation/App/Update
 
 Private-registry authentication failures are coalesced by runtime and registry, with
 bounded retry backoff and one Activity warning per failure episode. Unrelated
-registries and public tags can still be checked. **Settings → Registries** shows
+registries and public tags can still be checked. Healthy images retain the regular
+sweep interval; due retries check only affected local
+images in the matching runtime without waiting for that interval or postponing it.
+**Settings → Registries** shows
 affected tags, the next retry time, **Retry Now**, and **Refresh Login**; a manual
 image check also bypasses backoff. Apple Container credentials are read from its
 existing Keychain entries only when required, without background prompts. Tokens,
