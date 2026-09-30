@@ -29,13 +29,43 @@ final class AppModel {
     let updater = UpdaterController()
     let migrator = StateMigrator()
     let logger: AppLogger
-    /// Shared with `AppModel+ImageUpdates.swift` (Swift extensions in other files need ≥ internal).
-    let manifestClient = Core.Registry.ManifestClient()
+    @ObservationIgnored private let bootstrapRuntime: (Core.Configuration) async -> Core.Orchestrator.Bootstrap
+    @ObservationIgnored var registryManifestLookup: ((String, Core.Runtime.Kind) async throws -> Core.Registry.ManifestResult)?
+    @ObservationIgnored var registryChecksInFlight: Set<String> = []
+    var registryCredentialDates: [String: Date] = [:] {
+        didSet {
+            if !reloadingPersistence, registryCredentialDates != oldValue { database.setSetting(registryCredentialDates, for: "registryCredentialDates") }
+        }
+    }
+    var registryRetryPolicy = Core.Registry.UpdateRetryPolicy() {
+        didSet {
+            if !reloadingPersistence, registryRetryPolicy != oldValue {
+                database.setSetting(registryRetryPolicy, for: "registryUpdateRetryPolicy")
+            }
+        }
+    }
 
     private(set) var bootstrap: Bootstrap = .checking
     private(set) var client: Core.Orchestrator?
     private(set) var systemStatus: Core.System.Status?
     private(set) var diskUsage: Core.System.DiskUsage?
+    var storageAnalyses: [Core.Runtime.Kind: Core.System.StorageAnalysis] = [:]
+    var storageAnalysisErrors: [Core.Runtime.Kind: String] = [:]
+    var storageCleanupPlans: [Core.System.CleanupPlan] = []
+    struct RuntimePruneRequest: Identifiable {
+        let id = UUID()
+        let runtimeKind: Core.Runtime.Kind
+        let action: Core.System.CleanupAction
+    }
+    var runtimePruneRequests: [RuntimePruneRequest] = []
+    var storageCleanupInFlight = false
+    var storagePlanInFlight = false
+    var lowStorageWarning: String?
+    var activeImageBuilds = 0
+    @ObservationIgnored var lastStorageAutomationCheck: Date?
+    @ObservationIgnored var lastStorageAutomationRun: Date?
+    @ObservationIgnored var storageAutomationCursors: [String: String] = [:]
+    @ObservationIgnored private var reloadingPersistence = false
     private(set) var runtimeReadiness: [Core.Runtime.Kind: Core.RuntimeReadiness] = [:]
     @ObservationIgnored private var containerStatsVisible = true
     @ObservationIgnored private var containerStatsStreamTask: Task<Void, Never>?
@@ -78,7 +108,7 @@ final class AppModel {
     var imagesError: String?
     var imageUpdates: [String: Core.Image.UpdateStatus] = [:] {
         didSet {
-            guard imageUpdates != oldValue else { return }
+            guard !reloadingPersistence, imageUpdates != oldValue else { return }
             database.updateImageStatuses(imageUpdates)
         }
     }
@@ -97,6 +127,7 @@ final class AppModel {
     // The image-update sweep state below is driven from `AppModel+ImageUpdates.swift`.
     var lastImageUpdateSweep: Date? {
         didSet {
+            guard !reloadingPersistence else { return }
             if let lastImageUpdateSweep {
                 database.setSetting(lastImageUpdateSweep, for: Self.imageUpdateLastSweepKey)
             } else {
@@ -109,10 +140,64 @@ final class AppModel {
     var databaseFailureMessage: String? {
         database.lastFailure?.localizedDescription
     }
+
+    /// Recovery belongs to the app so eagerly loaded state and its consumers recover together.
+    func retryPersistence() async {
+        guard database.retryPersistence(validate: { validatePersistedSchema() },
+                                        reload: { reloadPersistedState() }) else { return }
+        await retryBootstrap()
+    }
+
+    func recoverPersistenceForDowngradeDecision() -> Bool {
+        database.retryPersistence(acceptNewerSchema: true,
+                                  validate: { validatePersistedSchema(allowNewerSchema: true) },
+                                  reload: { reloadPersistedState() })
+    }
+
+    private func validatePersistedSchema(allowNewerSchema: Bool = false) -> Bool {
+        let storedSchema: Int? = database.setting(StateMigrator.schemaVersionSettingKey, fallback: Optional<Int>.none)
+        guard database.retryAfter == nil, database.lastFailure == nil else { return false }
+        if case .newerOnDisk(let version) = migrator.reconcile(storedVersion: storedSchema) {
+            downgradeSchemaVersion = version
+            guard allowNewerSchema else { return false }
+        }
+        return true
+    }
+
+    private func reloadPersistedState() -> Bool {
+        guard settings.reloadFromDatabase(), personalization.reloadFromDatabase(),
+              healthChecks.reloadFromDatabase(), historyStore.reloadFromDatabase() else { return false }
+        let statuses = database.imageStatusesSnapshot()
+        let retryPolicy = database.setting("registryUpdateRetryPolicy", fallback: Core.Registry.UpdateRetryPolicy())
+        let credentialDates: [String: Date] = database.setting("registryCredentialDates", fallback: [:])
+        let storageRun = database.setting("lastStorageCleanupRun", fallback: Optional<Date>.none)
+        let cursors: [String: String] = database.setting("storageCleanupCursors", fallback: [:])
+        let sweep = database.setting(Self.imageUpdateLastSweepKey, fallback: Optional<Date>.none)
+        guard database.canPersist, database.lastFailure == nil else { return false }
+        reloadingPersistence = true
+        defer { reloadingPersistence = false }
+        persistedImageUpdatesAwaitingInventory = statuses
+        registryRetryPolicy = retryPolicy
+        registryCredentialDates = credentialDates
+        lastStorageAutomationRun = storageRun
+        storageAutomationCursors = cursors
+        lastImageUpdateSweep = sweep
+        if !images.isEmpty {
+            imageUpdates = statuses
+            reconcilePersistedImageUpdates(with: images)
+        }
+        historyStore.retentionDays = settings.historyRetentionDays
+        updater.channel = settings.updateChannel
+        updater.automaticallyChecks = settings.appUpdateChecksEnabled
+        applyStatsNormalizationContext()
+        coordinator.wake()
+        return true
+    }
     var imageUpdateInterval: TimeInterval { TimeInterval(settings.imageUpdateIntervalHours) * 60 * 60 }
     var imageUpdateLastRunDate: Date? { lastImageUpdateSweep }
     var imageUpdateNextRunDate: Date {
-        lastImageUpdateSweep?.addingTimeInterval(imageUpdateInterval) ?? Date()
+        let sweep = lastImageUpdateSweep?.addingTimeInterval(imageUpdateInterval) ?? Date()
+        return min(sweep, nextLocalRegistryRetryDate ?? sweep)
     }
     var imageUpdateIntervalDescription: String {
         "Every \(settings.imageUpdateIntervalHours) hour\(settings.imageUpdateIntervalHours == 1 ? "" : "s")"
@@ -183,8 +268,12 @@ final class AppModel {
         var fraction: Double? = nil   // nil → indeterminate
     }
 
-    init(database: AppDatabase = AppDatabase()) {
+    init(database: AppDatabase = AppDatabase(),
+         bootstrapRuntime: @escaping (Core.Configuration) async -> Core.Orchestrator.Bootstrap = {
+             await Core.Orchestrator.bootstrap(configuration: $0)
+         }) {
         self.database = database
+        self.bootstrapRuntime = bootstrapRuntime
         self.settings = SettingsStore(database: database)
         self.personalization = PersonalizationStore(database: database)
         self.healthChecks = HealthCheckStore(database: database)
@@ -193,6 +282,10 @@ final class AppModel {
         self.containers.logger = logger
         self.containers.database = database
         persistedImageUpdatesAwaitingInventory = database.imageStatusesSnapshot()
+        registryRetryPolicy = database.setting("registryUpdateRetryPolicy", fallback: Core.Registry.UpdateRetryPolicy())
+        registryCredentialDates = database.setting("registryCredentialDates", fallback: [:])
+        lastStorageAutomationRun = database.setting("lastStorageCleanupRun", fallback: Optional<Date>.none)
+        storageAutomationCursors = database.setting("storageCleanupCursors", fallback: [:])
         lastImageUpdateSweep = database.setting(Self.imageUpdateLastSweepKey, fallback: Optional<Date>.none)
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
@@ -293,19 +386,23 @@ final class AppModel {
     }
 
     private func bootstrap(force: Bool) async {
+        guard downgradeSchemaVersion == nil else { return }
         guard force || !didCompleteInitialBootstrap else { return }
         if let bootstrapTask {
             await bootstrapTask.value
+            if force { await bootstrap(force: true) }
             return
         }
+        bootstrap = .checking
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.performBootstrap()
+            // Clear ownership before waking joined/forced requests, not in the original caller.
+            self.bootstrapTask = nil
+            self.didCompleteInitialBootstrap = true
         }
         bootstrapTask = task
         await task.value
-        bootstrapTask = nil
-        didCompleteInitialBootstrap = true
     }
 
     private func performBootstrap() async {
@@ -313,7 +410,8 @@ final class AppModel {
         let configuration = Core.Configuration(runtimes: Dictionary(uniqueKeysWithValues: supportedRuntimeDescriptors.map { descriptor in
             (descriptor.kind, Core.Runtime.Configuration(cliPathOverride: settings.runtimePathOverride(for: descriptor.kind)))
         }))
-        let result = await Core.Orchestrator.bootstrap(configuration: configuration)
+        let result = await bootstrapRuntime(configuration)
+        guard downgradeSchemaVersion == nil else { return }
         switch result {
         case .cliMissing(let readiness):
             runtimeReadiness = Dictionary(uniqueKeysWithValues: readiness.map { ($0.kind, $0) })
@@ -589,6 +687,7 @@ final class AppModel {
         // update badges populate without first opening the Images panel.
         await refreshImagesIfNeeded()
         await checkImageUpdatesIfNeeded()
+        await runStorageAutomationIfNeeded()
         let elapsed = Date().timeIntervalSince(started)
         if elapsed >= 0.75 {
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
@@ -737,6 +836,7 @@ final class AppModel {
     func refreshSystemRuntimeResources() async {
         guard client != nil, bootstrap == .ready else { return }
         await refreshDiskUsage(force: true)
+        await refreshStorageAnalysis()
     }
 
     /// Refresh the registry-login list for Settings.
@@ -745,7 +845,28 @@ final class AppModel {
         let runtimeKinds = availableRuntimeDescriptors.filter { $0.supports(.registries) }.map(\.kind)
         var next: [Core.Registry.Login] = []
         for kind in runtimeKinds {
-            next += (try? await client.registries(runtimeKind: kind)) ?? []
+            do {
+                let logins = try await client.registries(runtimeKind: kind)
+                for login in logins {
+                    if let modified = login.modified ?? login.created {
+                        if let previous = registryCredentialDates[login.id], previous != modified {
+                            registryCredentialsChanged(host: login.host, runtimeKind: kind)
+                        }
+                        registryCredentialDates[login.id] = modified
+                    }
+                }
+                for key in Array(registryCredentialDates.keys) {
+                    if let scoped = Core.Runtime.Kind.parseScopedID(key), scoped.kind == kind,
+                       !logins.contains(where: { $0.id == key }) {
+                        registryCredentialsChanged(host: scoped.id, runtimeKind: kind)
+                        registryCredentialDates.removeValue(forKey: key)
+                    }
+                }
+                next += logins
+            } catch {
+                // A failed metadata read is not a credential change.
+                next += registries.filter { $0.runtimeKind == kind }
+            }
         }
         registries = next
     }
@@ -861,6 +982,7 @@ final class AppModel {
     /// deleting the current container so an unavailable image does not strand the edit flow.
     @discardableResult
     func recreateContainer(originalID: String, spec: ContainerFormState) async -> String? {
+        guard await permitStorageIntensiveOperation(runtimeKind: spec.effectiveRuntimeKind) else { return nil }
         guard let originalSnapshot = containers.snapshots.first(where: { $0.scopedID == originalID || $0.id == originalID }) else {
             flash(AppText.recreateOriginalUnavailable)
             return nil
@@ -1153,6 +1275,7 @@ final class AppModel {
     @discardableResult
     func pullImage(_ reference: String, runtimeKind: Core.Runtime.Kind) async -> Bool {
         guard let client else { return false }
+        guard await permitStorageIntensiveOperation(runtimeKind: runtimeKind) else { return false }
         activity = ActivityState(title: AppText.activityPullingImage(Format.shortImage(reference)))
         defer { activity = nil }
         do {

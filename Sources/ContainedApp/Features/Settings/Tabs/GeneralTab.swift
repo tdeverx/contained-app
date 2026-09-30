@@ -69,6 +69,24 @@ struct GeneralTab: View {
                 }
                 Button("Clear History…", role: .destructive) { confirmingClear = true }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                LabeledContent("App database allocated storage",
+                               value: ByteCountFormatter.string(fromByteCount: app.database.allocatedDatabaseBytes,
+                                                                countStyle: .file))
+                if let failure = app.databaseFailureMessage {
+                    Text(failure).foregroundStyle(.secondary)
+                    Button("Retry Database") { Task { await app.retryPersistence() } }
+                }
+                if let failure = app.database.maintenanceFailureCode {
+                    Text("Database maintenance: \(failure)").foregroundStyle(.secondary)
+                }
+                Button("Maintain Transaction History") {
+                    app.database.maintainTransactionHistory(force: true)
+                }
+                .disabled(app.database.historyMaintenanceTask != nil || !app.database.canPersist)
+                Button("Compact App Database") {
+                    Task { await app.database.compactDatabase() }
+                }
+                .disabled(app.database.isCompacting || !app.database.canPersist)
                 ConfigTransferControls()
             } header: {
                 Text(AppText.string("settings.general.data", defaultValue: "Data"))

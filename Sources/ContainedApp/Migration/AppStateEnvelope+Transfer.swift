@@ -3,15 +3,16 @@ import Foundation
 extension AppStateEnvelope {
     @MainActor
     static func make(from app: AppModel, sections selected: Set<AppStateSection>) throws -> AppStateEnvelope {
+        if let failure = app.database.lastFailure { throw failure }
         var sections: [AppStateSection: JSONValue] = [:]
         if selected.contains(.settings) {
             sections[.settings] = try JSONValue(app.settings.backupSnapshot())
         }
         if selected.contains(.personalization) {
-            sections[.personalization] = try JSONValue(app.personalization.backupSnapshot())
+            sections[.personalization] = try JSONValue(app.personalization.readOnlyBackupSnapshot())
         }
         if selected.contains(.healthChecks) {
-            sections[.healthChecks] = try JSONValue(app.healthChecks.backupSnapshot())
+            sections[.healthChecks] = try JSONValue(app.healthChecks.readOnlyBackupSnapshot())
         }
         if selected.contains(.templates) {
             sections[.templates] = try JSONValue(app.historyStore.templatesSnapshot())
@@ -22,6 +23,7 @@ extension AppStateEnvelope {
         if selected.contains(.caches) {
             sections[.caches] = .object([])
         }
+        if let failure = app.database.lastFailure { throw failure }
         return AppStateEnvelope(sections: sections)
     }
 }

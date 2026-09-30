@@ -82,6 +82,22 @@ container create/edit fields. They should receive dedicated capabilities and
 screens if Contained adopts them; they are not silently projected into the
 current container, image, or System models.
 
+## Storage And Registry Updates
+
+Storage management routes through `Core.Orchestrator.storageAnalysis`,
+`storageCapacity`, `cleanupPlan`, and `executeCleanup`. `Core.System` owns neutral
+analysis, risk, policy, plan, result, and error types. The Apple adapter owns directory
+accounting, builder discovery, reference-safe candidate selection, inventory tokens,
+version gates, argv, and execution. No runtime-internal files are deleted directly.
+Automatic plans accept compaction only, bounded to 16 identities. The app owns opt-in
+persistence, cadence, low-space presentation, confirmation, and Activity summaries.
+
+Manifest checks route through `Core.Orchestrator.remoteImageManifest`. Apple Keychain
+lookup remains inside the adapter. Core returns digest/authentication-use metadata
+without credentials; `Core.Registry.UpdateRetryPolicy` supplies pure retry/coalescing
+decisions. The app owns copy, credential-change observation, persistence, and UI.
+
+
 ## Create, Import, Export, And Runtime Choice
 
 The global Run/Edit form is app-owned form state, but editable runtime fields

@@ -29,6 +29,7 @@ struct SettingsBackup: Codable, Equatable {
     var autoStartEngineOnLaunch: Bool
     var autoStartAlwaysContainers: Bool
     var autoRestartEnabled: Bool
+    var storageCleanupPolicy: Core.System.StorageCleanupPolicy
     var notifyOnCrash: Bool
     var revealCLI: Bool
     var historyRetentionDays: Int
@@ -51,6 +52,7 @@ struct SettingsBackup: Codable, Equatable {
         case cliPathOverride, dockerCLIPathOverride, refreshInterval
         case statsNormalizationMode, imageUpdateIntervalHours, imageUpdateChecksEnabled, appUpdateChecksEnabled
         case autoStartEngineOnLaunch, autoStartAlwaysContainers, autoRestartEnabled
+        case storageCleanupPolicy
         case notifyOnCrash, revealCLI, historyRetentionDays, loggingLevel, enabledLogDestinations
         case enabledLogCategories, updateChannel, commandPaletteEnabled, hubSearchEnabled
         case composeImportEnabled, imageBuildEnabled, keyboardShortcutsEnabled
@@ -92,7 +94,9 @@ struct SettingsBackup: Codable, Equatable {
          hubSearchEnabled: Bool,
          composeImportEnabled: Bool,
          imageBuildEnabled: Bool,
-         keyboardShortcutsEnabled: Bool = false) {
+         keyboardShortcutsEnabled: Bool = false,
+         storageCleanupPolicy: Core.System.StorageCleanupPolicy = .init()) {
+        self.storageCleanupPolicy = storageCleanupPolicy
         self.accentTint = accentTint
         self.appearance = appearance
         self.density = density
@@ -167,6 +171,7 @@ struct SettingsBackup: Codable, Equatable {
         autoStartEngineOnLaunch = try container.decodeIfPresent(Bool.self, forKey: .autoStartEngineOnLaunch) ?? false
         autoStartAlwaysContainers = try container.decodeIfPresent(Bool.self, forKey: .autoStartAlwaysContainers) ?? false
         autoRestartEnabled = try container.decodeIfPresent(Bool.self, forKey: .autoRestartEnabled) ?? true
+        storageCleanupPolicy = try container.decodeIfPresent(Core.System.StorageCleanupPolicy.self, forKey: .storageCleanupPolicy) ?? .init()
         notifyOnCrash = try container.decodeIfPresent(Bool.self, forKey: .notifyOnCrash) ?? true
         revealCLI = try container.decodeIfPresent(Bool.self, forKey: .revealCLI) ?? true
         historyRetentionDays = try container.decodeIfPresent(Int.self, forKey: .historyRetentionDays) ?? 7
@@ -211,6 +216,7 @@ struct SettingsBackup: Codable, Equatable {
         try container.encode(autoStartEngineOnLaunch, forKey: .autoStartEngineOnLaunch)
         try container.encode(autoStartAlwaysContainers, forKey: .autoStartAlwaysContainers)
         try container.encode(autoRestartEnabled, forKey: .autoRestartEnabled)
+        try container.encode(storageCleanupPolicy, forKey: .storageCleanupPolicy)
         try container.encode(notifyOnCrash, forKey: .notifyOnCrash)
         try container.encode(revealCLI, forKey: .revealCLI)
         try container.encode(historyRetentionDays, forKey: .historyRetentionDays)

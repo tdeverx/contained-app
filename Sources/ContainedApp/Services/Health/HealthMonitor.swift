@@ -5,42 +5,81 @@ import ContainedCore
 @MainActor
 @Observable
 final class HealthCheckStore {
-    private var checks: [String: Core.Container.HealthCheck]
+    private var checks: [String: Core.Container.HealthCheck] = [:]
+    private var loadedSuccessfully = false
     private let database: AppDatabase
 
     init(database: AppDatabase = AppDatabase()) {
         self.database = database
-        checks = Dictionary(uniqueKeysWithValues: database.fetch(HealthCheckRecord.self).compactMap { record in
+        loadIfNeeded()
+    }
+
+    @discardableResult
+    private func loadIfNeeded() -> Bool {
+        if loadedSuccessfully { return true }
+        guard database.canPersist, let records = try? database.fetchRequired(HealthCheckRecord.self) else { return false }
+        checks = Dictionary(records.sorted { $0.updatedAt > $1.updatedAt }.compactMap { record in
             do {
                 return (record.containerScopedID,
                         try JSONDecoder().decode(Core.Container.HealthCheck.self, from: record.valueData))
             } catch {
                 fatalError("Unable to decode health check for \(record.containerScopedID): \(error)")
             }
-        })
+        }, uniquingKeysWith: { newest, _ in newest })
+        loadedSuccessfully = true
+        return true
     }
 
-    func check(for id: String) -> Core.Container.HealthCheck? { checks[id] }
+    func check(for id: String) -> Core.Container.HealthCheck? {
+        loadIfNeeded()
+        return checks[id]
+    }
+
+    @discardableResult
+    func reloadFromDatabase() -> Bool {
+        loadedSuccessfully = false
+        return loadIfNeeded()
+    }
 
     func setCheck(_ check: Core.Container.HealthCheck, for id: String) {
+        guard database.canPersist, loadIfNeeded() else { return }
         if check.command.isEmpty { checks[id] = nil } else { checks[id] = check }
         persist()
     }
 
     func clear(id: String) {
+        guard database.canPersist, loadIfNeeded() else { return }
         checks[id] = nil
         persist()
     }
 
-    func backupSnapshot() -> [String: Core.Container.HealthCheck] { checks }
+    func backupSnapshot() -> [String: Core.Container.HealthCheck] {
+        loadIfNeeded()
+        return checks
+    }
+
+    func readOnlyBackupSnapshot() throws -> [String: Core.Container.HealthCheck] {
+        let records = try database.fetchRequired(HealthCheckRecord.self).sorted {
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            return String(describing: $0.persistentModelID) < String(describing: $1.persistentModelID)
+        }
+        var snapshot: [String: Core.Container.HealthCheck] = [:]
+        for record in records where snapshot[record.containerScopedID] == nil {
+            do { snapshot[record.containerScopedID] = try JSONDecoder().decode(Core.Container.HealthCheck.self, from: record.valueData) }
+            catch { throw AppDatabase.Failure.decodeRecord(record: "health check", detail: AppDatabase.safeDetail(error)) }
+        }
+        return snapshot
+    }
 
     func applyBackup(_ snapshot: [String: Core.Container.HealthCheck], replace: Bool) {
+        guard database.canPersist, loadIfNeeded() else { return }
         if replace { checks = snapshot }
         else { checks.merge(snapshot) { _, imported in imported } }
         persist()
     }
 
     func purgeOrphans(liveContainerIDs: Set<String>) -> Int {
+        guard database.canPersist, loadIfNeeded() else { return 0 }
         let before = checks.count
         checks = checks.filter { liveContainerIDs.contains($0.key) }
         persist()
@@ -48,25 +87,29 @@ final class HealthCheckStore {
     }
 
     private func persist() {
-        let wanted = Set(checks.keys)
-        for record in database.fetch(HealthCheckRecord.self) where !wanted.contains(record.containerScopedID) {
-            database.context.delete(record)
-        }
-        for (id, check) in checks {
-            let data: Data
-            do {
-                data = try JSONEncoder().encode(check)
-            } catch {
-                fatalError("Unable to encode health check for \(id): \(error)")
+        database.performMutation {
+            let records = try database.fetchRequired(HealthCheckRecord.self)
+            let wanted = Set(checks.keys)
+            for record in records where !wanted.contains(record.containerScopedID) {
+                database.context.delete(record)
             }
-            if let record = database.fetch(HealthCheckRecord.self).first(where: { $0.containerScopedID == id }) {
-                record.valueData = data
-                record.updatedAt = Date()
-            } else {
-                database.context.insert(HealthCheckRecord(containerScopedID: id, valueData: data))
+            for (id, check) in checks {
+                let data: Data
+                do {
+                    data = try AppDatabase.encoded(check)
+                } catch {
+                    fatalError("Unable to encode health check for \(id): \(error)")
+                }
+                if let record = records.first(where: { $0.containerScopedID == id }) {
+                    guard record.valueData != data else { continue }
+                    record.valueData = data
+                    record.updatedAt = Date()
+                } else {
+                    database.context.insert(HealthCheckRecord(containerScopedID: id, valueData: data))
+                }
             }
+            database.save()
         }
-        database.save()
     }
 }
 

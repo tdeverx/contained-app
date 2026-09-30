@@ -14,6 +14,11 @@ struct RegistryLoginSheet: View {
     @State private var busy = false
     @State private var error: String?
 
+    init(server: String = "", runtimeKind: Core.Runtime.Kind = AppRuntimeIntent.placeholderKind) {
+        _server = State(initialValue: server)
+        _runtimeKind = State(initialValue: runtimeKind)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             UI.Panel.SheetTitleBar(title: AppText.string("registry.login.title", defaultValue: "Registry login"),
@@ -92,6 +97,7 @@ struct RegistryLoginSheet: View {
                                                    password: password,
                                                    runtimeKind: runtimeKind)
                 await app.refreshRegistries()
+                app.registryCredentialsChanged(host: server.trimmingCharacters(in: .whitespaces), runtimeKind: runtimeKind)
                 dismiss()
             } catch let e as Core.Command.Error { error = e.appDisplayMessage; busy = false }
             catch { self.error = error.appDisplayMessage; busy = false }

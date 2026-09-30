@@ -24,6 +24,7 @@ final class HistoryStore {
     /// setting (`SettingsStore.historyRetentionDays`), synced by `AppModel`.
     var retentionDays = 7
     private var lastMetricSample: Date?
+    private var lastRetentionPrune: Date?
     private var recentEvents: [String: Date] = [:]
     /// Minimum spacing between persisted metric samples, so a 2s poll doesn't flood the DB
     /// (60s → ~10k rows per container over the 7-day window).
@@ -42,13 +43,16 @@ final class HistoryStore {
     // MARK: Writes
 
     func record(_ kind: EventKind, containerID: String? = nil, message: String, at date: Date = Date()) {
+        guard database.canPersist else { return }
+        pruneIfDue(now: date)
+        guard database.canPersist else { return }
         let key = [kind.rawValue, containerID ?? "", message].joined(separator: "\u{1F}")
         if let last = recentEvents[key], date.timeIntervalSince(last) < duplicateEventWindow { return }
-        recentEvents[key] = date
-        recentEvents = recentEvents.filter { date.timeIntervalSince($0.value) < duplicateEventWindow }
         let record = EventRecord(timestamp: date, containerID: containerID, kind: kind, message: message)
         context.insert(record)
         guard save() else { return }
+        recentEvents[key] = date
+        recentEvents = recentEvents.filter { date.timeIntervalSince($0.value) < duplicateEventWindow }
         activitySummary.totalEvents += 1
         activitySummary.unreadEvents += 1
         if recentActivityLoaded {
@@ -62,26 +66,29 @@ final class HistoryStore {
 
     /// Persist a metric sample for each running container, throttled to `metricInterval`.
     func recordMetrics(_ scopedDeltas: [String: Core.Metrics.StatsDelta], at date: Date = Date()) {
+        guard database.canPersist else { return }
+        pruneIfDue(now: date)
+        guard database.canPersist else { return }
         guard !scopedDeltas.isEmpty else { return }
         if let last = lastMetricSample, date.timeIntervalSince(last) < metricInterval { return }
-        lastMetricSample = date
         for (scopedContainerID, d) in scopedDeltas {
             context.insert(MetricSample(timestamp: date, containerID: scopedContainerID,
                                         cpuFraction: d.cpuCoreFraction, memoryBytes: Double(d.memoryUsageBytes),
                                         netRxBytesPerSec: d.netRxBytesPerSec, netTxBytesPerSec: d.netTxBytesPerSec,
                                         diskReadBytesPerSec: d.blockReadBytesPerSec, diskWriteBytesPerSec: d.blockWriteBytesPerSec))
         }
-        _ = save()
+        if save() { lastMetricSample = date }
     }
 
     /// Mark every recorded event as read (clears the toolbar unread badge).
     func markAllEventsRead() {
+        guard database.canPersist else { return }
         let unread: [EventRecord]
         do {
             unread = try context.fetch(FetchDescriptor<EventRecord>(
                 predicate: #Predicate { !$0.isRead }))
         } catch {
-            database.recordFailure(.fetch(model: "EventRecord", detail: String(describing: error)))
+            database.recordFailure(.fetch(model: "EventRecord", detail: AppDatabase.safeDetail(error)))
             return
         }
         guard !unread.isEmpty else { return }
@@ -98,6 +105,7 @@ final class HistoryStore {
 
     /// Delete every recorded event (keeps metric samples + templates). Backs the Activity "Clear" action.
     func clearEvents() {
+        guard database.canPersist else { return }
         guard delete(EventRecord.self), save() else { return }
         activitySummary.totalEvents = 0
         activitySummary.unreadEvents = 0
@@ -114,11 +122,12 @@ final class HistoryStore {
             recentActivityLoaded = true
             activityRevision &+= 1
         } catch {
-            database.recordFailure(.fetch(model: "EventRecord", detail: String(describing: error)))
+            database.recordFailure(.fetch(model: "EventRecord", detail: AppDatabase.safeDetail(error)))
         }
     }
 
     func setEventRead(_ id: PersistentIdentifier, isRead: Bool) {
+        guard database.canPersist else { return }
         guard let record = context.model(for: id) as? EventRecord, record.isRead != isRead else { return }
         record.isRead = isRead
         guard save() else { return }
@@ -130,6 +139,7 @@ final class HistoryStore {
     }
 
     func markEventsRead(kind: EventKind?) {
+        guard database.canPersist else { return }
         let records: [EventRecord]
         if let kind {
             let raw = kind.rawValue
@@ -150,6 +160,7 @@ final class HistoryStore {
     }
 
     func deleteEvent(_ id: PersistentIdentifier) {
+        guard database.canPersist else { return }
         guard let record = context.model(for: id) as? EventRecord else { return }
         context.delete(record)
         guard save() else { return }
@@ -159,6 +170,7 @@ final class HistoryStore {
     }
 
     func clearEvents(kind: EventKind?) {
+        guard database.canPersist else { return }
         do {
             if let kind {
                 let raw = kind.rawValue
@@ -167,7 +179,7 @@ final class HistoryStore {
                 try context.delete(model: EventRecord.self)
             }
         } catch {
-            database.recordFailure(.save(detail: String(describing: error)))
+            database.recordFailure(.save(detail: AppDatabase.safeDetail(error)))
             return
         }
         guard save() else { return }
@@ -186,7 +198,7 @@ final class HistoryStore {
         do {
             return try await reader.containerHistory(scopedContainerID: scopedContainerID, since: cutoff)
         } catch {
-            database.recordFailure(.fetch(model: "Container history", detail: String(describing: error)))
+            database.recordFailure(.fetch(model: "Container history", detail: AppDatabase.safeDetail(error)))
             return ContainerHistorySnapshot()
         }
     }
@@ -195,7 +207,7 @@ final class HistoryStore {
         do {
             return try await reader.containerMetrics(scopedContainerID: scopedContainerID, since: cutoff)
         } catch {
-            database.recordFailure(.fetch(model: "Container metrics", detail: String(describing: error)))
+            database.recordFailure(.fetch(model: "Container metrics", detail: AppDatabase.safeDetail(error)))
             return []
         }
     }
@@ -204,22 +216,32 @@ final class HistoryStore {
         do {
             return try await reader.containerEvents(scopedContainerID: scopedContainerID, since: cutoff)
         } catch {
-            database.recordFailure(.fetch(model: "Container events", detail: String(describing: error)))
+            database.recordFailure(.fetch(model: "Container events", detail: AppDatabase.safeDetail(error)))
             return []
         }
     }
 
     // MARK: Retention
 
+    private func pruneIfDue(now: Date) {
+        if lastRetentionPrune.map({ now.timeIntervalSince($0) >= 3600 }) ?? true {
+            pruneOld(now: now)
+        }
+    }
+
     func pruneOld(now: Date = Date()) {
+        guard database.canPersist else { return }
         guard let cutoff = Calendar.current.date(byAdding: .day, value: -retentionDays, to: now) else { return }
         do {
             try context.delete(model: MetricSample.self, where: #Predicate { $0.timestamp < cutoff })
             try context.delete(model: EventRecord.self, where: #Predicate { $0.timestamp < cutoff })
         } catch {
-            database.recordFailure(.save(detail: "Unable to prune history: \(error)"))
+            database.recordFailure(.save(detail: AppDatabase.safeDetail(error)))
+            return
         }
         if save() {
+            lastRetentionPrune = now
+            database.maintainTransactionHistory()
             refreshSummary()
             if recentActivityLoaded {
                 Task { await loadRecentActivity(force: true) }
@@ -230,6 +252,7 @@ final class HistoryStore {
     /// Wipe all recorded metrics and events (Templates are preserved). Used by the "Clear history"
     /// action in Settings.
     func clearAll() {
+        guard database.canPersist else { return }
         guard delete(MetricSample.self), delete(EventRecord.self), save() else { return }
         recentActivity.removeAll()
         refreshSummary()
@@ -247,6 +270,7 @@ final class HistoryStore {
     }
 
     func applyTemplates(_ snapshots: [RecipeSnapshot], replace: Bool) {
+        guard database.canPersist else { return }
         if replace {
             guard delete(RecipeRecord.self) else { return }
         }
@@ -258,6 +282,7 @@ final class HistoryStore {
     }
 
     func applyHistory(_ snapshot: HistoryBackup, replace: Bool) {
+        guard database.canPersist else { return }
         if replace {
             guard delete(EventRecord.self), delete(MetricSample.self) else { return }
         }
@@ -269,21 +294,26 @@ final class HistoryStore {
     }
 
     func insertTemplate(_ record: RecipeRecord) {
+        guard database.canPersist else { return }
         context.insert(record)
         guard save() else { return }
         activitySummary.templateCount += 1
     }
 
     func deleteTemplate(_ record: RecipeRecord) {
+        guard database.canPersist else { return }
         context.delete(record)
         guard save() else { return }
         activitySummary.templateCount = max(0, activitySummary.templateCount - 1)
     }
 
     func purgeOrphans(liveContainerIDs: Set<String>) -> (events: Int, metrics: Int) {
-        let events = fetch(EventRecord.self)
+        guard database.canPersist else { return (0, 0) }
+        guard let allEvents = try? database.fetchRequired(EventRecord.self),
+              let allMetrics = try? database.fetchRequired(MetricSample.self) else { return (0, 0) }
+        let events = allEvents
             .filter { $0.containerID.map { !liveContainerIDs.contains($0) } ?? false }
-        let metrics = fetch(MetricSample.self)
+        let metrics = allMetrics
             .filter { !liveContainerIDs.contains($0.containerID) }
         for event in events { context.delete(event) }
         for metric in metrics { context.delete(metric) }
@@ -294,28 +324,43 @@ final class HistoryStore {
     }
 
     @discardableResult
-    private func save() -> Bool {
-        do {
-            try context.save()
-            return true
-        } catch {
-            database.recordFailure(.save(detail: "Unable to save history data: \(error)"))
-            return false
-        }
-    }
+    private func save() -> Bool { database.save() }
 
     private func refreshSummary() {
-        activitySummary = ActivitySummary(totalEvents: fetchCount(EventRecord.self),
-                                          unreadEvents: fetchCount(EventRecord.self,
-                                                                   predicate: #Predicate { !$0.isRead }),
-                                          templateCount: fetchCount(RecipeRecord.self))
+        _ = reloadFromDatabase(refreshRecent: false)
+    }
+
+    /// Refresh all projections together; a failed read must not replace prior values with zeros.
+    @discardableResult
+    func reloadFromDatabase(refreshRecent: Bool = true) -> Bool {
+        do {
+            let total = try database.readRequired(EventRecord.self) {
+                try context.fetchCount(FetchDescriptor<EventRecord>())
+            }
+            let unread = try database.readRequired(EventRecord.self) {
+                try context.fetchCount(FetchDescriptor<EventRecord>(predicate: #Predicate { !$0.isRead }))
+            }
+            let templates = try database.readRequired(RecipeRecord.self) {
+                try context.fetchCount(FetchDescriptor<RecipeRecord>())
+            }
+            var events: [ActivityEvent]?
+            if refreshRecent, recentActivityLoaded {
+                var descriptor = FetchDescriptor<EventRecord>(sortBy: [SortDescriptor(\EventRecord.timestamp, order: .reverse)])
+                descriptor.fetchLimit = Self.recentActivityLimit
+                events = try database.readRequired(EventRecord.self) { try context.fetch(descriptor).map(ActivityEvent.init) }
+            }
+            activitySummary = ActivitySummary(totalEvents: total, unreadEvents: unread, templateCount: templates)
+            if let events { recentActivity = events }
+            activityRevision &+= 1
+            return true
+        } catch { return false }
     }
 
     private func fetch<T: PersistentModel>(_ model: T.Type) -> [T] {
         do {
             return try context.fetch(FetchDescriptor<T>())
         } catch {
-            database.recordFailure(.fetch(model: String(describing: T.self), detail: String(describing: error)))
+            database.recordFailure(.fetch(model: String(describing: T.self), detail: AppDatabase.safeDetail(error)))
             return []
         }
     }
@@ -325,18 +370,8 @@ final class HistoryStore {
         do {
             return try context.fetch(FetchDescriptor<T>(predicate: predicate))
         } catch {
-            database.recordFailure(.fetch(model: String(describing: T.self), detail: String(describing: error)))
+            database.recordFailure(.fetch(model: String(describing: T.self), detail: AppDatabase.safeDetail(error)))
             return []
-        }
-    }
-
-    private func fetchCount<T: PersistentModel>(_ model: T.Type,
-                                                predicate: Predicate<T>? = nil) -> Int {
-        do {
-            return try context.fetchCount(FetchDescriptor<T>(predicate: predicate))
-        } catch {
-            database.recordFailure(.fetch(model: String(describing: T.self), detail: String(describing: error)))
-            return 0
         }
     }
 
@@ -346,7 +381,7 @@ final class HistoryStore {
             try context.delete(model: T.self)
             return true
         } catch {
-            database.recordFailure(.save(detail: "Unable to delete \(T.self): \(error)"))
+            database.recordFailure(.save(detail: AppDatabase.safeDetail(error)))
             return false
         }
     }

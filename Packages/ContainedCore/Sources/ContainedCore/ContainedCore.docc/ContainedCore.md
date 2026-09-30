@@ -26,6 +26,8 @@ Use Core for:
 - Compose import/export plans
 - run/edit schema conformance before validation and execution
 - image defaults and registry helpers
+- host storage analysis, reference-safe cleanup previews, and partial results
+- privacy-safe registry update retry/coalescing decisions
 - stats snapshots, metric normalization, and history inputs
 - typed display-neutral package errors
 

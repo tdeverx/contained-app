@@ -60,6 +60,17 @@ struct SystemVolumeInventoryTests {
         #expect(entries.first { $0.runtimeKind == .docker }?.containers.map(\.id) == ["docker-web"])
     }
 
+    @Test func appleBackingImagePathsResolveToTheNamedVolume() throws {
+        let source = "/store/volumes/config/volume.img"
+        let volume = Core.Volume.Resource(configuration: .init(name: "config", source: source), runtimeKind: .appleContainer)
+        let snapshot = try decode(Core.Container.Snapshot.self, from: mountedContainerJSON(id: "web", source: source))
+        let entries = SystemVolumeInventory.build(volumes: [volume], containers: [snapshot])
+        #expect(entries.count == 1)
+        #expect(entries.first?.kind == .named)
+        #expect(entries.first?.title == "config")
+        #expect(entries.first?.containers.map(\.id) == ["web"])
+    }
+
     private func decode<T: Decodable>(_ type: T.Type,
                                       runtimeKind: Core.Runtime.Kind = .appleContainer,
                                       from json: String) throws -> T {

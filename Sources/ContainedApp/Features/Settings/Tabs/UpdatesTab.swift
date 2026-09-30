@@ -6,6 +6,7 @@ import ContainedCore
 
 struct UpdatesTab: View {
     @Environment(AppModel.self) private var app
+    @Environment(UIState.self) private var ui
     @State private var showingAvailableNotes = false
     @State private var showingCurrentNotes = false
 
@@ -53,6 +54,9 @@ struct UpdatesTab: View {
             }
 
             Section {
+                if !app.registryUpdateFailures.isEmpty {
+                    Button("Resolve registry update failures…") { ui.openSettings(to: .registries) }
+                }
                 UI.Form.Row(title: AppText.string("settings.updates.checkImages", defaultValue: "Check images"),
                             isChanged: settings.imageUpdateIntervalHours != 6) {
                     Picker("", selection: $settings.imageUpdateIntervalHours) {

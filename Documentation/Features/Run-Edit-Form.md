@@ -1,5 +1,12 @@
 # Run / Edit Form
 
+Use size-limited tmpfs mounts such as `/tmp:size=64M,mode=1777` only for genuinely
+disposable cache/temp data. Tmpfs uses guest memory and is erased when the container
+stops; never put persistent application data there. Deleting guest files does not
+automatically shrink Apple's host sparse disks. System -> Storage can compact running
+containers without deleting live files. Bind-mounted deleted host files may need a
+user-initiated stop to release virtio-fs handles; compaction is not general cache deletion.
+
 The Run / Edit form is intentionally UI-first. It edits a Core-published
 runtime-neutral schema document with controls that feel native on macOS, while
 the selected runtime adapter validates the document and provides the live

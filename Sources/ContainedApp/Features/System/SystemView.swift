@@ -14,9 +14,6 @@ struct SystemContent: View {
     var onClose: () -> Void = {}
 
     @State private var working = false
-    @State private var pruneTarget: PruneTarget?
-    @State private var reclaimingAll = false
-    @State private var cleaningRunningStorage = false
     @State private var deletingVolume: Core.Volume.Resource?
     @State private var page: SystemPage
 
@@ -85,19 +82,6 @@ struct SystemContent: View {
 
     private typealias VolumeInventoryEntry = SystemVolumeInventory.Entry
 
-    enum PruneTarget: String, Identifiable {
-        case containers, images, volumes, networks
-        var id: String { rawValue }
-        var title: String {
-            switch self {
-            case .containers: return AppText.string("cleanup.removeStoppedContainers.title", defaultValue: "Remove all stopped containers?")
-            case .images: return AppText.string("cleanup.removeUnusedImages.title", defaultValue: "Remove unused images?")
-            case .volumes: return AppText.string("cleanup.removeUnusedVolumes.title", defaultValue: "Remove unused volumes?")
-            case .networks: return AppText.string("cleanup.removeUnusedNetworks.title", defaultValue: "Remove unused networks?")
-            }
-        }
-    }
-
     var body: some View {
         UI.Panel.Scaffold(width: UI.Panel.Size.system.width) {
             VStack(spacing: 0) {
@@ -107,7 +91,9 @@ struct SystemContent: View {
         } content: {
             LazyVStack(alignment: .leading, spacing: UI.Layout.Spacing.l) {
                 switch activePage {
-                case .runtime: runtimeStatusCard
+                case .runtime:
+                    runtimeStatusCard
+                    SystemStorageContent(elevated: elevated)
                 case .automation: automationCard
                 case .volumes: volumesCard
                 case .networks:
@@ -124,19 +110,6 @@ struct SystemContent: View {
                             isPresented: deletingVolumeBinding, presenting: deletingVolume) { volume in
             Button("Delete", role: .destructive) { Task { await deleteVolume(volume) } }
         } message: { _ in Text("This permanently removes the volume and its data.") }
-        .confirmationDialog(pruneTarget?.title ?? "", isPresented: pruneBinding, presenting: pruneTarget) { target in
-            Button("Remove", role: .destructive) { Task { await prune(target) } }
-        } message: { _ in Text("This permanently removes unused resources to reclaim disk space.") }
-        .confirmationDialog("Reclaim all unused space?", isPresented: $reclaimingAll) {
-            Button("Reclaim all", role: .destructive) { Task { await reclaimAll() } }
-        } message: {
-            Text("Removes stopped containers, unused images, unused volumes, and unused networks.")
-        }
-        .confirmationDialog("Compact running container storage?", isPresented: $cleaningRunningStorage) {
-            Button("Compact storage") { Task { await cleanRunningContainerStorage() } }
-        } message: {
-            Text("Reclaims blocks freed inside running containers and their writable named volumes. Containers remain running and their live files are preserved.")
-        }
     }
 
     /// A consistent design-system section card.
@@ -213,27 +186,20 @@ struct SystemContent: View {
 
     private var storageMenu: some View {
         Menu {
-            Button { cleaningRunningStorage = true } label: {
-                Label(AppText.string("cleanup.compactRunning", defaultValue: "Compact running containers"),
-                      systemImage: "arrow.down.right.and.arrow.up.left")
-            }
-            .disabled(cleanableRunningContainers.isEmpty)
+            Button("Refresh Storage Analysis") { Task { await app.refreshStorageAnalysis() } }
+                .disabled(app.storageRuntimes.isEmpty)
             Divider()
-            Button { reclaimingAll = true } label: {
-                Label(AppText.string("cleanup.reclaimAll", defaultValue: "Reclaim all"), systemImage: "trash")
+            ForEach(Core.System.CleanupAction.allCases) { action in
+                Button(StoragePresentation.title(action)) { Task { await app.prepareStorageCleanup(action) } }
+                    .disabled(app.cleanupRuntimes(for: action).isEmpty)
             }
-            .disabled((app.diskUsage?.totalReclaimableBytes ?? 0) == 0)
-            Divider()
-            Button { pruneTarget = .containers } label: { Label(AppText.string("cleanup.stoppedContainers", defaultValue: "Stopped containers"), systemImage: "shippingbox") }
-            Button { pruneTarget = .images } label: { Label(AppText.string("cleanup.unusedImages", defaultValue: "Unused images"), systemImage: "square.stack.3d.up") }
-            Button { pruneTarget = .volumes } label: { Label(AppText.string("cleanup.unusedVolumes", defaultValue: "Unused volumes"), systemImage: "externaldrive") }
-            Button { pruneTarget = .networks } label: { Label(AppText.string("cleanup.unusedNetworks", defaultValue: "Unused networks"), systemImage: "network") }
         } label: {
             UI.Action.MenuLabel(systemName: "trash",
                                   help: AppText.storageCleanup,
                                   role: .destructive)
         }
         .buttonStyle(.plain)
+        .disabled(app.availableRuntimeDescriptors.isEmpty || app.storagePlanInFlight || app.storageCleanupInFlight || app.activeImageBuilds > 0)
     }
 
     // MARK: Volumes
@@ -424,6 +390,7 @@ struct SystemContent: View {
 
     private var automationCard: some View {
         card {
+            StorageAutomationControls()
             Text(AppText.string("system.page.automation", defaultValue: "Automation")).designHeadlineLabelStyle()
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 automationRow(icon: "arrow.triangle.2.circlepath",
@@ -514,76 +481,6 @@ struct SystemContent: View {
         if hours > 0 { return String(format: "%dh %02dm", hours, minutes) }
         if minutes > 0 { return String(format: "%dm %02ds", minutes, secs) }
         return "\(secs)s"
-    }
-
-    private var pruneBinding: Binding<Bool> {
-        Binding(get: { pruneTarget != nil }, set: { if !$0 { pruneTarget = nil } })
-    }
-
-    private func prune(_ target: PruneTarget) async {
-        guard let client = app.client else { return }
-        do {
-            switch target {
-            case .containers:
-                for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.containers) {
-                    _ = try await client.pruneContainers(runtimeKind: descriptor.kind)
-                }
-            case .images:
-                for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.images) {
-                    _ = try await client.pruneImages(all: false, runtimeKind: descriptor.kind)
-                }
-            case .volumes:
-                for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.volumes) {
-                    _ = try await client.pruneVolumes(runtimeKind: descriptor.kind)
-                }
-            case .networks:
-                for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.networks) {
-                    _ = try await client.pruneNetworks(runtimeKind: descriptor.kind)
-                }
-            }
-            await app.refreshSystemResources()
-            await app.refreshSystem()
-        } catch let error as Core.Command.Error { app.flash(error.appDisplayMessage) }
-        catch { app.flash(error.appDisplayMessage) }
-    }
-
-    private func reclaimAll() async {
-        guard let client = app.client else { return }
-        if let error = await app.captured({
-            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.containers) {
-                _ = try await client.pruneContainers(runtimeKind: descriptor.kind)
-            }
-            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.images) {
-                _ = try await client.pruneImages(all: false, runtimeKind: descriptor.kind)
-            }
-            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.volumes) {
-                _ = try await client.pruneVolumes(runtimeKind: descriptor.kind)
-            }
-            for descriptor in app.availableRuntimeDescriptors where descriptor.supports(.networks) {
-                _ = try await client.pruneNetworks(runtimeKind: descriptor.kind)
-            }
-        }) { app.flash(error) }
-        await app.refreshSystemResources()
-        await app.refreshSystem()
-    }
-
-    private var cleanableRunningContainers: [Core.Container.Snapshot] {
-        let supported = Set(app.availableRuntimeDescriptors
-            .filter { $0.supports(.containerStorageCleanup) }
-            .map(\.kind))
-        return app.containers.running.filter { supported.contains($0.runtimeKind) }
-    }
-
-    private func cleanRunningContainerStorage() async {
-        guard let client = app.client else { return }
-        let groups = Dictionary(grouping: cleanableRunningContainers, by: \.runtimeKind)
-        if let error = await app.captured({
-            for (runtimeKind, containers) in groups {
-                _ = try await client.cleanContainers(containers.map(\.id).sorted(), runtimeKind: runtimeKind)
-            }
-        }) { app.flash(error) }
-        await app.refreshSystemResources()
-        await app.refreshSystem()
     }
 
     // MARK: Runtime

@@ -158,6 +158,7 @@ extension AppModel {
     }
 
     func checkImageUpdates(in group: Core.Image.LocalTagGroup) async {
+        for tag in group.tags { registryRetryPolicy.reset(tag.reference, runtimeKind: tag.runtimeKind) }
         for tag in group.tags {
             await checkImageUpdate(tag.reference, runtimeKind: tag.runtimeKind, notify: false)
         }
@@ -179,15 +180,22 @@ extension AppModel {
                                   runtimeKinds: [Core.Runtime.Kind],
                                   notify: Bool) async {
         let runtimeKinds = Array(Set(runtimeKinds)).sorted { $0.rawValue < $1.rawValue }
+        var statuses: [Core.Image.UpdateStatus] = []
         for runtimeKind in runtimeKinds {
             let key = imageUpdateKey(reference, runtimeKind: runtimeKind)
+            if notify { registryRetryPolicy.reset(reference, runtimeKind: runtimeKind) }
+            guard registryRetryPolicy.shouldCheck(reference, runtimeKind: runtimeKind),
+                  registryChecksInFlight.insert(key).inserted else { continue }
+            defer { registryChecksInFlight.remove(key) }
             imageUpdates[key] = .checking(localDigest: localDigest(for: reference, runtimeKind: runtimeKind))
-        }
-        do {
-            let remoteDigest = try await manifestClient.remoteDigest(for: reference)
-            var statuses: [Core.Image.UpdateStatus] = []
-            for runtimeKind in runtimeKinds {
-                let key = imageUpdateKey(reference, runtimeKind: runtimeKind)
+            do {
+                let manifest: Core.Registry.ManifestResult
+                if let registryManifestLookup {
+                    manifest = try await registryManifestLookup(reference, runtimeKind)
+                } else if let client {
+                    manifest = try await client.remoteImageManifest(reference, runtimeKind: runtimeKind)
+                } else { throw Core.Registry.ManifestError.invalidResponse }
+                registryRetryPolicy.succeeded(reference, runtimeKind: runtimeKind, authenticated: manifest.authenticated)
                 guard let localDigest = localDigest(for: reference, runtimeKind: runtimeKind),
                       !localDigest.isEmpty else {
                     let status = Core.Image.UpdateStatus.failed(
@@ -198,34 +206,39 @@ extension AppModel {
                     statuses.append(status)
                     continue
                 }
-                let status = Core.Image.UpdateStatus.resolved(localDigest: localDigest, remoteDigest: remoteDigest)
+                let status = Core.Image.UpdateStatus.resolved(localDigest: localDigest, remoteDigest: manifest.digest)
                 imageUpdates[key] = status
                 statuses.append(status)
-            }
-            if notify {
-                switch aggregateUpdateStatus(statuses).state {
-                case .updateAvailable:
-                    flash(AppText.imageUpdateAvailable(Format.shortImage(reference)))
-                    logger.record("Image update available",
-                                  category: .image,
-                                  severity: .warning)
-                case .current:
-                    flash(AppText.imageUpToDate(Format.shortImage(reference)))
-                default:
-                    break
+            } catch is CancellationError {
+                imageUpdates[key] = Core.Image.UpdateStatus(localDigest: localDigest(for: reference, runtimeKind: runtimeKind))
+            } catch {
+                if Task.isCancelled {
+                    imageUpdates[key] = Core.Image.UpdateStatus(localDigest: localDigest(for: reference, runtimeKind: runtimeKind))
+                    return
                 }
+                let kind = Core.Registry.UpdateFailureKind.classify(error)
+                let host = Core.Registry.UpdateRetryPolicy.host(for: reference)
+                let log = registryRetryPolicy.failed(reference, runtimeKind: runtimeKind, kind: kind)
+                let message = registryFailureMessage(host: host, kind: kind)
+                var status = Core.Image.UpdateStatus.failed(localDigest: localDigest(for: reference, runtimeKind: runtimeKind), message: message)
+                status.registryHost = host
+                status.failureCode = kind.rawValue
+                status.retryAfter = registryRetryPolicy.entries.values.filter {
+                    $0.host == host && $0.runtimeKind == runtimeKind && $0.kind == kind
+                }.map(\.retryAfter).max()
+                imageUpdates[key] = status
+                if notify { flash(message) }
+                if log { logger.record(message, category: .registry, severity: .warning) }
             }
-        } catch {
-            let message = error.appDisplayMessage
-            for runtimeKind in runtimeKinds {
-                let key = imageUpdateKey(reference, runtimeKind: runtimeKind)
-                imageUpdates[key] = .failed(localDigest: localDigest(for: reference, runtimeKind: runtimeKind), message: message)
+        }
+        if notify {
+            switch aggregateUpdateStatus(statuses).state {
+            case .updateAvailable:
+                flash(AppText.imageUpdateAvailable(Format.shortImage(reference)))
+                logger.record("Image update available", category: .image, severity: .warning)
+            case .current: flash(AppText.imageUpToDate(Format.shortImage(reference)))
+            default: break
             }
-            if notify { flash(message) }
-            logger.recordFailure("Failed checking image update",
-                                 error: error,
-                                 category: .image,
-                                 severity: .error)
         }
     }
 
@@ -285,11 +298,34 @@ extension AppModel {
         return true
     }
 
-    /// Background entry point (from `tick()`): run a silent sweep only when the throttle window has
-    /// elapsed, loading the image list first if it hasn't been fetched yet.
+    var nextLocalRegistryRetryDate: Date? {
+        localRegistryRetries().map { $0.entry.retryAfter }.min()
+    }
+
+    private func localRegistryRetries() -> [(reference: String, entry: Core.Registry.UpdateRetryPolicy.Entry)] {
+        let local = Set(uniqueImageReferences().map(imageUpdateKey))
+        return registryUpdateFailures.flatMap { entry in
+            entry.references.compactMap { reference in
+                guard local.contains(imageUpdateKey(reference)),
+                      localRuntimeTargets(for: reference).contains(entry.runtimeKind) else { return nil }
+                return (reference: reference, entry: entry)
+            }
+        }
+    }
+
+    /// Background retries follow their own deadlines without rechecking healthy images or
+    /// postponing the regular full sweep. Removed images and other runtimes are not retried.
     func checkImageUpdatesIfNeeded(now: Date = Date()) async {
         guard settings.imageUpdateChecksEnabled else { return }
-        if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < imageUpdateInterval { return }
+        if let lastImageUpdateSweep, now.timeIntervalSince(lastImageUpdateSweep) < imageUpdateInterval {
+            var checked = Set<String>()
+            for (reference, entry) in localRegistryRetries() where entry.retryAfter <= now {
+                guard registryRetryPolicy.shouldCheck(reference, runtimeKind: entry.runtimeKind, now: now),
+                      checked.insert(imageUpdateKey(reference, runtimeKind: entry.runtimeKind)).inserted else { continue }
+                await checkImageUpdate(reference, runtimeKind: entry.runtimeKind, notify: false)
+            }
+            return
+        }
         if images.isEmpty, let client {
             do {
                 setImages(try await client.runtimeImages())
@@ -324,6 +360,12 @@ extension AppModel {
         guard !references.isEmpty else {
             if manual { flash(emptyMessage) }
             return
+        }
+        await refreshRegistries()
+        if manual {
+            for reference in references {
+                for kind in localRuntimeTargets(for: reference) { registryRetryPolicy.reset(reference, runtimeKind: kind) }
+            }
         }
         for reference in references { await checkImageUpdate(reference, notify: false) }
         guard manual else { return }

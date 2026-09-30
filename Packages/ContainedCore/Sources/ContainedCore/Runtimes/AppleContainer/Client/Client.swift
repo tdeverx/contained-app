@@ -188,6 +188,11 @@ struct AppleContainerClient: Sendable {
 
     // MARK: Registries
 
+    func remoteImageManifest(_ reference: String) async throws -> Core.Registry.ManifestResult {
+        try await Core.Registry.ManifestClient(credentials: AppleRegistryCredentials.lookup)
+            .remoteManifest(for: .parse(reference))
+    }
+
     func registries() async throws -> [Core.Registry.Login] {
         try await decode([Core.Registry.Login].self, ContainerCommands.registryList(), "registry list")
     }

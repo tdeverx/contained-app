@@ -36,14 +36,24 @@ extension AppModel {
     }
 
     func resolveDowngradeByKeepingReadableData() {
+        guard recoverPersistenceForDowngradeDecision() else { return }
         database.setSetting(StateMigrator.currentSchemaVersion, for: StateMigrator.schemaVersionSettingKey)
+        guard database.canPersist, database.lastFailure == nil else { return }
         downgradeSchemaVersion = nil
+        Task { await retryBootstrap() }
         flash(AppText.keptReadableLocalData)
     }
 
-    func resetIncompatibleLocalState() {
+    @discardableResult
+    func resetIncompatibleLocalState() -> Bool {
+        guard recoverPersistenceForDowngradeDecision() else { return false }
         historyStore.clearAll()
+        guard database.canPersist else { return false }
         database.setSetting(StateMigrator.currentSchemaVersion, for: StateMigrator.schemaVersionSettingKey)
+        guard database.canPersist, database.lastFailure == nil else { return false }
+        downgradeSchemaVersion = nil
+        Task { await retryBootstrap() }
+        return true
     }
 
     func purgeDeadRows() {

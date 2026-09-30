@@ -17,6 +17,9 @@ struct BuildWorkspaceView: View {
     @State private var buildArgs: [KeyValue] = []
     @State private var runtimeKind = AppRuntimeIntent.placeholderKind
     @State private var building = false
+    @State private var checkingSpace = false
+    @State private var spaceCheckTask: Task<Void, Never>?
+    @State private var hasActiveBuild = false
     @State private var choosingContext = false
     @State private var run = 0          // bump to restart the console
     private var canBuild: Bool { contextDir != nil && !tag.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -40,7 +43,10 @@ struct BuildWorkspaceView: View {
                 lineCountLabel: AppText.lineCount,
                 copyLogHelp: AppText.copyLog,
                 failureLabel: AppErrorPresentation.message,
-                onComplete: { ok in if ok { Task { await app.refreshImagesIfNeeded(force: true) } } })
+                onComplete: { ok in
+                    finishBuildTracking()
+                    if ok { Task { await app.refreshImagesIfNeeded(force: true) } }
+                })
                 .id(run)
                 .padding(UI.Layout.Spacing.s)
             } else {
@@ -50,6 +56,10 @@ struct BuildWorkspaceView: View {
             }
         }
         .onAppear(perform: normalizeRuntimeSelection)
+        .onDisappear {
+            spaceCheckTask?.cancel()
+            finishBuildTracking()
+        }
         .fileImporter(isPresented: $choosingContext,
                       allowedContentTypes: [.folder]) { result in
             switch result {
@@ -159,12 +169,13 @@ struct BuildWorkspaceView: View {
                                                    help: AppText.cancelBuild,
                                                    role: .destructive) {
                         building = false
+                        finishBuildTracking()
                     })
                 } else {
                     UI.Action.Group(UI.Action.Item(systemName: "hammer.fill",
                                                    title: AppText.string("build.build", defaultValue: "Build"),
                                                    help: AppText.buildImage,
-                                                   isEnabled: canBuild,
+                                                   isEnabled: canBuild && !checkingSpace && !app.storageCleanupInFlight,
                                                    action: startBuild))
                 }
             }
@@ -190,8 +201,21 @@ struct BuildWorkspaceView: View {
     }
 
     private func startBuild() {
-        run += 1
-        building = true
+        checkingSpace = true
+        spaceCheckTask = Task {
+            defer { checkingSpace = false }
+            guard await app.permitStorageIntensiveOperation(runtimeKind: runtimeKind), !Task.isCancelled else { return }
+            run += 1
+            building = true
+            hasActiveBuild = true
+            app.activeImageBuilds += 1
+        }
+    }
+
+    private func finishBuildTracking() {
+        guard hasActiveBuild else { return }
+        hasActiveBuild = false
+        app.activeImageBuilds = max(0, app.activeImageBuilds - 1)
     }
 
     private func chooseFolder() {
