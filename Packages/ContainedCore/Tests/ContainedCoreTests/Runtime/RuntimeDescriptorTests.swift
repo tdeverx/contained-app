@@ -418,6 +418,54 @@ struct RuntimeDescriptorTests {
         request.name = name
         return Core.Schema.Document.containerCreate(from: request)
     }
+
+    @Test func recreationDoesNotReportStoppedRollbackAsRestored() async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "web", image: "nginx:stable", runtimeKind: .appleContainer)],
+            createErrors: [.nonZeroExit(code: 1, stderr: "mount failed", command: "run")],
+            creationStates: [.stopped])
+        let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
+        do {
+            _ = try await orchestrator.recreateContainer(originalID: "web", replacement: recreateDocument(), rollback: recreateDocument(name: "web"))
+            Issue.record("Expected failed rollback startup")
+        } catch let failure as Core.Container.RecreateFailure {
+            #expect(failure.recovery == .restoreFailed)
+            #expect(failure.primaryFailure.runtimeDetail == "mount failed")
+            #expect(failure.recoveryFailure?.code == "recreateReplacementNotRunning")
+        }
+    }
+
+    @Test func explicitRecoveryNeverDeletesAnExistingContainer() async throws {
+        let runtime = RecordingContainerRuntime(containers: [.placeholder(id: "web", image: "nginx:stable", runtimeKind: .appleContainer)])
+        let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
+        do {
+            _ = try await orchestrator.restoreContainer(recreateDocument(name: "web"), mustBeRunning: true)
+            Issue.record("Expected recovery name collision")
+        } catch {
+            #expect((error as? any Core.Error.PackageError)?.packageErrorCode == "recreateRecoveryNameInUse")
+        }
+        #expect(await runtime.createdRequests.isEmpty)
+        #expect(await runtime.deletedIDs.isEmpty)
+        #expect(await runtime.stoppedIDs.isEmpty)
+    }
+
+    @Test func explicitRecoveryRequiresVerifiedStartup() async throws {
+        let runtime = RecordingContainerRuntime(containers: [], creationStates: [.stopped, .running])
+        let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
+        do {
+            _ = try await orchestrator.restoreContainer(recreateDocument(name: "web"), mustBeRunning: true)
+            Issue.record("Expected stopped restore verification to fail")
+        } catch {
+            #expect((error as? any Core.Error.PackageError)?.packageErrorCode == "recreateReplacementNotRunning")
+        }
+        // Failed verification leaves the object for inspection rather than silently deleting it.
+        #expect(await runtime.deletedIDs.isEmpty)
+        let result = try await orchestrator.restoreContainer(recreateDocument(name: "other"), mustBeRunning: true)
+        #expect(result.id == "other")
+    }
 }
 
 private struct UnavailableRuntime: RuntimeClient,

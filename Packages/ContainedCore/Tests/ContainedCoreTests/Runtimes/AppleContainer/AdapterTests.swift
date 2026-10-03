@@ -4,6 +4,42 @@ import Testing
 
 @Suite("Runtime adapter boundary")
 struct AppleContainerAdapterTests {
+    @Test func localDigestRecoveryCreatesAndVerifiesAnImmutableAlias() async throws {
+        let digest = "sha256:" + String(repeating: "a", count: 64)
+        let alias = "ghcr.io/example/coast:contained-recovery-" + String(repeating: "a", count: 64)
+        let source = Core.Image.Resource(configuration: .init(name: "ghcr.io/example/coast:old", descriptor: .init(digest: digest, mediaType: nil, size: nil), creationDate: nil), id: digest, runtimeKind: .appleContainer)
+        let tagged = Core.Image.Resource(configuration: .init(name: alias, descriptor: .init(digest: digest, mediaType: nil, size: nil), creationDate: nil), id: digest, runtimeKind: .appleContainer)
+        let runner = CommandMapRunner(outputs: [
+            ContainerCommands.imageList(): .success(try JSONEncoder().encode([source])),
+            ContainerCommands.imageTag(source: source.reference, target: alias): .success(Data()),
+            ContainerCommands.imageInspect([alias]): .success(try JSONEncoder().encode([tagged])),
+        ])
+        let client = AppleContainerClient(runner: runner)
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "ghcr.io/example/coast@\(digest)"
+        let prepared = try await client.prepareCreateRequest(request)
+        #expect(prepared.image == alias)
+        #expect(try await client.prepareCreateRequest(prepared).image == alias)
+    }
+
+    @Test func conflictingRecoveryAliasIsNeverOverwritten() async throws {
+        let digest = "sha256:" + String(repeating: "a", count: 64)
+        let alias = "ghcr.io/example/coast:contained-recovery-" + String(repeating: "a", count: 64)
+        let source = Core.Image.Resource(configuration: .init(name: "ghcr.io/example/coast:old", descriptor: .init(digest: digest, mediaType: nil, size: nil), creationDate: nil), id: digest, runtimeKind: .appleContainer)
+        let conflict = Core.Image.Resource(configuration: .init(name: alias, descriptor: .init(digest: "sha256:wrong", mediaType: nil, size: nil), creationDate: nil), id: "sha256:wrong", runtimeKind: .appleContainer)
+        let client = AppleContainerClient(runner: CommandMapRunner(outputs: [
+            ContainerCommands.imageList(): .success(try JSONEncoder().encode([source, conflict])),
+        ]))
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "ghcr.io/example/coast@\(digest)"
+        do {
+            _ = try await client.prepareCreateRequest(request)
+            Issue.record("Expected alias identity conflict")
+        } catch {
+            #expect((error as? any Core.Error.PackageError)?.packageErrorCode == "recoveryImageIdentityChanged")
+        }
+    }
+
     @Test func runtimeKindAcceptsFutureAdapters() throws {
         let descriptor = Core.Runtime.Descriptor(kind: Core.Runtime.Kind(rawValue: "future-runtime"),
                                            displayName: "Future Runtime",

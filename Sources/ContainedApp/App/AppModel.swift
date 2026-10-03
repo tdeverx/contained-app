@@ -52,6 +52,7 @@ final class AppModel {
     var storageAnalyses: [Core.Runtime.Kind: Core.System.StorageAnalysis] = [:]
     var storageAnalysisErrors: [Core.Runtime.Kind: String] = [:]
     var storageCleanupPlans: [Core.System.CleanupPlan] = []
+    var storageCleanupRecommended = false
     struct RuntimePruneRequest: Identifiable {
         let id = UUID()
         let runtimeKind: Core.Runtime.Kind
@@ -989,7 +990,7 @@ final class AppModel {
         }
         let originalRuntimeID = originalSnapshot.id
         let originalScopedID = originalSnapshot.scopedID
-        guard core(for: spec.effectiveRuntimeKind) != nil else {
+        guard let core = core(for: spec.effectiveRuntimeKind) else {
             let error = Core.Runtime.UnsupportedCapability(kind: spec.effectiveRuntimeKind, capability: .containers)
             flash(error.appDisplayMessage)
             logger.recordFailure("Recreate requested unavailable runtime",
@@ -997,6 +998,14 @@ final class AppModel {
                                  category: .lifecycle,
                                  severity: .warning,
                                  containerID: originalScopedID)
+            return nil
+        }
+        let rollbackDocument = Core.Schema.Document.containerRecovery(from: originalSnapshot.configuration)
+        do { try await core.prepareContainerRecovery(rollbackDocument) }
+        catch {
+            flash(error.appDisplayMessage)
+            logger.recordFailure("Failed preparing original recovery image", error: error,
+                                 category: .lifecycle, severity: .warning, containerID: originalScopedID)
             return nil
         }
         if !(await imageIsLocal(spec.image, runtimeKind: spec.effectiveRuntimeKind)) {
@@ -1014,8 +1023,10 @@ final class AppModel {
             return nil
         }
         let replacementDocument = spec.materializedDocumentForRun()
-        let rollbackDocument = Core.Schema.Document.containerEdit(from: originalSnapshot.configuration)
-        database.markContainerRecreateStarted(source: originalSnapshot, sourceDocument: rollbackDocument)
+        guard database.markContainerRecreateStarted(source: originalSnapshot, sourceDocument: rollbackDocument) else {
+            flash(AppText.string("recreate.backupFailed", defaultValue: "Recreation stopped because the original recovery recipe could not be saved. Retry database recovery before replacing the container."))
+            return nil
+        }
         guard await containers.recreate(originalID: originalID,
                                         replacement: replacementDocument,
                                         rollback: rollbackDocument) else {

@@ -1,0 +1,2 @@
+- Added **Free Up Space…** with compaction selected by default, explicit opt-in resource/cache deletion, and access to automatic compaction settings.
+- Fixed Apple Container recreation accumulating image entrypoint arguments; pinned and verified rollback and added visible recovery for missing containers after failed replacement/restoration.

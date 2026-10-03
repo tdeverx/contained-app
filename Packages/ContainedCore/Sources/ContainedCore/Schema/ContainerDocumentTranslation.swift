@@ -113,6 +113,11 @@ public extension Core.Schema.Document {
         request.platform = configuration.platform.display
         request.name = configuration.id
         request.command = configuration.initProcess.arguments
+        // Apple inspect reports the resolved process, not an image CMD override. Without an
+        // explicit executable, run prepends the image's entrypoint again on every recreation.
+        if configuration.runtimeKind == .appleContainer {
+            request.entrypoint = configuration.initProcess.executable ?? ""
+        }
         request.tty = configuration.initProcess.terminal
         request.cpus = String(configuration.resources.cpus)
         request.memory = Self.memorySpec(configuration.resources.memoryInBytes)
@@ -166,6 +171,17 @@ public extension Core.Schema.Document {
         request.restart = Core.Container.RestartPolicy(label: configuration.labels["contained.restart"])
         var document = Core.Schema.Document.containerCreate(from: request)
         document.operation = .containerEdit
+        return document
+    }
+
+    /// Restore the inspected image, even if its tag has since moved to a replacement image.
+    static func containerRecovery(from configuration: Core.Container.Configuration) -> Core.Schema.Document {
+        var document = containerEdit(from: configuration)
+        if configuration.runtimeKind == .appleContainer,
+           let digest = configuration.image.descriptor?.digest, digest.hasPrefix("sha256:") {
+            let repository = Core.Registry.ImageReference.normalizedRepositoryKey(configuration.image.reference)
+            document.set(.imageReference, .string("\(repository)@\(digest)"))
+        }
         return document
     }
 

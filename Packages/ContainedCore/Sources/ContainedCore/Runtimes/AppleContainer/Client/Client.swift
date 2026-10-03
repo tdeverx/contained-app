@@ -98,9 +98,11 @@ struct AppleContainerClient: Sendable {
     }
 
     func prepareCreateRequest(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateRequest {
+        var prepared = request
+        prepared.image = try await localDigestReference(request.image)
         guard request.volumes.contains(where: {
             Self.standardizedPath($0.source).hasSuffix("/volume.img")
-        }) else { return request }
+        }) else { return prepared }
 
         let runtimeVolumes = try await volumes()
         let namesByBackingPath = runtimeVolumes.reduce(into: [String: String]()) { result, volume in
@@ -108,12 +110,36 @@ struct AppleContainerClient: Sendable {
             result[Self.standardizedPath(source)] = volume.name
         }
 
-        var prepared = request
         prepared.volumes = request.volumes.map { mount in
             guard let name = namesByBackingPath[Self.standardizedPath(mount.source)] else { return mount }
             return Core.Container.VolumeMount(source: name, target: mount.target, readOnly: mount.readOnly)
         }
         return prepared
+    }
+
+    /// Apple lookup is name-based. Preserve a locally stored digest under a verified recovery
+    /// name rather than letting rollback re-resolve a tag that may now point at the new image.
+    private func localDigestReference(_ reference: String) async throws -> String {
+        let parsed = Core.Registry.ImageReference.parse(reference)
+        guard parsed.isDigestReference, parsed.reference.hasPrefix("sha256:") else { return reference }
+        let digest = parsed.reference
+        let inventory = try await images()
+        func matches(_ image: Core.Image.Resource) -> Bool {
+            image.id == digest || image.digest == digest || image.variants.contains { $0.digest == digest }
+        }
+        if inventory.contains(where: { Core.Registry.ImageReference.normalizedKey($0.reference) == parsed.normalizedKey && matches($0) }) {
+            return reference
+        }
+        guard let source = inventory.first(where: matches) else { return reference }
+        let alias = "\(parsed.normalizedRepositoryKey):contained-recovery-\(digest.dropFirst("sha256:".count))"
+        if let existing = inventory.first(where: { Core.Registry.ImageReference.normalizedKey($0.reference) == Core.Registry.ImageReference.normalizedKey(alias) }) {
+            guard matches(existing) else { throw RecoveryImageError.identityChanged }
+        } else {
+            _ = try await tagImage(source: source.reference, target: alias)
+        }
+        let tagged = try await inspectImage(alias)
+        guard tagged.contains(where: matches) else { throw RecoveryImageError.identityChanged }
+        return alias
     }
 
     @discardableResult func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
@@ -287,4 +313,10 @@ struct AppleContainerClient: Sendable {
             throw Core.Command.Error.decodingFailed(underlying: String(describing: error), command: name)
         }
     }
+}
+
+private enum RecoveryImageError: Core.Error.PackageError {
+    case identityChanged
+    var packageName: String { "ContainedCore" }
+    var packageErrorCode: String { "recoveryImageIdentityChanged" }
 }

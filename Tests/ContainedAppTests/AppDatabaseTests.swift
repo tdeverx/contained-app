@@ -251,6 +251,23 @@ struct AppDatabaseTests {
         #expect(retained.runtimeProjectionsData != nil)
     }
 
+    @Test func failedRecreationRefreshCannotReplaceTheOriginalRecoveryRecipe() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let source = Core.Container.Snapshot.placeholder(id: "coast", image: "example/coast:original", runtimeKind: .appleContainer)
+        let document = Core.Schema.Document.containerRecovery(from: source.configuration)
+        #expect(database.markContainerRecreateStarted(source: source, sourceDocument: document))
+        database.markContainerRecreateFailed(scopedID: source.scopedID)
+        let replacement = Core.Container.Snapshot.placeholder(id: "coast", image: "example/coast:broken", state: .stopped, runtimeKind: .appleContainer)
+        _ = await database.upsertContainers([replacement])
+        let recovery = try #require(database.containerRecreationRecoveries().first)
+        #expect(recovery.snapshot == source)
+        #expect(recovery.document == document)
+        _ = await database.upsertContainers([])
+        #expect(database.containerRecreationRecoveries().count == 1)
+        database.completeContainerRecreate(sourceScopedID: source.scopedID, replacementScopedID: source.scopedID)
+        #expect(database.containerRecreationRecoveries().isEmpty)
+    }
+
     @Test func linkedVolumePathMetadataIsPersistedAndRetainsMissingContainer() async throws {
         let database = AppDatabase(isStoredInMemoryOnly: true)
         let runner = DockerRecordingRunner()

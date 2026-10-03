@@ -47,6 +47,27 @@ failed streamed pull stops the update instead of being reported as successful.
 Rebuild and Update preserve whether the container was running or stopped, while
 ordinary Start, Stop, and Restart remain non-destructive lifecycle operations.
 
+Apple Container edits preserve the inspected executable explicitly, so recreating
+does not repeatedly prepend the image entrypoint's arguments. Intentional repeated
+arguments are preserved, not guessed away. Before teardown, Contained must save the
+original recipe; its image is pinned to the inspected digest when available. Apple
+Container resolves that digest through a verified `contained-recovery-<digest>` image
+tag when needed. This retains the local original independently of a moving tag; it
+can be removed through unused-image cleanup once no container references it. Rollback
+is verified for image identity and startup before reporting that the original returned.
+
+If replacement and rollback fail, **Review Recovery…** remains on the Containers
+page even when the runtime container is missing. Review the original image, recovery
+digest, and requested command before **Restore Original**. Recovery never overwrites or
+deletes an existing container. If a partial runtime object already occupies the name,
+inspect it with the normal container controls; **Keep Existing Container** explicitly
+closes the saved recovery after confirmation. Inventory refreshes cannot overwrite
+the original backup with that partial object's configuration. Runtime stderr is shown
+for a failed attempt but is not stored in the recovery record or Activity history.
+Destructive storage cleanup is blocked for that runtime while recreation recovery
+remains pending, because a missing runtime object cannot protect its saved image,
+volumes, and networks from native pruning. Compaction remains available.
+
 The app serializes refreshes around lifecycle actions so a user action and the
 background polling tick do not fight over inventory and stats streams. While the
 Containers screen is hidden or Contained is inactive, a five-minute, per-runtime

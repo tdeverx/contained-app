@@ -348,6 +348,26 @@ public extension Core {
             return try await createContainer(request)
         }
 
+        /// Preserve recovery resources before pulling a replacement or tearing down the original.
+        public func prepareContainerRecovery(_ document: Core.Schema.Document) async throws {
+            let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
+            let request = try document.validatedRequest(definition: definition)
+            let runtime = try requireRuntime(request.runtimeKind, capability: .containers,
+                                             as: (any RuntimeContainerClient).self)
+            // Preserve any local immutable image before a replacement pull can move its tag.
+            _ = try await runtime.prepareCreateRequest(request)
+        }
+
+        /// Restore a saved recreation recipe without replacing any existing runtime object.
+        @discardableResult public func restoreContainer(_ document: Core.Schema.Document,
+                                                        mustBeRunning: Bool) async throws -> Core.Container.CreateResult {
+            let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
+            let request = try document.validatedRequest(definition: definition)
+            let runtime = try requireRuntime(request.runtimeKind, capability: .containers,
+                                             as: (any RuntimeContainerClient).self)
+            return try await runtime.restoreContainer(request, mustBeRunning: mustBeRunning)
+        }
+
         @discardableResult private func recreateContainer(originalID: String,
                                                          replacement: Core.Container.CreateRequest,
                                                          rollback: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {

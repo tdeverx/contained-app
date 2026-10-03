@@ -10,6 +10,12 @@ struct SystemStorageContent: View {
         UI.Surface.Content(elevated: elevated, alignment: .leading) {
             VStack(alignment: .leading, spacing: UI.Layout.Spacing.m) {
                 Text("Storage analysis").designHeadlineLabelStyle()
+                UI.Action.TextButton(title: AppText.string("storage.freeUpSpace", defaultValue: "Free Up Space…"),
+                                     systemName: "externaldrive.badge.minus",
+                                     help: AppText.string("storage.freeUpSpace.help", defaultValue: "Review compaction and optional cleanup before changing anything")) {
+                    Task { await app.prepareFreeUpSpace() }
+                }
+                .disabled(app.storagePlanInFlight || app.storageCleanupInFlight)
                 Button("Refresh Storage Analysis") { Task { await app.refreshStorageAnalysis() } }
                 ForEach(app.storageRuntimes, id: \.kind) { runtime in
                     if let error = app.storageAnalysisErrors[runtime.kind] { UI.State.InlineStatus(error, tone: .error) }
