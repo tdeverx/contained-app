@@ -35,15 +35,34 @@ extension RuntimeContainerClient {
         throw Core.Runtime.UnsupportedCapability(kind: descriptor.kind, capability: .containers)
     }
 
+    /// Explicit recovery only creates a missing object; it never deletes a colliding workload.
+    func restoreContainer(_ request: Core.Container.CreateRequest, mustBeRunning: Bool) async throws -> Core.Container.CreateResult {
+        let pinnedReference = request.image
+        let request = try await prepareCreateRequest(request)
+        guard !request.name.isEmpty, try await containerSnapshot(matching: request.name) == nil else {
+            throw RecreateVerificationError.recoveryNameInUse
+        }
+        let identities = try await resolvedImageIdentities(for: request.image, pinnedReference: pinnedReference)
+        let result = try await createContainer(request)
+        try await verifyReplacement(id: result.id ?? request.name,
+                                    expectedImageIdentities: identities, mustBeRunning: mustBeRunning)
+        return result
+    }
+
     @discardableResult func recreateContainer(originalID: String,
                                              replacement: Core.Container.CreateRequest,
                                              rollback: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
         // Resolve runtime-owned resources before touching the original. Adapters may need inventory
         // lookups to turn inspected implementation details back into stable create arguments.
+        let replacementReference = replacement.image
+        let rollbackReference = rollback.image
         let replacement = try await prepareCreateRequest(replacement)
         let rollback = try await prepareCreateRequest(rollback)
-        let originalWasRunning = try? await containerSnapshot(matching: originalID)?.state == .running
-        let expectedImageIdentities = try await resolvedImageIdentities(for: replacement.image)
+        let original = try await containerSnapshot(matching: originalID)
+        let originalWasRunning = original?.state == .running
+        let expectedImageIdentities = try await resolvedImageIdentities(for: replacement.image, pinnedReference: replacementReference)
+        // Resolve rollback before teardown too; a moving tag must not turn restoration into an update.
+        let rollbackImageIdentities = try await resolvedImageIdentities(for: rollback.image, pinnedReference: rollbackReference)
         _ = try? await stop([originalID])
         let deletedOriginal: Bool
         do {
@@ -60,7 +79,7 @@ extension RuntimeContainerClient {
             createdReplacementID = result.id ?? replacement.name
             try await verifyReplacement(id: createdReplacementID,
                                         expectedImageIdentities: expectedImageIdentities,
-                                        mustBeRunning: originalWasRunning == true)
+                                        mustBeRunning: originalWasRunning)
             return result
         } catch {
             let replacementError = error
@@ -73,7 +92,10 @@ extension RuntimeContainerClient {
                                                      primaryError: replacementError)
             }
             do {
-                _ = try await createContainer(rollback)
+                let restored = try await createContainer(rollback)
+                try await verifyReplacement(id: restored.id ?? rollback.name,
+                                            expectedImageIdentities: rollbackImageIdentities,
+                                            mustBeRunning: originalWasRunning)
             } catch {
                 throw Core.Container.RecreateFailure(phase: .restoreOriginal,
                                                      recovery: .restoreFailed,
@@ -86,7 +108,7 @@ extension RuntimeContainerClient {
         }
     }
 
-    private func resolvedImageIdentities(for reference: String) async throws -> Set<String>? {
+    private func resolvedImageIdentities(for reference: String, pinnedReference: String? = nil) async throws -> Set<String>? {
         guard let imageClient = self as? any RuntimeImageClient else { return nil }
         let images = try await imageClient.inspectImage(reference)
         let identities = images.reduce(into: Set<String>()) { result, image in
@@ -94,6 +116,14 @@ extension RuntimeContainerClient {
             if let digest = image.digest {
                 result.insert(Self.normalizedImageIdentity(digest))
             }
+        }
+        let pinned = Core.Registry.ImageReference.parse(pinnedReference ?? reference)
+        if pinned.isDigestReference {
+            let expected = Self.normalizedImageIdentity(pinned.reference)
+            guard identities.contains(expected) else {
+                throw RecreateVerificationError.imageMismatch(expected: [expected], actual: images.first?.digest)
+            }
+            return [expected]
         }
         return identities.isEmpty ? nil : identities
     }
@@ -147,6 +177,7 @@ extension RuntimeContainerClient {
 }
 
 private enum RecreateVerificationError: LocalizedError, Core.Error.PackageError {
+    case recoveryNameInUse
     case replacementUnavailable(id: String)
     case replacementNotRunning(id: String, state: String)
     case imageMismatch(expected: [String], actual: String?)
@@ -155,6 +186,7 @@ private enum RecreateVerificationError: LocalizedError, Core.Error.PackageError 
 
     var packageErrorCode: String {
         switch self {
+        case .recoveryNameInUse: "recreateRecoveryNameInUse"
         case .replacementUnavailable: "recreateReplacementUnavailable"
         case .replacementNotRunning: "recreateReplacementNotRunning"
         case .imageMismatch: "recreateImageMismatch"
@@ -165,6 +197,8 @@ private enum RecreateVerificationError: LocalizedError, Core.Error.PackageError 
 
     var errorDescription: String? {
         switch self {
+        case .recoveryNameInUse:
+            "Recovery requires a missing container name. An existing container will not be replaced or deleted."
         case .replacementUnavailable(let id):
             "Replacement container \(id) was not available after creation."
         case .replacementNotRunning(let id, let state):

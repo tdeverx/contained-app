@@ -6,6 +6,21 @@ import ContainedCore
 @Suite("Storage cleanup routing")
 @MainActor
 struct StorageRoutingTests {
+    @Test func freeUpSpaceNeverSelectsDeletionByDefaultOrRunsPruneDuringPreview() async {
+        for action in Core.System.CleanupAction.allCases {
+            #expect(AppModel.cleanupSelectedByDefault(action, recommended: true) == (action.risk == .compaction))
+            #expect(AppModel.cleanupSelectedByDefault(action, recommended: false))
+        }
+        let runner = DockerRecordingRunner()
+        let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
+        app.installRuntimeClientForTesting(appTestOrchestrator(runner: runner, runtimeKind: .docker))
+        await app.prepareFreeUpSpace()
+        #expect(app.storageCleanupRecommended)
+        #expect(Set(app.runtimePruneRequests.map(\.action)) == [.unusedImages, .unusedVolumes, .unusedNetworks])
+        #expect(!(await runner.contains(["image", "prune", "--force", "--all"])))
+        #expect(!(await runner.contains(["volume", "prune", "--force"])))
+    }
+
     @Test func dockerImageCleanupRequiresConfirmationAndUsesItsNativeRoute() async {
         let runner = DockerRecordingRunner()
         let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
@@ -16,6 +31,30 @@ struct StorageRoutingTests {
         #expect(!(await runner.contains(["image", "prune", "--force", "--all"])))
         await app.performStorageCleanup([], pruneRequests: app.runtimePruneRequests)
         #expect(await runner.contains(["image", "prune", "--force", "--all"]))
+    }
+
+    @Test func cleanupCannotDeleteRecoveryResourcesDuringALifecycleOperation() async {
+        let runner = DockerRecordingRunner()
+        let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
+        app.installRuntimeClientForTesting(appTestOrchestrator(runner: runner, runtimeKind: .docker))
+        await app.prepareStorageCleanup(.unusedImages)
+        app.containers.busyIDs.insert("docker::web")
+        await app.performStorageCleanup([], pruneRequests: app.runtimePruneRequests)
+        #expect(!(await runner.contains(["image", "prune", "--force", "--all"])))
+    }
+
+    @Test func pendingMissingContainerRecoveryProtectsResourcesEvenAfterPreview() async {
+        let runner = DockerRecordingRunner()
+        let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
+        app.installRuntimeClientForTesting(appTestOrchestrator(runner: runner, runtimeKind: .docker))
+        await app.prepareStorageCleanup(.unusedImages)
+        let source = Core.Container.Snapshot.placeholder(id: "missing", image: "alpine", runtimeKind: .docker)
+        #expect(app.database.markContainerRecreateStarted(source: source, sourceDocument: .containerRecovery(from: source.configuration)))
+        app.database.markContainerRecreateFailed(scopedID: source.scopedID)
+        await app.performStorageCleanup([], pruneRequests: app.runtimePruneRequests)
+        #expect(!(await runner.contains(["image", "prune", "--force", "--all"])))
+        await app.prepareStorageCleanup(.unusedVolumes)
+        #expect(app.runtimePruneRequests.isEmpty)
     }
 
     @Test func runtimePruneRemainsAvailableWithoutAppleStorageManagement() {

@@ -56,8 +56,11 @@ extension AppDatabase {
                 record.displayName = snapshot.displayName
                 record.imageReference = snapshot.image
                 record.statusRaw = snapshot.state.rawValue
-                if let documentData = item.documentData { record.documentData = documentData }
-                if let snapshotData = item.snapshotData { record.snapshotData = snapshotData }
+                // A partially-created replacement/rollback is not the saved original recipe.
+                if record.migrationStateRaw != "recreating" && record.migrationStateRaw != "recreateFailed" {
+                    if let documentData = item.documentData { record.documentData = documentData }
+                    if let snapshotData = item.snapshotData { record.snapshotData = snapshotData }
+                }
                 record.isMissing = false
                 record.missingSince = nil
                 record.lastSeenAt = observedAt
@@ -451,10 +454,14 @@ extension AppDatabase {
 
     /// Saves the live recipe before recreate deletes the runtime object. Reuse the projection
     /// payload so a failed restoration remains recoverable without adding another persistence model.
+    @discardableResult
     func markContainerRecreateStarted(source: Core.Container.Snapshot,
                                       sourceDocument: Core.Schema.Document,
-                                      observedAt: Date = Date()) {
+                                      observedAt: Date = Date()) -> Bool {
+        var saved = false
         performMutation {
+            let documentData = try Self.encoded(sourceDocument)
+            let snapshotData = try Self.encoded(source)
             let record: ContainerRecord
             if let existing = try fetchRequired(ContainerRecord.self).first(where: { $0.scopedID == source.scopedID }) {
                 record = existing
@@ -470,20 +477,45 @@ extension AppDatabase {
 
             var projections = runtimeProjections(from: record)
             projections[source.runtimeKind.rawValue] = sourceDocument
-            record.documentData = encode(sourceDocument)
-            record.snapshotData = encode(source)
-            record.runtimeProjectionsData = encode(projections)
+            record.documentData = documentData
+            record.snapshotData = snapshotData
+            record.runtimeProjectionsData = try Self.encoded(projections)
             record.migrationStateRaw = "recreating"
             record.isMissing = false
             record.missingSince = nil
             record.updatedAt = observedAt
-            save()
+            saved = save()
         }
+        return saved
     }
 
+    struct ContainerRecreationRecovery: Identifiable {
+        var id: String { snapshot.scopedID }
+        let snapshot: Core.Container.Snapshot
+        let document: Core.Schema.Document
+    }
+
+    func containerRecreationRecoveries() -> [ContainerRecreationRecovery] {
+        _ = mutationRevision
+        return fetch(ContainerRecord.self).filter {
+            $0.migrationStateRaw == "recreating" || $0.migrationStateRaw == "recreateFailed"
+        }.compactMap { record in
+            do {
+                guard let data = record.snapshotData else { throw Failure.decodeRecord(record: record.scopedID, detail: "Missing original snapshot") }
+                let snapshot = try JSONDecoder().decode(Core.Container.Snapshot.self, from: data)
+                return ContainerRecreationRecovery(snapshot: snapshot, document: .containerRecovery(from: snapshot.configuration))
+            } catch {
+                recordFailure(.decodeRecord(record: "recreation recovery \(record.scopedID)", detail: Self.safeDetail(error)))
+                return nil
+            }
+        }.sorted { $0.id < $1.id }
+    }
+
+    @discardableResult
     func completeContainerRecreate(sourceScopedID: String,
                                    replacementScopedID: String,
-                                   observedAt: Date = Date()) {
+                                   observedAt: Date = Date()) -> Bool {
+        var saved = false
         performMutation {
             guard let source = try fetchRequired(ContainerRecord.self).first(where: { $0.scopedID == sourceScopedID }) else { return }
             if sourceScopedID == replacementScopedID {
@@ -492,8 +524,9 @@ extension AppDatabase {
             } else {
                 context.delete(source)
             }
-            save()
+            saved = save()
         }
+        return saved
     }
 
     func markContainerRecreateFailed(scopedID: String,

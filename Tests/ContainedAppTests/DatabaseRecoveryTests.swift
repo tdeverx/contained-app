@@ -10,6 +10,40 @@ struct DatabaseRecoveryTests {
     private let diskFull = NSError(domain: NSCocoaErrorDomain, code: 640,
                                    userInfo: [NSLocalizedDescriptionKey: "secret-token must never appear"])
 
+    @Test func failedRecoveryRecipeSavePreventsDestructiveRecreation() async throws {
+        let db = AppDatabase(isStoredInMemoryOnly: true)
+        let runner = DockerRecordingRunner()
+        let app = AppModel(database: db)
+        app.installRuntimeClientForTesting(appTestOrchestrator(runner: runner, runtimeKind: .docker))
+        await app.containers.refresh()
+        let source = try #require(app.containers.snapshots.first)
+        db.failureInjector = { operation in if operation == "save" { throw diskFull } }
+        let result = await app.recreateContainer(originalID: source.scopedID, spec: ContainerFormState(from: source.configuration))
+        #expect(result == nil)
+        #expect(!db.canPersist)
+        #expect(!(await runner.contains(["container", "stop", source.id])))
+        #expect(!(await runner.contains(["container", "rm", "--force", source.id])))
+        #expect(!db.context.hasChanges)
+    }
+
+    @Test func recreationRecoverySurvivesDiskBackedReopen() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("recovery.store")
+        var db: AppDatabase? = AppDatabase(storeURL: url)
+        let source = Core.Container.Snapshot.placeholder(id: "coast", image: "example/coast:original", runtimeKind: .appleContainer)
+        #expect(db?.markContainerRecreateStarted(source: source, sourceDocument: .containerRecovery(from: source.configuration)) == true)
+        db?.markContainerRecreateFailed(scopedID: source.scopedID)
+        _ = await db?.upsertContainers([])
+        await db?.historyMaintenanceTask?.value
+        db = nil
+        let reopened = AppDatabase(storeURL: url)
+        #expect(reopened.containerRecreationRecoveries().map(\.snapshot) == [source])
+        #expect(reopened.fetch(ContainerRecord.self).first?.isMissing == true)
+        await reopened.historyMaintenanceTask?.value
+    }
+
     @Test func prerequisiteFailureCannotInsertOrMarkContainersMissing() async {
         let db = AppDatabase(isStoredInMemoryOnly: true)
         let first = Core.Container.Snapshot.placeholder(id: "first", image: "alpine", runtimeKind: .appleContainer)

@@ -40,6 +40,14 @@ references, and default/system networks are protected. Volume and stopped-contai
 deletion are irreversible. The combined "Reclaim all" action is replaced with
 individually reviewed categories so their different risks cannot be conflated.
 
+**Free Up Space…** in Storage analysis and the low-disk-space alert opens this
+review directly. Only running-container/builder compaction is preselected. Builder
+cache, unreferenced image, unused volume, and unused network removal require explicit
+selection; stopped containers and arbitrary guest temporary files are not included.
+The same sheet exposes the existing opt-in automatic compaction policy. Enabling
+automation does not enable any automatic deletion. If an earlier selected action
+changes runtime inventory, remaining exact previews are rejected until refreshed.
+
 Builder cache reset stops/deletes only the builder VM, interrupts external builds,
 and discards BuildKit cache. The next build recreates it. Running-builder compaction
 is also available without cache deletion. App builds/pulls disable cleanup. Activity

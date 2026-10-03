@@ -70,10 +70,12 @@ struct RootView: View {
         .sheet(isPresented: $showSystemLogs) { SystemLogsSheet() }
         .sheet(isPresented: Binding(get: { !app.storageCleanupPlans.isEmpty || !app.runtimePruneRequests.isEmpty },
                                     set: { if !$0 { app.storageCleanupPlans = []; app.runtimePruneRequests = [] } })) {
-            StorageCleanupPreview(plans: app.storageCleanupPlans, pruneRequests: app.runtimePruneRequests)
+            StorageCleanupPreview(plans: app.storageCleanupPlans, pruneRequests: app.runtimePruneRequests,
+                                  recommended: app.storageCleanupRecommended)
         }
         .alert("Low disk space", isPresented: Binding(get: { app.lowStorageWarning != nil },
                                                      set: { if !$0 { app.lowStorageWarning = nil } })) {
+            Button("Free Up Space…") { Task { await app.prepareFreeUpSpace() } }
             Button("Open System Storage") { ui.toolbar.activeMorph = .system }
             Button("Cancel", role: .cancel) { }
         } message: { Text(app.lowStorageWarning ?? "") }

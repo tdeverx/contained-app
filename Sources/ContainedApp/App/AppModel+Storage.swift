@@ -27,28 +27,66 @@ extension AppModel {
     }
 
     func prepareStorageCleanup(_ action: Core.System.CleanupAction) async {
+        await prepareStorageCleanup([action], recommended: false)
+    }
+
+    /// Compaction is the only default selection. Cache and resource deletion always require opt-in.
+    static func cleanupSelectedByDefault(_ action: Core.System.CleanupAction, recommended: Bool) -> Bool {
+        !recommended || action.risk == .compaction
+    }
+
+    private func storageDeletionAllowed(runtimeKind: Core.Runtime.Kind) -> Bool {
+        // Missing runtime objects do not protect their saved images, mounts, or networks from prune.
+        let recoveries = containerRecreationRecoveries
+        guard database.canPersist, !recoveries.contains(where: { $0.snapshot.runtimeKind == runtimeKind }) else {
+            flash(AppText.string("storage.recoveryProtected", defaultValue: "Resolve container recreation and database recovery before deleting storage resources. Saved recovery images, volumes, and networks must be kept."))
+            return false
+        }
+        return true
+    }
+
+    func prepareFreeUpSpace() async {
+        await prepareStorageCleanup([.compactRunningContainers, .compactRunningBuilder,
+                                     .resetBuilderCache, .unusedImages, .unusedVolumes, .unusedNetworks],
+                                    recommended: true)
+    }
+
+    private func prepareStorageCleanup(_ actions: [Core.System.CleanupAction], recommended: Bool) async {
         guard let client, !storagePlanInFlight, !storageCleanupInFlight else { return }
         storagePlanInFlight = true
         defer { storagePlanInFlight = false }
         var plans: [Core.System.CleanupPlan] = []
         var requests: [RuntimePruneRequest] = []
-        for runtime in cleanupRuntimes(for: action) {
-            if runtime.supports(.storageManagement) {
-                do { plans.append(try await client.cleanupPlan(action, runtimeKind: runtime.kind)) }
-                catch { flash(storageFailureMessage(error)); return }
-            } else {
-                requests.append(RuntimePruneRequest(runtimeKind: runtime.kind, action: action))
+        var deletionBlocked = false
+        for action in actions {
+            for runtime in cleanupRuntimes(for: action) {
+                if action.risk != .compaction, !storageDeletionAllowed(runtimeKind: runtime.kind) {
+                    deletionBlocked = true
+                    continue
+                }
+                if runtime.supports(.storageManagement) {
+                    do { plans.append(try await client.cleanupPlan(action, runtimeKind: runtime.kind)) }
+                    catch { flash(storageFailureMessage(error)); return }
+                } else {
+                    requests.append(RuntimePruneRequest(runtimeKind: runtime.kind, action: action))
+                }
             }
         }
+        storageCleanupRecommended = recommended
         storageCleanupPlans = plans
         runtimePruneRequests = requests
+        if plans.isEmpty && requests.isEmpty && !deletionBlocked {
+            flash(AppText.string("storage.noCleanupRuntime", defaultValue: "No available runtime supports storage cleanup."))
+        }
     }
 
     func performStorageCleanup(_ plans: [Core.System.CleanupPlan], pruneRequests: [RuntimePruneRequest] = [], automatic: Bool = false) async {
-        guard let client, !storageCleanupInFlight, activity == nil, activeImageBuilds == 0 else { return }
+        guard let client, !storageCleanupInFlight, activity == nil, activeImageBuilds == 0,
+              containers.busyIDs.isEmpty else { return }
         storageCleanupInFlight = true
         defer { storageCleanupInFlight = false }
         for plan in plans {
+            if plan.action.risk != .compaction, !storageDeletionAllowed(runtimeKind: plan.runtimeKind) { continue }
             do {
                 let result = try await client.executeCleanup(plan)
                 // Failed candidates must not starve the rest of a larger inventory either.
@@ -73,6 +111,7 @@ extension AppModel {
         }
         // Runtimes without exact storage planning retain their explicitly confirmed prune routes.
         for request in pruneRequests {
+            guard storageDeletionAllowed(runtimeKind: request.runtimeKind) else { continue }
             do {
                 switch request.action {
                 case .stoppedContainers: _ = try await client.pruneContainers(runtimeKind: request.runtimeKind)
