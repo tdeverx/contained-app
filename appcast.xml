@@ -3,23 +3,17 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.232+59a03dc</title>
-            <pubDate>Wed, 30 Sep 2026 18:09:54 +0000</pubDate>
-            <sparkle:version>232</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.232+59a03dc</sparkle:shortVersionString>
+            <title>1.0.0-nightly.235+00b298b</title>
+            <pubDate>Wed, 07 Oct 2026 08:33:57 +0000</pubDate>
+            <sparkle:version>235</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.235+00b298b</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
-<h3>Fixes</h3>
 <ul>
-<li>Bound app database growth with no-op persistence, hourly activity/metrics retention, and supported transaction-history maintenance. General settings now show allocated database storage and offer manual compaction.</li>
-<li>Recover safely from database fetch/save failures without inserting duplicate inventory. Startup repair and app writes wait for acceptance of newer-schema data; downgrade backups read saved styles and health checks without enabling writes. Explicit retry restores schema downgrade safeguards and reloads saved preferences, history, and scheduling before writes resume; recovery commits repair and normalization only after all required reads succeed. Runtime detection reruns with restored CLI paths even after an in-flight startup check.</li>
-<li>Group registry update failures by host with classified, privacy-safe errors, bounded retry backoff, and login/retry controls. Background retries honor their own deadlines without repeating healthy-image checks or postponing full sweeps; credential changes preserve affected tags for immediate retry. Recovery reconciles saved image statuses against already-loaded inventory. Private Apple Container image checks can reuse accessible Keychain logins without storing credentials in Contained, including equivalent HTTPS authentication origins with explicit default ports.</li>
-</ul>
-<h3>Improvements</h3>
-<ul>
-<li>Add host-allocated storage analysis and exact cleanup previews for container compaction, builder cache reset, and unreferenced resources. Changed inventory requires a fresh preview, and partial results show before/after host allocation.</li>
-<li>Offer opt-in scheduled compaction for running application containers and the builder, with configurable thresholds and rotating bounded batches. Destructive resource cleanup stays manual; low host space is checked before pulls, builds, and recreates. Runtimes without Apple storage analysis retain their confirmed native prune actions.</li>
+<li>Added **Free Up Space…** with compaction selected by default, explicit opt-in resource/cache deletion, and access to automatic compaction settings.</li>
+<li>Fixed Apple Container recreation accumulating image entrypoint arguments; pinned and verified rollback, preserved originals before update pulls without weakening child-manifest digest pins, and added visible recovery for missing containers after failed replacement/restoration.</li>
+<li>Protected saved recovery and local metadata during failed runtime reads, corrupt-data recovery, and orphan cleanup; kept stopped originals stopped during restoration, kept open resource details current, and reduced repeated cleanup scans and scrolling work.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -102,7 +96,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.232+59a03dc/Contained-1.0.0-nightly.232+59a03dc.dmg" length="9894717" type="application/octet-stream" sparkle:edSignature="pAMR2YwZlh5LW/Tad02aNVR2IXgQFNYlTzaSNLUQtfTFdGhSgZvIWFHNmN72vOexWMeK73TOp4Bc2JzpSLEcCA=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.235+00b298b/Contained-1.0.0-nightly.235+00b298b.dmg" length="10038517" type="application/octet-stream" sparkle:edSignature="X1S8UobkeQjCq+2HOoLEAA6dem4MMnctqOs8d6ovlzqaCQ3tS6is910CI82suxT2NxlO+ensXwKsCIgv9irmBw=="/>
         </item>
     </channel>
 </rss>
