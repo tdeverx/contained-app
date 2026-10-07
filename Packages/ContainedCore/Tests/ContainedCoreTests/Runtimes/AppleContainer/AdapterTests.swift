@@ -141,7 +141,7 @@ struct AppleContainerAdapterTests {
         request.name = "web"
         request.cpus = "2"
 
-        let preview = AppleContainerCreateTranslator.preview(for: request)
+        let preview = AppleContainerCreateTranslator.preview(for: request, start: true)
         #expect(preview.command == ["run", "--detach", "--name", "web", "--cpus", "2", "nginx:latest"])
         #expect(preview.warnings.isEmpty)
 

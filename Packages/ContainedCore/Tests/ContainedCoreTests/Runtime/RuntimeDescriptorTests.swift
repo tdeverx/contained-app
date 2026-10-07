@@ -489,7 +489,7 @@ struct RuntimeDescriptorTests {
         let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
             runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
         do {
-            _ = try await orchestrator.restoreContainer(recreateDocument(name: "web"), mustBeRunning: true)
+            _ = try await orchestrator.restoreContainer(recreateDocument(name: "web"), originalWasRunning: true)
             Issue.record("Expected recovery name collision")
         } catch {
             #expect((error as? any Core.Error.PackageError)?.packageErrorCode == "recreateRecoveryNameInUse")
@@ -504,15 +504,89 @@ struct RuntimeDescriptorTests {
         let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
             runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
         do {
-            _ = try await orchestrator.restoreContainer(recreateDocument(name: "web"), mustBeRunning: true)
+            _ = try await orchestrator.restoreContainer(recreateDocument(name: "web"), originalWasRunning: true)
             Issue.record("Expected stopped restore verification to fail")
         } catch {
             #expect((error as? any Core.Error.PackageError)?.packageErrorCode == "recreateReplacementNotRunning")
         }
         // Failed verification leaves the object for inspection rather than silently deleting it.
         #expect(await runtime.deletedIDs.isEmpty)
-        let result = try await orchestrator.restoreContainer(recreateDocument(name: "other"), mustBeRunning: true)
+        let result = try await orchestrator.restoreContainer(recreateDocument(name: "other"), originalWasRunning: true)
         #expect(result.id == "other")
+    }
+
+    @Test func explicitStoppedRecoveryNeverStartsTheWorkload() async throws {
+        let runtime = RecordingContainerRuntime(containers: [],
+            inspectedImages: [.init(configuration: .init(name: "nginx:stable",
+                descriptor: .init(digest: "sha256:original", mediaType: nil, size: nil), creationDate: nil),
+                id: "original", runtimeKind: .appleContainer)],
+            creationDigests: ["sha256:original"])
+        let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
+        let document = recreateDocument(name: "web")
+
+        let result = try await orchestrator.restoreContainer(document, originalWasRunning: false)
+
+        #expect(result.id == "web")
+        #expect(await runtime.creationStarts == [false])
+        #expect(await runtime.containers.first?.state == .stopped)
+        #expect(await runtime.startedIDs.isEmpty)
+        #expect(await runtime.stoppedIDs.isEmpty)
+        #expect(await runtime.deletedIDs.isEmpty)
+        #expect(try orchestrator.previewCreateCommand(for: document, start: false).command.first == "create")
+    }
+
+    @Test func stoppedRecoveryRejectsAnUnexpectedlyRunningResult() async throws {
+        let runtime = RecordingContainerRuntime(containers: [], creationStates: [.running])
+        let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
+        do {
+            _ = try await orchestrator.restoreContainer(recreateDocument(name: "web"), originalWasRunning: false)
+            Issue.record("Expected stopped-state verification to fail")
+        } catch {
+            #expect((error as? any Core.Error.PackageError)?.packageErrorCode == "recreateReplacementNotStopped")
+        }
+        #expect(await runtime.creationStarts == [false])
+        #expect(await runtime.deletedIDs.isEmpty)
+    }
+
+    @Test func stoppedRecoveryStillVerifiesImageIdentity() async throws {
+        let runtime = RecordingContainerRuntime(containers: [],
+            inspectedImages: [.init(configuration: .init(name: "nginx:stable",
+                descriptor: .init(digest: "sha256:original", mediaType: nil, size: nil), creationDate: nil),
+                id: "original", runtimeKind: .appleContainer)],
+            creationDigests: ["sha256:wrong"])
+        let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
+        do {
+            _ = try await orchestrator.restoreContainer(recreateDocument(name: "web"), originalWasRunning: false)
+            Issue.record("Expected image verification to fail")
+        } catch {
+            #expect((error as? any Core.Error.PackageError)?.packageErrorCode == "recreateImageMismatch")
+        }
+        #expect(await runtime.creationStarts == [false])
+        #expect(await runtime.startedIDs.isEmpty)
+        #expect(await runtime.deletedIDs.isEmpty)
+    }
+
+    @Test func failedReplacementRestoresStoppedOriginalWithoutStartingIt() async throws {
+        let seed = Core.Container.Snapshot.placeholder(id: "web", image: "nginx:stable", runtimeKind: .appleContainer)
+        let original = Core.Container.Snapshot(configuration: seed.configuration, id: "web",
+                                               status: .init(state: .stopped), runtimeKind: .appleContainer)
+        let runtime = RecordingContainerRuntime(containers: [original],
+            createErrors: [.nonZeroExit(code: 1, stderr: "replacement failed", command: "run replacement")])
+        let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
+        do {
+            _ = try await orchestrator.recreateContainer(originalID: "web", replacement: recreateDocument(),
+                                                         rollback: recreateDocument(name: "web"))
+            Issue.record("Expected replacement failure")
+        } catch let failure as Core.Container.RecreateFailure {
+            #expect(failure.recovery == .originalRestored)
+        }
+        #expect(await runtime.creationStarts == [true, false])
+        #expect(await runtime.containers.first?.state == .stopped)
+        #expect(await runtime.startedIDs.isEmpty)
     }
 }
 
@@ -610,6 +684,7 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient, 
     var stoppedIDs: [String] = []
     var startedIDs: [String] = []
     var createdRequests: [Core.Container.CreateRequest] = []
+    var creationStarts: [Bool] = []
     var inspectedImages: [Core.Image.Resource]
     var inspectError: Core.Command.Error?
     var creationDigests: [String?]
@@ -643,15 +718,16 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient, 
     nonisolated func streamLogs(id: String, follow: Bool, tail: Int?, boot: Bool) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { $0.finish() }
     }
-    nonisolated func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
-        Core.Command.Preview(command: ["run", request.image])
+    nonisolated func previewCreateCommand(for request: Core.Container.CreateRequest, start: Bool) throws -> Core.Command.Preview {
+        Core.Command.Preview(command: [start ? "run" : "create", request.image])
     }
-    func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
+    func createContainer(_ request: Core.Container.CreateRequest, start: Bool) async throws -> Core.Container.CreateResult {
         createdRequests.append(request)
+        creationStarts.append(start)
         if !createErrors.isEmpty { throw createErrors.removeFirst() }
         let id = request.name.isEmpty ? "created" : request.name
         let digest = creationDigests.isEmpty ? nil : creationDigests.removeFirst()
-        let state = creationStates.isEmpty ? Core.Runtime.Status.running : creationStates.removeFirst()
+        let state = creationStates.isEmpty ? (start ? Core.Runtime.Status.running : .stopped) : creationStates.removeFirst()
         let descriptor = digest.map { Core.Container.Descriptor(digest: $0, mediaType: nil, size: nil) }
         let initProcess = try JSONDecoder().decode(Core.Container.ProcessConfiguration.self,
                                                    from: Data("{}".utf8))

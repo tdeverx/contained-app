@@ -27,6 +27,33 @@ struct CommandTests {
         #expect(ContainerCommands.run(request) == ["run", "--detach", "alpine"])
     }
 
+    @Test func appleCreatePreservesConfigurationWithoutStartingOrDetaching() async throws {
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "alpine"
+        request.name = "web"
+        request.removeOnExit = true
+        request.interactive = true
+        request.tty = true
+        request.cpus = "2"
+        request.memory = "512M"
+        request.ports = [.init(hostPort: "8080", containerPort: "80")]
+        request.volumes = [.init(source: "data", target: "/data")]
+        request.env = [.init(key: "MODE", value: "recovery")]
+        request.command = ["sleep", "100"]
+        let expected = ["create", "--rm", "--interactive", "--tty", "--name", "web",
+                        "--cpus", "2", "--memory", "512M", "--publish", "8080:80",
+                        "--volume", "data:/data", "--env", "MODE=recovery", "alpine", "sleep", "100"]
+        let runner = CapturingCommandRunner()
+        let client = AppleContainerClient(runner: runner)
+
+        #expect(ContainerCommands.run(request, start: false) == expected)
+        #expect(try client.previewCreateCommand(for: request, start: false).command == expected)
+        let result = try await client.createContainer(request, start: false)
+
+        #expect(result.id == "web")
+        #expect(await runner.invocations.map(\.arguments) == [expected])
+    }
+
     @Test func runIncludesContainer141SecurityAndKernelOptions() {
         var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
         request.image = "alpine"

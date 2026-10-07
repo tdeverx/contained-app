@@ -10,9 +10,9 @@ protocol RuntimeContainerClient: RuntimeDescribing {
     func stats(ids: [String]) async throws -> [Core.Metrics.ContainerStats]
     func streamStats(ids: [String]) -> AsyncThrowingStream<[Core.Metrics.RuntimeStatsSnapshot], Error>
     func streamLogs(id: String, follow: Bool, tail: Int?, boot: Bool) -> AsyncThrowingStream<String, Error>
-    func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview
+    func previewCreateCommand(for request: Core.Container.CreateRequest, start: Bool) throws -> Core.Command.Preview
     func prepareCreateRequest(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateRequest
-    @discardableResult func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult
+    @discardableResult func createContainer(_ request: Core.Container.CreateRequest, start: Bool) async throws -> Core.Container.CreateResult
     @discardableResult func runContainer(arguments: [String]) async throws -> Data
     @discardableResult func start(_ ids: [String]) async throws -> Data
     @discardableResult func stop(_ ids: [String]) async throws -> Data

@@ -65,7 +65,10 @@ closes the saved recovery after confirmation. Inventory refreshes, another Edit/
 and duplicate-record repair cannot replace the saved original with a partial object's
 configuration. Resolve the pending recovery before recreating that container again.
 If teardown cannot delete a previously running original, Contained restarts and verifies
-it; a failed restart keeps the recovery open. Runtime stderr is shown
+it; a failed restart keeps the recovery open. Restoration preserves the original running
+or stopped state: stopped originals use the runtime's create-only command and are never
+started, including automatic rollback. Recovery closes only after image and state
+verification succeed. Runtime stderr is shown
 for a failed attempt but is not stored in the recovery record or Activity history.
 Destructive storage cleanup is blocked for that runtime while recreation recovery
 remains pending, because a missing runtime object cannot protect its saved image,

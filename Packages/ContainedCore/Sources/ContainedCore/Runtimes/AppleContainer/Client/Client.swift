@@ -93,8 +93,8 @@ struct AppleContainerClient: Sendable {
         try await decode(Core.System.Status.self, ContainerCommands.systemStatus, "system status")
     }
 
-    func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
-        AppleContainerCreateTranslator.preview(for: request)
+    func previewCreateCommand(for request: Core.Container.CreateRequest, start: Bool) throws -> Core.Command.Preview {
+        AppleContainerCreateTranslator.preview(for: request, start: start)
     }
 
     func prepareCreateRequest(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateRequest {
@@ -142,9 +142,9 @@ struct AppleContainerClient: Sendable {
         return alias
     }
 
-    @discardableResult func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
+    @discardableResult func createContainer(_ request: Core.Container.CreateRequest, start: Bool) async throws -> Core.Container.CreateResult {
         let request = try await prepareCreateRequest(request)
-        let data = try await runner.run(ContainerCommands.run(request))
+        let data = try await runner.run(ContainerCommands.run(request, start: start))
         return AppleContainerCreateTranslator.result(from: data, request: request)
     }
 

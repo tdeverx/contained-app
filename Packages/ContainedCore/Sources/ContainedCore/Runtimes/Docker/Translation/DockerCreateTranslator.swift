@@ -1,8 +1,8 @@
 import Foundation
 
 enum DockerCreateTranslator {
-    static func preview(for request: Core.Container.CreateRequest) -> Core.Command.Preview {
-        Core.Command.Preview(command: DockerCommands.run(request))
+    static func preview(for request: Core.Container.CreateRequest, start: Bool) -> Core.Command.Preview {
+        Core.Command.Preview(command: DockerCommands.run(request, start: start))
     }
 
     static func result(from data: Data, request: Core.Container.CreateRequest) -> Core.Container.CreateResult {

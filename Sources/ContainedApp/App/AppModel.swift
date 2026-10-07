@@ -679,8 +679,8 @@ final class AppModel {
         await capturedError(work)?.appDisplayMessage
     }
 
-    func previewCreateCommand(for spec: ContainerFormState) -> [String] {
-        (try? core(for: spec.effectiveRuntimeKind)?.previewCreateCommand(for: spec.materializedDocumentForRun()).command)
+    func previewCreateCommand(for spec: ContainerFormState, start: Bool = true) -> [String] {
+        (try? core(for: spec.effectiveRuntimeKind)?.previewCreateCommand(for: spec.materializedDocumentForRun(), start: start).command)
             ?? []
     }
 
@@ -689,8 +689,8 @@ final class AppModel {
         return ([executable] + arguments).joined(separator: " ")
     }
 
-    func previewCreateCommandText(for spec: ContainerFormState) -> String {
-        commandPreviewText(arguments: previewCreateCommand(for: spec), runtimeKind: spec.effectiveRuntimeKind)
+    func previewCreateCommandText(for spec: ContainerFormState, start: Bool = true) -> String {
+        commandPreviewText(arguments: previewCreateCommand(for: spec, start: start), runtimeKind: spec.effectiveRuntimeKind)
     }
 
     func imageDefaults(for spec: ContainerFormState) -> Core.Container.ImageDefaults? {

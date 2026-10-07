@@ -27,7 +27,7 @@ extension AppModel {
         containers.busyIDs.insert(recovery.id)
         defer { containers.busyIDs.remove(recovery.id) }
         do {
-            _ = try await client.restoreContainer(recovery.document, mustBeRunning: recovery.snapshot.state == .running)
+            _ = try await client.restoreContainer(recovery.document, originalWasRunning: recovery.snapshot.state == .running)
             let recorded = database.completeContainerRecreate(sourceScopedID: recovery.id, replacementScopedID: recovery.id)
             await containers.refresh()
             logger.record("Restored original container from recreation recovery", category: .lifecycle, containerID: recovery.id)

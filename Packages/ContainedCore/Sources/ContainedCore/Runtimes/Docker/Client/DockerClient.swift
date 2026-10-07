@@ -112,12 +112,12 @@ struct DockerClient: Sendable {
         }
     }
 
-    func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
-        DockerCreateTranslator.preview(for: request)
+    func previewCreateCommand(for request: Core.Container.CreateRequest, start: Bool) throws -> Core.Command.Preview {
+        DockerCreateTranslator.preview(for: request, start: start)
     }
 
-    @discardableResult func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
-        let data = try await runner.run(DockerCommands.run(request))
+    @discardableResult func createContainer(_ request: Core.Container.CreateRequest, start: Bool) async throws -> Core.Container.CreateResult {
+        let data = try await runner.run(DockerCommands.run(request, start: start))
         return DockerCreateTranslator.result(from: data, request: request)
     }
 

@@ -27,25 +27,26 @@ extension RuntimeContainerClient {
         streamLogs(id: id, follow: true, tail: 200, boot: false)
     }
 
-    func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
+    func previewCreateCommand(for request: Core.Container.CreateRequest, start: Bool) throws -> Core.Command.Preview {
         throw Core.Runtime.UnsupportedCapability(kind: descriptor.kind, capability: .containers)
     }
 
-    @discardableResult func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
+    @discardableResult func createContainer(_ request: Core.Container.CreateRequest, start: Bool) async throws -> Core.Container.CreateResult {
         throw Core.Runtime.UnsupportedCapability(kind: descriptor.kind, capability: .containers)
     }
 
     /// Explicit recovery only creates a missing object; it never deletes a colliding workload.
-    func restoreContainer(_ request: Core.Container.CreateRequest, mustBeRunning: Bool) async throws -> Core.Container.CreateResult {
+    func restoreContainer(_ request: Core.Container.CreateRequest, originalWasRunning: Bool) async throws -> Core.Container.CreateResult {
         let pinnedReference = request.image
         let request = try await prepareCreateRequest(request)
         guard !request.name.isEmpty, try await containerSnapshot(matching: request.name) == nil else {
             throw RecreateVerificationError.recoveryNameInUse
         }
         let identities = try await resolvedImageIdentities(for: request.image, pinnedReference: pinnedReference)
-        let result = try await createContainer(request)
+        let result = try await createContainer(request, start: originalWasRunning)
         try await verifyReplacement(id: result.id ?? request.name,
-                                    expectedImageIdentities: identities, mustBeRunning: mustBeRunning)
+                                    expectedImageIdentities: identities,
+                                    requiredState: originalWasRunning ? .running : .stopped)
         return result
     }
 
@@ -74,7 +75,7 @@ extension RuntimeContainerClient {
                     _ = try await start([originalID])
                     try await verifyReplacement(id: originalID,
                                                 expectedImageIdentities: rollbackImageIdentities,
-                                                mustBeRunning: true)
+                                                requiredState: .running)
                 } catch {
                     throw Core.Container.RecreateFailure(phase: .deleteOriginal,
                                                          recovery: .restoreFailed,
@@ -92,11 +93,11 @@ extension RuntimeContainerClient {
 
         var createdReplacementID: String?
         do {
-            let result = try await createContainer(replacement)
+            let result = try await createContainer(replacement, start: true)
             createdReplacementID = result.id ?? replacement.name
             try await verifyReplacement(id: createdReplacementID,
                                         expectedImageIdentities: expectedImageIdentities,
-                                        mustBeRunning: originalWasRunning)
+                                        requiredState: originalWasRunning ? .running : nil)
             return result
         } catch {
             let replacementError = error
@@ -109,10 +110,10 @@ extension RuntimeContainerClient {
                                                      primaryError: replacementError)
             }
             do {
-                let restored = try await createContainer(rollback)
+                let restored = try await createContainer(rollback, start: originalWasRunning)
                 try await verifyReplacement(id: restored.id ?? rollback.name,
                                             expectedImageIdentities: rollbackImageIdentities,
-                                            mustBeRunning: originalWasRunning)
+                                            requiredState: originalWasRunning ? .running : .stopped)
             } catch {
                 throw Core.Container.RecreateFailure(phase: .restoreOriginal,
                                                      recovery: .restoreFailed,
@@ -147,7 +148,7 @@ extension RuntimeContainerClient {
 
     private func verifyReplacement(id: String?,
                                    expectedImageIdentities: Set<String>?,
-                                   mustBeRunning: Bool) async throws {
+                                   requiredState: Core.Runtime.Status?) async throws {
         guard let id, !id.isEmpty else {
             throw RecreateVerificationError.replacementUnavailable(id: "")
         }
@@ -164,8 +165,11 @@ extension RuntimeContainerClient {
                 )
             }
         }
-        if mustBeRunning, replacement.state != .running {
+        if requiredState == .running, replacement.state != .running {
             throw RecreateVerificationError.replacementNotRunning(id: id, state: replacement.rawState)
+        }
+        if requiredState == .stopped, replacement.state != .stopped {
+            throw RecreateVerificationError.replacementNotStopped(id: id, state: replacement.rawState)
         }
     }
 
@@ -197,6 +201,7 @@ private enum RecreateVerificationError: LocalizedError, Core.Error.PackageError 
     case recoveryNameInUse
     case replacementUnavailable(id: String)
     case replacementNotRunning(id: String, state: String)
+    case replacementNotStopped(id: String, state: String)
     case imageMismatch(expected: [String], actual: String?)
 
     var packageName: String { "ContainedCore" }
@@ -206,6 +211,7 @@ private enum RecreateVerificationError: LocalizedError, Core.Error.PackageError 
         case .recoveryNameInUse: "recreateRecoveryNameInUse"
         case .replacementUnavailable: "recreateReplacementUnavailable"
         case .replacementNotRunning: "recreateReplacementNotRunning"
+        case .replacementNotStopped: "recreateReplacementNotStopped"
         case .imageMismatch: "recreateImageMismatch"
         }
     }
@@ -220,6 +226,8 @@ private enum RecreateVerificationError: LocalizedError, Core.Error.PackageError 
             "Replacement container \(id) was not available after creation."
         case .replacementNotRunning(let id, let state):
             "Replacement container \(id) entered state \(state) during startup verification."
+        case .replacementNotStopped(let id, let state):
+            "Restored container \(id) entered state \(state) instead of remaining stopped."
         case .imageMismatch(let expected, let actual):
             "Replacement resolved image \(actual ?? "unknown") instead of \(expected.joined(separator: ", "))."
         }

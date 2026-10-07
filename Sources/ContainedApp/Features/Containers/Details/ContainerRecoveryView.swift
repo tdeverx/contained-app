@@ -14,7 +14,7 @@ struct ContainerRecoveryView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        UI.Panel.Scaffold(width: UI.Panel.SheetSize.inspector.width, scrolls: false) {
             UI.Panel.SheetTitleBar(title: AppText.string("recreate.recovery", defaultValue: "Container recovery"),
                                   cancelHelp: AppText.close, onCancel: { dismiss() }) {
                 UI.Action.Group(UI.Action.Item(systemName: "arrow.counterclockwise", title: AppText.string("recreate.restore", defaultValue: "Restore Original"),
@@ -23,12 +23,13 @@ struct ContainerRecoveryView: View {
                     Task { if await app.restoreContainerRecreation(recovery) { dismiss() } }
                 })
             }
+        } content: {
             ScrollView {
                 UI.Panel.Section(header: recovery.snapshot.displayName) {
                     let spec = ContainerFormState(document: recovery.document)
                     LabeledContent("Original image", value: recovery.snapshot.image)
                     LabeledContent("Recovery image", value: spec.image)
-                    Text("Recreation did not complete. The saved original process, ports, and mounts remain available. Restoration creates a missing container and verifies its startup; it does not delete containers or volumes. Runtime errors are shown when a restore fails.")
+                    Text("Recreation did not complete. The saved original process, ports, and mounts remain available. Restoration creates a missing container and verifies its original running or stopped state; it does not delete containers or volumes. Runtime errors are shown when a restore fails.")
                         .foregroundStyle(.secondary)
                     if existing != nil {
                         Text("A container already uses this name. Use its normal controls to inspect or start it; recovery will not overwrite it.")
@@ -37,7 +38,7 @@ struct ContainerRecoveryView: View {
                         }
                         .disabled(app.containers.busyIDs.contains(recovery.id))
                     }
-                    UI.Command.PreviewBar(commandText: app.previewCreateCommandText(for: spec), copyHelp: AppText.copyCommand,
+                    UI.Command.PreviewBar(commandText: app.previewCreateCommandText(for: spec, start: recovery.snapshot.state == .running), copyHelp: AppText.copyCommand,
                                           copiedAccessibilityLabel: AppText.copied)
                     Text("Requested command — the runtime may resolve saved image and disk identities to local recovery names before running it.")
                         .foregroundStyle(.secondary)
