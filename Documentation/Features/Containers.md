@@ -41,8 +41,8 @@ Rebuild is always available from a container's context menu. When the app knows
 that the container's immutable image identity differs from the current tag—or a
 newer registry digest is available—the action is relabeled **Update Container**
 and an orange update button appears persistently at the far right of the card
-footer. Updating pulls first only
-when needed, then recreates through the same rollback path as Edit → Save. A
+footer. Updating preserves the original image and saves its recovery recipe before
+pulling when needed, then recreates through the same rollback path as Edit → Save. A
 failed streamed pull stops the update instead of being reported as successful.
 Rebuild and Update preserve whether the container was running or stopped, while
 ordinary Start, Stop, and Restart remain non-destructive lifecycle operations.
@@ -52,8 +52,10 @@ does not repeatedly prepend the image entrypoint's arguments. Intentional repeat
 arguments are preserved, not guessed away. Before teardown, Contained must save the
 original recipe; its image is pinned to the inspected digest when available. Apple
 Container resolves that digest through a verified `contained-recovery-<digest>` image
-tag when needed. This retains the local original independently of a moving tag; it
-can be removed through unused-image cleanup once no container references it. Rollback
+tag when needed. Only an exact image descriptor is aliased; a child-manifest digest
+is never replaced with its multi-platform parent index. This retains the local
+original independently of a moving tag; it can be removed through unused-image
+cleanup once no container references it. Rollback
 is verified for image identity and startup before reporting that the original returned.
 
 If replacement and rollback fail, **Review Recovery…** remains on the Containers

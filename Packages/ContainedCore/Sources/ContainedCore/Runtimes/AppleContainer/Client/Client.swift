@@ -125,7 +125,8 @@ struct AppleContainerClient: Sendable {
         let digest = parsed.reference
         let inventory = try await images()
         func matches(_ image: Core.Image.Resource) -> Bool {
-            image.id == digest || image.digest == digest || image.variants.contains { $0.digest == digest }
+            // A child manifest pin must not become an alias for its multi-platform parent index.
+            image.id == digest || image.digest == digest
         }
         if inventory.contains(where: { Core.Registry.ImageReference.normalizedKey($0.reference) == parsed.normalizedKey && matches($0) }) {
             return reference

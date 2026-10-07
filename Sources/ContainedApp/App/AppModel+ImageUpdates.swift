@@ -268,22 +268,14 @@ extension AppModel {
         }
 
         let updateState = containerImageUpdateState(for: snapshot)
-        if updateState.needsPull,
-           !(await pullImageUpdate(snapshot.image, runtimeKind: snapshot.runtimeKind)) {
-            return false
-        }
-
         var spec = ContainerFormState(from: snapshot.configuration)
         spec.personalization = containerStyle(for: snapshot)
         spec.healthCheck = healthChecks.check(for: snapshot.scopedID) ?? Core.Container.HealthCheck()
         spec.applyLinkedVolumePaths(database.linkedVolumePaths(for: snapshot.scopedID))
 
         let shouldRemainStopped = snapshot.state != .running
-        guard let replacementID = await recreateContainer(originalID: snapshot.scopedID, spec: spec) else {
-            if shouldRemainStopped,
-               containers.recreateFailure?.recovery == .originalRestored {
-                await containers.stop(snapshot.scopedID)
-            }
+        guard let replacementID = await recreateContainer(originalID: snapshot.scopedID, spec: spec,
+                                                         pullUpdatedImage: updateState.needsPull) else {
             return false
         }
 

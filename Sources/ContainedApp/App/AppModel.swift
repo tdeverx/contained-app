@@ -1022,15 +1022,21 @@ final class AppModel {
     /// Recreate an existing container from an edited spec. Pulls the replacement image before
     /// deleting the current container so an unavailable image does not strand the edit flow.
     @discardableResult
-    func recreateContainer(originalID: String, spec: ContainerFormState) async -> String? {
-        guard await permitStorageIntensiveOperation(runtimeKind: spec.effectiveRuntimeKind) else { return nil }
+    func recreateContainer(originalID: String, spec: ContainerFormState,
+                           pullUpdatedImage: Bool = false) async -> String? {
         guard let originalSnapshot = containers.snapshots.first(where: { $0.scopedID == originalID || $0.id == originalID }) else {
             flash(AppText.recreateOriginalUnavailable)
             return nil
         }
         let originalRuntimeID = originalSnapshot.id
         let originalScopedID = originalSnapshot.scopedID
-        guard !containerRecreationRecoveries.contains(where: { $0.id == originalScopedID }) else {
+        guard database.canPersist, !containers.busyIDs.contains(originalScopedID) else { return nil }
+        containers.busyIDs.insert(originalScopedID)
+        defer { containers.busyIDs.remove(originalScopedID) }
+        guard await permitStorageIntensiveOperation(runtimeKind: spec.effectiveRuntimeKind) else { return nil }
+        let recoveries = containerRecreationRecoveries
+        guard database.canPersist else { return nil }
+        guard !recoveries.contains(where: { $0.id == originalScopedID }) else {
             flash(AppText.string("recreate.recoveryPending", defaultValue: "Resolve the saved recreation recovery before editing or rebuilding this container again."))
             return nil
         }
@@ -1052,7 +1058,22 @@ final class AppModel {
                                  category: .lifecycle, severity: .warning, containerID: originalScopedID)
             return nil
         }
-        if !(await imageIsLocal(spec.image, runtimeKind: spec.effectiveRuntimeKind)) {
+        guard database.markContainerRecreateStarted(source: originalSnapshot, sourceDocument: rollbackDocument) else {
+            flash(AppText.string("recreate.backupFailed", defaultValue: "Recreation stopped because the original recovery recipe could not be saved. Retry database recovery before replacing the container."))
+            return nil
+        }
+        var recreationRequested = false
+        defer {
+            // A failed pull/preparation leaves the original untouched. Clear only our own marker;
+            // a failed cleanup save leaves the durable recipe available for explicit recovery.
+            if !recreationRequested {
+                database.completeContainerRecreate(sourceScopedID: originalScopedID,
+                                                   replacementScopedID: originalScopedID)
+            }
+        }
+        if pullUpdatedImage {
+            guard await pullImageUpdate(spec.image, runtimeKind: spec.effectiveRuntimeKind) else { return nil }
+        } else if !(await imageIsLocal(spec.image, runtimeKind: spec.effectiveRuntimeKind)) {
             guard await pullImage(spec.image, runtimeKind: spec.effectiveRuntimeKind) else { return nil }
         }
         do {
@@ -1067,10 +1088,8 @@ final class AppModel {
             return nil
         }
         let replacementDocument = spec.materializedDocumentForRun()
-        guard database.markContainerRecreateStarted(source: originalSnapshot, sourceDocument: rollbackDocument) else {
-            flash(AppText.string("recreate.backupFailed", defaultValue: "Recreation stopped because the original recovery recipe could not be saved. Retry database recovery before replacing the container."))
-            return nil
-        }
+        guard database.canPersist else { return nil }
+        recreationRequested = true
         guard await containers.recreate(originalID: originalID,
                                         replacement: replacementDocument,
                                         rollback: rollbackDocument) else {

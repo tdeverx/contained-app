@@ -1,3 +1,3 @@
 - Added **Free Up Space…** with compaction selected by default, explicit opt-in resource/cache deletion, and access to automatic compaction settings.
-- Fixed Apple Container recreation accumulating image entrypoint arguments; pinned and verified rollback and added visible recovery for missing containers after failed replacement/restoration.
+- Fixed Apple Container recreation accumulating image entrypoint arguments; pinned and verified rollback, preserved originals before update pulls without weakening child-manifest digest pins, and added visible recovery for missing containers after failed replacement/restoration.
 - Protected saved recovery and local metadata during failed runtime reads, corrupt-data recovery, and orphan cleanup; kept stopped originals stopped during restoration, kept open resource details current, and reduced repeated cleanup scans and scrolling work.

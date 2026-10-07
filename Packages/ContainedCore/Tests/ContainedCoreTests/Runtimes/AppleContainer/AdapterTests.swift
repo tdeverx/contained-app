@@ -4,6 +4,28 @@ import Testing
 
 @Suite("Runtime adapter boundary")
 struct AppleContainerAdapterTests {
+    @Test func normalCreateNeverSubstitutesAParentIndexForAChildDigest() async throws {
+        let imagesData = try Fixture.data("image-inspect")
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self,
+            from: imagesData, runtimeKind: .appleContainer)
+        let image = try #require(images.first)
+        let variant = try #require(image.variants.first { $0.platform.architecture == "amd64" && $0.isRunnable })
+        #expect(image.digest != variant.digest)
+        let reference = "\(Core.Registry.ImageReference.normalizedRepositoryKey(image.reference))@\(variant.digest)"
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = reference
+        request.name = "child-digest"
+        let runner = RecordingImageCreateRunner(images: imagesData)
+        let core = Core.Orchestrator.testing(runner: runner, runtimeKind: .appleContainer)
+
+        let result = try await core.createContainer(.containerCreate(from: request))
+
+        #expect(result.id == "child-digest")
+        #expect(await runner.commands == [ContainerCommands.imageList(),
+                                         ["run", "--detach", "--name", "child-digest", reference]])
+        #expect(await runner.commands.contains { $0.starts(with: ["image", "tag"]) } == false)
+    }
+
     @Test func localDigestRecoveryCreatesAndVerifiesAnImmutableAlias() async throws {
         let digest = "sha256:" + String(repeating: "a", count: 64)
         let alias = "ghcr.io/example/coast:contained-recovery-" + String(repeating: "a", count: 64)
@@ -273,6 +295,25 @@ struct AppleContainerAdapterTests {
 
         #expect(received.count == 1)
         #expect(received.first?.map(\.id) == ["buildkit", "sonarrhd"])
+    }
+}
+
+private actor RecordingImageCreateRunner: Core.Command.Running {
+    let images: Data
+    private(set) var commands: [[String]] = []
+
+    init(images: Data) { self.images = images }
+
+    func run(_ arguments: [String], stdin: Data?, priority: Core.Command.ExecutionPriority) async throws -> Data {
+        commands.append(arguments)
+        if arguments == ContainerCommands.imageList() || arguments.starts(with: ["image", "inspect"]) {
+            return images
+        }
+        return Data()
+    }
+
+    nonisolated func stream(_ arguments: [String], priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
     }
 }
 
