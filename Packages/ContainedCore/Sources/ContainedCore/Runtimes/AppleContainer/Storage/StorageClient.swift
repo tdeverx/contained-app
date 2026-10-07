@@ -7,17 +7,12 @@ extension AppleContainerClient {
     }
 
     func storageAnalysis() async throws -> Core.System.StorageAnalysis {
-        guard let path = try await systemStatus().appRoot else { throw Core.System.StorageError.unavailable }
-        let root = URL(fileURLWithPath: path).standardizedFileURL
         async let usage = try? diskUsage()
         async let containers = listContainers(all: true)
         async let builders = storageBuilders()
         let known = try await containers
         let builderSnapshots = try await builders
-        let measurement = try await Task.detached(priority: .utility) {
-            try HostStorageScanner.scan(root: root, knownContainers: Set(known.map(\.id)),
-                                        builderIDs: Set(builderSnapshots.map(\.id)))
-        }.value
+        let (root, measurement) = try await storageMeasurement(containers: known, builders: builderSnapshots)
         let now = Date()
         let bindIDs = known.filter { snapshot in
             snapshot.state == .running &&
@@ -36,7 +31,16 @@ extension AppleContainerClient {
     }
 
     func cleanupPlan(_ action: Core.System.CleanupAction, resourceLimit: Int?, afterResourceID: String? = nil) async throws -> Core.System.CleanupPlan {
-        if action.risk == .compaction {
+        try await cleanupPlans([action], resourceLimit: resourceLimit, afterResourceID: afterResourceID)[0]
+    }
+
+    func cleanupPlans(_ actions: [Core.System.CleanupAction]) async throws -> [Core.System.CleanupPlan] {
+        try await cleanupPlans(actions, resourceLimit: nil, afterResourceID: nil)
+    }
+
+    private func cleanupPlans(_ actions: [Core.System.CleanupAction], resourceLimit: Int?, afterResourceID: String?) async throws -> [Core.System.CleanupPlan] {
+        guard !actions.isEmpty else { return [] }
+        if actions.contains(where: { $0.risk == .compaction }) {
             let data = try await runner.run(ContainerCommands.version)
             let version = AppleContainerCLILocator.parseVersion(String(decoding: data, as: UTF8.self))
             guard AppleContainerCLILocator.isSupported(version) else {
@@ -44,25 +48,51 @@ extension AppleContainerClient {
             }
         }
         let inventory = try await storageInventory()
-        let all = inventory.identities(for: action)
-        let ids = storageCandidates(all, limit: resourceLimit, after: afterResourceID)
-        guard ids.allSatisfy({ !$0.isEmpty && !$0.hasPrefix("-") }) else { throw Core.System.StorageError.unavailable }
-        let commands = storageCommands(action, ids: ids, builders: inventory.builders)
-        let analysis = try? await storageAnalysis()
-        let bytes: UInt64?
-        switch action {
-        case .stoppedContainers, .resetBuilderCache, .unusedVolumes:
-            let prefix = action == .unusedVolumes ? "volumes/" : "containers/"
-            bytes = analysis.flatMap { value in
-                guard value.isComplete else { return nil }
-                return ids.reduce(0) { $0 + (value.resourceAllocatedBytes[prefix + $1] ?? 0) }
-            }
-        default: bytes = nil
+        let candidates = try actions.map { action in
+            let ids = storageCandidates(inventory.identities(for: action), limit: resourceLimit, after: afterResourceID)
+            guard ids.allSatisfy({ !$0.isEmpty && !$0.hasPrefix("-") }) else { throw Core.System.StorageError.unavailable }
+            return (action: action, ids: ids, commands: storageCommands(action, ids: ids, builders: inventory.builders))
         }
-        return Core.System.CleanupPlan(id: UUID(), runtimeKind: descriptor.kind, action: action,
-                                       resourceIDs: ids, commands: commands, candidateAllocatedBytes: bytes,
-                                       createdAt: Date(), validationToken: try inventory.token(), resourceLimit: resourceLimit,
-                                       afterResourceID: afterResourceID)
+        let needsMeasurement = candidates.contains { !$0.ids.isEmpty && allocationPrefix(for: $0.action) != nil }
+        let measurement: HostStorageScanner.Measurement?
+        if needsMeasurement {
+            measurement = (try? await storageMeasurement(containers: inventory.containers, builders: inventory.builders))?.measurement
+        } else {
+            measurement = nil
+        }
+        let validationToken = try inventory.token()
+        let createdAt = Date()
+        return candidates.map { candidate in
+            let bytes: UInt64?
+            if !candidate.ids.isEmpty, let prefix = allocationPrefix(for: candidate.action),
+               let measurement, measurement.complete {
+                bytes = candidate.ids.reduce(0) { $0 + (measurement.resources[prefix + $1] ?? 0) }
+            } else {
+                bytes = nil
+            }
+            return Core.System.CleanupPlan(id: UUID(), runtimeKind: descriptor.kind, action: candidate.action,
+                                           resourceIDs: candidate.ids, commands: candidate.commands, candidateAllocatedBytes: bytes,
+                                           createdAt: createdAt, validationToken: validationToken, resourceLimit: resourceLimit,
+                                           afterResourceID: afterResourceID)
+        }
+    }
+
+    private func allocationPrefix(for action: Core.System.CleanupAction) -> String? {
+        switch action {
+        case .stoppedContainers, .resetBuilderCache: "containers/"
+        case .unusedVolumes: "volumes/"
+        default: nil
+        }
+    }
+
+    private func storageMeasurement(containers: [Core.Container.Snapshot], builders: [Core.Container.Snapshot]) async throws -> (root: URL, measurement: HostStorageScanner.Measurement) {
+        guard let path = try await systemStatus().appRoot else { throw Core.System.StorageError.unavailable }
+        let root = URL(fileURLWithPath: path).standardizedFileURL
+        let measurement = try await Task.detached(priority: .utility) {
+            try HostStorageScanner.scan(root: root, knownContainers: Set(containers.map(\.id)),
+                                        builderIDs: Set(builders.map(\.id)))
+        }.value
+        return (root, measurement)
     }
 
     func executeCleanup(_ plan: Core.System.CleanupPlan) async throws -> Core.System.CleanupResult {

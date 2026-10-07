@@ -4,6 +4,64 @@ import Testing
 
 @Suite("Runtime adapter boundary")
 struct AppleContainerAdapterTests {
+    @Test func normalCreateNeverSubstitutesAParentIndexForAChildDigest() async throws {
+        let imagesData = try Fixture.data("image-inspect")
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self,
+            from: imagesData, runtimeKind: .appleContainer)
+        let image = try #require(images.first)
+        let variant = try #require(image.variants.first { $0.platform.architecture == "amd64" && $0.isRunnable })
+        #expect(image.digest != variant.digest)
+        let reference = "\(Core.Registry.ImageReference.normalizedRepositoryKey(image.reference))@\(variant.digest)"
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = reference
+        request.name = "child-digest"
+        let runner = RecordingImageCreateRunner(images: imagesData)
+        let core = Core.Orchestrator.testing(runner: runner, runtimeKind: .appleContainer)
+
+        let result = try await core.createContainer(.containerCreate(from: request))
+
+        #expect(result.id == "child-digest")
+        #expect(await runner.commands == [ContainerCommands.imageList(),
+                                         ["run", "--detach", "--name", "child-digest", reference]])
+        #expect(await runner.commands.contains { $0.starts(with: ["image", "tag"]) } == false)
+    }
+
+    @Test func localDigestRecoveryCreatesAndVerifiesAnImmutableAlias() async throws {
+        let digest = "sha256:" + String(repeating: "a", count: 64)
+        let alias = "ghcr.io/example/coast:contained-recovery-" + String(repeating: "a", count: 64)
+        let source = Core.Image.Resource(configuration: .init(name: "ghcr.io/example/coast:old", descriptor: .init(digest: digest, mediaType: nil, size: nil), creationDate: nil), id: digest, runtimeKind: .appleContainer)
+        let tagged = Core.Image.Resource(configuration: .init(name: alias, descriptor: .init(digest: digest, mediaType: nil, size: nil), creationDate: nil), id: digest, runtimeKind: .appleContainer)
+        let runner = CommandMapRunner(outputs: [
+            ContainerCommands.imageList(): .success(try JSONEncoder().encode([source])),
+            ContainerCommands.imageTag(source: source.reference, target: alias): .success(Data()),
+            ContainerCommands.imageInspect([alias]): .success(try JSONEncoder().encode([tagged])),
+        ])
+        let client = AppleContainerClient(runner: runner)
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "ghcr.io/example/coast@\(digest)"
+        let prepared = try await client.prepareCreateRequest(request)
+        #expect(prepared.image == alias)
+        #expect(try await client.prepareCreateRequest(prepared).image == alias)
+    }
+
+    @Test func conflictingRecoveryAliasIsNeverOverwritten() async throws {
+        let digest = "sha256:" + String(repeating: "a", count: 64)
+        let alias = "ghcr.io/example/coast:contained-recovery-" + String(repeating: "a", count: 64)
+        let source = Core.Image.Resource(configuration: .init(name: "ghcr.io/example/coast:old", descriptor: .init(digest: digest, mediaType: nil, size: nil), creationDate: nil), id: digest, runtimeKind: .appleContainer)
+        let conflict = Core.Image.Resource(configuration: .init(name: alias, descriptor: .init(digest: "sha256:wrong", mediaType: nil, size: nil), creationDate: nil), id: "sha256:wrong", runtimeKind: .appleContainer)
+        let client = AppleContainerClient(runner: CommandMapRunner(outputs: [
+            ContainerCommands.imageList(): .success(try JSONEncoder().encode([source, conflict])),
+        ]))
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "ghcr.io/example/coast@\(digest)"
+        do {
+            _ = try await client.prepareCreateRequest(request)
+            Issue.record("Expected alias identity conflict")
+        } catch {
+            #expect((error as? any Core.Error.PackageError)?.packageErrorCode == "recoveryImageIdentityChanged")
+        }
+    }
+
     @Test func runtimeKindAcceptsFutureAdapters() throws {
         let descriptor = Core.Runtime.Descriptor(kind: Core.Runtime.Kind(rawValue: "future-runtime"),
                                            displayName: "Future Runtime",
@@ -105,7 +163,7 @@ struct AppleContainerAdapterTests {
         request.name = "web"
         request.cpus = "2"
 
-        let preview = AppleContainerCreateTranslator.preview(for: request)
+        let preview = AppleContainerCreateTranslator.preview(for: request, start: true)
         #expect(preview.command == ["run", "--detach", "--name", "web", "--cpus", "2", "nginx:latest"])
         #expect(preview.warnings.isEmpty)
 
@@ -237,6 +295,25 @@ struct AppleContainerAdapterTests {
 
         #expect(received.count == 1)
         #expect(received.first?.map(\.id) == ["buildkit", "sonarrhd"])
+    }
+}
+
+private actor RecordingImageCreateRunner: Core.Command.Running {
+    let images: Data
+    private(set) var commands: [[String]] = []
+
+    init(images: Data) { self.images = images }
+
+    func run(_ arguments: [String], stdin: Data?, priority: Core.Command.ExecutionPriority) async throws -> Data {
+        commands.append(arguments)
+        if arguments == ContainerCommands.imageList() || arguments.starts(with: ["image", "inspect"]) {
+            return images
+        }
+        return Data()
+    }
+
+    nonisolated func stream(_ arguments: [String], priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
     }
 }
 

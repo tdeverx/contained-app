@@ -268,22 +268,14 @@ extension AppModel {
         }
 
         let updateState = containerImageUpdateState(for: snapshot)
-        if updateState.needsPull,
-           !(await pullImageUpdate(snapshot.image, runtimeKind: snapshot.runtimeKind)) {
-            return false
-        }
-
         var spec = ContainerFormState(from: snapshot.configuration)
         spec.personalization = containerStyle(for: snapshot)
         spec.healthCheck = healthChecks.check(for: snapshot.scopedID) ?? Core.Container.HealthCheck()
         spec.applyLinkedVolumePaths(database.linkedVolumePaths(for: snapshot.scopedID))
 
         let shouldRemainStopped = snapshot.state != .running
-        guard let replacementID = await recreateContainer(originalID: snapshot.scopedID, spec: spec) else {
-            if shouldRemainStopped,
-               containers.recreateFailure?.recovery == .originalRestored {
-                await containers.stop(snapshot.scopedID)
-            }
+        guard let replacementID = await recreateContainer(originalID: snapshot.scopedID, spec: spec,
+                                                         pullUpdatedImage: updateState.needsPull) else {
             return false
         }
 
@@ -326,17 +318,8 @@ extension AppModel {
             }
             return
         }
-        if images.isEmpty, let client {
-            do {
-                setImages(try await client.runtimeImages())
-                imagesError = nil
-            } catch let error as Core.Command.Error {
-                imagesError = error.appDisplayMessage
-                return
-            } catch {
-                imagesError = error.appDisplayMessage
-                return
-            }
+        if images.isEmpty {
+            await refreshImagesIfNeeded(force: true)
         }
         guard !images.isEmpty else { return }
         await checkAllImageUpdates(manual: false)

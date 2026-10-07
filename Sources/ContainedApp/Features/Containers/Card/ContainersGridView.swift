@@ -7,8 +7,12 @@ import ContainedCore
 /// filter live in the background context menu and menu commands; tapping a card grows it in place
 /// into a centered detail panel.
 struct ContainersGridView: View {
-    private struct DetailSource: Equatable {
+    struct DetailSource: Equatable {
         let snapshot: Core.Container.Snapshot
+
+        func currentSnapshot(in snapshots: [Core.Container.Snapshot]) -> Core.Container.Snapshot {
+            snapshots.first { $0.scopedID == snapshot.scopedID } ?? snapshot
+        }
     }
 
     private struct RebuildRequest: Identifiable {
@@ -37,6 +41,7 @@ struct ContainersGridView: View {
     @State private var projectionState = ContainerGridProjectionState()
     @State private var selectedWidgetIndices: [String: Int] = [:]
     @State private var liveSortRefresh = 0
+    @State private var recovering: AppDatabase.ContainerRecreationRecovery?
 
     private let detailSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
 
@@ -87,6 +92,19 @@ struct ContainersGridView: View {
                             .contentShape(Rectangle())
                             .onTapGesture(count: 2) { zoomFrontWindow() }
                         LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(app.containerRecreationRecoveries) { recovery in
+                                UI.Surface.Content(elevated: true, alignment: .leading) {
+                                    UI.Panel.Section(header: recovery.snapshot.displayName) {
+                                        Text("Recreation needs recovery. The original recipe is saved.")
+                                        UI.Action.TextButton(title: AppText.string("recreate.reviewRecovery", defaultValue: "Review Recovery…"),
+                                                             systemName: "arrow.counterclockwise",
+                                                             help: AppText.string("recreate.reviewRecovery.help", defaultValue: "Review the saved image and command, then restore the missing container")) {
+                                            recovering = recovery
+                                        }
+                                        .disabled(store.busyIDs.contains(recovery.id))
+                                    }
+                                }
+                            }
                             LazyVGrid(columns: gridColumns, spacing: UI.Card.Grid.spacing) {
                                 ForEach(projectionState.projection.containers, id: \.scopedID) { snapshot in
                                     gridCard(snapshot)
@@ -119,7 +137,7 @@ struct ContainersGridView: View {
                     UX.Morph.SingleSurface(source: source,
                                            target: target,
                                            progress: expanded ? 1 : 0) {
-                        expandedCard(detail.snapshot)
+                        expandedCard(detail.currentSnapshot(in: store.snapshots))
                     }
                         .zIndex(10)
                 }
@@ -130,10 +148,11 @@ struct ContainersGridView: View {
             if selecting && !selection.isEmpty { batchBar } else if let message = store.errorMessage { UI.State.ErrorBanner(message: message) }
         }
         .overlay {
-            if store.snapshots.isEmpty || (ui.selectedContainerGroup != nil && projectionState.projection.visibleCount == 0) {
+            if app.containerRecreationRecoveries.isEmpty && (store.snapshots.isEmpty || (ui.selectedContainerGroup != nil && projectionState.projection.visibleCount == 0)) {
                 emptyState
             }
         }
+        .sheet(item: $recovering) { recovery in ContainerRecoveryView(recovery: recovery) }
         .confirmationDialog(
             "Delete \(customizeName(deleting))?",
             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })

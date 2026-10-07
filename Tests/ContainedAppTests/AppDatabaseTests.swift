@@ -1,4 +1,6 @@
 import Foundation
+import Observation
+import Synchronization
 import Testing
 import ContainedCore
 import ContainedUI
@@ -249,6 +251,109 @@ struct AppDatabaseTests {
         database.markContainerRecreateFailed(scopedID: source.scopedID)
         #expect(retained.migrationStateRaw == "recreateFailed")
         #expect(retained.runtimeProjectionsData != nil)
+    }
+
+    @Test func failedRecreationRefreshCannotReplaceTheOriginalRecoveryRecipe() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let source = Core.Container.Snapshot.placeholder(id: "coast", image: "example/coast:original", runtimeKind: .appleContainer)
+        let document = Core.Schema.Document.containerRecovery(from: source.configuration)
+        #expect(database.markContainerRecreateStarted(source: source, sourceDocument: document))
+        database.markContainerRecreateFailed(scopedID: source.scopedID)
+        let replacement = Core.Container.Snapshot.placeholder(id: "coast", image: "example/coast:broken", state: .stopped, runtimeKind: .appleContainer)
+        _ = await database.upsertContainers([replacement])
+        let recovery = try #require(database.containerRecreationRecoveries().first)
+        #expect(recovery.snapshot == source)
+        #expect(recovery.document == document)
+        _ = await database.upsertContainers([])
+        #expect(database.containerRecreationRecoveries().count == 1)
+        database.completeContainerRecreate(sourceScopedID: source.scopedID, replacementScopedID: source.scopedID)
+        #expect(database.containerRecreationRecoveries().isEmpty)
+    }
+
+    @Test func pendingRecreationRejectsAnotherOriginalRecipe() throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let source = Core.Container.Snapshot.placeholder(id: "web", image: "example/original", runtimeKind: .appleContainer)
+        let document = Core.Schema.Document.containerRecovery(from: source.configuration)
+        #expect(database.markContainerRecreateStarted(source: source, sourceDocument: document))
+        database.markContainerRecreateFailed(scopedID: source.scopedID)
+        let replacement = Core.Container.Snapshot.placeholder(id: "web", image: "example/replacement", runtimeKind: .appleContainer)
+        let saves = database.successfulSaveCount
+
+        #expect(!database.markContainerRecreateStarted(source: replacement, sourceDocument: .containerRecovery(from: replacement.configuration)))
+        let recovery = try #require(database.containerRecreationRecoveries().first)
+        #expect(recovery.snapshot == source)
+        #expect(recovery.document == document)
+        #expect(database.successfulSaveCount == saves)
+        #expect(!database.context.hasChanges)
+    }
+
+    @Test func recoveryProjectionIgnoresUnrelatedDatabaseWrites() throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let source = Core.Container.Snapshot.placeholder(id: "web", image: "alpine", runtimeKind: .appleContainer)
+        #expect(database.markContainerRecreateStarted(source: source, sourceDocument: .containerRecovery(from: source.configuration)))
+        #expect(database.containerRecreationRecoveries().count == 1)
+        let loads = database.recreationRecoveryLoadCount
+        let invalidations = Mutex(0)
+        withObservationTracking {
+            _ = database.containerRecreationRecoveries()
+        } onChange: {
+            invalidations.withLock { $0 += 1 }
+        }
+
+        database.setSetting("changed", for: "unrelated")
+        HistoryStore(database: database).record(.system, message: "unrelated history")
+        #expect(database.containerRecreationRecoveries().count == 1)
+        #expect(database.recreationRecoveryLoadCount == loads)
+        #expect(invalidations.withLock { $0 } == 0)
+
+        #expect(database.completeContainerRecreate(sourceScopedID: source.scopedID, replacementScopedID: source.scopedID))
+        #expect(invalidations.withLock { $0 } == 1)
+        #expect(database.containerRecreationRecoveries().isEmpty)
+        #expect(database.recreationRecoveryLoadCount == loads + 1)
+    }
+
+    @Test func incompleteInventoryCannotRemoveOtherRuntimeRecords() async throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        for kind in [Core.Runtime.Kind.appleContainer, .docker] {
+            let scopedID = kind.scopedID(for: "web")
+            database.context.insert(ContainerRecord(scopedID: scopedID, runtimeKindRaw: kind.rawValue,
+                                                    runtimeID: "web", displayName: "web", imageReference: "alpine", statusRaw: "running"))
+            database.context.insert(ImageTagRecord(scopedID: kind.scopedID(for: "alpine:latest"), imageIdentity: "alpine",
+                                                  reference: "alpine:latest", runtimeKindRaw: kind.rawValue, runtimeImageID: "alpine"))
+            database.context.insert(VolumeRecord(scopedID: kind.scopedID(for: "data"), runtimeKindRaw: kind.rawValue, name: "data"))
+            database.context.insert(NetworkRecord(scopedID: kind.scopedID(for: "default"), runtimeKindRaw: kind.rawValue, name: "default"))
+        }
+        #expect(database.save())
+
+        _ = await database.upsertContainers([], authoritativeRuntimeKinds: [.appleContainer])
+        database.upsertImages([], authoritativeRuntimeKinds: [.appleContainer])
+        database.upsertVolumes([], authoritativeRuntimeKinds: [.appleContainer])
+        database.upsertNetworks([], authoritativeRuntimeKinds: [.appleContainer])
+
+        #expect(try database.fetchRequired(ContainerRecord.self).map(\.runtimeKindRaw) == [Core.Runtime.Kind.docker.rawValue])
+        #expect(try database.fetchRequired(ImageTagRecord.self).map(\.runtimeKindRaw) == [Core.Runtime.Kind.docker.rawValue])
+        #expect(try database.fetchRequired(VolumeRecord.self).map(\.runtimeKindRaw) == [Core.Runtime.Kind.docker.rawValue])
+        #expect(try database.fetchRequired(NetworkRecord.self).map(\.runtimeKindRaw) == [Core.Runtime.Kind.docker.rawValue])
+    }
+
+    @Test func orphanCleanupPreservesUnauthoritativeRuntimeAndLiveLegacyIDs() {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let styles = PersonalizationStore(database: database)
+        let health = HealthCheckStore(database: database)
+        var style = Personalization()
+        style.nickname = "retained"
+        let check = Core.Container.HealthCheck(command: ["true"], enabled: true)
+        for id in ["web", "docker::other", "apple-container::gone"] {
+            styles.setOverride(style, for: id)
+            health.setCheck(check, for: id)
+        }
+
+        #expect(styles.purgeOrphans(liveContainerIDs: ["apple-container::web"], liveImageRefs: [], authoritativeRuntimeKinds: [.appleContainer]) == 1)
+        #expect(health.purgeOrphans(liveContainerIDs: ["apple-container::web"], authoritativeRuntimeKinds: [.appleContainer]) == 1)
+        #expect(styles.override(for: "web") == style)
+        #expect(styles.override(for: "docker::other") == style)
+        #expect(health.check(for: "web") == check)
+        #expect(health.check(for: "docker::other") == check)
     }
 
     @Test func linkedVolumePathMetadataIsPersistedAndRetainsMissingContainer() async throws {

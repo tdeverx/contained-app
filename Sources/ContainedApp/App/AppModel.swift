@@ -46,12 +46,19 @@ final class AppModel {
     }
 
     private(set) var bootstrap: Bootstrap = .checking
-    private(set) var client: Core.Orchestrator?
+    private(set) var client: Core.Orchestrator? {
+        didSet {
+            imageInventoryRuntimeKinds = []
+            lastPersistedImages = nil
+            lastPersistedImageRuntimeKinds = nil
+        }
+    }
     private(set) var systemStatus: Core.System.Status?
     private(set) var diskUsage: Core.System.DiskUsage?
     var storageAnalyses: [Core.Runtime.Kind: Core.System.StorageAnalysis] = [:]
     var storageAnalysisErrors: [Core.Runtime.Kind: String] = [:]
     var storageCleanupPlans: [Core.System.CleanupPlan] = []
+    var storageCleanupRecommended = false
     struct RuntimePruneRequest: Identifiable {
         let id = UUID()
         let runtimeKind: Core.Runtime.Kind
@@ -103,13 +110,19 @@ final class AppModel {
     // Image inventories are updated through the no-op-safe methods below. This keeps polling from
     // invalidating every consumer when the runtime returns the same inventory.
     private(set) var images: [Core.Image.Resource] = []
+    private(set) var imageInventoryRuntimeKinds: Set<Core.Runtime.Kind> = []
+    var purgingOrphans = false
+    @ObservationIgnored private var lastPersistedImages: [Core.Image.Resource]?
+    @ObservationIgnored private var lastPersistedImageRuntimeKinds: Set<Core.Runtime.Kind>?
     @ObservationIgnored var imageGroupsCache: [Core.Image.LocalTagGroup]?
     @ObservationIgnored var imageGroupIDByReferenceCache: [String: String] = [:]
     var imagesError: String?
     var imageUpdates: [String: Core.Image.UpdateStatus] = [:] {
         didSet {
             guard !reloadingPersistence, imageUpdates != oldValue else { return }
-            database.updateImageStatuses(imageUpdates)
+            // Unverified startup results must survive writes for runtimes that did refresh.
+            let saved = persistedImageUpdatesAwaitingInventory.merging(imageUpdates) { _, verified in verified }
+            database.updateImageStatuses(saved)
         }
     }
     /// Persisted update results remain hidden until the live inventory can confirm that their local
@@ -184,7 +197,7 @@ final class AppModel {
         lastImageUpdateSweep = sweep
         if !images.isEmpty {
             imageUpdates = statuses
-            reconcilePersistedImageUpdates(with: images)
+            reconcilePersistedImageUpdates(with: images, authoritativeRuntimeKinds: client == nil ? nil : imageInventoryRuntimeKinds)
         }
         historyStore.retentionDays = settings.historyRetentionDays
         updater.channel = settings.updateChannel
@@ -334,35 +347,56 @@ final class AppModel {
         }
     }
 
-    func setImages(_ images: [Core.Image.Resource]) {
-        guard images != self.images else { return }
-        personalization.stabilizeImageGroupDefaults(for: localImageGroups())
-        self.images = images
-        imageGroupsCache = nil
-        imageGroupIDByReferenceCache.removeAll(keepingCapacity: true)
-        database.upsertImages(images)
-        reconcilePersistedImageUpdates(with: images)
+    func setImages(_ images: [Core.Image.Resource], authoritativeRuntimeKinds: Set<Core.Runtime.Kind>? = nil) {
+        let changed = images != self.images
+        let scopeChanged = authoritativeRuntimeKinds != lastPersistedImageRuntimeKinds
+        if changed {
+            personalization.stabilizeImageGroupDefaults(for: localImageGroups())
+            self.images = images
+            imageGroupsCache = nil
+            imageGroupIDByReferenceCache.removeAll(keepingCapacity: true)
+        }
+        if images != lastPersistedImages || authoritativeRuntimeKinds != lastPersistedImageRuntimeKinds {
+            database.upsertImages(images, authoritativeRuntimeKinds: authoritativeRuntimeKinds)
+            if database.canPersist {
+                lastPersistedImages = images
+                lastPersistedImageRuntimeKinds = authoritativeRuntimeKinds
+            }
+        }
+        if changed || scopeChanged || !persistedImageUpdatesAwaitingInventory.isEmpty {
+            reconcilePersistedImageUpdates(with: images, authoritativeRuntimeKinds: authoritativeRuntimeKinds)
+        }
     }
 
-    private func reconcilePersistedImageUpdates(with images: [Core.Image.Resource]) {
-        let restored = persistedImageUpdatesAwaitingInventory.isEmpty
-            ? imageUpdates
-            : persistedImageUpdatesAwaitingInventory
-        persistedImageUpdatesAwaitingInventory.removeAll(keepingCapacity: false)
+    private func reconcilePersistedImageUpdates(with images: [Core.Image.Resource],
+                                                authoritativeRuntimeKinds: Set<Core.Runtime.Kind>? = nil) {
+        let restored = persistedImageUpdatesAwaitingInventory.merging(imageUpdates) { _, current in current }
         guard !restored.isEmpty else { return }
 
         var reconciled: [String: Core.Image.UpdateStatus] = [:]
+        var pending: [String: Core.Image.UpdateStatus] = [:]
         var invalidated = false
         for (key, status) in restored {
             let candidates: [Core.Image.Resource]
             if let scoped = Core.Runtime.Kind.parseScopedID(key) {
+                if let authoritativeRuntimeKinds, !authoritativeRuntimeKinds.contains(scoped.kind) {
+                    pending[key] = status
+                    if !reloadingPersistence, let verified = imageUpdates[key] { reconciled[key] = verified }
+                    continue
+                }
                 candidates = images.filter {
                     $0.runtimeKind == scoped.kind && imageUpdateKey($0.reference) == scoped.id
                 }
             } else {
                 candidates = images.filter { imageUpdateKey($0.reference) == key }
             }
-            guard let currentDigest = candidates.compactMap(\.digest).first else { continue }
+            guard let currentDigest = candidates.compactMap(\.digest).first else {
+                if Core.Runtime.Kind.parseScopedID(key) == nil, let authoritativeRuntimeKinds {
+                    let requested = Set(registeredRuntimeDescriptors.filter { $0.supports(.images) }.map(\.kind))
+                    if !requested.isSubset(of: authoritativeRuntimeKinds) { pending[key] = status }
+                }
+                continue
+            }
             guard status.localDigest != currentDigest else {
                 reconciled[key] = status.state == .checking ? Core.Image.UpdateStatus() : status
                 continue
@@ -377,6 +411,7 @@ final class AppModel {
                 reconciled[key] = Core.Image.UpdateStatus(localDigest: currentDigest)
             }
         }
+        persistedImageUpdatesAwaitingInventory = pending
         imageUpdates = reconciled
         if invalidated { lastImageUpdateSweep = nil }
     }
@@ -621,9 +656,12 @@ final class AppModel {
         let started = Date()
         do {
             let inventory = try await client.imageInventory()
-            setImages(inventory.items)
+            imageInventoryRuntimeKinds = inventory.successfulRuntimeKinds
+            let retained = images.filter { !inventory.successfulRuntimeKinds.contains($0.runtimeKind) }
+            setImages(inventory.items + retained, authoritativeRuntimeKinds: inventory.successfulRuntimeKinds)
             imagesError = partialInventoryMessage(inventory.failures)
         } catch {
+            imageInventoryRuntimeKinds = []
             imagesError = error.appDisplayMessage
         }
         lastImagesDate = Date()
@@ -641,8 +679,8 @@ final class AppModel {
         await capturedError(work)?.appDisplayMessage
     }
 
-    func previewCreateCommand(for spec: ContainerFormState) -> [String] {
-        (try? core(for: spec.effectiveRuntimeKind)?.previewCreateCommand(for: spec.materializedDocumentForRun()).command)
+    func previewCreateCommand(for spec: ContainerFormState, start: Bool = true) -> [String] {
+        (try? core(for: spec.effectiveRuntimeKind)?.previewCreateCommand(for: spec.materializedDocumentForRun(), start: start).command)
             ?? []
     }
 
@@ -651,8 +689,8 @@ final class AppModel {
         return ([executable] + arguments).joined(separator: " ")
     }
 
-    func previewCreateCommandText(for spec: ContainerFormState) -> String {
-        commandPreviewText(arguments: previewCreateCommand(for: spec), runtimeKind: spec.effectiveRuntimeKind)
+    func previewCreateCommandText(for spec: ContainerFormState, start: Bool = true) -> String {
+        commandPreviewText(arguments: previewCreateCommand(for: spec, start: start), runtimeKind: spec.effectiveRuntimeKind)
     }
 
     func imageDefaults(for spec: ContainerFormState) -> Core.Container.ImageDefaults? {
@@ -894,8 +932,9 @@ final class AppModel {
         guard let client, bootstrap == .ready else { return }
         do {
             let inventory = try await client.volumeInventory()
-            volumes = inventory.items
-            database.upsertVolumes(inventory.items)
+            let retained = volumes.filter { !inventory.successfulRuntimeKinds.contains($0.runtimeKind) }
+            volumes = inventory.items + retained
+            database.upsertVolumes(inventory.items, authoritativeRuntimeKinds: inventory.successfulRuntimeKinds)
             setResourceInventoryError(partialInventoryMessage(inventory.failures), for: "volumes")
         } catch {
             resourceInventoryErrors["volumes"] = error.appDisplayMessage
@@ -907,8 +946,10 @@ final class AppModel {
         guard let client, bootstrap == .ready else { return }
         do {
             let inventory = try await client.networkInventory()
-            if networks != inventory.items { networks = inventory.items }
-            database.upsertNetworks(inventory.items)
+            let retained = networks.filter { !inventory.successfulRuntimeKinds.contains($0.runtimeKind) }
+            let next = inventory.items + retained
+            if networks != next { networks = next }
+            database.upsertNetworks(inventory.items, authoritativeRuntimeKinds: inventory.successfulRuntimeKinds)
             setResourceInventoryError(partialInventoryMessage(inventory.failures), for: "networks")
         } catch {
             resourceInventoryErrors["networks"] = error.appDisplayMessage
@@ -981,15 +1022,25 @@ final class AppModel {
     /// Recreate an existing container from an edited spec. Pulls the replacement image before
     /// deleting the current container so an unavailable image does not strand the edit flow.
     @discardableResult
-    func recreateContainer(originalID: String, spec: ContainerFormState) async -> String? {
-        guard await permitStorageIntensiveOperation(runtimeKind: spec.effectiveRuntimeKind) else { return nil }
+    func recreateContainer(originalID: String, spec: ContainerFormState,
+                           pullUpdatedImage: Bool = false) async -> String? {
         guard let originalSnapshot = containers.snapshots.first(where: { $0.scopedID == originalID || $0.id == originalID }) else {
             flash(AppText.recreateOriginalUnavailable)
             return nil
         }
         let originalRuntimeID = originalSnapshot.id
         let originalScopedID = originalSnapshot.scopedID
-        guard core(for: spec.effectiveRuntimeKind) != nil else {
+        guard database.canPersist, !containers.busyIDs.contains(originalScopedID) else { return nil }
+        containers.busyIDs.insert(originalScopedID)
+        defer { containers.busyIDs.remove(originalScopedID) }
+        guard await permitStorageIntensiveOperation(runtimeKind: spec.effectiveRuntimeKind) else { return nil }
+        let recoveries = containerRecreationRecoveries
+        guard database.canPersist else { return nil }
+        guard !recoveries.contains(where: { $0.id == originalScopedID }) else {
+            flash(AppText.string("recreate.recoveryPending", defaultValue: "Resolve the saved recreation recovery before editing or rebuilding this container again."))
+            return nil
+        }
+        guard let core = core(for: spec.effectiveRuntimeKind) else {
             let error = Core.Runtime.UnsupportedCapability(kind: spec.effectiveRuntimeKind, capability: .containers)
             flash(error.appDisplayMessage)
             logger.recordFailure("Recreate requested unavailable runtime",
@@ -999,7 +1050,30 @@ final class AppModel {
                                  containerID: originalScopedID)
             return nil
         }
-        if !(await imageIsLocal(spec.image, runtimeKind: spec.effectiveRuntimeKind)) {
+        let rollbackDocument = Core.Schema.Document.containerRecovery(from: originalSnapshot.configuration)
+        do { try await core.prepareContainerRecovery(rollbackDocument) }
+        catch {
+            flash(error.appDisplayMessage)
+            logger.recordFailure("Failed preparing original recovery image", error: error,
+                                 category: .lifecycle, severity: .warning, containerID: originalScopedID)
+            return nil
+        }
+        guard database.markContainerRecreateStarted(source: originalSnapshot, sourceDocument: rollbackDocument) else {
+            flash(AppText.string("recreate.backupFailed", defaultValue: "Recreation stopped because the original recovery recipe could not be saved. Retry database recovery before replacing the container."))
+            return nil
+        }
+        var recreationRequested = false
+        defer {
+            // A failed pull/preparation leaves the original untouched. Clear only our own marker;
+            // a failed cleanup save leaves the durable recipe available for explicit recovery.
+            if !recreationRequested {
+                database.completeContainerRecreate(sourceScopedID: originalScopedID,
+                                                   replacementScopedID: originalScopedID)
+            }
+        }
+        if pullUpdatedImage {
+            guard await pullImageUpdate(spec.image, runtimeKind: spec.effectiveRuntimeKind) else { return nil }
+        } else if !(await imageIsLocal(spec.image, runtimeKind: spec.effectiveRuntimeKind)) {
             guard await pullImage(spec.image, runtimeKind: spec.effectiveRuntimeKind) else { return nil }
         }
         do {
@@ -1014,8 +1088,8 @@ final class AppModel {
             return nil
         }
         let replacementDocument = spec.materializedDocumentForRun()
-        let rollbackDocument = Core.Schema.Document.containerEdit(from: originalSnapshot.configuration)
-        database.markContainerRecreateStarted(source: originalSnapshot, sourceDocument: rollbackDocument)
+        guard database.canPersist else { return nil }
+        recreationRequested = true
         guard await containers.recreate(originalID: originalID,
                                         replacement: replacementDocument,
                                         rollback: rollbackDocument) else {

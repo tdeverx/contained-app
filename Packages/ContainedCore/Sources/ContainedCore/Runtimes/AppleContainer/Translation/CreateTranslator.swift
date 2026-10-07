@@ -1,8 +1,8 @@
 import Foundation
 
 enum AppleContainerCreateTranslator {
-    static func preview(for request: Core.Container.CreateRequest) -> Core.Command.Preview {
-        Core.Command.Preview(command: ContainerCommands.run(request))
+    static func preview(for request: Core.Container.CreateRequest, start: Bool) -> Core.Command.Preview {
+        Core.Command.Preview(command: ContainerCommands.run(request, start: start))
     }
 
     static func result(from data: Data, request: Core.Container.CreateRequest) -> Core.Container.CreateResult {

@@ -14,6 +14,8 @@ enum AppErrorPresentation {
             return message(for: error)
         case let error as Core.Compose.Error:
             return message(for: error)
+        case let error as Core.Error.PackageError where error.packageErrorCode == "recreateReplacementNotStopped":
+            return AppText.string("error.recreate.originalNotStopped", defaultValue: "The recovered container did not remain stopped. Its saved recovery is still available; inspect the container before closing recovery.")
         case let error as LocalizedError:
             return error.errorDescription ?? (error as NSError).localizedDescription
         default:
@@ -100,6 +102,9 @@ enum AppErrorPresentation {
         case .originalRestored:
             return AppText.recreateOriginalRestored(detail: error.primaryFailure.runtimeDetail)
         case .restoreFailed:
+            if error.phase == .deleteOriginal {
+                return AppText.string("error.recreate.restartOriginalFailed", defaultValue: "Couldn't remove the original container or restore its running state. Its saved configuration was kept for recovery. Removal: \(error.primaryFailure.runtimeDetail) Restart: \(error.recoveryFailure?.runtimeDetail ?? "")")
+            }
             return AppText.recreateRestoreFailed(
                 replacementDetail: error.primaryFailure.runtimeDetail,
                 recoveryDetail: error.recoveryFailure?.runtimeDetail ?? ""

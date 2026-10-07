@@ -18,14 +18,20 @@ final class HealthCheckStore {
     private func loadIfNeeded() -> Bool {
         if loadedSuccessfully { return true }
         guard database.canPersist, let records = try? database.fetchRequired(HealthCheckRecord.self) else { return false }
-        checks = Dictionary(records.sorted { $0.updatedAt > $1.updatedAt }.compactMap { record in
+        let ordered = records.sorted {
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            return String(describing: $0.persistentModelID) < String(describing: $1.persistentModelID)
+        }
+        var restored: [String: Core.Container.HealthCheck] = [:]
+        for record in ordered where restored[record.containerScopedID] == nil {
             do {
-                return (record.containerScopedID,
-                        try JSONDecoder().decode(Core.Container.HealthCheck.self, from: record.valueData))
+                restored[record.containerScopedID] = try JSONDecoder().decode(Core.Container.HealthCheck.self, from: record.valueData)
             } catch {
-                fatalError("Unable to decode health check for \(record.containerScopedID): \(error)")
+                database.recordFailure(.decodeRecord(record: "health check \(record.containerScopedID)", detail: AppDatabase.safeDetail(error)))
+                return false
             }
-        }, uniquingKeysWith: { newest, _ in newest })
+        }
+        checks = restored
         loadedSuccessfully = true
         return true
     }
@@ -78,10 +84,15 @@ final class HealthCheckStore {
         persist()
     }
 
-    func purgeOrphans(liveContainerIDs: Set<String>) -> Int {
+    func purgeOrphans(liveContainerIDs: Set<String>,
+                      authoritativeRuntimeKinds: Set<Core.Runtime.Kind> = Set(Core.Runtime.supportedDescriptors.map(\.kind))) -> Int {
         guard database.canPersist, loadIfNeeded() else { return 0 }
         let before = checks.count
-        checks = checks.filter { liveContainerIDs.contains($0.key) }
+        checks = checks.filter {
+            let kind = Core.Runtime.Kind.parseScopedID($0.key)?.kind ?? .appleContainer
+            let scopedID = Core.Runtime.Kind.parseScopedID($0.key) == nil ? kind.scopedID(for: $0.key) : $0.key
+            return !authoritativeRuntimeKinds.contains(kind) || liveContainerIDs.contains($0.key) || liveContainerIDs.contains(scopedID)
+        }
         persist()
         return before - checks.count
     }
@@ -98,7 +109,7 @@ final class HealthCheckStore {
                 do {
                     data = try AppDatabase.encoded(check)
                 } catch {
-                    fatalError("Unable to encode health check for \(id): \(error)")
+                    throw AppDatabase.Failure.encodeRecord(type: "health check \(id)", detail: AppDatabase.safeDetail(error))
                 }
                 if let record = records.first(where: { $0.containerScopedID == id }) {
                     guard record.valueData != data else { continue }

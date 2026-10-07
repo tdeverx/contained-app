@@ -40,6 +40,17 @@ references, and default/system networks are protected. Volume and stopped-contai
 deletion are irreversible. The combined "Reclaim all" action is replaced with
 individually reviewed categories so their different risks cannot be conflated.
 
+**Free Up Space…** in Storage analysis and the low-disk-space alert opens this
+review directly. Only running-container/builder compaction is preselected. Builder
+cache, unreferenced image, unused volume, and unused network removal require explicit
+selection; stopped containers and arbitrary guest temporary files are not included.
+The same sheet exposes the existing opt-in automatic compaction policy. Enabling
+automation does not enable any automatic deletion. If an earlier selected action
+changes runtime inventory, remaining exact previews are rejected until refreshed.
+
+The combined preview shares one runtime inventory and measures host allocation only
+when a selected category needs it. Execution still refreshes inventory before acting.
+
 Builder cache reset stops/deletes only the builder VM, interrupts external builds,
 and discards BuildKit cache. The next build recreates it. Running-builder compaction
 is also available without cache deletion. App builds/pulls disable cleanup. Activity
@@ -164,6 +175,8 @@ delete settings, templates, container records, or retained history.
 If database reads or saves fail, Contained rolls back pending changes and pauses
 new writes until explicit recovery succeeds. Waiting alone never resumes writes.
 An alert links to General settings and an explicit retry.
+Unreadable personalization or health-check records also pause writes instead of
+crashing startup; previously loaded values remain intact when a reload fails.
 Successful explicit retry reloads saved preferences, registry retry state, and cleanup/
 image-update scheduling state, history counts, and loaded recent activity without
 saving fallback defaults. It then reruns runtime detection using the restored CLI paths.
@@ -177,6 +190,10 @@ downgrade decision is explicitly accepted; ordinary retry does not grant accepta
 Configuration export reads saved personalization and health checks directly without
 enabling writes or normalization. Unreadable records abort export instead of producing
 a successful-looking backup with missing data.
+**Clean Up Orphans** refreshes container and image inventories first and refuses to
+remove local metadata if any connected runtime cannot supply a complete inventory.
+Saved recreation/migration identities and state belonging to unqueried runtimes are
+protected, including personalization, health checks, and retained history.
 Forced runtime detection queues behind an in-flight
 startup check rather than reusing its pre-recovery configuration.
 Diagnostics show only an error domain/code, not database contents or private paths.

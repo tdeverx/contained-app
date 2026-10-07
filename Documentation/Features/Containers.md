@@ -41,11 +41,45 @@ Rebuild is always available from a container's context menu. When the app knows
 that the container's immutable image identity differs from the current tag—or a
 newer registry digest is available—the action is relabeled **Update Container**
 and an orange update button appears persistently at the far right of the card
-footer. Updating pulls first only
-when needed, then recreates through the same rollback path as Edit → Save. A
+footer. Updating preserves the original image and saves its recovery recipe before
+pulling when needed, then recreates through the same rollback path as Edit → Save. A
 failed streamed pull stops the update instead of being reported as successful.
 Rebuild and Update preserve whether the container was running or stopped, while
 ordinary Start, Stop, and Restart remain non-destructive lifecycle operations.
+
+Apple Container edits preserve the inspected executable explicitly, so recreating
+does not repeatedly prepend the image entrypoint's arguments. Intentional repeated
+arguments are preserved, not guessed away. Before teardown, Contained must save the
+original recipe; its image is pinned to the inspected digest when available. Apple
+Container resolves that digest through a verified `contained-recovery-<digest>` image
+tag when needed. Only an exact image descriptor is aliased; a child-manifest digest
+is never replaced with its multi-platform parent index. This retains the local
+original independently of a moving tag; it can be removed through unused-image
+cleanup once no container references it. Rollback
+is verified for image identity and startup before reporting that the original returned.
+
+If replacement and rollback fail, **Review Recovery…** remains on the Containers
+page even when the runtime container is missing. Review the original image, recovery
+digest, and requested command before **Restore Original**. Recovery never overwrites or
+deletes an existing container. If a partial runtime object already occupies the name,
+inspect it with the normal container controls; **Keep Existing Container** explicitly
+closes the saved recovery after confirmation. Inventory refreshes, another Edit/Rebuild,
+and duplicate-record repair cannot replace the saved original with a partial object's
+configuration. Resolve the pending recovery before recreating that container again.
+If teardown cannot delete a previously running original, Contained restarts and verifies
+it; a failed restart keeps the recovery open. Restoration preserves the original running
+or stopped state: stopped originals use the runtime's create-only command and are never
+started, including automatic rollback. Recovery closes only after image and state
+verification succeed. Runtime stderr is shown
+for a failed attempt but is not stored in the recovery record or Activity history.
+Destructive storage cleanup is blocked for that runtime while recreation recovery
+remains pending, because a missing runtime object cannot protect its saved image,
+volumes, and networks from native pruning. Compaction remains available.
+
+Open container details follow current inventory state, including changes made by
+their Start/Stop controls. If a runtime cannot refresh, its last known containers and
+metrics remain visible with the refresh error; an outage is not treated as confirmed
+resource removal.
 
 The app serializes refreshes around lifecycle actions so a user action and the
 background polling tick do not fight over inventory and stats streams. While the

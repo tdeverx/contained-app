@@ -57,6 +57,65 @@ struct StorageManagementTests {
         #expect(await runner.mutations.isEmpty)
     }
 
+    @Test func combinedPreviewSharesInventoryAndAllocationMeasurement() async throws {
+        let directory = try temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for path in ["containers/buildkit/root.img", "volumes/unused/volume.img"] {
+            let disk = directory.appendingPathComponent(path)
+            try FileManager.default.createDirectory(at: disk.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data(repeating: 7, count: 8192).write(to: disk)
+        }
+        var inventory = emptyInventory()
+        inventory.containers = [try snapshot("running", state: "running")]
+        inventory.builders = [try snapshot("buildkit", state: "running")]
+        inventory.volumes = [volume("unused")]
+        let runner = StorageRunner(root: directory, inventory: inventory)
+        let core = Core.Orchestrator.testing(runner: runner, runtimeKind: .appleContainer)
+        let actions: [Core.System.CleanupAction] = [.compactRunningContainers, .compactRunningBuilder,
+            .resetBuilderCache, .unusedImages, .unusedVolumes, .unusedNetworks]
+
+        let plans = try await core.cleanupPlans(actions, runtimeKind: .appleContainer)
+
+        #expect(plans.map(\.action) == actions)
+        #expect(Set(plans.map(\.validationToken)).count == 1)
+        #expect((plans.first { $0.action == .resetBuilderCache }?.candidateAllocatedBytes ?? 0) > 0)
+        let volumePlan = try #require(plans.first { $0.action == .unusedVolumes })
+        #expect((volumePlan.candidateAllocatedBytes ?? 0) > 0)
+        for command in [ContainerCommands.list(all: true), ContainerCommands.builderStatus, ContainerCommands.imageList(),
+                        ContainerCommands.volumeList(), ContainerCommands.networkList(), ContainerCommands.version,
+                        ContainerCommands.systemStatus] {
+            #expect(await runner.commands.filter { $0 == command }.count == 1)
+        }
+        #expect(await runner.commands.contains(ContainerCommands.systemDF) == false)
+
+        inventory.volumes.append(volume("new-volume"))
+        await runner.replace(inventory)
+        await #expect(throws: Core.System.StorageError.self) { _ = try await core.executeCleanup(volumePlan) }
+        #expect(await runner.mutations.isEmpty)
+    }
+
+    @Test(arguments: [false, true])
+    func previewSkipsAllocationWhenUnusedOrWithoutCandidates(emptyCandidates: Bool) async throws {
+        let directory = try temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var inventory = emptyInventory()
+        inventory.containers = [try snapshot("running", state: "running")]
+        inventory.images = [image("unused:latest")]
+        inventory.networks = [network("unused")]
+        let runner = StorageRunner(root: directory, inventory: inventory)
+        let client = AppleContainerClient(runner: runner)
+        let actions: [Core.System.CleanupAction] = emptyCandidates
+            ? [.stoppedContainers, .resetBuilderCache, .unusedVolumes]
+            : [.compactRunningContainers, .unusedImages, .unusedNetworks]
+
+        let plans = try await client.cleanupPlans(actions)
+
+        #expect(plans.allSatisfy { $0.candidateAllocatedBytes == nil })
+        #expect(await runner.commands.contains(ContainerCommands.systemStatus) == false)
+        #expect(await runner.commands.contains(ContainerCommands.systemDF) == false)
+        #expect(await runner.mutations.isEmpty)
+    }
+
     @Test func exactCommandsPartialFailuresAndObservedHostReclaim() async throws {
         let directory = try temporaryRoot()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -163,11 +222,13 @@ private actor StorageRunner: Core.Command.Running {
     var inventory: AppleStorageInventory
     let version: String
     var mutations: [[String]] = []
+    var commands: [[String]] = []
     init(root: URL, inventory: AppleStorageInventory, version: String = "1.4.1") {
         self.root = root; self.inventory = inventory; self.version = version
     }
     func replace(_ value: AppleStorageInventory) { inventory = value }
     func run(_ arguments: [String], stdin: Data?, priority: Core.Command.ExecutionPriority) async throws -> Data {
+        commands.append(arguments)
         let encoder = JSONEncoder()
         switch arguments {
         case ContainerCommands.version: return Data("container version \(version)\n".utf8)

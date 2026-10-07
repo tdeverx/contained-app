@@ -26,10 +26,14 @@ struct InventoryFailure: Error, Equatable, Sendable {
 struct InventoryResult<Item: Sendable>: Sendable {
     public var items: [Item]
     public var failures: [Core.Runtime.InventoryFailure]
+    /// Only these runtimes confirmed absence; failed or unqueried runtimes remain unknown.
+    public var successfulRuntimeKinds: Set<Core.Runtime.Kind>
 
-    public init(items: [Item], failures: [Core.Runtime.InventoryFailure] = []) {
+    public init(items: [Item], failures: [Core.Runtime.InventoryFailure] = [],
+                successfulRuntimeKinds: Set<Core.Runtime.Kind>) {
         self.items = items
         self.failures = failures
+        self.successfulRuntimeKinds = successfulRuntimeKinds
     }
 }
 }

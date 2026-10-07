@@ -23,4 +23,10 @@ public extension Core.Orchestrator {
         try await requireRuntime(plan.runtimeKind, capability: .storageManagement,
                                  as: (any RuntimeStorageClient).self).executeCleanup(plan)
     }
+
+    /// Build a manual preview from one runtime inventory and, when needed, one allocation scan.
+    func cleanupPlans(_ actions: [Core.System.CleanupAction], runtimeKind: Core.Runtime.Kind) async throws -> [Core.System.CleanupPlan] {
+        try await requireRuntime(runtimeKind, capability: .storageManagement,
+                                 as: (any RuntimeStorageClient).self).cleanupPlans(actions)
+    }
 }

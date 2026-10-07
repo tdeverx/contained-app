@@ -11,7 +11,7 @@ struct ToolbarUpdatesPanel: View {
     var hiddenImageGroupID: Core.Image.LocalTagGroup.ID?
     var onOpenImage: (Core.Image.LocalTagGroup, CGRect) -> Void
     var onClose: () -> Void
-    @State private var imageFrames: [Core.Image.LocalTagGroup.ID: CGRect] = [:]
+    @State private var pendingImageGroupID: Core.Image.LocalTagGroup.ID?
     @State private var settledUpdateStates: [Core.Image.LocalTagGroup.ID: Core.Image.UpdateState] = [:]
     @State private var page: ImagePage?
 
@@ -82,6 +82,11 @@ struct ToolbarUpdatesPanel: View {
         }
         .onChange(of: projection.liveUpdateStates) { _, states in
             rememberSettledUpdateStates(states)
+        }
+        .onChange(of: projection.groups.map(\.id)) { _, ids in
+            if let pendingImageGroupID, !ids.contains(pendingImageGroupID) {
+                self.pendingImageGroupID = nil
+            }
         }
         .task { await app.refreshImagesIfNeeded() }
     }
@@ -223,26 +228,31 @@ struct ToolbarUpdatesPanel: View {
         ToolbarImageGroupCard(group: group,
                               isExpanded: false,
                               onTap: {
-                                  onOpenImage(group, imageFrames[group.id] ?? .zero)
+                                  guard pendingImageGroupID == nil else { return }
+                                  pendingImageGroupID = group.id
                               },
                               onClose: {})
             .opacity(hiddenImageGroupID == group.id ? 0 : 1)
             .background {
-                GeometryReader { proxy in
-                    Color.clear
-                        .onAppear {
-                            updateImageFrame(proxy.frame(in: .named(coordinateSpaceName)), for: group.id)
-                        }
-                        .onChange(of: proxy.frame(in: .named(coordinateSpaceName))) { _, frame in
-                            updateImageFrame(frame, for: group.id)
-                        }
+                // Attach geometry to the tapped source instead of publishing every scrolling row.
+                if pendingImageGroupID == group.id || hiddenImageGroupID == group.id {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear {
+                                openMeasuredImage(group, frame: proxy.frame(in: .named(coordinateSpaceName)))
+                            }
+                            .onChange(of: proxy.frame(in: .named(coordinateSpaceName))) { _, frame in
+                                openMeasuredImage(group, frame: frame)
+                            }
+                    }
                 }
             }
     }
 
-    private func updateImageFrame(_ frame: CGRect, for id: Core.Image.LocalTagGroup.ID) {
-        guard imageFrames[id]?.isClose(to: frame) != true else { return }
-        imageFrames[id] = frame
+    private func openMeasuredImage(_ group: Core.Image.LocalTagGroup, frame: CGRect) {
+        guard frame.isUsableForMorph, pendingImageGroupID == group.id else { return }
+        pendingImageGroupID = nil
+        onOpenImage(group, frame)
     }
 
     private func imageRank(_ group: Core.Image.LocalTagGroup,
@@ -367,13 +377,4 @@ struct ToolbarUpdatesPanel: View {
         settledUpdateStates = settled
     }
 
-}
-
-private extension CGRect {
-    func isClose(to other: CGRect, tolerance: CGFloat = 0.5) -> Bool {
-        abs(minX - other.minX) <= tolerance &&
-        abs(minY - other.minY) <= tolerance &&
-        abs(width - other.width) <= tolerance &&
-        abs(height - other.height) <= tolerance
-    }
 }

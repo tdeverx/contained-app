@@ -52,9 +52,9 @@ enum DockerCommands {
         return args
     }
 
-    static func run(_ request: Core.Container.CreateRequest) -> [String] {
-        var args = ["container", "run"]
-        if request.detach { args.append("--detach") }
+    static func run(_ request: Core.Container.CreateRequest, start: Bool = true) -> [String] {
+        var args = ["container", start ? "run" : "create"]
+        if start, request.detach { args.append("--detach") }
         if request.removeOnExit { args.append("--rm") }
         if request.interactive { args.append("--interactive") }
         if request.tty { args.append("--tty") }

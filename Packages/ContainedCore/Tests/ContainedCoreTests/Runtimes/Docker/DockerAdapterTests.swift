@@ -68,6 +68,33 @@ struct DockerAdapterTests {
             == ["build", "--progress", "plain", "--tag", "web:dev", "."])
     }
 
+    @Test func dockerCreatePreservesConfigurationWithoutStartingOrDetaching() async throws {
+        var request = Core.Container.CreateRequest(runtimeKind: .docker)
+        request.image = "alpine"
+        request.name = "web"
+        request.removeOnExit = true
+        request.interactive = true
+        request.tty = true
+        request.cpus = "2"
+        request.memory = "512M"
+        request.attachStreams = ["stdout", "stderr"]
+        request.ports = [.init(hostPort: "8080", containerPort: "80")]
+        request.volumes = [.init(source: "data", target: "/data")]
+        request.env = [.init(key: "MODE", value: "recovery")]
+        request.command = ["sleep", "100"]
+        let expected = ["container", "create", "--rm", "--interactive", "--tty", "--name", "web",
+                        "--cpus", "2", "--memory", "512M", "--attach", "stdout", "--attach", "stderr",
+                        "--publish", "8080:80", "--volume", "data:/data", "--env", "MODE=recovery",
+                        "alpine", "sleep", "100"]
+        let client = DockerClient(runner: CommandMapRunner(outputs: [expected: .success(Data("generated-id\n".utf8))]))
+
+        #expect(DockerCommands.run(request, start: false) == expected)
+        #expect(try client.previewCreateCommand(for: request, start: false).command == expected)
+        let result = try await client.createContainer(request, start: false)
+
+        #expect(result.id == "web")
+    }
+
     @Test func dockerSchemaProfileLivesWithRuntimeAdapter() throws {
         let profile = DockerRuntimeModule().schemaProfile()
         let definition = Core.Schema.Definition.containerRunEdit(runtimeProfile: profile)

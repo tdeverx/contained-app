@@ -324,28 +324,48 @@ public extension Core {
                                      as: (any RuntimeSystemStatusClient).self).systemStatus()
         }
 
-        private func previewCreateCommand(for request: Core.Container.CreateRequest) throws -> Core.Command.Preview {
+        private func previewCreateCommand(for request: Core.Container.CreateRequest, start: Bool) throws -> Core.Command.Preview {
             try requireRuntime(request.runtimeKind,
                                capability: .containers,
-                               as: (any RuntimeContainerClient).self).previewCreateCommand(for: request)
+                               as: (any RuntimeContainerClient).self).previewCreateCommand(for: request, start: start)
         }
 
-        public func previewCreateCommand(for document: Core.Schema.Document) throws -> Core.Command.Preview {
+        public func previewCreateCommand(for document: Core.Schema.Document, start: Bool = true) throws -> Core.Command.Preview {
             let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
             let request = try document.validatedRequest(definition: definition)
-            return try previewCreateCommand(for: request)
+            return try previewCreateCommand(for: request, start: start)
         }
 
         @discardableResult private func createContainer(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateResult {
             try await requireRuntime(request.runtimeKind,
                                      capability: .containers,
-                                     as: (any RuntimeContainerClient).self).createContainer(request)
+                                     as: (any RuntimeContainerClient).self).createContainer(request, start: true)
         }
 
         @discardableResult public func createContainer(_ document: Core.Schema.Document) async throws -> Core.Container.CreateResult {
             let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
             let request = try document.validatedRequest(definition: definition)
             return try await createContainer(request)
+        }
+
+        /// Preserve recovery resources before pulling a replacement or tearing down the original.
+        public func prepareContainerRecovery(_ document: Core.Schema.Document) async throws {
+            let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
+            let request = try document.validatedRequest(definition: definition)
+            let runtime = try requireRuntime(request.runtimeKind, capability: .containers,
+                                             as: (any RuntimeContainerClient).self)
+            // Preserve any local immutable image before a replacement pull can move its tag.
+            _ = try await runtime.prepareCreateRequest(request)
+        }
+
+        /// Restore a saved recipe and its running/stopped state without replacing an existing object.
+        @discardableResult public func restoreContainer(_ document: Core.Schema.Document,
+                                                        originalWasRunning: Bool) async throws -> Core.Container.CreateResult {
+            let definition = schemaDefinition(for: document.operation, runtimeKind: document.runtimeKind)
+            let request = try document.validatedRequest(definition: definition)
+            let runtime = try requireRuntime(request.runtimeKind, capability: .containers,
+                                             as: (any RuntimeContainerClient).self)
+            return try await runtime.restoreContainer(request, originalWasRunning: originalWasRunning)
         }
 
         @discardableResult private func recreateContainer(originalID: String,

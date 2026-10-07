@@ -555,7 +555,7 @@ struct ContainerFormStateTests {
 
         #expect(spec.image == "example/app:1")
         #expect(spec.platform == "linux/amd64/v2")
-        #expect(spec.entrypoint.isEmpty)
+        #expect(spec.entrypoint == "/entrypoint.sh")
         #expect(spec.command == "serve")
         #expect(spec.tty)
         #expect(spec.memory == "512M")

@@ -4,6 +4,33 @@ import Testing
 
 @Suite("Container run/edit schema")
 struct SchemaTests {
+    @Test func appleInspectEditCyclesPreserveResolvedProcessWithoutAccumulation() throws {
+        let expected = ["--", "/usr/local/bin/coast-entrypoint", "value with spaces", "--", "--"]
+        var arguments = expected
+        for _ in 0..<20 {
+            let processData = try JSONSerialization.data(withJSONObject: ["executable": "/usr/bin/tini", "arguments": arguments])
+            let process = try JSONDecoder().decode(Core.Container.ProcessConfiguration.self, from: processData)
+            let configuration = Core.Container.Configuration(runtimeKind: .appleContainer, id: "coast",
+                image: .init(reference: "ghcr.io/tdeverx/coast:preview", descriptor: nil), initProcess: process)
+            let request = try Core.Schema.Document.containerEdit(from: configuration).validatedRequest()
+            #expect(request.entrypoint == "/usr/bin/tini")
+            #expect(request.command == expected)
+            // Apple's parser uses the explicit executable instead of prepending OCI Entrypoint.
+            let resolved = [request.entrypoint] + request.command
+            #expect(resolved == ["/usr/bin/tini"] + expected)
+            arguments = Array(resolved.dropFirst())
+        }
+    }
+
+    @Test func recoveryPinsInspectedDigestWithoutChangingNormalEditImage() throws {
+        let process = try JSONDecoder().decode(Core.Container.ProcessConfiguration.self, from: Data("{}".utf8))
+        let digest = "sha256:" + String(repeating: "a", count: 64)
+        let configuration = Core.Container.Configuration(runtimeKind: .appleContainer, id: "coast",
+            image: .init(reference: "ghcr.io/tdeverx/coast:preview", descriptor: .init(digest: digest, mediaType: nil, size: nil)), initProcess: process)
+        #expect(try Core.Schema.Document.containerEdit(from: configuration).validatedRequest().image == "ghcr.io/tdeverx/coast:preview")
+        #expect(try Core.Schema.Document.containerRecovery(from: configuration).validatedRequest().image == "ghcr.io/tdeverx/coast@\(digest)")
+    }
+
     @Test func appleSchemaPublishesCurrentRunFieldAliases() throws {
         let definition = Core.Schema.Definition.containerRunEdit(runtimeKind: .appleContainer)
         let paths = Set(definition.fields.map(\.path))
