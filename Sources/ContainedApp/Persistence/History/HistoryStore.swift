@@ -307,14 +307,21 @@ final class HistoryStore {
         activitySummary.templateCount = max(0, activitySummary.templateCount - 1)
     }
 
-    func purgeOrphans(liveContainerIDs: Set<String>) -> (events: Int, metrics: Int) {
+    func purgeOrphans(liveContainerIDs: Set<String>,
+                      authoritativeRuntimeKinds: Set<Core.Runtime.Kind> = Set(Core.Runtime.supportedDescriptors.map(\.kind))) -> (events: Int, metrics: Int) {
         guard database.canPersist else { return (0, 0) }
         guard let allEvents = try? database.fetchRequired(EventRecord.self),
               let allMetrics = try? database.fetchRequired(MetricSample.self) else { return (0, 0) }
+        func isOrphan(_ id: String) -> Bool {
+            let scoped = Core.Runtime.Kind.parseScopedID(id)
+            let kind = scoped?.kind ?? .appleContainer
+            let live = liveContainerIDs.contains(id) || (scoped == nil && liveContainerIDs.contains(kind.scopedID(for: id)))
+            return authoritativeRuntimeKinds.contains(kind) && !live
+        }
         let events = allEvents
-            .filter { $0.containerID.map { !liveContainerIDs.contains($0) } ?? false }
+            .filter { $0.containerID.map(isOrphan) ?? false }
         let metrics = allMetrics
-            .filter { !liveContainerIDs.contains($0.containerID) }
+            .filter { isOrphan($0.containerID) }
         for event in events { context.delete(event) }
         for metric in metrics { context.delete(metric) }
         guard save() else { return (0, 0) }

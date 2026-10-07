@@ -3,10 +3,12 @@ import ContainedCore
 
 extension AppModel {
     func localImageGroups() -> [Core.Image.LocalTagGroup] {
+        // Cache hits must retain the inventory dependency for observing resource views.
+        let inventory = images
         if let imageGroupsCache {
             return imageGroupsCache
         }
-        let groups = Core.Image.LocalTagGroup.groups(for: images)
+        let groups = Core.Image.LocalTagGroup.groups(for: inventory)
         imageGroupsCache = groups
         return groups
     }

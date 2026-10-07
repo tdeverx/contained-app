@@ -63,14 +63,31 @@ extension RuntimeContainerClient {
         let expectedImageIdentities = try await resolvedImageIdentities(for: replacement.image, pinnedReference: replacementReference)
         // Resolve rollback before teardown too; a moving tag must not turn restoration into an update.
         let rollbackImageIdentities = try await resolvedImageIdentities(for: rollback.image, pinnedReference: rollbackReference)
-        _ = try? await stop([originalID])
+        let stoppedOriginal = (try? await stop([originalID])) != nil
         let deletedOriginal: Bool
         do {
             deletedOriginal = try await deleteContainerIfPresent(originalID, force: true)
         } catch {
+            let deletionError = error
+            if originalWasRunning, stoppedOriginal {
+                do {
+                    _ = try await start([originalID])
+                    try await verifyReplacement(id: originalID,
+                                                expectedImageIdentities: rollbackImageIdentities,
+                                                mustBeRunning: true)
+                } catch {
+                    throw Core.Container.RecreateFailure(phase: .deleteOriginal,
+                                                         recovery: .restoreFailed,
+                                                         primaryError: deletionError,
+                                                         recoveryError: error)
+                }
+                throw Core.Container.RecreateFailure(phase: .deleteOriginal,
+                                                     recovery: .originalRestored,
+                                                     primaryError: deletionError)
+            }
             throw Core.Container.RecreateFailure(phase: .deleteOriginal,
                                                  recovery: .notNeeded,
-                                                 primaryError: error)
+                                                 primaryError: deletionError)
         }
 
         var createdReplacementID: String?

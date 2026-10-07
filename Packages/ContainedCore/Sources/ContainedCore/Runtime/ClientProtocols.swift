@@ -28,6 +28,7 @@ protocol RuntimeStorageClient: RuntimeDescribing {
     func storageAnalysis() async throws -> Core.System.StorageAnalysis
     func storageCapacity() async throws -> Core.System.StorageCapacity?
     func cleanupPlan(_ action: Core.System.CleanupAction, resourceLimit: Int?, afterResourceID: String?) async throws -> Core.System.CleanupPlan
+    func cleanupPlans(_ actions: [Core.System.CleanupAction]) async throws -> [Core.System.CleanupPlan]
     func executeCleanup(_ plan: Core.System.CleanupPlan) async throws -> Core.System.CleanupResult
 }
 

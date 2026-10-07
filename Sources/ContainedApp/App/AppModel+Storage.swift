@@ -57,6 +57,7 @@ extension AppModel {
         defer { storagePlanInFlight = false }
         var plans: [Core.System.CleanupPlan] = []
         var requests: [RuntimePruneRequest] = []
+        var actionsByRuntime: [Core.Runtime.Kind: [Core.System.CleanupAction]] = [:]
         var deletionBlocked = false
         for action in actions {
             for runtime in cleanupRuntimes(for: action) {
@@ -65,12 +66,15 @@ extension AppModel {
                     continue
                 }
                 if runtime.supports(.storageManagement) {
-                    do { plans.append(try await client.cleanupPlan(action, runtimeKind: runtime.kind)) }
-                    catch { flash(storageFailureMessage(error)); return }
+                    actionsByRuntime[runtime.kind, default: []].append(action)
                 } else {
                     requests.append(RuntimePruneRequest(runtimeKind: runtime.kind, action: action))
                 }
             }
+        }
+        for kind in actionsByRuntime.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            do { plans += try await client.cleanupPlans(actionsByRuntime[kind] ?? [], runtimeKind: kind) }
+            catch { flash(storageFailureMessage(error)); return }
         }
         storageCleanupRecommended = recommended
         storageCleanupPlans = plans

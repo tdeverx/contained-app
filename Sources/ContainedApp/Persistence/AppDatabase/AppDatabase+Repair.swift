@@ -17,20 +17,36 @@ extension AppDatabase {
             let styles = try fetchRequired(PersonalizationRecord.self)
             let checks = try fetchRequired(HealthCheckRecord.self)
             let recipes = try fetchRequired(RecipeRecord.self)
+            let hasDuplicateContainers = Set(containers.map(\.scopedID)).count != containers.count
 
             try consolidate(settings, key: { $0.key }, date: { $0.updatedAt })
             consolidate(runtimes, key: { $0.runtimeKindRaw }, date: { $0.lastCheckedAt ?? .distantPast }) { keep, other in
                 if keep.cliPathOverride.isEmpty { keep.cliPathOverride = other.cliPathOverride }
             }
             try consolidate(containers, key: { $0.scopedID }, date: { $0.updatedAt }) { keep, other in
-                keep.documentData = keep.documentData ?? other.documentData
-                keep.snapshotData = keep.snapshotData ?? other.snapshotData
+                let keepHasRecovery = keep.migrationStateRaw == "recreating" || keep.migrationStateRaw == "recreateFailed"
+                let otherHasRecovery = other.migrationStateRaw == "recreating" || other.migrationStateRaw == "recreateFailed"
+                let adoptsRecovery = !keepHasRecovery && otherHasRecovery
+                if adoptsRecovery {
+                    // The original recipe and snapshot belong to the pending recovery, even
+                    // when a newer duplicate describes a partially-created replacement.
+                    keep.documentData = other.documentData
+                    keep.snapshotData = other.snapshotData
+                    keep.migrationStateRaw = other.migrationStateRaw
+                    keep.isHiddenDuringMigration = other.isHiddenDuringMigration
+                } else if !keepHasRecovery {
+                    keep.documentData = keep.documentData ?? other.documentData
+                    keep.snapshotData = keep.snapshotData ?? other.snapshotData
+                }
                 if let data = other.runtimeProjectionsData {
                     var projections = try keep.runtimeProjectionsData.map {
                         try JSONDecoder().decode([String: Core.Schema.Document].self, from: $0)
                     } ?? [:]
                     let older = try JSONDecoder().decode([String: Core.Schema.Document].self, from: data)
                     projections.merge(older) { newest, _ in newest }
+                    if adoptsRecovery, let original = older[other.runtimeKindRaw] {
+                        projections[other.runtimeKindRaw] = original
+                    }
                     keep.runtimeProjectionsData = try JSONEncoder().encode(projections)
                 }
                 if let data = other.linkedVolumePathsData {
@@ -70,7 +86,7 @@ extension AppDatabase {
                 keep.personalizationData = keep.personalizationData ?? other.personalizationData
                 keep.healthCheckData = keep.healthCheckData ?? other.healthCheckData
             }
-            save()
+            if save(), hasDuplicateContainers { invalidateRecreationRecoveries() }
         }
     }
 

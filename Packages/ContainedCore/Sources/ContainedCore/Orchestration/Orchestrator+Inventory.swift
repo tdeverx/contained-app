@@ -3,7 +3,7 @@ import Foundation
 public extension Core.Orchestrator {
     func containerInventory(all: Bool = true) async throws -> Core.Runtime.InventoryResult<Core.Container.Snapshot> {
         var snapshots: [Core.Container.Snapshot] = []
-        var successes = 0
+        var successes: Set<Core.Runtime.Kind> = []
         var firstError: Swift.Error?
         var failures: [Core.Runtime.InventoryFailure] = []
         for kind in runtimes.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
@@ -13,14 +13,14 @@ public extension Core.Orchestrator {
                                                  capability: .containers,
                                                  as: (any RuntimeContainerClient).self)
                 snapshots += try await runtime.listContainers(all: all).map { $0.scoped(to: kind) }
-                successes += 1
+                successes.insert(kind)
             } catch {
                 firstError = firstError ?? error
                 failures.append(.init(resource: "containers", kind: kind, message: String(describing: error)))
             }
         }
-        if successes == 0, let firstError { throw firstError }
-        return Core.Runtime.InventoryResult(items: snapshots, failures: failures)
+        if successes.isEmpty, let firstError { throw firstError }
+        return Core.Runtime.InventoryResult(items: snapshots, failures: failures, successfulRuntimeKinds: successes)
     }
 
     func listRuntimeContainers(all: Bool = true) async throws -> [Core.Container.Snapshot] {
@@ -29,7 +29,7 @@ public extension Core.Orchestrator {
 
     func networkInventory() async throws -> Core.Runtime.InventoryResult<Core.Network.Resource> {
         var networks: [Core.Network.Resource] = []
-        var successes = 0
+        var successes: Set<Core.Runtime.Kind> = []
         var firstError: Swift.Error?
         var failures: [Core.Runtime.InventoryFailure] = []
         for kind in runtimes.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
@@ -39,14 +39,14 @@ public extension Core.Orchestrator {
                                                  capability: .networks,
                                                  as: (any RuntimeNetworkClient).self)
                 networks += try await runtime.networks().map { $0.scoped(to: kind) }
-                successes += 1
+                successes.insert(kind)
             } catch {
                 firstError = firstError ?? error
                 failures.append(.init(resource: "networks", kind: kind, message: String(describing: error)))
             }
         }
-        if successes == 0, let firstError { throw firstError }
-        return Core.Runtime.InventoryResult(items: networks, failures: failures)
+        if successes.isEmpty, let firstError { throw firstError }
+        return Core.Runtime.InventoryResult(items: networks, failures: failures, successfulRuntimeKinds: successes)
     }
 
     func runtimeNetworks() async throws -> [Core.Network.Resource] {
@@ -55,7 +55,7 @@ public extension Core.Orchestrator {
 
     func volumeInventory() async throws -> Core.Runtime.InventoryResult<Core.Volume.Resource> {
         var volumes: [Core.Volume.Resource] = []
-        var successes = 0
+        var successes: Set<Core.Runtime.Kind> = []
         var firstError: Swift.Error?
         var failures: [Core.Runtime.InventoryFailure] = []
         for kind in runtimes.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
@@ -65,14 +65,14 @@ public extension Core.Orchestrator {
                                                  capability: .volumes,
                                                  as: (any RuntimeVolumeClient).self)
                 volumes += try await runtime.volumes().map { $0.scoped(to: kind) }
-                successes += 1
+                successes.insert(kind)
             } catch {
                 firstError = firstError ?? error
                 failures.append(.init(resource: "volumes", kind: kind, message: String(describing: error)))
             }
         }
-        if successes == 0, let firstError { throw firstError }
-        return Core.Runtime.InventoryResult(items: volumes, failures: failures)
+        if successes.isEmpty, let firstError { throw firstError }
+        return Core.Runtime.InventoryResult(items: volumes, failures: failures, successfulRuntimeKinds: successes)
     }
 
     func runtimeVolumes() async throws -> [Core.Volume.Resource] {
@@ -81,7 +81,7 @@ public extension Core.Orchestrator {
 
     func imageInventory() async throws -> Core.Runtime.InventoryResult<Core.Image.Resource> {
         var images: [Core.Image.Resource] = []
-        var successes = 0
+        var successes: Set<Core.Runtime.Kind> = []
         var firstError: Swift.Error?
         var failures: [Core.Runtime.InventoryFailure] = []
         for kind in runtimes.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
@@ -91,14 +91,14 @@ public extension Core.Orchestrator {
                                                  capability: .images,
                                                  as: (any RuntimeImageClient).self)
                 images += try await runtime.images().map { $0.scoped(to: kind) }
-                successes += 1
+                successes.insert(kind)
             } catch {
                 firstError = firstError ?? error
                 failures.append(.init(resource: "images", kind: kind, message: String(describing: error)))
             }
         }
-        if successes == 0, let firstError { throw firstError }
-        return Core.Runtime.InventoryResult(items: images, failures: failures)
+        if successes.isEmpty, let firstError { throw firstError }
+        return Core.Runtime.InventoryResult(items: images, failures: failures, successfulRuntimeKinds: successes)
     }
 
     func runtimeImages() async throws -> [Core.Image.Resource] {

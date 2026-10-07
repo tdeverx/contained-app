@@ -100,6 +100,9 @@ enum AppErrorPresentation {
         case .originalRestored:
             return AppText.recreateOriginalRestored(detail: error.primaryFailure.runtimeDetail)
         case .restoreFailed:
+            if error.phase == .deleteOriginal {
+                return AppText.string("error.recreate.restartOriginalFailed", defaultValue: "Couldn't remove the original container or restore its running state. Its saved configuration was kept for recovery. Removal: \(error.primaryFailure.runtimeDetail) Restart: \(error.recoveryFailure?.runtimeDetail ?? "")")
+            }
             return AppText.recreateRestoreFailed(
                 replacementDetail: error.primaryFailure.runtimeDetail,
                 recoveryDetail: error.recoveryFailure?.runtimeDetail ?? ""

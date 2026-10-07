@@ -406,6 +406,124 @@ struct DatabaseRecoveryTests {
         #expect(try db.fetchRequired(NetworkRecord.self).count == 1)
     }
 
+    @Test func corruptPersonalizationAndHealthRecordsPauseStartupWithoutCrashing() throws {
+        for scope in ["personalizationOverrides", "personalizationImageDefaults", "personalizationVolumeStyles", "personalizationDefaultImageStyle", "health"] {
+            let database = AppDatabase(isStoredInMemoryOnly: true)
+            SettingsStore(database: database).loggingLevel = .off
+            if scope == "health" {
+                database.context.insert(HealthCheckRecord(containerScopedID: "apple-container::web", valueData: Data("invalid".utf8)))
+            } else {
+                database.context.insert(PersonalizationRecord(key: scope == "personalizationDefaultImageStyle" ? "default" : "apple-container::web",
+                                                              scopeRaw: scope, valueData: Data("invalid".utf8)))
+            }
+            #expect(database.save())
+            let saves = database.successfulSaveCount
+
+            let app = AppModel(database: database, bootstrapRuntime: { _ in .cliMissing(runtimes: []) })
+
+            #expect(!database.canPersist)
+            #expect(database.successfulSaveCount == saves)
+            #expect(app.databaseFailureMessage != nil)
+            guard case .decodeRecord = database.lastFailure else {
+                Issue.record("Expected typed corrupt record failure for \(scope).")
+                continue
+            }
+            #expect(!database.context.hasChanges)
+        }
+    }
+
+    @Test func failedPersonalizationDecodePreservesAllPreviousCaches() throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        var original = Personalization()
+        original.nickname = "original"
+        let record = PersonalizationRecord(key: "apple-container::web", scopeRaw: "personalizationOverrides",
+                                           valueData: try AppDatabase.encoded(original))
+        database.context.insert(record)
+        #expect(database.save())
+        let store = PersonalizationStore(database: database)
+        var restored = original
+        restored.nickname = "restored"
+        record.valueData = try AppDatabase.encoded(restored)
+        let corrupt = PersonalizationRecord(key: "default", scopeRaw: "personalizationDefaultImageStyle", valueData: Data("invalid".utf8))
+        database.context.insert(corrupt)
+        try database.context.save()
+
+        #expect(!store.reloadFromDatabase())
+        #expect(store.override(for: record.key) == original)
+        #expect(!database.canPersist)
+        #expect(!database.retryPersistence(reload: { store.reloadFromDatabase() }))
+        #expect(store.override(for: record.key) == original)
+
+        database.context.delete(corrupt)
+        try database.context.save()
+        #expect(database.retryPersistence(reload: { store.reloadFromDatabase() }))
+        #expect(store.override(for: record.key) == restored)
+    }
+
+    @Test func failedHealthDecodePreservesPreviousChecksUntilRetrySucceeds() throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let original = Core.Container.HealthCheck(command: ["original"], enabled: true)
+        let record = HealthCheckRecord(containerScopedID: "apple-container::web", valueData: try AppDatabase.encoded(original))
+        database.context.insert(record)
+        #expect(database.save())
+        let store = HealthCheckStore(database: database)
+        let restored = Core.Container.HealthCheck(command: ["restored"], enabled: true)
+        record.valueData = try AppDatabase.encoded(restored)
+        let corrupt = HealthCheckRecord(containerScopedID: "apple-container::bad", valueData: Data("invalid".utf8))
+        database.context.insert(corrupt)
+        try database.context.save()
+
+        #expect(!store.reloadFromDatabase())
+        #expect(store.check(for: record.containerScopedID) == original)
+        #expect(!database.canPersist)
+        database.context.delete(corrupt)
+        try database.context.save()
+        #expect(database.retryPersistence(reload: { store.reloadFromDatabase() }))
+        #expect(store.check(for: record.containerScopedID) == restored)
+    }
+
+    @Test func duplicateRepairKeepsOriginalRecreationPayloadTogether() throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let original = Core.Container.Snapshot.placeholder(id: "web", image: "example/original", runtimeKind: .appleContainer)
+        let document = Core.Schema.Document.containerRecovery(from: original.configuration)
+        #expect(database.markContainerRecreateStarted(source: original, sourceDocument: document, observedAt: .distantPast))
+        database.markContainerRecreateFailed(scopedID: original.scopedID, observedAt: .distantPast)
+        _ = database.containerRecreationRecoveries()
+        let replacement = Core.Container.Snapshot.placeholder(id: "web", image: "example/replacement", state: .stopped, runtimeKind: .appleContainer)
+        database.context.insert(ContainerRecord(scopedID: replacement.scopedID, runtimeKindRaw: replacement.runtimeKind.rawValue,
+                                                runtimeID: replacement.id, displayName: replacement.displayName,
+                                                imageReference: replacement.image, statusRaw: replacement.state.rawValue,
+                                                documentData: try AppDatabase.encoded(Core.Schema.Document.containerEdit(from: replacement.configuration)),
+                                                snapshotData: try AppDatabase.encoded(replacement)))
+        #expect(database.save())
+
+        database.repairDuplicateRecords()
+
+        let recovery = try #require(database.containerRecreationRecoveries().first)
+        #expect(recovery.snapshot == original)
+        #expect(recovery.document == document)
+        #expect(try database.fetchRequired(ContainerRecord.self).count == 1)
+    }
+
+    @Test func failedRecoveryDoesNotPublishStagedRecoveryRemoval() throws {
+        let database = AppDatabase(isStoredInMemoryOnly: true)
+        let original = Core.Container.Snapshot.placeholder(id: "web", image: "alpine", runtimeKind: .appleContainer)
+        #expect(database.markContainerRecreateStarted(source: original, sourceDocument: .containerRecovery(from: original.configuration)))
+        #expect(database.containerRecreationRecoveries().count == 1)
+        let revision = database.recreationRecoveryRevision
+
+        let recovered = database.retryPersistence(reload: {
+            #expect(database.completeContainerRecreate(sourceScopedID: original.scopedID, replacementScopedID: original.scopedID))
+            #expect(database.containerRecreationRecoveries().count == 1)
+            return false
+        })
+        #expect(!recovered)
+
+        #expect(database.recreationRecoveryRevision == revision)
+        #expect(database.containerRecreationRecoveries().map(\.snapshot) == [original])
+        #expect(try database.context.fetch(FetchDescriptor<ContainerRecord>()).first?.migrationStateRaw == "recreating")
+    }
+
     @Test func repeatedSettingsAndRuntimeReadinessCreateNoWrites() {
         let db = AppDatabase(isStoredInMemoryOnly: true)
         db.setSetting(true, for: "enabled")

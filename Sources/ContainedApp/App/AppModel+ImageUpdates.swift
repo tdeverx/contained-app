@@ -326,17 +326,8 @@ extension AppModel {
             }
             return
         }
-        if images.isEmpty, let client {
-            do {
-                setImages(try await client.runtimeImages())
-                imagesError = nil
-            } catch let error as Core.Command.Error {
-                imagesError = error.appDisplayMessage
-                return
-            } catch {
-                imagesError = error.appDisplayMessage
-                return
-            }
+        if images.isEmpty {
+            await refreshImagesIfNeeded(force: true)
         }
         guard !images.isEmpty else { return }
         await checkAllImageUpdates(manual: false)

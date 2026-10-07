@@ -40,7 +40,8 @@ struct ConfigTransferControls: View {
             HStack {
                 Button("Export Backup…") { exportBackup() }
                 Button("Import Backup…") { importBackup() }
-                Button("Clean Up Orphans") { app.purgeDeadRows() }
+                Button("Clean Up Orphans") { Task { await app.purgeDeadRows() } }
+                    .disabled(app.purgingOrphans || !app.database.canPersist)
             }
         }
         .fileExporter(isPresented: $exportingBackup,

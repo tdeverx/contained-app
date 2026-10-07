@@ -61,12 +61,20 @@ page even when the runtime container is missing. Review the original image, reco
 digest, and requested command before **Restore Original**. Recovery never overwrites or
 deletes an existing container. If a partial runtime object already occupies the name,
 inspect it with the normal container controls; **Keep Existing Container** explicitly
-closes the saved recovery after confirmation. Inventory refreshes cannot overwrite
-the original backup with that partial object's configuration. Runtime stderr is shown
+closes the saved recovery after confirmation. Inventory refreshes, another Edit/Rebuild,
+and duplicate-record repair cannot replace the saved original with a partial object's
+configuration. Resolve the pending recovery before recreating that container again.
+If teardown cannot delete a previously running original, Contained restarts and verifies
+it; a failed restart keeps the recovery open. Runtime stderr is shown
 for a failed attempt but is not stored in the recovery record or Activity history.
 Destructive storage cleanup is blocked for that runtime while recreation recovery
 remains pending, because a missing runtime object cannot protect its saved image,
 volumes, and networks from native pruning. Compaction remains available.
+
+Open container details follow current inventory state, including changes made by
+their Start/Stop controls. If a runtime cannot refresh, its last known containers and
+metrics remain visible with the refresh error; an outage is not treated as confirmed
+resource removal.
 
 The app serializes refreshes around lifecycle actions so a user action and the
 background polling tick do not fight over inventory and stats streams. While the

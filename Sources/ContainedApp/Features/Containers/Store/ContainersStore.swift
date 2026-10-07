@@ -49,6 +49,7 @@ final class ContainersStore {
         }
     }
     private(set) var inventoryRevision = 0
+    private(set) var authoritativeRuntimeKinds: Set<Core.Runtime.Kind> = []
     @ObservationIgnored
     var statsByID: [String: Core.Metrics.StatsDelta] = [:]
     /// Per-container, per-metric sparkline history.
@@ -65,8 +66,15 @@ final class ContainersStore {
     @ObservationIgnored private var metricsStates: [String: ContainerMetricsState] = [:]
     @ObservationIgnored private var statsNormalizationContext: Core.Metrics.NormalizationContext = .containerSpecific
     @ObservationIgnored private var lastPersistedInventory: [Core.Container.Snapshot]?
+    @ObservationIgnored private var lastPersistedRuntimeKinds: Set<Core.Runtime.Kind> = []
 
-    var client: Core.Orchestrator?
+    var client: Core.Orchestrator? {
+        didSet {
+            authoritativeRuntimeKinds = []
+            lastPersistedInventory = nil
+            lastPersistedRuntimeKinds = []
+        }
+    }
 
     private var lastStreamedStats: [String: Core.Metrics.RuntimeStatsSnapshot] = [:]
     private var lastStreamedStatsDate: Date?
@@ -149,22 +157,29 @@ final class ContainersStore {
         guard let client else { return }
         do {
             let inventory = try await client.containerInventory(all: true)
+            authoritativeRuntimeKinds = inventory.successfulRuntimeKinds
             let listedAll = inventory.items
                 .sorted { lhs, rhs in
                     let comparison = lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName)
                     return comparison == .orderedSame ? lhs.scopedID < rhs.scopedID : comparison == .orderedAscending
                 }
-            if let database, listedAll != lastPersistedInventory {
-                let persistence = await database.upsertContainers(listedAll)
+            if let database, listedAll != lastPersistedInventory || authoritativeRuntimeKinds != lastPersistedRuntimeKinds {
+                let persistence = await database.upsertContainers(listedAll, authoritativeRuntimeKinds: authoritativeRuntimeKinds)
                 diagnosticLogger.debug("Inventory persistence listed=\(listedAll.count, privacy: .public) changed=\(persistence.inserted + persistence.updated, privacy: .public) encoded=\(persistence.encoded, privacy: .public) persisted=\(persistence.persisted, privacy: .public) skipped=\(persistence.unchanged, privacy: .public)")
                 if persistence.succeeded {
                     lastPersistedInventory = listedAll
+                    lastPersistedRuntimeKinds = authoritativeRuntimeKinds
                 }
             } else if database != nil {
                 diagnosticLogger.debug("Inventory persistence listed=\(listedAll.count, privacy: .public) changed=0 encoded=0 persisted=0 skipped=\(listedAll.count, privacy: .public)")
             }
             let migratingIDs = database?.hiddenContainerScopedIDs() ?? []
-            let listed = listedAll.filter { !migratingIDs.contains($0.scopedID) }
+            let retained = snapshots.filter { !authoritativeRuntimeKinds.contains($0.runtimeKind) }
+            let listed = (listedAll + retained).filter { !migratingIDs.contains($0.scopedID) }
+                .sorted { lhs, rhs in
+                    let comparison = lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName)
+                    return comparison == .orderedSame ? lhs.scopedID < rhs.scopedID : comparison == .orderedAscending
+                }
             // Only publish when the list actually changed: reassigning an identical array would
             // needlessly invalidate the whole grid (and every card's sparkline) on each idle tick.
             if listed != snapshots { snapshots = listed }
@@ -174,8 +189,10 @@ final class ContainersStore {
             errorMessage = partialInventoryMessage(inventory.failures)
             pruneStatsForCurrentRunningSet()
         } catch let error as Core.Command.Error {
+            authoritativeRuntimeKinds = []
             errorMessage = error.appDisplayMessage
         } catch {
+            authoritativeRuntimeKinds = []
             errorMessage = error.appDisplayMessage
         }
     }

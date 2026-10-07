@@ -38,6 +38,10 @@ final class AppDatabase {
     private(set) var retryAfter: Date?
     private(set) var successfulSaveCount = 0
     private(set) var mutationRevision = 0
+    private(set) var recreationRecoveryRevision = 0
+    @ObservationIgnored var recreationRecoveryCache: [ContainerRecreationRecovery] = []
+    @ObservationIgnored var recreationRecoveryCacheNeedsReload = true
+    @ObservationIgnored var recreationRecoveryLoadCount = 0
     let isStoredInMemoryOnly: Bool
     private(set) var lastHistoryMaintenance: Date?
     var maintenanceFailureCode: String?
@@ -46,7 +50,7 @@ final class AppDatabase {
     @ObservationIgnored var now: () -> Date = { Date() }
     @ObservationIgnored var failureInjector: ((String) throws -> Void)?
     private var schemaWritesBlocked = true
-    private var isRecovering = false
+    @ObservationIgnored var isRecovering = false
     // Elapsed time is not recovery: app caches may still hold startup fallbacks.
     var canPersist: Bool { !schemaWritesBlocked && !isCompacting && retryAfter == nil }
     var containerInventoryPreparationCount = 0
@@ -187,6 +191,7 @@ final class AppDatabase {
             // Only commit after every required read and cache reload has succeeded.
             isRecovering = false
             guard save() else { return false }
+            invalidateRecreationRecoveries()
             recovered = true
             return true
         } catch { return false }
@@ -233,11 +238,19 @@ final class AppDatabase {
     func recordFailure(_ failure: Failure) {
         lastFailure = failure
         switch failure {
-        case .fetch, .save:
+        case .fetch, .save, .decodeRecord:
             context.rollback()
             retryAfter = now().addingTimeInterval(60)
         default: break
         }
+    }
+
+    func invalidateRecreationRecoveries() {
+        if isRecovering {
+            return
+        }
+        recreationRecoveryCacheNeedsReload = true
+        recreationRecoveryRevision &+= 1
     }
 
     func maintainTransactionHistory(force: Bool = false) {

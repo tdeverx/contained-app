@@ -56,13 +56,47 @@ extension AppModel {
         return true
     }
 
-    func purgeDeadRows() {
-        let liveContainerIDs = Set(containers.snapshots.map(\.scopedID))
-        let liveImageRefs = Set(images.map(\.reference))
+    func purgeDeadRows() async {
+        guard let client, database.canPersist, !purgingOrphans else { return }
+        purgingOrphans = true
+        defer { purgingOrphans = false }
+        await containers.refresh()
+        await refreshImagesIfNeeded(force: true)
+        let containerKinds = Set(client.availableRuntimeDescriptors.filter { $0.supports(.containers) }.map(\.kind))
+        let imageKinds = Set(client.availableRuntimeDescriptors.filter { $0.supports(.images) }.map(\.kind))
+        guard database.canPersist, !containerKinds.isEmpty, !imageKinds.isEmpty,
+              containerKinds.isSubset(of: containers.authoritativeRuntimeKinds),
+              imageKinds.isSubset(of: imageInventoryRuntimeKinds) else {
+            flash(AppText.string("settings.orphans.inventoryUnavailable", defaultValue: "Orphan cleanup requires successful container and image inventories from every connected runtime. Nothing was removed."))
+            return
+        }
+        let records: [ContainerRecord]
+        let tags: [ImageTagRecord]
+        do {
+            records = try database.fetchRequired(ContainerRecord.self)
+            tags = try database.fetchRequired(ImageTagRecord.self)
+        } catch { return }
+        // Hidden migrations and missing recreations still own their saved configuration.
+        let protected = records.filter { $0.isHiddenDuringMigration || $0.migrationStateRaw != "none" }
+        let protectedImageRefs: [String]
+        do {
+            // A partial replacement updates the scalar image field, not the saved original.
+            protectedImageRefs = try protected.map { record in
+                guard let data = record.snapshotData else { return record.imageReference }
+                return try JSONDecoder().decode(Core.Container.Snapshot.self, from: data).image
+            }
+        } catch {
+            database.recordFailure(.decodeRecord(record: "protected container snapshot", detail: AppDatabase.safeDetail(error)))
+            return
+        }
+        let liveContainerIDs = Set(containers.snapshots.map(\.scopedID) + protected.map(\.scopedID))
+        let unavailableImageRefs = tags.filter { !imageKinds.contains(Core.Runtime.Kind(rawValue: $0.runtimeKindRaw)) }.map(\.reference)
+        let liveImageRefs = Set(images.map(\.reference) + containers.snapshots.map(\.image) + protected.map(\.imageReference) + protectedImageRefs + unavailableImageRefs)
         let personalizations = personalization.purgeOrphans(liveContainerIDs: liveContainerIDs,
-                                                            liveImageRefs: liveImageRefs)
-        let checks = healthChecks.purgeOrphans(liveContainerIDs: liveContainerIDs)
-        let history = historyStore.purgeOrphans(liveContainerIDs: liveContainerIDs)
+                                                            liveImageRefs: liveImageRefs,
+                                                            authoritativeRuntimeKinds: containerKinds)
+        let checks = healthChecks.purgeOrphans(liveContainerIDs: liveContainerIDs, authoritativeRuntimeKinds: containerKinds)
+        let history = historyStore.purgeOrphans(liveContainerIDs: liveContainerIDs, authoritativeRuntimeKinds: containerKinds)
         flash(AppText.cleanedOrphanedRows(personalizations + checks + history.events + history.metrics))
     }
 

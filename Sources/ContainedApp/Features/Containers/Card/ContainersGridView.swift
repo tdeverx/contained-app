@@ -7,8 +7,12 @@ import ContainedCore
 /// filter live in the background context menu and menu commands; tapping a card grows it in place
 /// into a centered detail panel.
 struct ContainersGridView: View {
-    private struct DetailSource: Equatable {
+    struct DetailSource: Equatable {
         let snapshot: Core.Container.Snapshot
+
+        func currentSnapshot(in snapshots: [Core.Container.Snapshot]) -> Core.Container.Snapshot {
+            snapshots.first { $0.scopedID == snapshot.scopedID } ?? snapshot
+        }
     }
 
     private struct RebuildRequest: Identifiable {
@@ -133,7 +137,7 @@ struct ContainersGridView: View {
                     UX.Morph.SingleSurface(source: source,
                                            target: target,
                                            progress: expanded ? 1 : 0) {
-                        expandedCard(detail.snapshot)
+                        expandedCard(detail.currentSnapshot(in: store.snapshots))
                     }
                         .zIndex(10)
                 }

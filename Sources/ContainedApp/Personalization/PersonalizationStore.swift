@@ -34,16 +34,35 @@ final class PersonalizationStore {
         guard database.canPersist,
               let records = try? database.fetchRequired(PersonalizationRecord.self),
               let images = try? database.fetchRequired(ImageRecord.self) else { return false }
-        overrides = Self.load(database, Keys.overrides, records: records)
-        let loadedImageDefaults = Self.load(database, Keys.imageDefaults, records: records)
-        imageDefaults = Self.migratedImageDefaults(loadedImageDefaults, records: images)
-        volumeStyles = Self.load(database, Keys.volumeStyles, records: records)
-        defaultImageStyle = Self.loadStyle(database, Keys.defaultImageStyle, records: records) ?? Personalization()
-        if imageDefaults != loadedImageDefaults {
-            Self.persist(database, Keys.imageDefaults, imageDefaults)
+        do {
+            let records = records.sorted {
+                if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+                return String(describing: $0.persistentModelID) < String(describing: $1.persistentModelID)
+            }
+            let savedOverrides = try Self.decodedValues(Keys.overrides, records: records)
+            let savedImageDefaults = try Self.decodedValues(Keys.imageDefaults, records: records)
+            let savedVolumeStyles = try Self.decodedValues(Keys.volumeStyles, records: records)
+            let savedDefault = try Self.decodedValues(Keys.defaultImageStyle, records: records)["default"] ?? Personalization()
+            let restoredOverrides = Self.normalizedValues(savedOverrides)
+            let restoredImageDefaults = Self.migratedImageDefaults(Self.normalizedValues(savedImageDefaults), records: images)
+            let restoredVolumeStyles = Self.normalizedValues(savedVolumeStyles)
+            let restoredDefault = savedDefault.normalizedForPersistence()
+            // Decode every scope before normalization can mutate the store or replace a cache.
+            if restoredOverrides != savedOverrides { Self.persist(database, Keys.overrides, restoredOverrides) }
+            if restoredImageDefaults != savedImageDefaults { Self.persist(database, Keys.imageDefaults, restoredImageDefaults) }
+            if restoredVolumeStyles != savedVolumeStyles { Self.persist(database, Keys.volumeStyles, restoredVolumeStyles) }
+            if restoredDefault != savedDefault { Self.persist(database, Keys.defaultImageStyle, restoredDefault) }
+            guard database.canPersist, database.lastFailure == nil else { return false }
+            overrides = restoredOverrides
+            imageDefaults = restoredImageDefaults
+            volumeStyles = restoredVolumeStyles
+            defaultImageStyle = restoredDefault
+            loadedSuccessfully = true
+            return true
+        } catch {
+            database.recordFailure(error as? AppDatabase.Failure ?? .decodeRecord(record: "personalization", detail: AppDatabase.safeDetail(error)))
+            return false
         }
-        loadedSuccessfully = database.canPersist
-        return loadedSuccessfully
     }
 
     func backupSnapshot() -> PersonalizationBackup {
@@ -100,11 +119,16 @@ final class PersonalizationStore {
         Self.persist(database, Keys.defaultImageStyle, defaultImageStyle)
     }
 
-    func purgeOrphans(liveContainerIDs: Set<String>, liveImageRefs: Set<String>) -> Int {
+    func purgeOrphans(liveContainerIDs: Set<String>, liveImageRefs: Set<String>,
+                      authoritativeRuntimeKinds: Set<Core.Runtime.Kind> = Set(Core.Runtime.supportedDescriptors.map(\.kind))) -> Int {
         guard database.canPersist, loadIfNeeded() else { return 0 }
         let before = overrides.count + imageDefaults.count + volumeStyles.count
         let normalizedLiveImageRefs = Set(liveImageRefs.map(Core.Registry.ImageReference.normalizedKey))
-        overrides = overrides.filter { liveContainerIDs.contains($0.key) }
+        overrides = overrides.filter {
+            let kind = Core.Runtime.Kind.parseScopedID($0.key)?.kind ?? .appleContainer
+            let scopedID = Core.Runtime.Kind.parseScopedID($0.key) == nil ? kind.scopedID(for: $0.key) : $0.key
+            return !authoritativeRuntimeKinds.contains(kind) || liveContainerIDs.contains($0.key) || liveContainerIDs.contains(scopedID)
+        }
         imageDefaults = imageDefaults.filter { key, _ in
             if key.hasPrefix(Self.legacyImageGroupPrefix) { return true }
             if let reference = Self.reference(from: key, prefix: Self.imageReferencePrefix) {
@@ -121,31 +145,20 @@ final class PersonalizationStore {
         return before - (overrides.count + imageDefaults.count + volumeStyles.count)
     }
 
-    private static func load(_ database: AppDatabase, _ scope: String, records: [PersonalizationRecord]) -> [String: Personalization] {
-        let decoded = Dictionary(records.sorted { $0.updatedAt > $1.updatedAt }
-            .filter { $0.scopeRaw == scope }
-            .compactMap { record -> (String, Personalization)? in
-                do {
-                    return (record.key, try JSONDecoder().decode(Personalization.self, from: record.valueData))
-                } catch {
-                    fatalError("Unable to decode personalization \(scope)/\(record.key): \(error)")
-                }
-            }, uniquingKeysWith: { newest, _ in newest })
-        var migrated: [String: Personalization] = [:]
-        var changed = false
-        for (entryKey, entryValue) in decoded {
-            let normalized = entryValue.normalizedForPersistence()
-            if normalized != entryValue { changed = true }
-            if !normalized.isDefault {
-                migrated[entryKey] = normalized
-            } else if decoded[entryKey] != nil {
-                changed = true
+    private static func decodedValues(_ scope: String, records: [PersonalizationRecord]) throws -> [String: Personalization] {
+        var decoded: [String: Personalization] = [:]
+        for record in records where record.scopeRaw == scope && decoded[record.key] == nil {
+            do {
+                decoded[record.key] = try JSONDecoder().decode(Personalization.self, from: record.valueData)
+            } catch {
+                throw AppDatabase.Failure.decodeRecord(record: "personalization \(scope)/\(record.key)", detail: AppDatabase.safeDetail(error))
             }
         }
-        if changed {
-            persist(database, scope, migrated)
-        }
-        return migrated
+        return decoded
+    }
+
+    private static func normalizedValues(_ values: [String: Personalization]) -> [String: Personalization] {
+        values.mapValues { $0.normalizedForPersistence() }.filter { !$0.value.isDefault }
     }
 
     private static func meaningful(_ personalization: Personalization?) -> Personalization? {
@@ -341,7 +354,7 @@ final class PersonalizationStore {
                 do {
                     data = try AppDatabase.encoded(value.normalizedForPersistence())
                 } catch {
-                    fatalError("Unable to encode personalization \(scope)/\(key): \(error)")
+                    throw AppDatabase.Failure.encodeRecord(type: "personalization \(scope)/\(key)", detail: AppDatabase.safeDetail(error))
                 }
                 if let record = records.first(where: { $0.scopeRaw == scope && $0.key == key }) {
                     guard record.valueData != data else { continue }
@@ -355,19 +368,6 @@ final class PersonalizationStore {
         }
     }
 
-    private static func loadStyle(_ database: AppDatabase, _ key: String, records: [PersonalizationRecord]) -> Personalization? {
-        guard let record = records.sorted(by: { $0.updatedAt > $1.updatedAt }).first(where: { $0.scopeRaw == key && $0.key == "default" }) else { return nil }
-        let decoded: Personalization
-        do {
-            decoded = try JSONDecoder().decode(Personalization.self, from: record.valueData)
-        } catch {
-            fatalError("Unable to decode personalization \(key)/default: \(error)")
-        }
-        let normalized = decoded.normalizedForPersistence()
-        if normalized != decoded { persist(database, key, normalized) }
-        return normalized
-    }
-
     private static func persist(_ database: AppDatabase, _ scope: String, _ value: Personalization) {
         database.performMutation {
             let records = try database.fetchRequired(PersonalizationRecord.self)
@@ -375,7 +375,7 @@ final class PersonalizationStore {
             do {
                 data = try AppDatabase.encoded(value.normalizedForPersistence())
             } catch {
-                fatalError("Unable to encode personalization \(scope)/default: \(error)")
+                throw AppDatabase.Failure.encodeRecord(type: "personalization \(scope)/default", detail: AppDatabase.safeDetail(error))
             }
             if let record = records.first(where: { $0.scopeRaw == scope && $0.key == "default" }) {
                 guard record.valueData != data else { return }

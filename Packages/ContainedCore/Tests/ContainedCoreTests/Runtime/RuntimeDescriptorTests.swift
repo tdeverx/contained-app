@@ -115,6 +115,7 @@ struct RuntimeDescriptorTests {
         #expect(snapshots.map { $0.scopedID } == ["apple-container::apple-web"])
         #expect(inventory.failures.count == 1)
         #expect(inventory.failures.first?.kind == .docker)
+        #expect(inventory.successfulRuntimeKinds == [.appleContainer])
     }
 
     @Test func orchestratorTerminalInvocationRoutesByRuntimeKind() throws {
@@ -205,7 +206,7 @@ struct RuntimeDescriptorTests {
         #expect(await runtime.createdRequests.count == 1)
     }
 
-    @Test func recreateStillSurfacesRealDeleteFailures() async throws {
+    @Test func recreateRestartsRunningOriginalAfterDeleteFailure() async throws {
         let runtime = RecordingContainerRuntime(
             containers: [.placeholder(id: "blocked", image: "nginx:latest", runtimeKind: .appleContainer)],
             deleteError: .nonZeroExit(code: 1,
@@ -224,9 +225,56 @@ struct RuntimeDescriptorTests {
             Issue.record("Expected recreate to fail")
         } catch let error as Core.Container.RecreateFailure {
             #expect(error.phase == .deleteOriginal)
-            #expect(error.recovery == .notNeeded)
+            #expect(error.recovery == .originalRestored)
+            #expect(error.primaryFailure.runtimeDetail == "permission denied")
         }
         #expect(await runtime.createdRequests.isEmpty)
+        #expect(await runtime.startedIDs == ["blocked"])
+        #expect(await runtime.containers.first?.state == .running)
+    }
+
+    @Test func recreateDoesNotStartStoppedOriginalAfterDeleteFailure() async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "blocked", image: "nginx:latest", state: .stopped, runtimeKind: .appleContainer)],
+            deleteError: .nonZeroExit(code: 1, stderr: "permission denied", command: "delete --force blocked"))
+        let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
+
+        do {
+            _ = try await orchestrator.recreateContainer(originalID: "blocked", replacement: recreateDocument(),
+                                                         rollback: recreateDocument(name: "blocked"))
+            Issue.record("Expected delete failure")
+        } catch let failure as Core.Container.RecreateFailure {
+            #expect(failure.phase == .deleteOriginal)
+            #expect(failure.recovery == .notNeeded)
+        }
+        #expect(await runtime.startedIDs.isEmpty)
+        #expect(await runtime.containers.first?.state == .stopped)
+    }
+
+    @Test(arguments: [false, true])
+    func recreateRetainsRecoveryWhenRestartAfterDeleteFailureFails(commandFails: Bool) async throws {
+        let runtime = RecordingContainerRuntime(
+            containers: [.placeholder(id: "blocked", image: "nginx:latest", runtimeKind: .appleContainer)],
+            deleteError: .nonZeroExit(code: 1, stderr: "permission denied", command: "delete --force blocked"),
+            startError: commandFails ? .nonZeroExit(code: 1, stderr: "restart unavailable", command: "start blocked") : nil,
+            startState: .stopped)
+        let orchestrator = Core.Orchestrator(cliURLs: [.appleContainer: URL(fileURLWithPath: "/usr/bin/container")],
+            runtimes: [.appleContainer: runtime] as [Core.Runtime.Kind: any RuntimeClient])
+
+        do {
+            _ = try await orchestrator.recreateContainer(originalID: "blocked", replacement: recreateDocument(),
+                                                         rollback: recreateDocument(name: "blocked"))
+            Issue.record("Expected failed original restart")
+        } catch let failure as Core.Container.RecreateFailure {
+            #expect(failure.phase == .deleteOriginal)
+            #expect(failure.recovery == .restoreFailed)
+            #expect(failure.primaryFailure.runtimeDetail == "permission denied")
+            #expect(failure.recoveryFailure?.code == (commandFails ? "nonZeroExit" : "recreateReplacementNotRunning"))
+        }
+        #expect(await runtime.startedIDs == ["blocked"])
+        #expect(await runtime.createdRequests.isEmpty)
+        #expect(await runtime.containers.first?.state == .stopped)
     }
 
     @Test func recreateValidatesRollbackBeforeDeletingOriginal() async throws {
@@ -555,9 +603,12 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient, 
     nonisolated let descriptor = Core.Runtime.Descriptor.appleContainer
     var containers: [Core.Container.Snapshot]
     var deleteError: Core.Command.Error?
+    var startError: Core.Command.Error?
+    var startState: Core.Runtime.Status
     var createErrors: [Core.Command.Error]
     var deletedIDs: [String] = []
     var stoppedIDs: [String] = []
+    var startedIDs: [String] = []
     var createdRequests: [Core.Container.CreateRequest] = []
     var inspectedImages: [Core.Image.Resource]
     var inspectError: Core.Command.Error?
@@ -566,6 +617,8 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient, 
 
     init(containers: [Core.Container.Snapshot],
          deleteError: Core.Command.Error? = nil,
+         startError: Core.Command.Error? = nil,
+         startState: Core.Runtime.Status = .running,
          createErrors: [Core.Command.Error] = [],
          inspectedImages: [Core.Image.Resource] = [],
          inspectError: Core.Command.Error? = nil,
@@ -573,6 +626,8 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient, 
          creationStates: [Core.Runtime.Status] = []) {
         self.containers = containers
         self.deleteError = deleteError
+        self.startError = startError
+        self.startState = startState
         self.createErrors = createErrors
         self.inspectedImages = inspectedImages
         self.inspectError = inspectError
@@ -616,10 +671,23 @@ private actor RecordingContainerRuntime: RuntimeClient, RuntimeContainerClient, 
         return Core.Container.CreateResult(id: id)
     }
     func runContainer(arguments: [String]) async throws -> Data { Data() }
-    func start(_ ids: [String]) async throws -> Data { Data() }
+    func start(_ ids: [String]) async throws -> Data {
+        startedIDs.append(contentsOf: ids)
+        if let startError { throw startError }
+        setState(startState, for: ids)
+        return Data()
+    }
     func stop(_ ids: [String]) async throws -> Data {
         stoppedIDs.append(contentsOf: ids)
+        setState(.stopped, for: ids)
         return Data()
+    }
+    private func setState(_ state: Core.Runtime.Status, for ids: [String]) {
+        containers = containers.map { snapshot in
+            guard ids.contains(snapshot.id) else { return snapshot }
+            return Core.Container.Snapshot(configuration: snapshot.configuration, id: snapshot.id,
+                                           status: .init(state: state), runtimeKind: snapshot.runtimeKind)
+        }
     }
     func deleteContainers(_ ids: [String], force: Bool) async throws -> Data {
         deletedIDs.append(contentsOf: ids)

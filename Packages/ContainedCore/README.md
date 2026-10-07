@@ -140,6 +140,11 @@ not guaranteed reclaim; results contain before/after measurements and safe parti
 failure codes. Apple internals are never deleted directly. Registry credentials stay
 inside the adapter; retry policy is a pure `Core.Registry.UpdateRetryPolicy` value.
 
+Use `core.cleanupPlans([.compactRunningContainers, .unusedVolumes],
+runtimeKind: .appleContainer)` for a combined manual preview. It shares one runtime
+inventory and measures host allocation once only when nonempty candidates can use
+that measurement. Execution still validates each plan against fresh inventory.
+
 ## Fixtures
 
 Core fixtures are available only by depending on the separate

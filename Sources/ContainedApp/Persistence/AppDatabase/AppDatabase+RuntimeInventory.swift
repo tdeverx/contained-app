@@ -1,5 +1,6 @@
 import Foundation
 import ContainedCore
+import SwiftData
 
 struct InventoryPersistenceResult: Equatable, Sendable {
     var inserted = 0
@@ -14,6 +15,7 @@ struct InventoryPersistenceResult: Equatable, Sendable {
 
 extension AppDatabase {
     func upsertContainers(_ snapshots: [Core.Container.Snapshot],
+                          authoritativeRuntimeKinds: Set<Core.Runtime.Kind>? = nil,
                           observedAt: Date = Date()) async -> InventoryPersistenceResult {
         let interval = PerformanceSignposts.inventory.beginInterval("InventoryPersistence")
         defer { PerformanceSignposts.inventory.endInterval("InventoryPersistence", interval) }
@@ -80,7 +82,8 @@ extension AppDatabase {
                 changed = true
             }
         }
-        for record in records where !seen.contains(record.scopedID) && !record.isMissing {
+        for record in records where (authoritativeRuntimeKinds?.contains(Core.Runtime.Kind(rawValue: record.runtimeKindRaw)) ?? true) &&
+            !seen.contains(record.scopedID) && !record.isMissing {
             if shouldRetainMissingContainer(record,
                                             personalizedIDs: personalizedIDs,
                                             healthCheckedIDs: healthCheckedIDs) {
@@ -97,7 +100,9 @@ extension AppDatabase {
         return result
     }
 
-    func upsertImages(_ images: [Core.Image.Resource], observedAt: Date = Date()) {
+    func upsertImages(_ images: [Core.Image.Resource],
+                      authoritativeRuntimeKinds: Set<Core.Runtime.Kind>? = nil,
+                      observedAt: Date = Date()) {
         performMutation {
             let groups = Core.Image.LocalTagGroup.groups(for: images)
             let imageRecords = try fetchRequired(ImageRecord.self)
@@ -165,7 +170,8 @@ extension AppDatabase {
                     changed = true
                 }
             }
-            for tag in tagRecords where !seenTags.contains(tag.scopedID) && !tag.isMissing {
+            for tag in tagRecords where (authoritativeRuntimeKinds?.contains(Core.Runtime.Kind(rawValue: tag.runtimeKindRaw)) ?? true) &&
+                !seenTags.contains(tag.scopedID) && !tag.isMissing {
                 context.delete(tag)
                 changed = true
             }
@@ -327,7 +333,9 @@ extension AppDatabase {
         }
     }
 
-    func upsertVolumes(_ volumes: [Core.Volume.Resource], observedAt: Date = Date()) {
+    func upsertVolumes(_ volumes: [Core.Volume.Resource],
+                       authoritativeRuntimeKinds: Set<Core.Runtime.Kind>? = nil,
+                       observedAt: Date = Date()) {
         performMutation {
             let volumes = Array(Dictionary(volumes.map { ($0.scopedID, $0) },
                                              uniquingKeysWith: { _, latest in latest }).values)
@@ -360,7 +368,8 @@ extension AppDatabase {
                     changed = true
                 }
             }
-            for record in records where !seen.contains(record.scopedID) && !record.isMissing {
+            for record in records where (authoritativeRuntimeKinds?.contains(Core.Runtime.Kind(rawValue: record.runtimeKindRaw)) ?? true) &&
+                !seen.contains(record.scopedID) && !record.isMissing {
                 if record.personalizationData != nil {
                     record.isMissing = true
                     record.missingSince = observedAt
@@ -374,7 +383,9 @@ extension AppDatabase {
         }
     }
 
-    func upsertNetworks(_ networks: [Core.Network.Resource], observedAt: Date = Date()) {
+    func upsertNetworks(_ networks: [Core.Network.Resource],
+                        authoritativeRuntimeKinds: Set<Core.Runtime.Kind>? = nil,
+                        observedAt: Date = Date()) {
         performMutation {
             let networks = Array(Dictionary(networks.map { ($0.scopedID, $0) },
                                              uniquingKeysWith: { _, latest in latest }).values)
@@ -407,7 +418,8 @@ extension AppDatabase {
                     changed = true
                 }
             }
-            for record in records where !seen.contains(record.scopedID) && !record.isMissing {
+            for record in records where (authoritativeRuntimeKinds?.contains(Core.Runtime.Kind(rawValue: record.runtimeKindRaw)) ?? true) &&
+                !seen.contains(record.scopedID) && !record.isMissing {
                 context.delete(record)
                 changed = true
             }
@@ -448,7 +460,7 @@ extension AppDatabase {
             record.isMissing = false
             record.lastSeenAt = observedAt
             record.updatedAt = observedAt
-            save()
+            if save() { invalidateRecreationRecoveries() }
         }
     }
 
@@ -460,10 +472,12 @@ extension AppDatabase {
                                       observedAt: Date = Date()) -> Bool {
         var saved = false
         performMutation {
+            let matching = try fetchRequired(ContainerRecord.self).filter { $0.scopedID == source.scopedID }
+            guard !matching.contains(where: { $0.migrationStateRaw == "recreating" || $0.migrationStateRaw == "recreateFailed" }) else { return }
             let documentData = try Self.encoded(sourceDocument)
             let snapshotData = try Self.encoded(source)
             let record: ContainerRecord
-            if let existing = try fetchRequired(ContainerRecord.self).first(where: { $0.scopedID == source.scopedID }) {
+            if let existing = matching.first {
                 record = existing
             } else {
                 record = ContainerRecord(scopedID: source.scopedID,
@@ -485,6 +499,7 @@ extension AppDatabase {
             record.missingSince = nil
             record.updatedAt = observedAt
             saved = save()
+            if saved { invalidateRecreationRecoveries() }
         }
         return saved
     }
@@ -496,19 +511,27 @@ extension AppDatabase {
     }
 
     func containerRecreationRecoveries() -> [ContainerRecreationRecovery] {
-        _ = mutationRevision
-        return fetch(ContainerRecord.self).filter {
-            $0.migrationStateRaw == "recreating" || $0.migrationStateRaw == "recreateFailed"
-        }.compactMap { record in
-            do {
+        _ = recreationRecoveryRevision
+        guard !isRecovering, recreationRecoveryCacheNeedsReload else { return recreationRecoveryCache }
+        do {
+            let descriptor = FetchDescriptor<ContainerRecord>(predicate: #Predicate {
+                $0.migrationStateRaw == "recreating" || $0.migrationStateRaw == "recreateFailed"
+            })
+            let records = try readRequired(ContainerRecord.self) { try context.fetch(descriptor) }
+            recreationRecoveryLoadCount &+= 1
+            let recoveries = try records.map { record in
                 guard let data = record.snapshotData else { throw Failure.decodeRecord(record: record.scopedID, detail: "Missing original snapshot") }
                 let snapshot = try JSONDecoder().decode(Core.Container.Snapshot.self, from: data)
-                return ContainerRecreationRecovery(snapshot: snapshot, document: .containerRecovery(from: snapshot.configuration))
-            } catch {
-                recordFailure(.decodeRecord(record: "recreation recovery \(record.scopedID)", detail: Self.safeDetail(error)))
-                return nil
-            }
-        }.sorted { $0.id < $1.id }
+                let document = try record.documentData.map { try JSONDecoder().decode(Core.Schema.Document.self, from: $0) }
+                    ?? .containerRecovery(from: snapshot.configuration)
+                return ContainerRecreationRecovery(snapshot: snapshot, document: document)
+            }.sorted { $0.id < $1.id }
+            recreationRecoveryCache = recoveries
+            recreationRecoveryCacheNeedsReload = false
+        } catch {
+            recordFailure(error as? Failure ?? .decodeRecord(record: "recreation recovery", detail: Self.safeDetail(error)))
+        }
+        return recreationRecoveryCache
     }
 
     @discardableResult
@@ -525,6 +548,7 @@ extension AppDatabase {
                 context.delete(source)
             }
             saved = save()
+            if saved { invalidateRecreationRecoveries() }
         }
         return saved
     }
@@ -535,7 +559,7 @@ extension AppDatabase {
             guard let record = try fetchRequired(ContainerRecord.self).first(where: { $0.scopedID == scopedID }) else { return }
             record.migrationStateRaw = "recreateFailed"
             record.updatedAt = observedAt
-            save()
+            if save() { invalidateRecreationRecoveries() }
         }
     }
 
@@ -547,7 +571,7 @@ extension AppDatabase {
             record.isHiddenDuringMigration = false
             record.migrationStateRaw = message.map { "failed:\($0)" } ?? "failed"
             record.updatedAt = observedAt
-            save()
+            if save() { invalidateRecreationRecoveries() }
         }
     }
 
@@ -595,7 +619,7 @@ extension AppDatabase {
             record.missingSince = nil
             record.lastSeenAt = observedAt
             record.updatedAt = observedAt
-            save()
+            if save() { invalidateRecreationRecoveries() }
         }
     }
 
