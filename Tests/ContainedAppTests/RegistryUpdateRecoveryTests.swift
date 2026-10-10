@@ -6,6 +6,32 @@ import ContainedCore
 @Suite("Registry update recovery")
 @MainActor
 struct RegistryUpdateRecoveryTests {
+    @Test func persistedAliasRetriesAreRemovedWithoutResettingRealTags() async throws {
+        let db = AppDatabase(isStoredInMemoryOnly: true)
+        let alias = "ghcr.io/team/app:contained-recovery-" + String(repeating: "a", count: 64)
+        let published = "ghcr.io/team/app:latest"
+        var policy = Core.Registry.UpdateRetryPolicy()
+        policy.failed(alias, runtimeKind: .appleContainer, kind: .notFound)
+        policy.failed(published, runtimeKind: .appleContainer, kind: .network)
+        let staleAlias = try #require(policy.entries.values.first { $0.references == [alias] })
+        let real = try #require(policy.entries.values.first { $0.references == [published] })
+        db.setSetting(policy, for: "registryUpdateRetryPolicy")
+        let app = AppModel(database: db)
+        app.setImages([])
+        #expect(app.registryUpdateFailures == [real])
+        let saved: Core.Registry.UpdateRetryPolicy = db.setting("registryUpdateRetryPolicy", fallback: .init())
+        #expect(saved == app.registryRetryPolicy)
+        var requests = 0
+        app.registryManifestLookup = { _, _ in
+            requests += 1
+            throw Core.Registry.ManifestError.notFound
+        }
+        await app.retryRegistryUpdates(staleAlias)
+        await app.checkImageUpdate(alias, runtimeKind: .appleContainer)
+        #expect(requests == 0)
+        #expect(app.registryUpdateFailures == [real])
+    }
+
     @Test func recoveryAliasesNeverEnterSweepsOrExplicitChecks() async throws {
         let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
         let alias = "ghcr.io/team/app:contained-recovery-" + String(repeating: "a", count: 64)

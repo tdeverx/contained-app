@@ -141,6 +141,7 @@ extension AppModel {
     /// Compare one image's local digest against the registry. `notify` controls per-image banners
     /// (off during bulk sweeps, which summarize once at the end).
     func checkImageUpdate(_ reference: String, notify: Bool = true) async {
+        reconcileRegistryRecoveryAliases()
         guard !Core.Registry.ImageReference.parse(reference).isLocalRecoveryAlias else { return }
         let runtimeKinds = localRuntimeTargets(for: reference)
         guard !runtimeKinds.isEmpty else {
@@ -182,6 +183,7 @@ extension AppModel {
     private func checkImageUpdate(_ reference: String,
                                   runtimeKinds: [Core.Runtime.Kind],
                                   notify: Bool) async {
+        reconcileRegistryRecoveryAliases()
         guard !Core.Registry.ImageReference.parse(reference).isLocalRecoveryAlias else { return }
         let runtimeKinds = Array(Set(runtimeKinds)).sorted { $0.rawValue < $1.rawValue }
         var statuses: [Core.Image.UpdateStatus] = []

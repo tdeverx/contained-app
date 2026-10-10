@@ -95,6 +95,14 @@ public extension Core.Registry {
             }
         }
 
+        /// Removes obsolete local-only identities without resetting unrelated registry backoff.
+        public mutating func removeLocalRecoveryAliases() {
+            for key in Array(entries.keys) {
+                entries[key]?.references.removeAll { ImageReference.parse($0).isLocalRecoveryAlias }
+                if entries[key]?.references.isEmpty == true { entries.removeValue(forKey: key) }
+            }
+        }
+
         /// A credential change removes the delay, not the affected references needed for retry.
         public mutating func scheduleRetry(host: String, runtimeKind: Core.Runtime.Kind, now: Date = Date()) {
             let normalized = Self.host(for: host + "/placeholder")

@@ -2,6 +2,10 @@ import Foundation
 import ContainedCore
 
 extension AppModel {
+    func reconcileRegistryRecoveryAliases() {
+        registryRetryPolicy.removeLocalRecoveryAliases()
+    }
+
     var registryUpdateFailures: [Core.Registry.UpdateRetryPolicy.Entry] {
         registryRetryPolicy.entries.values.sorted { $0.id < $1.id }
     }
@@ -12,7 +16,8 @@ extension AppModel {
     }
 
     func retryRegistryUpdates(_ entry: Core.Registry.UpdateRetryPolicy.Entry) async {
-        for reference in entry.references {
+        reconcileRegistryRecoveryAliases()
+        for reference in entry.references where !Core.Registry.ImageReference.parse(reference).isLocalRecoveryAlias {
             // Explicit retry attempts every affected tag even if an earlier tag fails again.
             registryRetryPolicy.scheduleRetry(host: entry.host, runtimeKind: entry.runtimeKind)
             await checkImageUpdate(reference, runtimeKind: entry.runtimeKind, notify: false)
