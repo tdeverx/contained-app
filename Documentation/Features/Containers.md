@@ -57,6 +57,14 @@ is never replaced with its multi-platform parent index. This retains the local
 original independently of a moving tag; it can be removed through unused-image
 cleanup once no container references it. Rollback
 is verified for image identity and startup before reporting that the original returned.
+If the original digest is no longer registered locally, recovery preflight fetches
+that exact digest and verifies it before teardown. It never substitutes the current
+tag. If fetching or verification fails, the existing container is left untouched and
+the immediate error includes runtime details. Local `contained-recovery-<digest>`
+aliases are not published tags: remote update checks and pulls exclude them.
+Pending recovery continues to block destructive cleanup for its runtime. After
+recovery completes, unused-image cleanup is the deliberate way to remove aliases
+that no remaining container needs; they are not automatically deleted.
 
 If replacement and rollback fail, **Review Recovery…** remains on the Containers
 page even when the runtime container is missing. Review the original image, recovery

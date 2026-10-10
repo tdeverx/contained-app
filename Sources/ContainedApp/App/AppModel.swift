@@ -348,6 +348,7 @@ final class AppModel {
     }
 
     func setImages(_ images: [Core.Image.Resource], authoritativeRuntimeKinds: Set<Core.Runtime.Kind>? = nil) {
+        reconcileRegistryRecoveryAliases()
         let changed = images != self.images
         let scopeChanged = authoritativeRuntimeKinds != lastPersistedImageRuntimeKinds
         if changed {

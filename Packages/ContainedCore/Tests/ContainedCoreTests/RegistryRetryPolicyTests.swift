@@ -4,6 +4,25 @@ import Testing
 
 @Suite("Registry retry policy")
 struct RegistryRetryPolicyTests {
+    @Test func recoveryAliasCleanupPreservesSharedRegistryBackoff() throws {
+        var policy = Core.Registry.UpdateRetryPolicy()
+        let alias = "ghcr.io/team/app:contained-recovery-" + String(repeating: "a", count: 64)
+        let published = "ghcr.io/team/app:latest"
+        let now = Date(timeIntervalSince1970: 1000)
+        policy.failed(alias, runtimeKind: .appleContainer, kind: .notFound, now: now)
+        policy.failed(alias, runtimeKind: .appleContainer, kind: .network, now: now)
+        policy.failed(published, runtimeKind: .appleContainer, kind: .network, now: now)
+        policy.failed(published, runtimeKind: .docker, kind: .unauthorized, now: now)
+        var expected = policy.entries.values.filter { $0.references.contains(published) }
+        for index in expected.indices { expected[index].references.removeAll { $0 == alias } }
+        policy = try JSONDecoder().decode(Core.Registry.UpdateRetryPolicy.self, from: JSONEncoder().encode(policy))
+        policy.removeLocalRecoveryAliases()
+        #expect(policy.entries == Dictionary(uniqueKeysWithValues: expected.map { ($0.id, $0) }))
+        let cleaned = policy
+        policy.removeLocalRecoveryAliases()
+        #expect(policy == cleaned)
+    }
+
     @Test func authenticationCoalescesAndLeavesPublicAndUnrelatedImagesAvailable() {
         var policy = Core.Registry.UpdateRetryPolicy()
         let date = Date(timeIntervalSince1970: 1000)
