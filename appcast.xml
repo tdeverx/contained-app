@@ -3,17 +3,15 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.235+00b298b</title>
-            <pubDate>Wed, 07 Oct 2026 08:33:57 +0000</pubDate>
-            <sparkle:version>235</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.235+00b298b</sparkle:shortVersionString>
+            <title>1.0.0-nightly.238+85e0a1b</title>
+            <pubDate>Sat, 10 Oct 2026 10:52:57 +0000</pubDate>
+            <sparkle:version>238</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.238+85e0a1b</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
 <ul>
-<li>Added **Free Up Space…** with compaction selected by default, explicit opt-in resource/cache deletion, and access to automatic compaction settings.</li>
-<li>Fixed Apple Container recreation accumulating image entrypoint arguments; pinned and verified rollback, preserved originals before update pulls without weakening child-manifest digest pins, and added visible recovery for missing containers after failed replacement/restoration.</li>
-<li>Protected saved recovery and local metadata during failed runtime reads, corrupt-data recovery, and orphan cleanup; kept stopped originals stopped during restoration, kept open resource details current, and reduced repeated cleanup scans and scrolling work.</li>
+<li>Fetch and verify missing original image digests before recreation; keep local recovery aliases out of registry update checks and pulls.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -96,7 +94,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.235+00b298b/Contained-1.0.0-nightly.235+00b298b.dmg" length="10038517" type="application/octet-stream" sparkle:edSignature="X1S8UobkeQjCq+2HOoLEAA6dem4MMnctqOs8d6ovlzqaCQ3tS6is910CI82suxT2NxlO+ensXwKsCIgv9irmBw=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.238+85e0a1b/Contained-1.0.0-nightly.238+85e0a1b.dmg" length="10031216" type="application/octet-stream" sparkle:edSignature="ja3aCeeOIHVG1IarULFCuAYQVW/XkosGnnlSqONEQJDPTGhXphrVc/liiGENvwVno3G4kJnRoUlPBNlI1HjVAA=="/>
         </item>
     </channel>
 </rss>
