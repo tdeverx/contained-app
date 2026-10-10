@@ -5,6 +5,7 @@ extension RuntimeContainerClient {
 
     /// Fetch only the immutable original, then verify it before any lifecycle mutation.
     func prepareRecoveryRequest(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateRequest {
+        try Task.checkCancellation()
         let pinned = Core.Registry.ImageReference.parse(request.image)
         guard pinned.isDigestReference else { return try await prepareCreateRequest(request) }
         do {
@@ -19,8 +20,11 @@ extension RuntimeContainerClient {
                     }
                 }
             }
+            // Cancellation can end an AsyncThrowingStream without yielding or throwing.
+            try Task.checkCancellation()
             let prepared = try await prepareCreateRequest(request)
             _ = try await resolvedImageIdentities(for: prepared.image, pinnedReference: request.image)
+            try Task.checkCancellation()
             return prepared
         } catch is CancellationError {
             throw CancellationError()
@@ -69,6 +73,7 @@ extension RuntimeContainerClient {
         }
         let request = try await prepareRecoveryRequest(request)
         let identities = try await resolvedImageIdentities(for: request.image, pinnedReference: pinnedReference)
+        try Task.checkCancellation()
         let result = try await createContainer(request, start: originalWasRunning)
         try await verifyReplacement(id: result.id ?? request.name,
                                     expectedImageIdentities: identities,
@@ -90,6 +95,7 @@ extension RuntimeContainerClient {
         let expectedImageIdentities = try await resolvedImageIdentities(for: replacement.image, pinnedReference: replacementReference)
         // Resolve rollback before teardown too; a moving tag must not turn restoration into an update.
         let rollbackImageIdentities = try await resolvedImageIdentities(for: rollback.image, pinnedReference: rollbackReference)
+        try Task.checkCancellation()
         let stoppedOriginal = (try? await stop([originalID])) != nil
         let deletedOriginal: Bool
         do {

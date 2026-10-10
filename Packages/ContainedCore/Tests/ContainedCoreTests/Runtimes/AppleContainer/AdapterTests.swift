@@ -4,6 +4,28 @@ import Testing
 
 @Suite("Runtime adapter boundary")
 struct AppleContainerAdapterTests {
+    @Test func cancelledQuietRecoveryPullCannotContinueIntoTeardown() async throws {
+        let runner = MissingRecoveryImageRunner(outcome: "cancel-quiet")
+        let core = Core.Orchestrator.testing(runner: runner, runtimeKind: .appleContainer)
+        var original = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        original.name = "original"
+        original.image = "ghcr.io/example/coast@\(MissingRecoveryImageRunner.digest)"
+        var replacement = original
+        replacement.image = "ghcr.io/example/coast:latest"
+        let rollbackDocument = Core.Schema.Document.containerCreate(from: original)
+        let replacementDocument = Core.Schema.Document.containerCreate(from: replacement)
+        let operation = Task {
+            try await core.recreateContainer(originalID: "original", replacement: replacementDocument, rollback: rollbackDocument)
+        }
+        await runner.waitUntilPull()
+        operation.cancel()
+        do {
+            _ = try await operation.value
+            Issue.record("Cancelled recovery must not continue")
+        } catch { #expect(error is CancellationError) }
+        #expect(await runner.commands == [ContainerCommands.imageList(), ContainerCommands.imagePull(original.image)])
+    }
+
     @Test(arguments: ["available", "unavailable", "wrong-digest"])
     func recoveryFetchesOnlyTheMissingPinnedImageBeforeAnyLifecycleMutation(_ outcome: String) async throws {
         let runner = MissingRecoveryImageRunner(outcome: outcome)
@@ -363,8 +385,14 @@ private actor MissingRecoveryImageRunner: Core.Command.Running {
     static let alias = "ghcr.io/example/coast:contained-recovery-" + String(repeating: "a", count: 64)
     let outcome: String
     var pulled = false
+    private var pullWaiter: CheckedContinuation<Void, Never>?
     private(set) var commands: [[String]] = []
     init(outcome: String) { self.outcome = outcome }
+
+    func waitUntilPull() async {
+        if pulled { return }
+        await withCheckedContinuation { pullWaiter = $0 }
+    }
 
     func run(_ arguments: [String], stdin: Data?, priority: Core.Command.ExecutionPriority) async throws -> Data {
         commands.append(arguments)
@@ -387,11 +415,16 @@ private actor MissingRecoveryImageRunner: Core.Command.Running {
             throw Core.Command.Error.nonZeroExit(code: 1, stderr: "manifest no longer available", command: "test")
         }
         pulled = true
+        pullWaiter?.resume()
+        pullWaiter = nil
     }
     nonisolated func stream(_ arguments: [String], priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
-                do { try await pull(arguments); continuation.finish() }
+                do {
+                    try await pull(arguments)
+                    if outcome != "cancel-quiet" { continuation.finish() }
+                }
                 catch { continuation.finish(throwing: error) }
             }
             continuation.onTermination = { _ in task.cancel() }
