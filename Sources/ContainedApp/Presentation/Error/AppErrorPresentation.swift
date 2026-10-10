@@ -4,6 +4,10 @@ import ContainedCore
 enum AppErrorPresentation {
     static func message(for error: Error) -> String {
         switch error {
+        case let error as Core.Container.RecoveryImageFailure:
+            return AppText.string("error.recreate.rollbackImageUnavailable", defaultValue: "Couldn't obtain and verify the original rollback image. The existing container was not replaced. Restore access to its exact image digest and retry. Runtime detail: \(error.cause.runtimeDetail)")
+        case is Core.Registry.LocalRecoveryAliasError:
+            return AppText.string("error.image.localRecoveryAlias", defaultValue: "This image tag is a local recovery copy, not a published registry tag. It cannot be pulled or checked for remote updates.")
         case let error as Core.Command.Error:
             return message(for: error)
         case let error as Core.Container.RecreateFailure:

@@ -6,6 +6,29 @@ import ContainedCore
 @Suite("Registry update recovery")
 @MainActor
 struct RegistryUpdateRecoveryTests {
+    @Test func recoveryAliasesNeverEnterSweepsOrExplicitChecks() async throws {
+        let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
+        let alias = "ghcr.io/team/app:contained-recovery-" + String(repeating: "a", count: 64)
+        let published = "ghcr.io/team/app:latest"
+        app.setImages(try Core.Container.JSON.decode([Core.Image.Resource].self, from: Data("""
+        [{"configuration":{"name":"\(alias)","descriptor":{"digest":"sha256:old"}},"id":"alias","variants":[]},
+         {"configuration":{"name":"\(published)","descriptor":{"digest":"sha256:old"}},"id":"published","variants":[]}]
+        """.utf8), runtimeKind: .appleContainer))
+        app.imageUpdates[app.imageUpdateKey(alias, runtimeKind: .appleContainer)] = .failed(localDigest: nil, message: "old alias failure")
+        var requests: [String] = []
+        app.registryManifestLookup = { reference, _ in
+            requests.append(reference)
+            return .init(digest: "sha256:new", authenticated: false)
+        }
+        await app.checkAllImageUpdates()
+        await app.checkImageUpdate(alias)
+        await app.checkImageUpdate(alias, runtimeKind: .appleContainer)
+        #expect(requests == [published])
+        #expect(app.imageUpdateStatus(for: alias).state == .unknown)
+        #expect(app.imageUpdateStatus(for: alias, runtimeKind: .appleContainer).state == .unknown)
+        #expect(app.registryUpdateFailures.isEmpty)
+    }
+
     @Test func backgroundRetryHonorsBackoffWithoutRepeatingHealthyChecksOrDelayingFullSweep() async throws {
         let app = AppModel(database: AppDatabase(isStoredInMemoryOnly: true))
         let reference = "ghcr.io/team/retry:latest"

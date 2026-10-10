@@ -1,0 +1,1 @@
+- Fetch and verify missing original image digests before recreation; keep local recovery aliases out of registry update checks and pulls.

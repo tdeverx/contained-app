@@ -1,6 +1,13 @@
 import Foundation
 
 public extension Core.Container {
+    struct RecoveryImageFailure: Core.Error.PackageError {
+        public let cause: RecreateFailure.Cause
+        public var packageName: String { "ContainedCore" }
+        public var packageErrorCode: String { "recoveryImageUnavailable" }
+        public var packageErrorContext: [String: String] { ["causeCode": cause.code] }
+    }
+
     /// Describes which destructive recreate phase failed and whether Core restored the original.
     struct RecreateFailure: Error, Equatable, Sendable {
         public enum Phase: String, Equatable, Sendable {

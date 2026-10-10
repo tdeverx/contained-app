@@ -3,6 +3,32 @@ import Foundation
 extension RuntimeContainerClient {
     var recreateVerificationDelay: Duration { .zero }
 
+    /// Fetch only the immutable original, then verify it before any lifecycle mutation.
+    func prepareRecoveryRequest(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateRequest {
+        let pinned = Core.Registry.ImageReference.parse(request.image)
+        guard pinned.isDigestReference else { return try await prepareCreateRequest(request) }
+        do {
+            if let images = self as? any RuntimeImageClient {
+                let inventory = try await images.images()
+                if !inventory.contains(where: {
+                    Self.normalizedImageIdentity($0.id) == Self.normalizedImageIdentity(pinned.reference) ||
+                    $0.digest.map(Self.normalizedImageIdentity) == Self.normalizedImageIdentity(pinned.reference)
+                }) {
+                    for try await _ in images.streamPull(request.image, platform: request.platform.isEmpty ? nil : request.platform) {
+                        try Task.checkCancellation()
+                    }
+                }
+            }
+            let prepared = try await prepareCreateRequest(request)
+            _ = try await resolvedImageIdentities(for: prepared.image, pinnedReference: request.image)
+            return prepared
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw Core.Container.RecoveryImageFailure(cause: .init(error))
+        }
+    }
+
     func prepareCreateRequest(_ request: Core.Container.CreateRequest) async throws -> Core.Container.CreateRequest {
         request
     }
@@ -38,10 +64,10 @@ extension RuntimeContainerClient {
     /// Explicit recovery only creates a missing object; it never deletes a colliding workload.
     func restoreContainer(_ request: Core.Container.CreateRequest, originalWasRunning: Bool) async throws -> Core.Container.CreateResult {
         let pinnedReference = request.image
-        let request = try await prepareCreateRequest(request)
         guard !request.name.isEmpty, try await containerSnapshot(matching: request.name) == nil else {
             throw RecreateVerificationError.recoveryNameInUse
         }
+        let request = try await prepareRecoveryRequest(request)
         let identities = try await resolvedImageIdentities(for: request.image, pinnedReference: pinnedReference)
         let result = try await createContainer(request, start: originalWasRunning)
         try await verifyReplacement(id: result.id ?? request.name,
@@ -58,7 +84,7 @@ extension RuntimeContainerClient {
         let replacementReference = replacement.image
         let rollbackReference = rollback.image
         let replacement = try await prepareCreateRequest(replacement)
-        let rollback = try await prepareCreateRequest(rollback)
+        let rollback = try await prepareRecoveryRequest(rollback)
         let original = try await containerSnapshot(matching: originalID)
         let originalWasRunning = original?.state == .running
         let expectedImageIdentities = try await resolvedImageIdentities(for: replacement.image, pinnedReference: replacementReference)

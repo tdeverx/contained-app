@@ -4,6 +4,66 @@ import Testing
 
 @Suite("Runtime adapter boundary")
 struct AppleContainerAdapterTests {
+    @Test(arguments: ["available", "unavailable", "wrong-digest"])
+    func recoveryFetchesOnlyTheMissingPinnedImageBeforeAnyLifecycleMutation(_ outcome: String) async throws {
+        let runner = MissingRecoveryImageRunner(outcome: outcome)
+        let core = Core.Orchestrator.testing(runner: runner, runtimeKind: .appleContainer)
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = "ghcr.io/example/coast@\(MissingRecoveryImageRunner.digest)"
+        request.name = "original"
+        do {
+            try await core.prepareContainerRecovery(.containerCreate(from: request))
+            #expect(outcome == "available")
+        } catch let failure as Core.Container.RecoveryImageFailure {
+            #expect(outcome != "available")
+            #expect(failure.packageErrorCode == "recoveryImageUnavailable")
+            if outcome == "unavailable" { #expect(failure.cause.runtimeDetail == "manifest no longer available") }
+        }
+        let commands = await runner.commands
+        #expect(commands.filter { $0.starts(with: ["image", "pull"]) } == [ContainerCommands.imagePull(request.image)])
+        #expect(!commands.contains { ["run", "create", "stop", "delete"].contains($0.first ?? "") })
+        if outcome == "available" {
+            #expect(commands.contains(ContainerCommands.imageTag(source: "ghcr.io/example/coast:old", target: MissingRecoveryImageRunner.alias)))
+            #expect(commands.last == ContainerCommands.imageInspect([MissingRecoveryImageRunner.alias]))
+            try await core.prepareContainerRecovery(.containerCreate(from: request))
+            #expect(await runner.commands.filter { $0.starts(with: ["image", "pull"]) }.count == 1)
+        }
+    }
+
+    @Test func recoveryAliasesCannotReachRemoteLookupOrPull() async throws {
+        let runner = MissingRecoveryImageRunner(outcome: "available")
+        let core = Core.Orchestrator.testing(runner: runner, runtimeKind: .appleContainer)
+        await #expect(throws: Core.Registry.LocalRecoveryAliasError.self) {
+            try await core.remoteImageManifest(MissingRecoveryImageRunner.alias, runtimeKind: .appleContainer)
+        }
+        do {
+            for try await _ in core.streamPull(MissingRecoveryImageRunner.alias, runtimeKind: .appleContainer) {}
+            Issue.record("Local alias pull must fail")
+        } catch { #expect(error is Core.Registry.LocalRecoveryAliasError) }
+        #expect(await runner.commands.isEmpty)
+        #expect(Core.Registry.ImageReference.parse(MissingRecoveryImageRunner.alias).isLocalRecoveryAlias)
+        #expect(!Core.Registry.ImageReference.parse("example/app:contained-recovery-public").isLocalRecoveryAlias)
+    }
+
+    @Test func unavailableRollbackDigestAbortsPublicRecreateBeforeStoppingOriginal() async throws {
+        let runner = MissingRecoveryImageRunner(outcome: "unavailable")
+        let core = Core.Orchestrator.testing(runner: runner, runtimeKind: .appleContainer)
+        var original = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        original.name = "original"
+        original.image = "ghcr.io/example/coast@\(MissingRecoveryImageRunner.digest)"
+        var replacement = original
+        replacement.image = "ghcr.io/example/coast:latest"
+        do {
+            _ = try await core.recreateContainer(originalID: original.name,
+                replacement: .containerCreate(from: replacement), rollback: .containerCreate(from: original))
+            Issue.record("Expected missing rollback image failure")
+        } catch let failure as Core.Container.RecoveryImageFailure {
+            #expect(failure.cause.runtimeDetail == "manifest no longer available")
+            #expect(!failure.packageErrorContext.values.contains(failure.cause.runtimeDetail))
+        }
+        #expect(await runner.commands == [ContainerCommands.imageList(), ContainerCommands.imagePull(original.image)])
+    }
+
     @Test func normalCreateNeverSubstitutesAParentIndexForAChildDigest() async throws {
         let imagesData = try Fixture.data("image-inspect")
         let images = try Core.Container.JSON.decode([Core.Image.Resource].self,
@@ -295,6 +355,47 @@ struct AppleContainerAdapterTests {
 
         #expect(received.count == 1)
         #expect(received.first?.map(\.id) == ["buildkit", "sonarrhd"])
+    }
+}
+
+private actor MissingRecoveryImageRunner: Core.Command.Running {
+    static let digest = "sha256:" + String(repeating: "a", count: 64)
+    static let alias = "ghcr.io/example/coast:contained-recovery-" + String(repeating: "a", count: 64)
+    let outcome: String
+    var pulled = false
+    private(set) var commands: [[String]] = []
+    init(outcome: String) { self.outcome = outcome }
+
+    func run(_ arguments: [String], stdin: Data?, priority: Core.Command.ExecutionPriority) async throws -> Data {
+        commands.append(arguments)
+        if arguments == ContainerCommands.imageList() {
+            return try JSONEncoder().encode(pulled ? [image(name: "ghcr.io/example/coast:old")] : [])
+        }
+        if arguments.starts(with: ["image", "inspect"]) {
+            return try JSONEncoder().encode([image(name: Self.alias)])
+        }
+        if arguments.starts(with: ["image", "tag"]) { return Data() }
+        throw Core.Command.Error.nonZeroExit(code: 1, stderr: "unexpected lifecycle command", command: "test")
+    }
+    private func image(name: String) -> Core.Image.Resource {
+        let digest = outcome == "wrong-digest" ? "sha256:" + String(repeating: "b", count: 64) : Self.digest
+        return .init(configuration: .init(name: name, descriptor: .init(digest: digest, mediaType: nil, size: nil), creationDate: nil), id: digest, runtimeKind: .appleContainer)
+    }
+    private func pull(_ arguments: [String]) throws {
+        commands.append(arguments)
+        if outcome == "unavailable" {
+            throw Core.Command.Error.nonZeroExit(code: 1, stderr: "manifest no longer available", command: "test")
+        }
+        pulled = true
+    }
+    nonisolated func stream(_ arguments: [String], priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do { try await pull(arguments); continuation.finish() }
+                catch { continuation.finish(throwing: error) }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 }
 

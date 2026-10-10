@@ -355,7 +355,7 @@ public extension Core {
             let runtime = try requireRuntime(request.runtimeKind, capability: .containers,
                                              as: (any RuntimeContainerClient).self)
             // Preserve any local immutable image before a replacement pull can move its tag.
-            _ = try await runtime.prepareCreateRequest(request)
+            _ = try await runtime.prepareRecoveryRequest(request)
         }
 
         /// Restore a saved recipe and its running/stopped state without replacing an existing object.
@@ -469,6 +469,9 @@ public extension Core {
                                platform: String? = nil,
                                runtimeKind: Core.Runtime.Kind) -> AsyncThrowingStream<String, Swift.Error> {
             do {
+                guard !Core.Registry.ImageReference.parse(ref).isLocalRecoveryAlias else {
+                    throw Core.Registry.LocalRecoveryAliasError()
+                }
                 let runtime = try requireRuntime(runtimeKind,
                                                  capability: .images,
                                                  as: (any RuntimeImageClient).self)
@@ -537,7 +540,10 @@ public extension Core {
 
         public func remoteImageManifest(_ reference: String,
                                         runtimeKind: Core.Runtime.Kind) async throws -> Core.Registry.ManifestResult {
-            try await requireRuntime(runtimeKind, capability: .registries,
+            guard !Core.Registry.ImageReference.parse(reference).isLocalRecoveryAlias else {
+                throw Core.Registry.LocalRecoveryAliasError()
+            }
+            return try await requireRuntime(runtimeKind, capability: .registries,
                                      as: (any RuntimeRegistryClient).self).remoteImageManifest(reference)
         }
 

@@ -33,6 +33,7 @@ extension AppModel {
 
     /// The tracked update status for an image reference (defaults to an empty/unknown status).
     func imageUpdateStatus(for reference: String) -> Core.Image.UpdateStatus {
+        guard !Core.Registry.ImageReference.parse(reference).isLocalRecoveryAlias else { return .init() }
         let runtimeStatuses = localRuntimeTargets(for: reference).compactMap {
             imageUpdates[imageUpdateKey(reference, runtimeKind: $0)]
         }
@@ -45,7 +46,8 @@ extension AppModel {
     /// The tracked update status for a local tag in one runtime.
     func imageUpdateStatus(for reference: String,
                            runtimeKind: Core.Runtime.Kind) -> Core.Image.UpdateStatus {
-        imageUpdates[imageUpdateKey(reference, runtimeKind: runtimeKind)]
+        guard !Core.Registry.ImageReference.parse(reference).isLocalRecoveryAlias else { return .init() }
+        return imageUpdates[imageUpdateKey(reference, runtimeKind: runtimeKind)]
             ?? imageUpdates[imageUpdateKey(reference)]
             ?? Core.Image.UpdateStatus()
     }
@@ -139,6 +141,7 @@ extension AppModel {
     /// Compare one image's local digest against the registry. `notify` controls per-image banners
     /// (off during bulk sweeps, which summarize once at the end).
     func checkImageUpdate(_ reference: String, notify: Bool = true) async {
+        guard !Core.Registry.ImageReference.parse(reference).isLocalRecoveryAlias else { return }
         let runtimeKinds = localRuntimeTargets(for: reference)
         guard !runtimeKinds.isEmpty else {
             let key = imageUpdateKey(reference)
@@ -179,6 +182,7 @@ extension AppModel {
     private func checkImageUpdate(_ reference: String,
                                   runtimeKinds: [Core.Runtime.Kind],
                                   notify: Bool) async {
+        guard !Core.Registry.ImageReference.parse(reference).isLocalRecoveryAlias else { return }
         let runtimeKinds = Array(Set(runtimeKinds)).sorted { $0.rawValue < $1.rawValue }
         var statuses: [Core.Image.UpdateStatus] = []
         for runtimeKind in runtimeKinds {
@@ -406,7 +410,8 @@ extension AppModel {
     }
 
     private func sortedUnique(_ references: [String]) -> [String] {
-        Array(Set(references)).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+        Array(Set(references.filter { !Core.Registry.ImageReference.parse($0).isLocalRecoveryAlias }))
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     private func localRuntimeTargets(for reference: String) -> [Core.Runtime.Kind] {
