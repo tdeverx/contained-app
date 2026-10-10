@@ -13,7 +13,8 @@ extension RuntimeContainerClient {
                 let inventory = try await images.images()
                 if !inventory.contains(where: {
                     Self.normalizedImageIdentity($0.id) == Self.normalizedImageIdentity(pinned.reference) ||
-                    $0.digest.map(Self.normalizedImageIdentity) == Self.normalizedImageIdentity(pinned.reference)
+                    $0.digest.map(Self.normalizedImageIdentity) == Self.normalizedImageIdentity(pinned.reference) ||
+                    $0.variants.contains { $0.isRunnable && Self.normalizedImageIdentity($0.digest) == Self.normalizedImageIdentity(pinned.reference) }
                 }) {
                     for try await _ in images.streamPull(request.image, platform: request.platform.isEmpty ? nil : request.platform) {
                         try Task.checkCancellation()
@@ -170,7 +171,13 @@ extension RuntimeContainerClient {
         let pinned = Core.Registry.ImageReference.parse(pinnedReference ?? reference)
         if pinned.isDigestReference {
             let expected = Self.normalizedImageIdentity(pinned.reference)
-            guard identities.contains(expected) else {
+            // A native child pin may inspect as its parent index. Accept only that exact runnable
+            // child, and only when preparation left the digest reference unchanged (not an alias).
+            let prepared = Core.Registry.ImageReference.parse(reference)
+            let nativeChild = prepared.isDigestReference &&
+                Self.normalizedImageIdentity(prepared.reference) == expected &&
+                images.contains { $0.variants.contains { $0.isRunnable && Self.normalizedImageIdentity($0.digest) == expected } }
+            guard identities.contains(expected) || nativeChild else {
                 throw RecreateVerificationError.imageMismatch(expected: [expected], actual: images.first?.digest)
             }
             return [expected]

@@ -108,6 +108,22 @@ struct AppleContainerAdapterTests {
         #expect(await runner.commands.contains { $0.starts(with: ["image", "tag"]) } == false)
     }
 
+    @Test func recoveryUsesLocalChildDigestWithoutPullingOrAliasingItsParent() async throws {
+        let imagesData = try Fixture.data("image-inspect")
+        let images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: imagesData, runtimeKind: .appleContainer)
+        let image = try #require(images.first)
+        let child = try #require(image.variants.first { $0.platform.architecture == "amd64" && $0.isRunnable })
+        let reference = "\(Core.Registry.ImageReference.normalizedRepositoryKey(image.reference))@\(child.digest)"
+        let runner = RecordingImageCreateRunner(images: imagesData)
+        let core = Core.Orchestrator.testing(runner: runner, runtimeKind: .appleContainer)
+        var request = Core.Container.CreateRequest(runtimeKind: .appleContainer)
+        request.image = reference
+        request.name = "child-recovery"
+        try await core.prepareContainerRecovery(.containerCreate(from: request))
+        #expect(await runner.commands == [ContainerCommands.imageList(), ContainerCommands.imageList(),
+                                         ContainerCommands.imageInspect([reference])])
+    }
+
     @Test func localDigestRecoveryCreatesAndVerifiesAnImmutableAlias() async throws {
         let digest = "sha256:" + String(repeating: "a", count: 64)
         let alias = "ghcr.io/example/coast:contained-recovery-" + String(repeating: "a", count: 64)
@@ -447,7 +463,8 @@ private actor RecordingImageCreateRunner: Core.Command.Running {
     }
 
     nonisolated func stream(_ arguments: [String], priority: Core.Command.ExecutionPriority) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { $0.finish() }
+        AsyncThrowingStream { $0.finish(throwing: Core.Command.Error.nonZeroExit(
+            code: 127, stderr: "unexpected stream", command: arguments.joined(separator: " "))) }
     }
 }
 
