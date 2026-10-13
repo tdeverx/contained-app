@@ -1,7 +1,6 @@
 import AppKit
 import ContainedCore
 import ContainedUI
-import Darwin
 import SwiftTerm
 import SwiftUI
 
@@ -13,8 +12,12 @@ struct TerminalSurface: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(onExit: onExit) }
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
+        makeTerminalView(coordinator: context.coordinator)
+    }
+
+    func makeTerminalView(coordinator: Coordinator) -> LocalProcessTerminalView {
         let view = LocalProcessTerminalView(frame: .zero)
-        view.processDelegate = context.coordinator
+        view.processDelegate = coordinator
         view.font = NSFont.monospacedSystemFont(ofSize: UI.Console.Metric.fontSize, weight: .regular)
         view.nativeBackgroundColor = .clear
         view.nativeForegroundColor = NSColor(white: UI.Console.Metric.nativeForegroundWhite, alpha: 1)
@@ -35,9 +38,18 @@ struct TerminalSurface: NSViewRepresentable {
     func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {}
 
     static func dismantleNSView(_ nsView: LocalProcessTerminalView, coordinator: Coordinator) {
-        let pid = nsView.process?.shellPid ?? 0
+        // A disconnected session must not mark its replacement as ended.
+        nsView.processDelegate = nil
         nsView.terminate()
-        TerminalProcessReaper.terminate(pid)
+        // SwiftTerm owns child reaping/escalation when the view releases its process.
+        // Committed GPU work can briefly delay permanent renderer shutdown.
+        if !nsView.updateUiClosed() {
+            Task { @MainActor in
+                while !nsView.updateUiClosed() {
+                    try? await Task.sleep(for: .milliseconds(10))
+                }
+            }
+        }
     }
 
     final class Coordinator: NSObject, LocalProcessTerminalViewDelegate {
@@ -45,19 +57,9 @@ struct TerminalSurface: NSViewRepresentable {
         init(onExit: @escaping (Int32?) -> Void) { self.onExit = onExit }
 
         func processTerminated(source: TerminalView, exitCode: Int32?) { onExit(exitCode) }
+        func processFailedToStart(source: TerminalView, error: LocalProcessError) { onExit(nil) }
         func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
         func setTerminalTitle(source: LocalProcessTerminalView, title: String) {}
         func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
-    }
-}
-
-private enum TerminalProcessReaper {
-    static func terminate(_ pid: pid_t) {
-        guard pid > 0 else { return }
-        kill(pid, SIGTERM)
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.7) {
-            guard kill(pid, 0) == 0 else { return }
-            kill(pid, SIGKILL)
-        }
     }
 }

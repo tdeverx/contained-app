@@ -14,7 +14,6 @@ fail() {
 required_resource_bundles=(
   "Contained_ContainedApp.bundle"
   "ContainedCore_ContainedCore.bundle"
-  "SwiftTerm_SwiftTerm.bundle"
 )
 
 usage() {

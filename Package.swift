@@ -15,7 +15,7 @@ let package = Package(
         .package(path: "Packages/ContainedUX"),
         // Mature VT100/xterm emulator + PTY host for the in-container terminal. AppKit-backed,
         // bridged through NSViewRepresentable in the app target.
-        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.2.0"),
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.99.0"),
         // Auto-update (release): Sparkle, the de-facto macOS updater. Inert until a signed build
         // points SUFeedURL at a hosted appcast (see Scripts/appcast.sh).
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),

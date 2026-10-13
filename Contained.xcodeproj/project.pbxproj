@@ -20,6 +20,7 @@
 		0E2100010000000000000009 /* AppErrorPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000009 /* AppErrorPresentationTests.swift */; };
 		0E210001000000000000000A /* AppDatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000A /* AppDatabaseTests.swift */; };
 		0E210001000000000000000B /* AppKitBoundaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000B /* AppKitBoundaryTests.swift */; };
+		0E2100010000000000000014 /* TerminalSurfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E2100020000000000000014 /* TerminalSurfaceTests.swift */; };
 		0E210001000000000000000C /* ContainerRuntimeMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000C /* ContainerRuntimeMigrationTests.swift */; };
 		0E210001000000000000000D /* DesignSystemBoundaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000D /* DesignSystemBoundaryTests.swift */; };
 		0E210001000000000000000E /* PreviewFixtureMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E210002000000000000000E /* PreviewFixtureMappingTests.swift */; };
@@ -55,6 +56,7 @@
 		0E2100020000000000000009 /* AppErrorPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorPresentationTests.swift; sourceTree = "<group>"; };
 		0E210002000000000000000A /* AppDatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabaseTests.swift; sourceTree = "<group>"; };
 		0E210002000000000000000B /* AppKitBoundaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppKitBoundaryTests.swift; sourceTree = "<group>"; };
+		0E2100020000000000000014 /* TerminalSurfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSurfaceTests.swift; sourceTree = "<group>"; };
 		0E210002000000000000000C /* ContainerRuntimeMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerRuntimeMigrationTests.swift; sourceTree = "<group>"; };
 		0E210002000000000000000D /* DesignSystemBoundaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemBoundaryTests.swift; sourceTree = "<group>"; };
 		0E210002000000000000000E /* PreviewFixtureMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewFixtureMappingTests.swift; sourceTree = "<group>"; };
@@ -128,6 +130,7 @@
 				0E2100020000000000000009 /* AppErrorPresentationTests.swift */,
 				0E210002000000000000000A /* AppDatabaseTests.swift */,
 				0E210002000000000000000B /* AppKitBoundaryTests.swift */,
+				0E2100020000000000000014 /* TerminalSurfaceTests.swift */,
 				0E2100020000000000000001 /* AppLoggingTests.swift */,
 				0E210002000000000000000C /* ContainerRuntimeMigrationTests.swift */,
 				0E2100020000000000000012 /* ContainerGridProjectionTests.swift */,
@@ -264,6 +267,7 @@
 				0E2100010000000000000009 /* AppErrorPresentationTests.swift in Sources */,
 				0E210001000000000000000A /* AppDatabaseTests.swift in Sources */,
 				0E210001000000000000000B /* AppKitBoundaryTests.swift in Sources */,
+				0E2100010000000000000014 /* TerminalSurfaceTests.swift in Sources */,
 				0E2100010000000000000001 /* AppLoggingTests.swift in Sources */,
 				0E210001000000000000000C /* ContainerRuntimeMigrationTests.swift in Sources */,
 				0E2100010000000000000012 /* ContainerGridProjectionTests.swift in Sources */,
