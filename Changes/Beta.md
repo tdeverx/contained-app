@@ -1,3 +1,7 @@
+### Fixed
+
+- Updated the container terminal to SwiftTerm 1.99.0, including launch-failure handling and terminal resource cleanup when disconnecting or reconnecting.
+
 - Fetch and verify missing original image digests before recreation; keep local recovery aliases out of registry update checks and pulls.
 
 - Added **Free Up Space…** with compaction selected by default, explicit opt-in resource/cache deletion, and access to automatic compaction settings.
