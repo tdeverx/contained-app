@@ -3,15 +3,16 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.238+85e0a1b</title>
-            <pubDate>Sat, 10 Oct 2026 10:52:57 +0000</pubDate>
-            <sparkle:version>238</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.238+85e0a1b</sparkle:shortVersionString>
+            <title>1.0.0-nightly.241+0d66c47</title>
+            <pubDate>Wed, 14 Oct 2026 00:02:47 +0000</pubDate>
+            <sparkle:version>241</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.241+0d66c47</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
+<h3>Fixed</h3>
 <ul>
-<li>Fetch and verify missing original image digests before recreation; keep local recovery aliases out of registry update checks and pulls.</li>
+<li>Updated the container terminal to SwiftTerm 1.99.0, including launch-failure handling and terminal resource cleanup when disconnecting or reconnecting.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -94,7 +95,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.238+85e0a1b/Contained-1.0.0-nightly.238+85e0a1b.dmg" length="10031216" type="application/octet-stream" sparkle:edSignature="ja3aCeeOIHVG1IarULFCuAYQVW/XkosGnnlSqONEQJDPTGhXphrVc/liiGENvwVno3G4kJnRoUlPBNlI1HjVAA=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.241+0d66c47/Contained-1.0.0-nightly.241+0d66c47.dmg" length="10603222" type="application/octet-stream" sparkle:edSignature="FybljFx2M4VXy5zz4g1TAs/1w1zIXk8HdS6Ow1UNETm2UqFN3MmHWLROOMBd1UHyCKn5crmOboauXwkPvBkyBQ=="/>
         </item>
     </channel>
 </rss>
