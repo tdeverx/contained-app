@@ -3,16 +3,15 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.241+0d66c47</title>
-            <pubDate>Wed, 14 Oct 2026 00:02:47 +0000</pubDate>
-            <sparkle:version>241</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.241+0d66c47</sparkle:shortVersionString>
+            <title>1.0.0-nightly.244+21dff35</title>
+            <pubDate>Wed, 21 Oct 2026 16:15:17 +0000</pubDate>
+            <sparkle:version>244</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.244+21dff35</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
-<h3>Fixed</h3>
 <ul>
-<li>Updated the container terminal to SwiftTerm 1.99.0, including launch-failure handling and terminal resource cleanup when disconnecting or reconnecting.</li>
+<li>Replace the temporary recreation-recovery banner with card caution icons, and let storage cleanup previews show per-resource sizes and select or exclude individual cleanup candidates.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -95,7 +94,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.241+0d66c47/Contained-1.0.0-nightly.241+0d66c47.dmg" length="10603222" type="application/octet-stream" sparkle:edSignature="FybljFx2M4VXy5zz4g1TAs/1w1zIXk8HdS6Ow1UNETm2UqFN3MmHWLROOMBd1UHyCKn5crmOboauXwkPvBkyBQ=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.244+21dff35/Contained-1.0.0-nightly.244+21dff35.dmg" length="10625746" type="application/octet-stream" sparkle:edSignature="Mogzi4cVmr3dAY73DttWyJITaWgm6YZqWJCFNfVUSf8d59nQK6CgBWWG09BAcxLEBi9SgcOwtq1xofJXEKCgAA=="/>
         </item>
     </channel>
 </rss>
