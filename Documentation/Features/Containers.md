@@ -66,8 +66,12 @@ Pending recovery continues to block destructive cleanup for its runtime. After
 recovery completes, unused-image cleanup is the deliberate way to remove aliases
 that no remaining container needs; they are not automatically deleted.
 
-If replacement and rollback fail, **Review Recovery…** remains on the Containers
-page even when the runtime container is missing. Review the original image, recovery
+Container cards show an amber caution icon when an image update is available; clicking
+it opens the existing update confirmation. If replacement and rollback fail, a red
+caution icon opens **Review Recovery…**, replacing the temporary recovery banner.
+A saved-recovery card remains on the Containers page when the runtime container is
+missing. It opens recovery instead of exposing lifecycle actions for a nonexistent
+container. Review the original image, recovery
 digest, and requested command before **Restore Original**. Recovery never overwrites or
 deletes an existing container. If a partial runtime object already occupies the name,
 inspect it with the normal container controls; **Keep Existing Container** explicitly

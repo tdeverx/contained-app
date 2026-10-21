@@ -17,6 +17,8 @@ struct ContainerCard: View {
     var statsNormalization: Core.Metrics.NormalizationContext = .containerSpecific
     var isBusy: Bool
     var imageUpdateState: Core.Image.ContainerUpdateState = .unknown
+    var requiresRecovery = false
+    var isRecoveryOnly = false
     var isExpanded: Bool = false
     /// Whether the expanded card's controls (footer buttons + close) are shown. The grid drops this
     /// the instant a close begins so the glass buttons fade out *before* the shrink finishes.
@@ -27,6 +29,7 @@ struct ContainerCard: View {
     var onRestart: () -> Void
     var onEdit: () -> Void = {}
     var onRebuild: () -> Void = {}
+    var onReviewRecovery: () -> Void = {}
     var onDelete: () -> Void
     var onClose: () -> Void = {}
     var onSelectMultiple: () -> Void = {}
@@ -75,7 +78,7 @@ struct ContainerCard: View {
         }
     }
 
-    private var presentation: StatusPresentation { StatusPresentation(snapshot.state) }
+    private var presentation: StatusPresentation { StatusPresentation(snapshot.state, errored: isRecoveryOnly) }
     private var styleForDisplay: Personalization { draftStyle ?? style }
     private var tint: Color { styleForDisplay.color }
     private var name: String { styleForDisplay.displayName(fallback: snapshot.id) }
@@ -104,7 +107,13 @@ struct ContainerCard: View {
                 cardSurface
             } else {
                 cardSurface
-                    .contextMenu { menuItems }
+                    .contextMenu {
+                        if isRecoveryOnly {
+                            Button(action: onReviewRecovery) {
+                                Label(AppText.string("recreate.reviewRecovery", defaultValue: "Review Recovery…"), systemImage: "exclamationmark.triangle.fill")
+                            }
+                        } else { menuItems }
+                    }
             }
         }
         .accessibilityElement(children: .combine)
@@ -237,6 +246,7 @@ struct ContainerCard: View {
     }
 
     private var statusState: StatusState {
+        if isRecoveryOnly { return .failed }
         if health == .unhealthy { return .failed }
         switch presentation {
         case .running: return .online
@@ -248,6 +258,7 @@ struct ContainerCard: View {
     }
 
     private var statusLabel: String {
+        if isRecoveryOnly { return AppText.string("recreate.recoveryRequired", defaultValue: "Recovery needed") }
         switch statusState {
         case .online: return "Online"
         case .restarting: return "Restarting"
@@ -278,6 +289,7 @@ struct ContainerCard: View {
     }
 
     private var statusHelp: String {
+        if isRecoveryOnly { return AppText.string("recreate.recoveryMissing", defaultValue: "The runtime container is missing. Its original recipe is saved for recovery.") }
         switch statusState {
         case .online: return "Healthy"
         case .restarting: return "Restarting"
@@ -454,28 +466,30 @@ struct ContainerCard: View {
     /// rather than the heavier prominent glass circles (per the simplified footer).
     @ViewBuilder
     private var footerActions: some View {
-        if isRunning {
-            footerAction("stop.fill", help: AppText.stop, action: onStop)
-            footerAction("arrow.clockwise", help: AppText.restart, action: onRestart)
-        } else {
-            footerAction("play.fill", help: AppText.start, tint: tint, action: onStart)
-        }
-        footerAction("slider.horizontal.3", help: AppText.edit, action: onEdit)
-        if let webDestination {
-            footerAction("arrow.up.right.square", help: "Open in browser") {
-                openURL(webDestination)
+        if !isRecoveryOnly {
+            if isRunning {
+                footerAction("stop.fill", help: AppText.stop, action: onStop)
+                footerAction("arrow.clockwise", help: AppText.restart, action: onRestart)
+            } else {
+                footerAction("play.fill", help: AppText.start, tint: tint, action: onStart)
             }
+            footerAction("slider.horizontal.3", help: AppText.edit, action: onEdit)
+            if let webDestination {
+                footerAction("arrow.up.right.square", help: "Open in browser") {
+                    openURL(webDestination)
+                }
+            }
+            footerAction("trash", help: AppText.delete, role: .destructive) { confirmingDelete = true }
         }
-        footerAction("trash", help: AppText.delete, role: .destructive) { confirmingDelete = true }
     }
 
     private var persistentFooterActions: AnyView? {
-        guard imageUpdateState.requiresUpdate else { return nil }
+        guard let attention = ContainerCardAttention.resolve(update: imageUpdateState, requiresRecovery: requiresRecovery) else { return nil }
         return AnyView(
-            footerAction("arrow.down.circle",
-                         help: AppText.updateContainer,
-                         tint: .orange,
-                         action: onRebuild)
+            footerAction(attention.systemImage,
+                         help: attention.help,
+                         tint: attention == .recovery ? .red : .orange,
+                         action: attention == .recovery ? onReviewRecovery : onRebuild)
         )
     }
 
