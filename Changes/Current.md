@@ -1,0 +1,1 @@
+- Keep the download icon for container updates and show the recovery caution icon only when the container is idle and recovery still needs attention.

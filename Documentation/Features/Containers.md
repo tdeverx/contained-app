@@ -66,9 +66,11 @@ Pending recovery continues to block destructive cleanup for its runtime. After
 recovery completes, unused-image cleanup is the deliberate way to remove aliases
 that no remaining container needs; they are not automatically deleted.
 
-Container cards show an amber caution icon when an image update is available; clicking
-it opens the existing update confirmation. If replacement and rollback fail, a red
-caution icon opens **Review Recovery…**, replacing the temporary recovery banner.
+Container cards show a download icon when an image update is available; clicking
+it opens the existing update confirmation. While that container has an operation in
+progress, its attention action is hidden. Once idle, a red caution icon appears only
+if saved recovery still needs attention and opens **Review Recovery…**, replacing the
+temporary recovery banner.
 A saved-recovery card remains on the Containers page when the runtime container is
 missing. It opens recovery instead of exposing lifecycle actions for a nonexistent
 container. Review the original image, recovery
