@@ -144,6 +144,11 @@ Use `core.cleanupPlans([.compactRunningContainers, .unusedVolumes],
 runtimeKind: .appleContainer)` for a combined manual preview. It shares one runtime
 inventory and measures host allocation once only when nonempty candidates can use
 that measurement. Execution still validates each plan against fresh inventory.
+Call `plan.selectingResources(selectedIDs)` to narrow an exact preview before
+execution. It accepts only identities from that plan, keeps the original expiry and
+inventory token, and filters its commands. Builder cache reset is indivisible.
+`resourceAllocatedBytes` contains measured host footprints; `resourceReportedBytes`
+contains logical image sizes, not reclaim estimates. Missing entries mean unknown.
 
 ## Fixtures
 

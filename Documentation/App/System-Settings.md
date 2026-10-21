@@ -50,6 +50,18 @@ changes runtime inventory, remaining exact previews are rejected until refreshed
 
 The combined preview shares one runtime inventory and measures host allocation only
 when a selected category needs it. Execution still refreshes inventory before acting.
+Every exact-preview category can be included or excluded. Individual containers,
+images, volumes, and networks have checkboxes; only checked identities appear in the
+command preview and execute. Builder cache reset is indivisible, so its resources
+are selected together. Excluding resources does not extend the preview's lifetime or
+relax inventory validation.
+
+Each resource shows measured host allocation when available, runtime-reported logical
+image size when available, or **Size unavailable**. Missing measurements are not zero.
+Selected allocation totals include only fully measured selections. Image content can
+be shared, and filesystem allocation includes blocks compaction cannot reclaim, so
+these sizes are not promises of reclaimed space. Actual host allocation is still
+measured before and after cleanup.
 
 Builder cache reset stops/deletes only the builder VM, interrupts external builds,
 and discards BuildKit cache. The next build recreates it. Running-builder compaction
@@ -69,7 +81,8 @@ retain this opt-in policy; it is not a macOS-wide scheduled job.
 Runtimes without host-storage planning retain their native container/image/volume/
 network prune actions. The confirmation names each runtime and explains that its
 native prune command selects unused resources at execution; these are not exact
-Apple Container inventory previews and never run automatically.
+Apple Container inventory previews and never run automatically. They explicitly show
+that sizes and per-item exclusions are unavailable; exclude the entire action instead.
 
 Pull, build, and recreate warn below 5 GiB free; below 1 GiB they pause and link to
 System storage. Free-space reporting is advisory when the filesystem cannot provide

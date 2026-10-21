@@ -61,10 +61,39 @@ public extension Core.System {
         public let commands: [[String]]
         /// Allocated space occupied by candidates, not a promise that it can all be reclaimed.
         public let candidateAllocatedBytes: UInt64?
+        /// Per-resource host allocation; absent values are unknown, not zero.
+        public let resourceAllocatedBytes: [String: UInt64]
+        /// Runtime-reported logical image sizes, which may include shared content.
+        public let resourceReportedBytes: [String: UInt64]
         public let createdAt: Date
         internal let validationToken: Data
         internal let resourceLimit: Int?
         internal let afterResourceID: String?
+
+        /// Narrows an immutable preview without accepting new identities or arbitrary commands.
+        public func selectingResources(_ selectedIDs: Set<String>) throws -> Self {
+            guard selectedIDs.isSubset(of: Set(resourceIDs)),
+                  action != .resetBuilderCache || selectedIDs.isEmpty || selectedIDs == Set(resourceIDs) else {
+                throw StorageError.inventoryChanged
+            }
+            let ids = resourceIDs.filter(selectedIDs.contains)
+            let selectedCommands: [[String]]
+            if action == .resetBuilderCache {
+                selectedCommands = ids.isEmpty ? [] : commands
+            } else {
+                guard commands.count == resourceIDs.count else { throw StorageError.inventoryChanged }
+                selectedCommands = zip(resourceIDs, commands).compactMap { selectedIDs.contains($0.0) ? $0.1 : nil }
+            }
+            let allocation = resourceAllocatedBytes.filter { selectedIDs.contains($0.key) }
+            let bytes = ids.allSatisfy { allocation[$0] != nil }
+                ? ids.reduce(UInt64(0)) { $0 + (allocation[$1] ?? 0) } : nil
+            return Self(id: id, runtimeKind: runtimeKind, action: action, resourceIDs: ids,
+                        commands: selectedCommands, candidateAllocatedBytes: bytes,
+                        resourceAllocatedBytes: allocation,
+                        resourceReportedBytes: resourceReportedBytes.filter { selectedIDs.contains($0.key) },
+                        createdAt: createdAt, validationToken: validationToken, resourceLimit: resourceLimit,
+                        afterResourceID: afterResourceID)
+        }
     }
 
     struct CleanupResult: Sendable {

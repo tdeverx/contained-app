@@ -1,6 +1,16 @@
 import ContainedCore
 
 enum StoragePresentation {
+    static func size(_ resourceID: String, in plan: Core.System.CleanupPlan) -> String {
+        if let bytes = plan.resourceAllocatedBytes[resourceID] {
+            return AppText.string("storage.resource.allocated", defaultValue: "Host allocation: \(Format.bytes(bytes))")
+        }
+        if let bytes = plan.resourceReportedBytes[resourceID] {
+            return AppText.string("storage.resource.reported", defaultValue: "Runtime image size: \(Format.bytes(bytes)) — shared content, not reclaimable space")
+        }
+        return AppText.string("storage.resource.sizeUnavailable", defaultValue: "Size unavailable")
+    }
+
     static func title(_ action: Core.System.CleanupAction) -> String {
         switch action {
         case .compactRunningContainers: AppText.string("storage.compactContainers", defaultValue: "Compact running containers")

@@ -46,6 +46,10 @@ struct ContainersGridView: View {
     private let detailSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
 
     private var store: ContainersStore { app.containers }
+    private var missingRecoveries: [AppDatabase.ContainerRecreationRecovery] {
+        let existing = Set(store.snapshots.map(\.scopedID))
+        return app.containerRecreationRecoveries.filter { !existing.contains($0.id) }
+    }
 
     private var projectionInput: ContainerGridProjection.Input {
         let snapshots = ui.containers(in: store.snapshots)
@@ -92,20 +96,10 @@ struct ContainersGridView: View {
                             .contentShape(Rectangle())
                             .onTapGesture(count: 2) { zoomFrontWindow() }
                         LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(app.containerRecreationRecoveries) { recovery in
-                                UI.Surface.Content(elevated: true, alignment: .leading) {
-                                    UI.Panel.Section(header: recovery.snapshot.displayName) {
-                                        Text("Recreation needs recovery. The original recipe is saved.")
-                                        UI.Action.TextButton(title: AppText.string("recreate.reviewRecovery", defaultValue: "Review Recovery…"),
-                                                             systemName: "arrow.counterclockwise",
-                                                             help: AppText.string("recreate.reviewRecovery.help", defaultValue: "Review the saved image and command, then restore the missing container")) {
-                                            recovering = recovery
-                                        }
-                                        .disabled(store.busyIDs.contains(recovery.id))
-                                    }
-                                }
-                            }
                             LazyVGrid(columns: gridColumns, spacing: UI.Card.Grid.spacing) {
+                                ForEach(missingRecoveries) { recovery in
+                                    containerCard(recovery.snapshot, isExpanded: false) { recovering = recovery }
+                                }
                                 ForEach(projectionState.projection.containers, id: \.scopedID) { snapshot in
                                     gridCard(snapshot)
                                 }
@@ -148,7 +142,7 @@ struct ContainersGridView: View {
             if selecting && !selection.isEmpty { batchBar } else if let message = store.errorMessage { UI.State.ErrorBanner(message: message) }
         }
         .overlay {
-            if app.containerRecreationRecoveries.isEmpty && (store.snapshots.isEmpty || (ui.selectedContainerGroup != nil && projectionState.projection.visibleCount == 0)) {
+            if missingRecoveries.isEmpty && (store.snapshots.isEmpty || (ui.selectedContainerGroup != nil && projectionState.projection.visibleCount == 0)) {
                 emptyState
             }
         }
@@ -268,6 +262,7 @@ struct ContainersGridView: View {
         let key = snapshot.scopedID
         let hasStyleOverride = app.personalization.hasAppearanceOverride(id: key)
         let imageUpdateState = app.containerImageUpdateState(for: snapshot)
+        let recovery = app.containerRecreationRecoveries.first { $0.id == key }
         return ContainerCardMetricsRenderer(
             metrics: store.metricsState(for: key),
             snapshot: snapshot,
@@ -278,6 +273,8 @@ struct ContainersGridView: View {
             selectedWidgetIndex: selectedWidgetBinding(for: key),
             isBusy: store.busyIDs.contains(key),
             imageUpdateState: imageUpdateState,
+            requiresRecovery: recovery != nil,
+            isRecoveryOnly: recovery != nil && !store.snapshots.contains { $0.scopedID == key },
             isExpanded: isExpanded,
             controlsVisible: controlsVisible,
             onTap: onTap,
@@ -286,6 +283,7 @@ struct ContainersGridView: View {
             onRestart: { lifecycleAction { await store.restart(key) } },
             onEdit: { ui.openCreationPanel(editing: snapshot) },
             onRebuild: { rebuilding = RebuildRequest(snapshot: snapshot, updateState: imageUpdateState) },
+            onReviewRecovery: { recovering = recovery },
             onDelete: { deleting = snapshot },
             onClose: closeDetail,
             onSelectMultiple: { beginSelecting(key) },
@@ -458,6 +456,8 @@ struct ContainerCardMetricsRenderer: View {
     let selectedWidgetIndex: Binding<Int>
     let isBusy: Bool
     let imageUpdateState: Core.Image.ContainerUpdateState
+    let requiresRecovery: Bool
+    let isRecoveryOnly: Bool
     let isExpanded: Bool
     let controlsVisible: Bool
     let onTap: () -> Void
@@ -466,6 +466,7 @@ struct ContainerCardMetricsRenderer: View {
     let onRestart: () -> Void
     let onEdit: () -> Void
     let onRebuild: () -> Void
+    let onReviewRecovery: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
     let onSelectMultiple: () -> Void
@@ -485,6 +486,8 @@ struct ContainerCardMetricsRenderer: View {
             statsNormalization: statsNormalization,
             isBusy: isBusy,
             imageUpdateState: imageUpdateState,
+            requiresRecovery: requiresRecovery,
+            isRecoveryOnly: isRecoveryOnly,
             isExpanded: isExpanded,
             controlsVisible: controlsVisible,
             onTap: onTap,
@@ -493,6 +496,7 @@ struct ContainerCardMetricsRenderer: View {
             onRestart: onRestart,
             onEdit: onEdit,
             onRebuild: onRebuild,
+            onReviewRecovery: onReviewRecovery,
             onDelete: onDelete,
             onClose: onClose,
             onSelectMultiple: onSelectMultiple,

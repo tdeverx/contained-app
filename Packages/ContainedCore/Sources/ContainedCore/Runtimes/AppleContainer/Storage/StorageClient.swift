@@ -63,15 +63,24 @@ extension AppleContainerClient {
         let validationToken = try inventory.token()
         let createdAt = Date()
         return candidates.map { candidate in
-            let bytes: UInt64?
-            if !candidate.ids.isEmpty, let prefix = allocationPrefix(for: candidate.action),
-               let measurement, measurement.complete {
-                bytes = candidate.ids.reduce(0) { $0 + (measurement.resources[prefix + $1] ?? 0) }
-            } else {
-                bytes = nil
+            var allocation: [String: UInt64] = [:]
+            var reported: [String: UInt64] = [:]
+            for id in candidate.ids {
+                if let prefix = allocationPrefix(for: candidate.action), let measurement, measurement.complete {
+                    allocation[id] = measurement.resources[prefix + id]
+                }
+                if candidate.action == .unusedImages || candidate.action == .danglingImages,
+                   let image = inventory.images.first(where: { $0.reference == id }), !image.variants.isEmpty,
+                   image.variants.allSatisfy({ $0.size != nil && ($0.size ?? -1) >= 0 }) {
+                    let variants = Dictionary(image.variants.map { ($0.digest, UInt64($0.size!)) }, uniquingKeysWith: max)
+                    reported[id] = variants.values.reduce(0, +)
+                }
             }
+            let bytes: UInt64? = !candidate.ids.isEmpty && candidate.ids.allSatisfy { allocation[$0] != nil }
+                ? allocation.values.reduce(0, +) : nil
             return Core.System.CleanupPlan(id: UUID(), runtimeKind: descriptor.kind, action: candidate.action,
                                            resourceIDs: candidate.ids, commands: candidate.commands, candidateAllocatedBytes: bytes,
+                                           resourceAllocatedBytes: allocation, resourceReportedBytes: reported,
                                            createdAt: createdAt, validationToken: validationToken, resourceLimit: resourceLimit,
                                            afterResourceID: afterResourceID)
         }
@@ -79,7 +88,7 @@ extension AppleContainerClient {
 
     private func allocationPrefix(for action: Core.System.CleanupAction) -> String? {
         switch action {
-        case .stoppedContainers, .resetBuilderCache: "containers/"
+        case .stoppedContainers, .resetBuilderCache, .compactRunningContainers, .compactRunningBuilder: "containers/"
         case .unusedVolumes: "volumes/"
         default: nil
         }
@@ -102,8 +111,11 @@ extension AppleContainerClient {
         let inventory = try await storageInventory()
         guard try inventory.token() == plan.validationToken else { throw Core.System.StorageError.inventoryChanged }
         let all = inventory.identities(for: plan.action)
-        let ids = storageCandidates(all, limit: plan.resourceLimit, after: plan.afterResourceID)
+        let previewIDs = storageCandidates(all, limit: plan.resourceLimit, after: plan.afterResourceID)
+        let selectedIDs = Set(plan.resourceIDs)
+        let ids = previewIDs.filter(selectedIDs.contains)
         guard ids == plan.resourceIDs,
+              plan.action != .resetBuilderCache || ids.isEmpty || ids == previewIDs,
               storageCommands(plan.action, ids: ids, builders: inventory.builders) == plan.commands else {
             throw Core.System.StorageError.inventoryChanged
         }

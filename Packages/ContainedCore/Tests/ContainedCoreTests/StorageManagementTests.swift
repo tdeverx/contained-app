@@ -4,6 +4,70 @@ import Testing
 
 @Suite("Storage management")
 struct StorageManagementTests {
+    @Test func selectedCleanupPreservesPreviewAndExecutesOnlyIncludedResources() async throws {
+        let directory = try temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var inventory = emptyInventory()
+        inventory.volumes = [volume("keep"), volume("remove")]
+        let runner = StorageRunner(root: directory, inventory: inventory)
+        let client = AppleContainerClient(runner: runner)
+        let plan = try await client.cleanupPlan(.unusedVolumes, resourceLimit: nil)
+        let selected = try plan.selectingResources(["remove"])
+        #expect(selected.resourceIDs == ["remove"])
+        #expect(selected.commands == [ContainerCommands.volumeDelete(["remove"])])
+        #expect(selected.validationToken == plan.validationToken)
+        #expect(selected.createdAt == plan.createdAt)
+        #expect(selected.candidateAllocatedBytes == nil)
+        let empty = try plan.selectingResources([])
+        #expect(empty.commands.isEmpty)
+        #expect(throws: Core.System.StorageError.self) {
+            _ = try plan.selectingResources(["not-previewed"])
+        }
+        _ = try await client.executeCleanup(selected)
+        #expect(await runner.mutations == selected.commands)
+        inventory.containers = [try snapshot("new-user", state: "stopped", mount: "remove")]
+        await runner.replace(inventory)
+        await #expect(throws: Core.System.StorageError.self) { _ = try await client.executeCleanup(selected) }
+        #expect(await runner.mutations == selected.commands)
+    }
+
+    @Test func perResourceSizesDistinguishAllocationReportedAndUnknown() async throws {
+        let directory = try temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let disk = directory.appendingPathComponent("containers/running/root.img")
+        try FileManager.default.createDirectory(at: disk.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(repeating: 7, count: 8192).write(to: disk)
+        var inventory = emptyInventory()
+        inventory.containers = [try snapshot("running", state: "running", image: "used:latest"),
+                                try snapshot("unknown-size", state: "running", image: "used:latest")]
+        inventory.images = try Core.Container.JSON.decode([Core.Image.Resource].self, from: Fixture.data("image-inspect"), runtimeKind: .appleContainer)
+        let runner = StorageRunner(root: directory, inventory: inventory)
+        let client = AppleContainerClient(runner: runner)
+        let plans = try await client.cleanupPlans([.compactRunningContainers, .unusedImages])
+        let containers = try #require(plans.first)
+        #expect((containers.resourceAllocatedBytes["running"] ?? 0) >= 8192)
+        #expect(containers.resourceAllocatedBytes["unknown-size"] == nil)
+        #expect(containers.candidateAllocatedBytes == nil)
+        let selected = try containers.selectingResources(["running"])
+        #expect(selected.candidateAllocatedBytes == containers.resourceAllocatedBytes["running"])
+        let images = try #require(plans.last)
+        #expect(images.resourceAllocatedBytes.isEmpty)
+        #expect(images.candidateAllocatedBytes == nil)
+        #expect((images.resourceReportedBytes.values.first ?? 0) > 0)
+    }
+
+    @Test func builderResetCannotBePartiallySelected() async throws {
+        let directory = try temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var inventory = emptyInventory()
+        inventory.builders = [try snapshot("one", state: "running"), try snapshot("two", state: "stopped")]
+        let client = AppleContainerClient(runner: StorageRunner(root: directory, inventory: inventory))
+        let plan = try await client.cleanupPlan(.resetBuilderCache, resourceLimit: nil)
+        #expect(try plan.selectingResources(Set(plan.resourceIDs)).commands == plan.commands)
+        #expect(try plan.selectingResources([]).commands.isEmpty)
+        #expect(throws: Core.System.StorageError.self) { _ = try plan.selectingResources(["one"]) }
+    }
+
     @Test func candidatesProtectRunningStoppedAndBuilderReferences() throws {
         let running = try snapshot("running", state: "running", image: "used:latest", mount: "/store/volumes/data/volume.img", network: "custom")
         let stopped = try snapshot("stopped", state: "stopped", image: "old:latest", mount: "old-data", network: "stopped-net")
@@ -106,7 +170,7 @@ struct StorageManagementTests {
         let client = AppleContainerClient(runner: runner)
         let actions: [Core.System.CleanupAction] = emptyCandidates
             ? [.stoppedContainers, .resetBuilderCache, .unusedVolumes]
-            : [.compactRunningContainers, .unusedImages, .unusedNetworks]
+            : [.unusedImages, .unusedNetworks]
 
         let plans = try await client.cleanupPlans(actions)
 
@@ -230,6 +294,7 @@ private actor StorageRunner: Core.Command.Running {
     func run(_ arguments: [String], stdin: Data?, priority: Core.Command.ExecutionPriority) async throws -> Data {
         commands.append(arguments)
         let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
         switch arguments {
         case ContainerCommands.version: return Data("container version \(version)\n".utf8)
         case ContainerCommands.systemStatus:
