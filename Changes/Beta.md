@@ -1,3 +1,5 @@
+- Replace the temporary recreation-recovery banner with card caution icons, and let storage cleanup previews show per-resource sizes and select or exclude individual cleanup candidates.
+
 ### Fixed
 
 - Updated the container terminal to SwiftTerm 1.99.0, including launch-failure handling and terminal resource cleanup when disconnecting or reconnecting.
