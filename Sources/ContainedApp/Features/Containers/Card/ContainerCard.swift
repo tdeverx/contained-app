@@ -484,7 +484,8 @@ struct ContainerCard: View {
     }
 
     private var persistentFooterActions: AnyView? {
-        guard let attention = ContainerCardAttention.resolve(update: imageUpdateState, requiresRecovery: requiresRecovery) else { return nil }
+        guard let attention = ContainerCardAttention.resolve(update: imageUpdateState, requiresRecovery: requiresRecovery,
+                                                            isBusy: isBusy) else { return nil }
         return AnyView(
             footerAction(attention.systemImage,
                          help: attention.help,
