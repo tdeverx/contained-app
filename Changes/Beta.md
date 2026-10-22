@@ -1,3 +1,5 @@
+- Keep the download icon for container updates and show the recovery caution icon only when the container is idle and recovery still needs attention.
+
 - Replace the temporary recreation-recovery banner with card caution icons, and let storage cleanup previews show per-resource sizes and select or exclude individual cleanup candidates.
 
 ### Fixed
