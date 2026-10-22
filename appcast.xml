@@ -3,15 +3,15 @@
     <channel>
         <title>Contained</title>
         <item>
-            <title>1.0.0-nightly.244+21dff35</title>
-            <pubDate>Wed, 21 Oct 2026 16:15:17 +0000</pubDate>
-            <sparkle:version>244</sparkle:version>
-            <sparkle:shortVersionString>1.0.0-nightly.244+21dff35</sparkle:shortVersionString>
+            <title>1.0.0-nightly.247+6681a7f</title>
+            <pubDate>Thu, 22 Oct 2026 01:24:35 +0000</pubDate>
+            <sparkle:version>247</sparkle:version>
+            <sparkle:shortVersionString>1.0.0-nightly.247+6681a7f</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description><![CDATA[<h2>Changes Since Last Nightly</h2>
 <ul>
-<li>Replace the temporary recreation-recovery banner with card caution icons, and let storage cleanup previews show per-resource sizes and select or exclude individual cleanup candidates.</li>
+<li>Keep the download icon for container updates and show the recovery caution icon only when the container is idle and recovery still needs attention.</li>
 </ul>
 <h2>Full Release Notes</h2>
 <h3>Highlights</h3>
@@ -94,7 +94,7 @@
 <li>Activity events created before unread tracking are treated as unread on first launch.</li>
 </ul>
 ]]></description>
-            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.244+21dff35/Contained-1.0.0-nightly.244+21dff35.dmg" length="10625746" type="application/octet-stream" sparkle:edSignature="Mogzi4cVmr3dAY73DttWyJITaWgm6YZqWJCFNfVUSf8d59nQK6CgBWWG09BAcxLEBi9SgcOwtq1xofJXEKCgAA=="/>
+            <enclosure url="https://github.com/tdeverx/contained-app/releases/download/v1.0.0-nightly.247+6681a7f/Contained-1.0.0-nightly.247+6681a7f.dmg" length="10625933" type="application/octet-stream" sparkle:edSignature="BNmperB3NUT15t4GvgtX5sULQdiB1/J+tGHMeZjECMCbVG+1YcAoYHcZkz8L0wQGl3Lh7suMJzHipkUuGEgQBA=="/>
         </item>
     </channel>
 </rss>
